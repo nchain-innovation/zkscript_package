@@ -39,9 +39,9 @@ unlock += Script.parse_string('1 0 0 1')                            # X = (1,0),
 assert(Context(script=unlock+lock).evaluate())
 
 # Let's test an incorrect input
-unlock = Script.parse_string('19')                                  # modulus
-unlock += Script.parse_string('1 1 1 0')                            # X = (1,1), Y = (1,0)
-assert(not Context(script=unlock_wrong+lock).evaluate())
+unlock_wrong = Script.parse_string('19')                            # modulus
+unlock_wrong += Script.parse_string('1 1 1 0')                      # X = (1,1), Y = (1,0)
+assert(not Context(script=unlock_wrong+lock).evaluate(quiet=True))
 ```
 
 ### Fq4
@@ -84,5 +84,5 @@ assert(Context(script=unlock+lock).evaluate())
 # Let's test an incorrect input
 unlock_wrong = Script.parse_string('19')
 unlock_wrong += Script.parse_string('0 0 1 0 0 0 1 0')
-assert(not Context(script=unlock_wrong+lock).evaluate())
+assert(not Context(script=unlock_wrong+lock).evaluate(quiet=True))
 ```

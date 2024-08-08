@@ -1,4 +1,4 @@
-# Finite field arithmetic
+# Elliptic curve arithmetic
 
 The zk Script Library contains the implementation of arithmetic for elliptic curves. More precisely, it contains scripts for:
 - EC arithmetic over a prime field `Fq`:
@@ -22,6 +22,7 @@ The zk Script Library contains the implementation of arithmetic for elliptic cur
 from tx_engine import Script, Context
 # Let's set up secp256k1
 from zkscript.elliptic_curves.ec_operations_fq import EllipticCurveFq
+from zkscript.util.utility_scripts import nums_to_script
 
 secp256k1_MODULUS = 115792089237316195423570985008687907853269984665640564039457584007908834671663
 # Script class for operations on secp256k1
@@ -33,34 +34,33 @@ secp256k1_generator_plus_double_generator = [0xf9308a019258c31049344f85f89d5229b
 
 # Let's sum two points on secp256k1: generator + 2*generator
 lock = secp256k1_script.point_addition(take_modulo=True,check_constant=True,clean_constant=True)
-lock += Script.parse_string(str(secp256k1_generator_plus_double_generator[1]) + ' OP_EQUALVERIFY')
-lock += Script.parse_string(str(secp256k1_generator_plus_double_generator[0]) + ' OP_EQUAL')
+lock += nums_to_script([secp256k1_generator_plus_double_generator[1]]) + Script.parse_string('OP_EQUALVERIFY')
+lock += nums_to_script([secp256k1_generator_plus_double_generator[0]]) + Script.parse_string('OP_EQUAL')
 
 # Gradient through generator and 2*generator: (y1 - y0) * (x1 - x0)^-1
 lam = ((secp256k1_double_generator[1] - secp256k1_generator[1]) * pow(secp256k1_double_generator[0] - secp256k1_generator[0],-1,secp256k1_MODULUS)) % secp256k1_MODULUS
 
 # Unlocking script
-unlock = Script.parse_string(str(secp256k1_MODULUS))
-unlock += Script.parse_string(str(lam))
-unlock += Script.parse_string(' '.join([str(_) for _ in secp256k1_double_generator]))
-unlock += Script.parse_string(' '.join([str(_) for _ in secp256k1_generator]))
+unlock = nums_to_script([secp256k1_MODULUS])
+unlock += nums_to_script([lam])
+unlock += nums_to_script(secp256k1_double_generator)
+unlock += nums_to_script(secp256k1_generator)
 
 context = Context(script = unlock + lock)
 assert(context.evaluate())
 
 # Let's double a point: 2*generator
 lock = secp256k1_script.point_doubling(take_modulo=True,check_constant=True,clean_constant=True)
-lock += Script.parse_string(str(secp256k1_double_generator[1]) + ' OP_EQUALVERIFY')
-lock += Script.parse_string(str(secp256k1_double_generator[0]) + ' OP_EQUAL')
+lock += nums_to_script([secp256k1_double_generator[1]]) + Script.parse_string('OP_EQUALVERIFY')
+lock += nums_to_script([secp256k1_double_generator[0]]) + Script.parse_string('OP_EQUAL')
 
 # Gradient through generator and 2*generator: 3*x0^2 / (2*y0)
 lam = (3 * pow(secp256k1_generator[0],2,secp256k1_MODULUS) * pow(secp256k1_generator[1] * 2, -1, secp256k1_MODULUS)) % secp256k1_MODULUS
 
 # Unlocking script
-unlock = Script.parse_string(str(secp256k1_MODULUS))
-unlock += Script.parse_string(str(lam))
-unlock += Script.parse_string(' '.join([str(_) for _ in secp256k1_generator]))
-
+unlock = nums_to_script([secp256k1_MODULUS])
+unlock += nums_to_script([lam])
+unlock += nums_to_script(secp256k1_generator)
 
 context = Context(script = unlock + lock)
 assert(context.evaluate())
