@@ -59,14 +59,12 @@ Note: the unlocking script is dependent on the public statements.
 The code and resources within this repository are intended for research and educational purposes only.
 
 Please note:
-- The repository may be updated without notice.
-- The code may not be fully optimized or suitable for production use.
 - No guarantees are provided regarding the security or the performance of the code.
 - Users are responsible for validating the code and understanding its implications before using it in any capacity.
 - There may be edge cases causing bugs or unexpected behaviours. Please contact us if you find any bug. 
 
 ## License
-The code is released under the attached [LICENSE](./LICENSE.txt).
+The code is released under the attached [LICENSE](./LICENSE.txt). If you would like to use it for commercial purposes, please contact research.enquiries@nchain.com.
 
 
 
