@@ -1,0 +1,74 @@
+Adapter and User Agreement
+
+1.	Sharing under Research License
+1.1	This agreement is the Adapter & User Agreement (“Agreement”) described in the nChain Attribution – Non-Commercial – Share & Assignment – Research License (“Research License”) and documents the rights granted by You to the Licensor. 
+1.2	You wish to Share Adapted Material and/or Output and therefore, as required by the Research License, agree to assign to Licensor all copyright and database rights in the Adapted Material and/or Output on the terms set out in this Agreement.
+1.3	To make this document effective, please sign it and send it to the Licensor by mail, email, fax, or electronic submission, following the instructions at research.enquiries@nchain.com. 
+1.4	This is a legally binding document executed as a deed, so please read it carefully before agreeing to it. 
+
+2.	Definitions
+2.1	Terms defined in the Research License have the same meaning in this Agreement unless given a different meaning in this Agreement. The following definitions and rules of interpretation apply in this Agreement.
+a.	"Affiliates" in relation to a party, any Legal Entity which controls, is controlled by, or is under common control with such party, and for the purposes of this definition, “control” means direct or indirect ownership of at least fifty percent (50%) of the voting power of the shares or other securities for election of directors (or other managing authority) of the controlled or commonly controlled entity.
+b.	"Effective Date" means the date You execute this Agreement or the date You first Submit a Shared Material to the Licensor, whichever is earlier. 
+c.	"Legal Entity" means an entity which is not a natural person. 
+d.	"Media" means any portion of a Shared Material which is not software.
+e.	“Shared Material” means any Works which you Submit to the Licensor as part of the Sharing of such Works.
+f.	"Submission Date" means the date on which You Submit a Shared Material to the Licensor. 
+g.	"Submit" means any form of electronic, verbal, or written communication sent to The Licensor or our representatives, including but not limited to electronic mailing lists, source code control systems, and issue tracking systems that are managed by, or on behalf of, the Licensor for the purpose of discussing and improving the Licensed Material[, but excluding communication that is conspicuously marked or otherwise designated in writing by You as "Not Shared Material."] 
+h.	“Works” means the Adapted Material and/or Output which you wish to Share and in which You own or assert ownership of the Copyright and Similar Rights.
+i.	"You" means the natural person who wishes to Share Adapted Material and/or Output or the Legal Entity on whose behalf you are acting when entering into this Agreement. 
+2.2	Where any statement is qualified by the expression “so far as [PARTY] is aware” or “to [PARTY]'s knowledge” or any similar expression, that statement shall be deemed to include an additional statement that it has been made after due and careful enquiry.
+
+3.	Grant of Rights
+3.1	Copyright Assignment. Pursuant to and for the consideration set out in the Research License You hereby assign to the Licensor absolutely with full title guarantee the following rights throughout the world:
+a.	the entire Copyright and Similar Rights subsisting in the Shared Materials;
+b.	any database right subsisting in the Shared Materials;
+c.	all other rights in the Shared Materials of whatever nature, whether now known or created in the future, to which You are now, or at any time after the date of this agreement may be, entitled by virtue of the laws in force in the United Kingdom and in any other part of the world;
+    in each case for the whole term including any renewals, reversions, revivals and extensions and together with all related rights and powers arising or accrued, including the right to bring, make, oppose, defend, appeal proceedings, claims or actions and obtain relief (and to retain any damages recovered) in respect of any infringement, or any other cause of action arising from ownership, of any of these assigned rights, whether occurring before, on, or after the date of this agreement
+d.	To the extent that any of the rights in Clause 3.1 cannot be assigned by You to the Licensor, You grant to the Licensor a perpetual, worldwide, exclusive, royalty-free, transferable, irrevocable license under such non-assigned rights, with rights to sublicense through multiple tiers of sublicensees, to practice such non-assigned rights, including, but not limited to, the right to reproduce, modify, display, perform and distribute the Shared Materials.
+e.	To the extent that any of the rights in Clause 3.1 can neither be assigned nor licensed by You to the Licensor, You irrevocably waive and agree never to assert such rights against the Licensor, any of its successors in interest, or any of its licensees, either direct or indirect.
+f.	Upon such transfer of rights to the Licensor, in accordance with the Research License the Licensor immediately grants to You the rights under that Agreement in respect of the Shared Materials, as Licensed Material for purposes of that agreement. 
+g.	At the Licensor’s expense You shall, and shall use all reasonable endeavours to procure that any necessary third party shall, promptly execute such documents and perform such acts as may reasonably be required for the purpose of giving full effect to this agreement, including assisting the Licensor in obtaining, defending and enforcing the copyright, and assisting with any other proceedings which may be brought by or against the Licensor against or by any third party relating to the rights assigned by this agreement.
+3.2	Patent License
+a.	For patent claim including, without limitation, method, process, and apparatus claims which You or Your Affiliates own, control or have the right to grant, now or in the future, and which is or is likely to be infringed by use of the Shared Material, You grant to the Licensor a perpetual, worldwide, non-exclusive, transferable, royalty-free, irrevocable patent license, with the right to sublicense these rights to multiple tiers of sublicensees, to make, have made, use, sell, offer for sale, import and otherwise transfer the Shared Material and the Shared Material in combination with other material (and portions of such combination). 
+b.	This license is granted only to the extent that the exercise of the licensed rights infringes such patent claims.
+c.	If You are or become aware of any patent or other intellectual property right which is, or is likely to be, infringed by the use of the assigned Shared Materials, You will promptly notify the Licensor.
+3.3	Outbound License
+a.	Based on the grant of rights in Clause 3.1 and 3.2, if We include Your Shared Material in any Licensed Material, We may license the Shared Material under any license, including copyleft, permissive, commercial, or proprietary licenses. 
+b.	As a condition on the exercise of this right, We agree to also license to You the Shared Material under the terms of the license or licenses which We are using for the Material on the Submission Date. 
+3.4	Moral Rights. 
+a.	If moral rights apply to the Shared Materials, to the maximum extent permitted by law, You waive and agree not to assert such moral rights against the Licensor or its transferees or  successors in interest, or any of its licensees, either direct or indirect.
+3.5	Our Rights. You acknowledge that the Licensor is not obligated to use the Shared Materials assigned to the Licensor under this Agreement as part of the Licensed Material and may decide to include any Shared Materials it considers appropriate as part of the Licensed Materials which it makes available. This does not detract from the license automatically granted to you under the Research License in accordance with Clause 3.1f of this Agreement.
+3.6	Reservation of Rights. Any rights not expressly assigned or licensed under this Clause are expressly reserved by You.
+
+4.	Warranties
+4.1	You warrant that, as at the date of this agreement:
+a.	the Shared Materials are Your original work, and have not been copied wholly or substantially from any other work or material or any other source;
+b.	You are the sole legal and beneficial owner of the rights assigned by this agreement which have not been created in the course of employment;
+c.	You have not assigned or licensed any of the rights assigned by this agreement; 
+d.	the rights assigned by this agreement are free from any security interest, option, mortgage, charge or lien;
+e.	You are unaware of any infringement, or likely infringement of, any of the rights assigned by this agreement;
+f.	so far as You are aware, the exploitation of the rights assigned by this agreement will not infringe the rights of any third party;
+g.	the Shared Materials contain nothing that is defamatory or indecent.
+4.2	You make no warranty in respect of the Shared Material’s quality, merchantability or fitness for purpose.
+
+5.	Agreement
+5.1	You confirm that You have the legal authority to enter into this Agreement. 
+
+6.	Disclaimer
+6.1	EXCEPT FOR THE EXPRESS WARRANTIES IN CLAUSE 4, THE WORK IS PROVIDED "AS IS". MORE PARTICULARLY, ALL EXPRESS OR IMPLIED WARRANTIES INCLUDING, WITHOUT LIMITATION, ANY IMPLIED WARRANTY OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT ARE EXPRESSLY DISCLAIMED BY YOU TO THE LICENSOR AND BY THE LICENSOR TO YOU. TO THE EXTENT THAT ANY SUCH WARRANTIES CANNOT BE DISCLAIMED, SUCH WARRANTY IS LIMITED IN DURATION TO THE MINIMUM PERIOD PERMITTED BY LAW. 
+
+7.	Consequential Damage Waiver
+7.1	TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, IN NO EVENT WILL YOU OR THE LICENSOR BE LIABLE FOR ANY LOSS OF PROFITS, LOSS OF ANTICIPATED SAVINGS, LOSS OF DATA, INDIRECT, SPECIAL, INCIDENTAL, CONSEQUENTIAL AND EXEMPLARY DAMAGES ARISING OUT OF THIS AGREEMENT REGARDLESS OF THE LEGAL OR EQUITABLE THEORY (CONTRACT, TORT OR OTHERWISE) UPON WHICH THE CLAIM IS BASED.
+
+8.	Miscellaneous
+8.1	This agreement and any dispute or claim (including non-contractual disputes or claims) arising out of or in connection with it or its subject matter or formation shall be governed by and construed in accordance with the law of England and Wales. The parties submit to the exclusive jurisdiction of the courts of England and Wales for any claim or matter arising under or in connection with this Agreement. 
+8.2	This Agreement sets out the entire agreement between the parties.
+8.3	If You or We assign the rights or obligations received through this Agreement to a third party, as a condition of the assignment, that third party must agree in writing to abide by all the rights and obligations in the Agreement.
+8.4	The failure of either party to require performance by the other party of any provision of this Agreement in one situation shall not affect the right of a party to require such performance at any time in the future. A waiver of performance under a provision in one situation shall not be considered a waiver of the performance of the provision in the future or a waiver of the provision in its entirety.
+8.5	If any provision or part-provision of this agreement is or becomes invalid, illegal or unenforceable, it shall be deemed deleted, but that shall not affect the validity and enforceability of the rest of this agreement.
+8.6	If any provision or part-provision of this agreement is deemed deleted under Clause 8.5, the parties shall negotiate in good faith to agree a replacement provision that, to the greatest extent possible, achieves the intended commercial result of the original provision.
+
+This document has been executed as a deed and is delivered and takes effect on the date stated below.
+
+This deed is dated [DATE]
