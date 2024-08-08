@@ -51,6 +51,7 @@ The script sizes for Groth16 are:
 | ----- | ------------------- | --------------------- | ------------------- | ----- |
 | `BLS12-381` | 2 | ~ 60 KB | ~ 480 KB | ~ 540 KB |
 | `MNT4-753` | 1 | ~ 400 KB | ~ 720 KB | ~ 1.12 MB |
+
 Note: the unlocking script is dependent on the public statements. 
 
 
