@@ -11,8 +11,8 @@ The following scripts are currently implemented:
 - [Groth16](./docs/groth16.md)
 
 The library currenly contains implementations of pairings and Groth16 for:
-- [BLS12-381](src/zkscript/groth16/bls12_381/bls12_381.py)
-- [MNT4-753](src/zkscript/groth16/mnt4_753/mnt4_753.py)
+- [BLS12-381](./zkscript/groth16/bls12_381/bls12_381.py)
+- [MNT4-753](./zkscript/groth16/mnt4_753/mnt4_753.py)
 
 ## Requirements
 Make sure you are using Python 3.11 or later versions.
