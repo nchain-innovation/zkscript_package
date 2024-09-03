@@ -10,10 +10,25 @@ def pick(position: int, nElements: int) -> Script:
         nElements = 2, position = 2 --> OP_2 OP_PICK OP_2 OP_PICK
 
     """
-    if position < 17:
-        return Script.parse_string(" ".join([str(position), "OP_PICK"] * nElements))
-    return Script.parse_string(" ".join(["0x" + encode_num(position).hex(), "OP_PICK"] * nElements))
+    out = Script()
 
+    if position == 0 and nElements == 1:
+        out += Script.parse_string('OP_DUP')
+    elif position == 1 and nElements == 1:
+        out += Script.parse_string('OP_OVER')
+    elif position == 1 and nElements == 2:
+        out += Script.parse_string('OP_2DUP')
+    elif position == 3 and nElements == 2:
+        out += Script.parse_string('OP_2OVER')
+    elif position < 17:
+        out += Script.parse_string(' '.join([str(position), 'OP_PICK'] * nElements))
+    else:
+        num_encoded = encode_num(position)
+        for i in range(nElements):
+            out.append_pushdata(num_encoded)
+            out += Script.parse_string('OP_PICK')
+    
+    return out
 
 def roll(position: int, nElements: int) -> Script:
     """Roll nElements starting from position.
@@ -24,10 +39,27 @@ def roll(position: int, nElements: int) -> Script:
         nElements = 2, position = 2 --> OP_2 OP_ROLL OP_2 OP_ROLL
 
     """
-    if position < 17:
-        return Script.parse_string(" ".join([str(position), "OP_ROLL"] * nElements))
-    return Script.parse_string(" ".join(["0x" + encode_num(position).hex(), "OP_ROLL"] * nElements))
+    out = Script()
 
+    if position == 1 and nElements == 1:
+        out += Script.parse_string('OP_SWAP')
+    elif position == 2 and nElements == 1:
+        out += Script.parse_string('OP_ROT')
+    elif position == 2 and nElements == 2:
+        out += Script.parse_string('OP_ROT OP_ROT')
+    elif position == 3 and nElements == 2:
+        out += Script.parse_string('OP_2SWAP')
+    elif position == 5 and nElements == 2:
+        out += Script.parse_string('OP_2ROT')
+    elif position < 17:
+        out += Script.parse_string(' '.join([str(position), 'OP_ROLL'] * nElements))
+    else:
+        num_encoded = encode_num(position)
+        for i in range(nElements):
+            out.append_pushdata(num_encoded)
+            out += Script.parse_string('OP_ROLL')
+
+    return out
 
 def nums_to_script(nums: list[int]) -> Script:
     """Take a list of number and return the script pushing those numbers to the stack."""
