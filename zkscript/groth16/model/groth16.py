@@ -201,15 +201,17 @@ class Groth16(PairingModel):
 		# Multiplications pub[i] * gamma_abc[i]
 		M = int(log(r,2))
 		for i in range(n_pub):
-			out += nums_to_script([pub[i]])
 
 			if pub[i] == 0:
-				out += Script.parse_string(' '.join(['OP_0']*M))
+				out += Script.parse_string('OP_1') + Script.parse_string(' '.join(['OP_0','OP_0']*M))
 			else:
 				# Binary expansion of pub[i]
 				exp_pub_i = [int(bin(pub[i])[j]) for j in range(2,len(bin(pub[i])))][::-1]
 
 				N = len(exp_pub_i)-1
+
+				# Marker marker_a_equal_zero
+				out += Script.parse_string('OP_0')
 				
 				# Load the lambdas and the markers
 				for j in range(len(lambdas_multiplications[i])-1,-1,-1):
@@ -217,7 +219,7 @@ class Groth16(PairingModel):
 						out += nums_to_script(lambdas_multiplications[i][j][1]) + Script.parse_string('OP_1')
 						out += nums_to_script(lambdas_multiplications[i][j][0]) + Script.parse_string('OP_1')
 					else:
-						out += Script.parse_string('OP_0') + nums_to_script(lambdas_multiplications[i][j][0]) + Script.parse_string('OP_1')
-				out += Script.parse_string(' '.join(['OP_0']*(M - N)))
+						out += Script.parse_string('OP_0 OP_0') + nums_to_script(lambdas_multiplications[i][j][0]) + Script.parse_string('OP_1')
+				out += Script.parse_string(' '.join(['OP_0','OP_0']*(M - N)))
 
 		return out
