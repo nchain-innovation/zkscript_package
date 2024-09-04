@@ -39,14 +39,16 @@ class Groth16(PairingModel):
 			alpha_beta: list[int], 
 			minus_gamma: list[int], 
 			minus_delta: list[int], 
-			gamma_abc: list[list[int]], 
+			gamma_abc: list[list[int]],
+			max_multipliers: Optional[list[int]] = None, 
 			check_constant: Optional[bool] = None, 
 			clean_constant: Optional[bool] = None
 		) -> Script:
 		'''
 		Groth16 implementation.
 
-		gamma_abc is the list of points given in the Common Reference String.
+		- gamma_abc is the list of points given in the Common Reference String.
+		- max_multipliers[i] is the max value of the i-th public statement
 
 		The verification equation is:
 		
@@ -98,8 +100,13 @@ class Groth16(PairingModel):
 			else:
 				out += nums_to_script(gamma_abc[i])
 			if i > 0:
+				if max_multipliers is None:
+					max_multiplier = self.r
+				else:
+					max_multiplier = max_multipliers[i-1]
+
 				out += ec_fq_unrolled.unrolled_multiplication(
-					max_multiplier=self.r,
+					max_multiplier=max_multiplier,
 					modulo_threshold=modulo_threshold,
 					check_constant=False,
 					clean_constant=False
@@ -151,6 +158,7 @@ class Groth16(PairingModel):
 			inverse_miller_loop: list[int],
 			lamdbas_partial_sums: list[int],
 			lambdas_multiplications: list[int],
+			max_multipliers: Optional[list[int]] = None,
 			load_q = True
 		) -> Script:
 		r'''
@@ -163,6 +171,7 @@ class Groth16(PairingModel):
 			- inverse_miller_loop: inverse of miller_loop(A,B) * miller_loop(C,-gamma) * miller_loop(sum_gamma_abc,-delta), where gamma_abc is taken from the vk
 			- lamdbas_partial_sums: list of gradients, the element at position n_pub - i - 1 is the list of gradients to compute a_(i+1) * gamma_abc[i] and \sum_(j=0)^(i) a_j * gamma_abc[j], 0 <= i <= n_pub - 1
 			- lambdas_multiplications: list of gradients, the element at position i is the list of gradients to compute pub[i] * gamma_abc[i], 0 <= i <= n_pub - 1
+			- max_multipliers[i]: upper bound for public statement pub[i]
 		'''
 		q = self.pairing_model.MODULUS
 		r = self.r
@@ -199,8 +208,11 @@ class Groth16(PairingModel):
 			out += nums_to_script(lamdbas_partial_sums[i])
 
 		# Multiplications pub[i] * gamma_abc[i]
-		M = int(log(r,2))
 		for i in range(n_pub):
+			if max_multipliers is None:
+				M = int(log(r,2))
+			else:
+				M = int(log(max_multipliers[i],2))
 
 			if pub[i] == 0:
 				out += Script.parse_string('OP_1') + Script.parse_string(' '.join(['OP_0','OP_0']*M))
