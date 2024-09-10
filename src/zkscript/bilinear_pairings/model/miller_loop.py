@@ -3,8 +3,8 @@ from math import ceil, log, log2
 
 from tx_engine import Script
 
-from src.zkscript.util.utility_scripts import nums_to_script, pick, roll
 from src.zkscript.util.utility_functions import optimise_script
+from src.zkscript.util.utility_scripts import nums_to_script, pick, roll
 
 
 class MillerLoop:

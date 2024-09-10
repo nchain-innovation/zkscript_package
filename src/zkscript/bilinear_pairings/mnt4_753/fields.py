@@ -7,7 +7,7 @@ from src.zkscript.bilinear_pairings.mnt4_753.parameters import GAMMAS, NON_RESID
 from src.zkscript.fields.fq2 import Fq2 as Fq2ScriptModel
 from src.zkscript.fields.fq2 import fq2_for_towering
 from src.zkscript.fields.fq4 import Fq4 as Fq4ScriptModel
-from zkscript.util.utility_scripts import nums_to_script
+from src.zkscript.util.utility_scripts import nums_to_script
 
 # Fq2 class
 Fq2Script = fq2_for_towering(Fq2ScriptModel.mul_by_u)
