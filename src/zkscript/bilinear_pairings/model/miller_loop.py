@@ -4,6 +4,7 @@ from math import ceil, log, log2
 from tx_engine import Script
 
 from src.zkscript.util.utility_scripts import nums_to_script, pick, roll
+from src.zkscript.util.utility_functions import optimise_script
 
 
 class MillerLoop:
@@ -424,7 +425,7 @@ class MillerLoop:
         )
         out += Script.parse_string(" ".join(["OP_DROP"] * (2 * N_POINTS_TWIST + N_POINTS_CURVE)))
 
-        return out
+        return optimise_script(out)
 
     def miller_loop_input_data(
         self, P: list[int], Q: list[int], lambdas_Q_exp_miller_loop: list[list[list[int]]]

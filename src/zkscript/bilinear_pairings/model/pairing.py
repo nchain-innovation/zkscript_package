@@ -2,6 +2,7 @@
 from tx_engine import Script
 
 from src.zkscript.util.utility_scripts import nums_to_script, pick, roll
+from src.zkscript.util.utility_functions import optimise_script
 
 
 class Pairing:
@@ -97,7 +98,7 @@ class Pairing:
             out += Script.parse_string("OP_DEPTH OP_1SUB OP_ROLL OP_DROP")
         out += Script.parse_string("OP_ENDIF")
 
-        return out
+        return optimise_script(out)
 
     def triple_pairing(
         self, modulo_threshold: int, check_constant: bool | None = None, clean_constant: bool | None = None
@@ -142,7 +143,7 @@ class Pairing:
             take_modulo=True, modulo_threshold=modulo_threshold, check_constant=False, clean_constant=clean_constant
         )
 
-        return out
+        return optimise_script(out)
 
     def single_pairing_input(
         self,

@@ -27,7 +27,7 @@ def pick(position: int, nElements: int) -> Script:
         for i in range(nElements):
             out.append_pushdata(num_encoded)
             out += Script.parse_string('OP_PICK')
-    
+
     return out
 
 def roll(position: int, nElements: int) -> Script:

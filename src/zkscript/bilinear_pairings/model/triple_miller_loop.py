@@ -5,6 +5,7 @@ from math import ceil, log, log2
 from tx_engine import Script
 
 from src.zkscript.util.utility_scripts import nums_to_script, pick, roll
+from src.zkscript.util.utility_functions import optimise_script
 
 
 class TripleMillerLoop:
@@ -1285,7 +1286,7 @@ class TripleMillerLoop:
         out += Script.parse_string(" ".join(["OP_DROP"] * (9 * N_POINTS_TWIST + 3 * N_POINTS_CURVE)))
         # ----------------------------------------------
 
-        return out
+        return optimise_script(out)
 
     def triple_miller_loop_input(
         self,
