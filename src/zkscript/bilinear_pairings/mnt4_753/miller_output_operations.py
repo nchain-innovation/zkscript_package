@@ -263,8 +263,8 @@ class MillerOutputOperations(Fq4ScriptModel):
             out = Script()
 
         # The stack at the beginning is: a1 b1 a2 b2 with:
-        # 	- a1,b1,a2 in Fq2
-        # 	- b2 in Fq
+        # 	- a1,a2,b2 in Fq2
+        # 	- b1 in Fq
 
         # Computation of second component --------------------------------------------------------
 
