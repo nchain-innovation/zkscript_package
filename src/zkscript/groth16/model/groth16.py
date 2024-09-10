@@ -9,6 +9,7 @@ from src.zkscript.bilinear_pairings.model.model_definition import PairingModel
 # EC arithmetic
 from src.zkscript.elliptic_curves.ec_operations_fq import EllipticCurveFq
 from src.zkscript.elliptic_curves.ec_operations_fq_unrolled import EllipticCurveFqUnrolled
+from src.zkscript.util.utility_functions import optimise_script
 from src.zkscript.util.utility_scripts import nums_to_script, roll
 
 
@@ -28,12 +29,14 @@ class Groth16(PairingModel):
         minus_gamma: list[int],
         minus_delta: list[int],
         gamma_abc: list[list[int]],
+        max_multipliers: list[int] | None = None,
         check_constant: bool | None = None,
         clean_constant: bool | None = None,
     ) -> Script:
         """Groth16 implementation.
 
-        gamma_abc is the list of points given in the Common Reference String.
+        - gamma_abc is the list of points given in the Common Reference String.
+        - max_multipliers[i] is the max value of the i-th public statement
 
         The verification equation is:
 
@@ -92,20 +95,24 @@ class Groth16(PairingModel):
         for i in range(n_pub, -1, -1):
             # After this, the top of the stack is: a_(i-1) lambdas[a_(i-1),gamma_abc[i-1]],
             # altstack = [..., a_i * gamma_abc[i]]
-            if all([el == None for el in gamma_abc[i]]):
+            if not any(gamma_abc[i]):
                 out += Script.parse_string(" ".join(["0x00"] * N_POINTS_CURVE))
             else:
                 out += nums_to_script(gamma_abc[i])
             if i > 0:
+                max_multiplier = self.r if max_multipliers is None else max_multipliers[i - 1]
                 out += ec_fq_unrolled.unrolled_multiplication(
-                    max_multiplier=self.r, modulo_threshold=modulo_threshold, check_constant=False, clean_constant=False
+                    max_multiplier=max_multiplier,
+                    modulo_threshold=modulo_threshold,
+                    check_constant=False,
+                    clean_constant=False,
                 )
                 out += Script.parse_string("OP_2SWAP OP_2DROP")  # Drop gamma_abc[i]
                 out += Script.parse_string(" ".join(["OP_TOALTSTACK"] * N_POINTS_CURVE))
 
         # After this, the stack is: q .. lambdas_pairing inverse_miller_loop_triple_pairing A B C
         # sum_(i=0)^l a_i * gamma_abc[i]
-        for i in range(n_pub):
+        for _i in range(n_pub):
             out += Script.parse_string(" ".join(["OP_FROMALTSTACK"] * N_POINTS_CURVE))
             out += ec_fq.point_addition_with_unknown_points(
                 take_modulo=True, check_constant=False, clean_constant=False
@@ -132,7 +139,7 @@ class Groth16(PairingModel):
             else:
                 out += Script.parse_string("OP_EQUAL")
 
-        return out
+        return optimise_script(out)
 
     def groth16_verifier_unlock(
         self,
@@ -146,6 +153,7 @@ class Groth16(PairingModel):
         inverse_miller_loop: list[int],
         lamdbas_partial_sums: list[int],
         lambdas_multiplications: list[int],
+        max_multipliers: list[int] | None = None,
         load_q=True,
     ) -> Script:
         r"""Generate unlocking script for groth16_verifier.
@@ -162,6 +170,7 @@ class Groth16(PairingModel):
         compute a_(i+1) * gamma_abc[i] and \sum_(j=0)^(i) a_j * gamma_abc[j], 0 <= i <= n_pub - 1
         - lambdas_multiplications: list of gradients, the element at position i is the list of gradients to compute
         pub[i] * gamma_abc[i], 0 <= i <= n_pub - 1
+        - max_multipliers[i]: upper bound for public statement pub[i]
         """
         q = self.pairing_model.MODULUS
         r = self.r
@@ -194,17 +203,19 @@ class Groth16(PairingModel):
             out += nums_to_script(lamdbas_partial_sums[i])
 
         # Multiplications pub[i] * gamma_abc[i]
-        M = int(log2(r))
         for i in range(n_pub):
-            out += nums_to_script([pub[i]])
+            M = int(log2(r)) if max_multipliers is None else int(log2(max_multipliers[i]))
 
             if pub[i] == 0:
-                out += Script.parse_string(" ".join(["OP_0"] * M))
+                out += Script.parse_string("OP_1") + Script.parse_string(" ".join(["OP_0", "OP_0"] * M))
             else:
                 # Binary expansion of pub[i]
                 exp_pub_i = [int(bin(pub[i])[j]) for j in range(2, len(bin(pub[i])))][::-1]
 
                 N = len(exp_pub_i) - 1
+
+                # Marker marker_a_equal_zero
+                out += Script.parse_string("OP_0")
 
                 # Load the lambdas and the markers
                 for j in range(len(lambdas_multiplications[i]) - 1, -1, -1):
@@ -213,10 +224,10 @@ class Groth16(PairingModel):
                         out += nums_to_script(lambdas_multiplications[i][j][0]) + Script.parse_string("OP_1")
                     else:
                         out += (
-                            Script.parse_string("OP_0")
+                            Script.parse_string("OP_0 OP_0")
                             + nums_to_script(lambdas_multiplications[i][j][0])
                             + Script.parse_string("OP_1")
                         )
-                out += Script.parse_string(" ".join(["OP_0"] * (M - N)))
+                out += Script.parse_string(" ".join(["OP_0 OP_0"] * (M - N)))
 
         return out
