@@ -70,7 +70,7 @@ The Bitcoin Script Library contains two instantiations of PairingModel. One for 
 
 ```python
 # Import the PairingModel instantiation for BLS12-381
-from lib.bilinear_pairings.bls12_381.bls12_381 import bls12_381
+from src.zkscript.bilinear_pairings.bls12_381.bls12_381 import bls12_381
 
 # The following is the script that, taken two points P, Q and some additional data, compute the pairing e(P,Q)
 bls12_381_pairing = bls12_381.pairing(

@@ -1,0 +1,152 @@
+[build-system]
+requires = ["setuptools >= 61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "zkscript"
+version = "0.0.1"
+dependencies = [
+    "tx_engine >= 0.5.4",
+    "requests >= 2.32.3",
+    "python-bitcoinrpc >= 1.0",
+    "elliptic_curves_package @ git+https://github.com/nchain-innovation/elliptic_curves_package.git@v0.1.0#egg=elliptic_curves",
+]
+
+[pytest]
+testpaths = ["tests"]
+
+[tool.setuptools.packages.find]
+include = ["src/zkscript"]
+exclude = ["tests"]
+
+[tool.ruff]
+include = ["src/**/*.py", "tests/**/*.py"]
+line-length = 120
+indent-width = 4
+
+[tool.ruff.lint]
+select = [
+    "F",  # Pyflakes
+    "E",  # pycodestyle (Error)
+    "W",  # pycodestyle (Warning)
+    "I",  # isort (for imports)
+    "C90",  # mccabe (for names too complex)
+    "N",  # pep8-naming
+    "UP",  # pyupgrade
+    "YTT",  # flake8-2020
+    "ASYNC",  # async
+    "S",  # bandit
+    "B",  # flake8-bugbear
+    "A",  # flake8-builtins
+    "C4",  # flake8-comprehensions
+    "T10",  # flake8-debugger
+    "EM",  # flake8-errmsg
+    "ICN",  # flake8-import-conventions
+    "LOG",  # flake8-logging
+    "G",  # flake8-logging-format
+    "INP",  # flake8-no-pep420
+    "PIE",  # flake8-pie
+    "T20",  # flake8-print
+    "PYI",  # flake8-pyi
+    "PT",  # flake8-pytest-style
+    "Q",  # flake8-quotes
+    "RSE",  # flake8-raise
+    "RET",  # flake8-return
+    "SLF",  # flake8-self
+    "SLOT",  # flake8-slots
+    "SIM",  # flake8-simplify
+    "TID",  # flake8-tidy-imports
+    "TCH",  # flake8-type-checking
+    "INT",  # flake8-gettext
+    "ARG",  # flake8-unused-arguments
+    "PTH",  # flake8-use-pathlib
+    "TD", # flake8-todos
+    # TODO: re-enable
+#    "ERA",  # eradicate (for commented out code)
+    "PL",  # Pylint
+    "FLY",  # flynt
+    "PERF",  # Perflint
+    "FURB",  # refurb
+    "RUF",  # Ruff-specific rules
+    "D",  # pydocstyle
+]
+
+ignore = [
+    "S101",  # use of assert
+    "N803",  # argument name should be lowercase
+    "N806",  # variable name in function should be lowercase
+    # TODO: re-enable once documentation is well done
+    "D100",
+    # TODO: re-enable once documentation is well done
+    "D101",
+    # TODO: re-enable once documentation is well done
+    "D102",
+    # TODO: re-enable once documentation is well done
+    "D103",
+    "D107",  # missing docstring in __init__
+    "D203",  # 1 blank line required before class docstring. This conflicts with D211.
+    "D213",  # Multi-line docstring summary should start at the second line
+    "D406",  # Section name should end with a newline ("{name}")
+    "D407",  # Missing dashed underline after section ("{name}")
+    # Lint rules incompatible with Ruff formatter
+    "W191",
+    "E111",
+    "E114",
+    "E117",
+    "D202",
+    "D300",
+    "Q000",
+    "Q001",
+    "Q002",
+    "Q003",
+    "COM812",
+    "COM819",
+    "ISC001",
+    "ISC002",
+]
+
+# Allow fix for all enabled rules (when `--fix`) is provided.
+fixable = ["ALL"]
+unfixable = []
+
+# Allow unused variables when underscore-prefixed.
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = [
+    "S101", # use of assert
+    "D", # pydocstyle
+    "PLR2004", # magic value used in comparison
+    "EM", # error message
+    "INP", # flake8-no-pep420,
+    "PLR6301", # no self use
+    "RUF012", # Checks for mutable default values in class attributes.
+    "PERF401", # manual-list-comprehension
+]
+
+[tool.ruff.format]
+# Like Black, use double quotes for strings.
+quote-style = "double"
+
+# Like Black, indent with spaces, rather than tabs.
+indent-style = "space"
+
+# Like Black, respect magic trailing commas.
+skip-magic-trailing-comma = false
+
+# Like Black, automatically detect the appropriate line ending.
+line-ending = "auto"
+
+# Enable auto-formatting of code examples in docstrings. Markdown,
+# reStructuredText code/literal blocks and doctests are all supported.
+#
+# This is currently disabled by default, but it is planned for this
+# to be opt-out in the future.
+docstring-code-format = false
+
+# Set the line length limit used when formatting code snippets in
+# docstrings.
+#
+# This only has an effect when the `docstring-code-format` setting is
+# enabled.
+docstring-code-line-length = "dynamic"

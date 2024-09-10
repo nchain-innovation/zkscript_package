@@ -1,4 +1,5 @@
-tx_engine>=0.5.4
--e git+https://github.com/nchain-innovation/elliptic_curves_package.git@v0.1.0#egg=elliptic_curves
+tx_engine>=0.6.4
+-e git+https://github.com/nchain-innovation/elliptic_curves_package.git@v0.1.1#egg=elliptic_curves
 requests>=2.32.3
 python-bitcoinrpc>=1.0
+pytest>=8.3.2

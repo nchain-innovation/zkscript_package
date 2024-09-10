@@ -21,8 +21,8 @@ The zk Script Library contains the implementation of arithmetic for elliptic cur
 # For testing
 from tx_engine import Script, Context
 # Let's set up secp256k1
-from zkscript.elliptic_curves.ec_operations_fq import EllipticCurveFq
-from zkscript.util.utility_scripts import nums_to_script
+from src.zkscript.elliptic_curves.ec_operations_fq import EllipticCurveFq
+from src.zkscript.util.utility_scripts import nums_to_script
 
 secp256k1_MODULUS = 115792089237316195423570985008687907853269984665640564039457584007908834671663
 # Script class for operations on secp256k1
