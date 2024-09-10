@@ -1,6 +1,6 @@
 from tx_engine import Script
 
-from src.zkscript.util.utility_scripts import nums_to_script, pick, roll
+from src.zkscript.util.utility_scripts import nums_to_script, roll
 
 
 class EllipticCurveFq2:
@@ -15,12 +15,18 @@ class EllipticCurveFq2:
         self.FQ2 = fq2
 
     def point_addition(
-        self, take_modulo: bool, check_constant: bool | None = None, clean_constant: bool | None = None
+        self,
+        take_modulo: bool,
+        check_constant: bool | None,
+        clean_constant: bool | None,
+        position_lambda: int = 10,
+        position_P: int = 8,
+        position_Q: int = 4,
     ) -> Script:
         """Point addition.
 
         Input Parameters:
-            - Stack: q .. <lambda> P Q
+            - Stack: q .. <lambda> .. P .. Q ..
             - Altstack: []
         Output:
             - P + Q
@@ -32,14 +38,14 @@ class EllipticCurveFq2:
             - P != -Q --> It is very important that this assumption is satisfied, otherwise lambda = 0 will pass the
             test
             - P and Q are not the point at infinity --> This function is not able to handle such case
+            - position_lambda, position_P and position_Q denote the positions in the stack (top of stack is position 1)
+            of the first element of lambda, P, and Q respectively
         If take_modulo = True, the coordinates of P + Q are in Fq2
         """
         if check_constant:
-            out = (
-                Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
-                + nums_to_script([self.MODULUS])
-                + Script.parse_string("OP_EQUALVERIFY")
-            )
+            out = Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
+            out += nums_to_script([self.MODULUS])
+            out += Script.parse_string("OP_EQUALVERIFY")
         else:
             out = Script()
 
@@ -47,67 +53,96 @@ class EllipticCurveFq2:
         fq2 = self.FQ2
 
         # P \neq Q, then check that lambda (x_P - x_Q) = (y_P - y_Q)
-        # After this, the stack is: <lambda> x_P y_P x_Q
-        lambda_different_points = pick(position=9, nElements=2)  # Pick lambda
-        lambda_different_points += pick(position=9, nElements=2)  # Pick x_P
-        lambda_different_points += pick(position=7, nElements=2)  # Pick x_Q
+        # At the end of this part, the stack is: lambda xP xQ yP
+
+        # After this, the stack is: lambda xP lambda xP
+        STACK_ADDED_LENGTH = 0
+        lambda_different_points = roll(position=position_lambda - 1, nElements=2)  # Roll lambda
+        STACK_ADDED_LENGTH += 2
+        lambda_different_points += roll(position=position_P + STACK_ADDED_LENGTH - 1, nElements=2)  # Roll xP
+        STACK_ADDED_LENGTH += 2
+        lambda_different_points += Script.parse_string("OP_2OVER OP_2OVER")  # Duplicate lambda, xP
+        STACK_ADDED_LENGTH += 4
+        # After this, the stack is: lambda xP xQ [lambda * (xP - xQ)]
+        lambda_different_points += roll(position=position_Q + STACK_ADDED_LENGTH - 1, nElements=2)  # Roll xQ
+        STACK_ADDED_LENGTH += 2
+        lambda_different_points += Script.parse_string("OP_2SWAP OP_2OVER")  # Swap xP and xQ, duplicate xQ
+        STACK_ADDED_LENGTH += 2
         lambda_different_points += fq2.subtract(
             take_modulo=False, check_constant=False, clean_constant=False
         )  # Compute x_P - x_Q
+        STACK_ADDED_LENGTH -= 2
+        lambda_different_points += Script.parse_string("OP_2ROT")  # Bring lambda on top of the stack
         lambda_different_points += fq2.mul(
             take_modulo=False, check_constant=False, clean_constant=False
-        )  # Compute lambda (x_P - x_Q)
-        lambda_different_points += pick(position=7, nElements=2)  # Pick y_P
-        lambda_different_points += Script.parse_string("OP_2ROT")  # Roll y_Q
+        )  # Compute lambda * (x_P - x_Q)
+        STACK_ADDED_LENGTH -= 2
+        # After this, the stack is: lambda xP xQ yP
+        lambda_different_points += roll(position=position_Q + STACK_ADDED_LENGTH - 2 - 1, nElements=2)  # Roll yQ
+        STACK_ADDED_LENGTH += 0  # These elements were already in front of P
+        lambda_different_points += roll(
+            position=position_P + STACK_ADDED_LENGTH - 2 - 2 - 1, nElements=2
+        )  # Roll yP: -2 is for y coordinates, -2 is because xQ was already in front of P
+        lambda_different_points += Script.parse_string("OP_2SWAP OP_2OVER")  # Swap yQ and yP, duplicate yP
         lambda_different_points += fq2.subtract(
             take_modulo=False, check_constant=False, clean_constant=False
-        )  # Compute y_P - y_Q
-        lambda_different_points += fq2.subtract(
+        )  # Compute yQ - yP
+        lambda_different_points += Script.parse_string("OP_2ROT")  # Bring lambda * (x_P - x_Q)
+        lambda_different_points += fq2.add(
             take_modulo=True, check_constant=False, clean_constant=False, is_constant_reused=False
-        )  # Compute lambda (x_P - x_Q) - (y_P - y_Q)
-        lambda_different_points += Script.parse_string("OP_0 OP_EQUALVERIFY OP_0 OP_EQUALVERIFY")
+        )  # Compute lambda * (x_P - x_Q) + yQ- yP
+        lambda_different_points += Script.parse_string("OP_CAT OP_0 OP_EQUALVERIFY")
 
-        # Compute x_(P+Q) = lambda^2 - x_P - x_Q
-        # After this, the base stack is: <lambda> x_P y_P x_(P+Q)
-        compute_x_coordinate = pick(position=7, nElements=2)  # Pick lambda
-        compute_x_coordinate += fq2.square(
+        # Compute coordinates
+        # After this, the stack is: xP lambda x_(P+Q)
+        compute_coordinates = Script.parse_string("OP_TOALTSTACK OP_TOALTSTACK")  # Put yP on altstack
+        compute_coordinates += Script.parse_string("OP_2OVER")  # Duplicate xP
+        compute_coordinates += fq2.add(
+            take_modulo=False, check_constant=False, clean_constant=False
+        )  # Compute (xP + xQ)
+        compute_coordinates += Script.parse_string(
+            "OP_2ROT OP_2SWAP OP_2OVER"
+        )  # Roll lambda, reorder, duplicate lambda
+        compute_coordinates += fq2.square(
             take_modulo=False, check_constant=False, clean_constant=False
         )  # Compute lambda^2
-        compute_x_coordinate += Script.parse_string("OP_2SWAP")  # Roll x_Q
-        compute_x_coordinate += pick(position=7, nElements=2)  # Pick x_P
-        compute_x_coordinate += fq2.add(
-            take_modulo=False, check_constant=False, clean_constant=False
-        )  # Compute (x_P + x_Q)
-        compute_x_coordinate += fq2.subtract(
+        compute_coordinates += Script.parse_string("OP_2SWAP")
+        compute_coordinates += fq2.subtract(
             take_modulo=take_modulo, check_constant=False, clean_constant=False, is_constant_reused=False
-        )  # Compute lambda^2 - (x_P + x_Q))
+        )  # Compute lambda^2 - (xP + xQ)
 
-        # Compute y_(P+Q) = lambda (x_P - x_(P+Q)) - y_P
-        compute_y_coordinate = roll(position=7, nElements=2)  # Roll lambda
-        compute_y_coordinate += roll(position=7, nElements=2)  # Roll x_P
-        compute_y_coordinate += pick(position=5, nElements=2)  # Pick x_(P+Q)
-        compute_y_coordinate += fq2.subtract(
+        # After this, the stack is: x_(P+Q) lambda (x_P - x_(P+Q))
+        compute_coordinates += Script.parse_string("OP_2ROT OP_2OVER")
+        compute_coordinates += fq2.subtract(
             take_modulo=False, check_constant=False, clean_constant=False
-        )  # Compute (x_P - x_(P+Q))
-        compute_y_coordinate += fq2.mul(
+        )  # Compute x_P - x_(P+Q)
+        compute_coordinates += Script.parse_string("OP_2ROT")
+        compute_coordinates += fq2.mul(
             take_modulo=False, check_constant=False, clean_constant=False
         )  # Compute lambda (x_P - x_(P+Q))
-        compute_y_coordinate += Script.parse_string("OP_2ROT")  # Roll y_P
-        compute_y_coordinate += fq2.subtract(
-            take_modulo=take_modulo, check_constant=False, clean_constant=clean_constant, is_constant_reused=False
-        )  # Compute lambda (x_P - x_(P+Q)) - y_P
 
-        out += lambda_different_points + compute_x_coordinate + compute_y_coordinate
+        # After this, the stack is: x_(P+Q) y_(P+Q)
+        compute_coordinates += Script.parse_string("OP_FROMALTSTACK OP_FROMALTSTACK")
+        compute_coordinates += fq2.subtract(
+            take_modulo=take_modulo, check_constant=False, clean_constant=clean_constant, is_constant_reused=False
+        )  # y_(P+Q)
+
+        out += lambda_different_points + compute_coordinates
 
         return out
 
     def point_doubling(
-        self, take_modulo: bool, check_constant: bool | None = None, clean_constant: bool | None = None
+        self,
+        take_modulo: bool,
+        check_constant: bool | None,
+        clean_constant: bool | None,
+        position_lambda: int = 6,
+        position_P: int = 4,
     ) -> Script:
         """Point doubling.
 
         Input Parameters:
-            - Stack: q .. <lambda> P
+            - Stack: q .. <lambda> .. P ..
             - Altstack: []
         Output:
             - 2P
@@ -115,6 +150,8 @@ class EllipticCurveFq2:
             - P is a point on E(F_q^2), passed as an element in Fq2
             - lambda is the gradient of the line tangent at P, passed as an element in Fq2
             - P is not the point at infinity --> This function is not able to handle such case
+            - position_lambda, position_P denote the positions in the stack (top of stack is position 1)
+            of the first element of lambda, P
         Assumption on variables:
             - a is the a coefficient in the Short-Weierstrass equation of the curve (an element in Fq2)
         If take_modulo = True, the coordinates of 2P are in F_q
@@ -125,72 +162,82 @@ class EllipticCurveFq2:
         curve_a = self.CURVE_A
 
         if check_constant:
-            out = (
-                Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
-                + nums_to_script([self.MODULUS])
-                + Script.parse_string("OP_EQUALVERIFY")
-            )
+            out = Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
+            out += nums_to_script([self.MODULUS])
+            out += Script.parse_string("OP_EQUALVERIFY")
         else:
             out = Script()
 
-        # P = Q, then check 2 lambda y_P = 3 x_P^2
-        # After this, the base stack is: <lambda> x_P y_P
-        lambda_equal_points = Script.parse_string("OP_2DUP")  # Duplicate y_P
+        # P \neq Q, then check that 2 lambda y_P = 3 x_P^2 + a
+        # At the end of this part, the stack is: lambda yP xP
+
+        # After this, the stack is: lambda yP lambda yP
+        STACK_ADDED_LENGTH = 0
+        lambda_equal_points = roll(position=position_lambda - 1, nElements=2)  # Roll lambda
+        STACK_ADDED_LENGTH += 2
+        lambda_equal_points += roll(position=position_P + STACK_ADDED_LENGTH - 2 - 1, nElements=2)  # Roll yP
+        STACK_ADDED_LENGTH += 0  # Elements were already in front of xP
+        lambda_equal_points += Script.parse_string("OP_2OVER OP_2OVER")  # Duplicate lambda, yP
+        STACK_ADDED_LENGTH += 4
+        # After this, the stack is: lambda yP (2*lambda*yP)
+        lambda_equal_points += fq2.mul(
+            take_modulo=False, check_constant=False, clean_constant=False
+        )  # Compute lamdba * yP
+        STACK_ADDED_LENGTH -= 2
         lambda_equal_points += Script.parse_string("OP_2")
         lambda_equal_points += fq2.scalar_mul(
             take_modulo=False, check_constant=False, clean_constant=False
-        )  # Compute 2y_P
-        lambda_equal_points += pick(position=7, nElements=2)  # Pick lambda
-        lambda_equal_points += fq2.mul(
-            take_modulo=False, check_constant=False, clean_constant=False
-        )  # Compute 2 lambda y_P
-        lambda_equal_points += pick(position=5, nElements=2)  # Pick x_P
-        lambda_equal_points += fq2.square(
-            take_modulo=False, check_constant=False, clean_constant=False
-        )  # Compute x_P^2
+        )  # Compute 2 * lamdba * yP
+        # After this, the stack is: lambda yP xP
+        lambda_equal_points += roll(position=position_P + STACK_ADDED_LENGTH - 1, nElements=2)  # Roll xP
+        lambda_equal_points += Script.parse_string("OP_2SWAP OP_2OVER")
+        lambda_equal_points += fq2.square(take_modulo=False, check_constant=False, clean_constant=False)  # Compute xP^2
         lambda_equal_points += Script.parse_string("OP_3")
         lambda_equal_points += fq2.scalar_mul(
             take_modulo=False, check_constant=False, clean_constant=False
-        )  # Compute 3 x_P^2
-        if not all([el == 0 for el in curve_a]):
+        )  # Compute 3 * xP^2
+        if any(curve_a):
             lambda_equal_points += nums_to_script(curve_a)
             lambda_equal_points += fq2.add(
-                take_modulo=False, check_constant=False, clean_constant=False, is_constant_reused=False
+                take_modulo=False, check_constant=False, clean_constant=False
             )  # Compute 3 x_P^2 + a if a != 0
         lambda_equal_points += fq2.subtract(
             take_modulo=True, check_constant=False, clean_constant=False, is_constant_reused=False
-        )  # Compute 2 lambda y_P - 3 x_P^2
-        lambda_equal_points += Script.parse_string("OP_0 OP_EQUALVERIFY OP_0 OP_EQUALVERIFY")
+        )
+        lambda_equal_points += Script.parse_string("OP_CAT OP_0 OP_EQUALVERIFY")
 
-        # Compute x_(2P) = lambda^2 - 2 x_P
-        # After this, the base stack is: <lambda> x_P y_P x_(2P)
-        compute_x_coordinate = pick(position=5, nElements=2)  # Pick lambda
-        compute_x_coordinate += fq2.square(
+        # Compute coordinates
+        # After this, the stack is: yP lambda xP x_(2P)
+        compute_coordinates = Script.parse_string("OP_2ROT OP_2DUP")  # Roll lambda and duplicate it
+        compute_coordinates += fq2.square(
             take_modulo=False, check_constant=False, clean_constant=False
         )  # Compute lambda^2
-        compute_x_coordinate += pick(position=5, nElements=2)  # Pick x_P
-        compute_x_coordinate += Script.parse_string("OP_2")
-        compute_x_coordinate += fq2.scalar_mul(
+        compute_coordinates += Script.parse_string("OP_2ROT OP_2SWAP OP_2OVER")  # Roll xP and duplicate it
+        compute_coordinates += Script.parse_string("OP_2")
+        compute_coordinates += fq2.scalar_mul(
             take_modulo=False, check_constant=False, clean_constant=False
-        )  # Compute 2 x_P
-        compute_x_coordinate += fq2.subtract(
+        )  # Compute 2 * xP
+        compute_coordinates += fq2.subtract(
             take_modulo=take_modulo, check_constant=False, clean_constant=False, is_constant_reused=False
-        )  # Compute lambda^2 - (2 x_P)
+        )  # Compute lambda^2 - 2*xP
 
-        # Compute y_(2P) = lambda (x_P - x_(2P)) - y_P
-        compute_y_coordinate = roll(position=7, nElements=2)  # Roll lambda
-        compute_y_coordinate += roll(position=7, nElements=2)  # Roll x_P
-        compute_y_coordinate += pick(position=5, nElements=2)  # Pick x_(2P)
-        compute_y_coordinate += fq2.subtract(take_modulo=False, check_constant=False, clean_constant=False)
-        compute_y_coordinate += fq2.mul(
+        # After this, the stack is: yP x_(2P) lambda * (xP - x_(2P))
+        compute_coordinates += Script.parse_string("OP_2SWAP OP_2OVER")
+        compute_coordinates += fq2.subtract(
             take_modulo=False, check_constant=False, clean_constant=False
-        )  # Compute lambda (x_P - x_(2P))
-        compute_y_coordinate += roll(position=5, nElements=2)  # Roll y_P
-        compute_y_coordinate += fq2.subtract(
-            take_modulo=take_modulo, check_constant=False, clean_constant=clean_constant, is_constant_reused=False
-        )  # Compute lambda (x_P - x_(2P)) - y_P
+        )  # Compute x_P - x_(2P)
+        compute_coordinates += Script.parse_string("OP_2ROT")
+        compute_coordinates += fq2.mul(
+            take_modulo=False, check_constant=False, clean_constant=False
+        )  # Compute lambda * (xP - x_(2P))
 
-        out += lambda_equal_points + compute_x_coordinate + compute_y_coordinate
+        # After this, the stack is: x_(2P) y_(2P)
+        compute_coordinates += Script.parse_string("OP_2ROT")
+        compute_coordinates += fq2.subtract(
+            take_modulo=take_modulo, check_constant=False, clean_constant=clean_constant, is_constant_reused=False
+        )  # Compute y_(2P)
+
+        out += lambda_equal_points + compute_coordinates
 
         return out
 
