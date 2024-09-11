@@ -62,12 +62,14 @@ op_range_to_opccode = {
 
 
 def pick(position: int, n_elements: int) -> Script:
-    """Pick n_elements starting from position.
+    """Pick the elements x_{position}, .., x_{position-n_elements}.
 
-    Position is the stack position, so we star counting from 0.
+    {position} is the stack position, so we start counting from 0.
 
     Example:
         n_elements = 2, position = 2 --> OP_2 OP_PICK OP_2 OP_PICK
+        n_elements = 2, position = 8 --> OP_8 OP_PICK OP_8 OP_PICK
+        n_elements = 2, position = 1 --> OP_2DUP
 
     """
     out = Script()
@@ -86,12 +88,14 @@ def pick(position: int, n_elements: int) -> Script:
 
 
 def roll(position: int, n_elements: int) -> Script:
-    """Roll n_elements starting from position.
+    """Pick the elements x_{position}, .., x_{position-n_elements}.
 
-    Position is the stack position, so we star counting from 0.
+    Position is the stack position, so we start counting from 0.
 
     Example:
-        n_elements = 2, position = 2 --> OP_2 OP_ROLL OP_2 OP_ROLL
+        n_elements = 2, position = 2 --> OP_2 OP_PICK OP_2 OP_PICK
+        n_elements = 2, position = 8 --> OP_8 OP_PICK OP_8 OP_PICK
+        n_elements = 1, position = 1 --> OP_SWAP
 
     """
     out = Script()
