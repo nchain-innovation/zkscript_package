@@ -61,48 +61,48 @@ op_range_to_opccode = {
 }
 
 
-def pick(position: int, nElements: int) -> Script:
-    """Pick nElements starting from position.
+def pick(position: int, n_elements: int) -> Script:
+    """Pick n_elements starting from position.
 
     Position is the stack position, so we star counting from 0.
 
     Example:
-        nElements = 2, position = 2 --> OP_2 OP_PICK OP_2 OP_PICK
+        n_elements = 2, position = 2 --> OP_2 OP_PICK OP_2 OP_PICK
 
     """
     out = Script()
 
-    if (position, nElements) in patterns_to_pick:
-        out += Script(patterns_to_pick[(position, nElements)])
+    if (position, n_elements) in patterns_to_pick:
+        out += Script(patterns_to_pick[(position, n_elements)])
     elif position in op_range:
-        out += Script([op_range_to_opccode[position], OP_PICK] * nElements)
+        out += Script([op_range_to_opccode[position], OP_PICK] * n_elements)
     else:
         num_encoded = encode_num(position)
-        for _i in range(nElements):
+        for _i in range(n_elements):
             out.append_pushdata(num_encoded)
             out += Script([OP_PICK])
 
     return out
 
 
-def roll(position: int, nElements: int) -> Script:
-    """Roll nElements starting from position.
+def roll(position: int, n_elements: int) -> Script:
+    """Roll n_elements starting from position.
 
     Position is the stack position, so we star counting from 0.
 
     Example:
-        nElements = 2, position = 2 --> OP_2 OP_ROLL OP_2 OP_ROLL
+        n_elements = 2, position = 2 --> OP_2 OP_ROLL OP_2 OP_ROLL
 
     """
     out = Script()
 
-    if (position, nElements) in patterns_to_roll:
-        out += Script(patterns_to_roll[(position, nElements)])
+    if (position, n_elements) in patterns_to_roll:
+        out += Script(patterns_to_roll[(position, n_elements)])
     elif position in op_range:
-        out += Script([op_range_to_opccode[position], OP_ROLL] * nElements)
+        out += Script([op_range_to_opccode[position], OP_ROLL] * n_elements)
     else:
         num_encoded = encode_num(position)
-        for _i in range(nElements):
+        for _ in range(n_elements):
             out.append_pushdata(num_encoded)
             out += Script([OP_ROLL])
 

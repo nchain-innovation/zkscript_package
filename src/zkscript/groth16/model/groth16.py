@@ -120,8 +120,8 @@ class Groth16(PairingModel):
 
         # After this, the stack is: q .. lambdas_pairing inverse_miller_loop_triple_pairing A
         # sum_(i=0)^l a_i * gamma_abc[i] C B gamma delta
-        out += roll(position=2 * N_POINTS_CURVE - 1, nElements=N_POINTS_CURVE)  # Roll C
-        out += roll(position=2 * N_POINTS_CURVE + N_POINTS_TWIST - 1, nElements=N_POINTS_TWIST)  # Roll B
+        out += roll(position=2 * N_POINTS_CURVE - 1, n_elements=N_POINTS_CURVE)  # Roll C
+        out += roll(position=2 * N_POINTS_CURVE + N_POINTS_TWIST - 1, n_elements=N_POINTS_TWIST)  # Roll B
         out += nums_to_script(minus_gamma)
         out += nums_to_script(minus_delta)
 

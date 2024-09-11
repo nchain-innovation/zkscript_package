@@ -57,14 +57,14 @@ class EllipticCurveFq2:
 
         # After this, the stack is: lambda xP lambda xP
         STACK_ADDED_LENGTH = 0
-        lambda_different_points = roll(position=position_lambda - 1, nElements=2)  # Roll lambda
+        lambda_different_points = roll(position=position_lambda - 1, n_elements=2)  # Roll lambda
         STACK_ADDED_LENGTH += 2
-        lambda_different_points += roll(position=position_P + STACK_ADDED_LENGTH - 1, nElements=2)  # Roll xP
+        lambda_different_points += roll(position=position_P + STACK_ADDED_LENGTH - 1, n_elements=2)  # Roll xP
         STACK_ADDED_LENGTH += 2
         lambda_different_points += Script.parse_string("OP_2OVER OP_2OVER")  # Duplicate lambda, xP
         STACK_ADDED_LENGTH += 4
         # After this, the stack is: lambda xP xQ [lambda * (xP - xQ)]
-        lambda_different_points += roll(position=position_Q + STACK_ADDED_LENGTH - 1, nElements=2)  # Roll xQ
+        lambda_different_points += roll(position=position_Q + STACK_ADDED_LENGTH - 1, n_elements=2)  # Roll xQ
         STACK_ADDED_LENGTH += 2
         lambda_different_points += Script.parse_string("OP_2SWAP OP_2OVER")  # Swap xP and xQ, duplicate xQ
         STACK_ADDED_LENGTH += 2
@@ -78,10 +78,10 @@ class EllipticCurveFq2:
         )  # Compute lambda * (x_P - x_Q)
         STACK_ADDED_LENGTH -= 2
         # After this, the stack is: lambda xP xQ yP
-        lambda_different_points += roll(position=position_Q + STACK_ADDED_LENGTH - 2 - 1, nElements=2)  # Roll yQ
+        lambda_different_points += roll(position=position_Q + STACK_ADDED_LENGTH - 2 - 1, n_elements=2)  # Roll yQ
         STACK_ADDED_LENGTH += 0  # These elements were already in front of P
         lambda_different_points += roll(
-            position=position_P + STACK_ADDED_LENGTH - 2 - 2 - 1, nElements=2
+            position=position_P + STACK_ADDED_LENGTH - 2 - 2 - 1, n_elements=2
         )  # Roll yP: -2 is for y coordinates, -2 is because xQ was already in front of P
         lambda_different_points += Script.parse_string("OP_2SWAP OP_2OVER")  # Swap yQ and yP, duplicate yP
         lambda_different_points += fq2.subtract(
@@ -173,9 +173,9 @@ class EllipticCurveFq2:
 
         # After this, the stack is: lambda yP lambda yP
         STACK_ADDED_LENGTH = 0
-        lambda_equal_points = roll(position=position_lambda - 1, nElements=2)  # Roll lambda
+        lambda_equal_points = roll(position=position_lambda - 1, n_elements=2)  # Roll lambda
         STACK_ADDED_LENGTH += 2
-        lambda_equal_points += roll(position=position_P + STACK_ADDED_LENGTH - 2 - 1, nElements=2)  # Roll yP
+        lambda_equal_points += roll(position=position_P + STACK_ADDED_LENGTH - 2 - 1, n_elements=2)  # Roll yP
         STACK_ADDED_LENGTH += 0  # Elements were already in front of xP
         lambda_equal_points += Script.parse_string("OP_2OVER OP_2OVER")  # Duplicate lambda, yP
         STACK_ADDED_LENGTH += 4
@@ -189,7 +189,7 @@ class EllipticCurveFq2:
             take_modulo=False, check_constant=False, clean_constant=False
         )  # Compute 2 * lamdba * yP
         # After this, the stack is: lambda yP xP
-        lambda_equal_points += roll(position=position_P + STACK_ADDED_LENGTH - 1, nElements=2)  # Roll xP
+        lambda_equal_points += roll(position=position_P + STACK_ADDED_LENGTH - 1, n_elements=2)  # Roll xP
         lambda_equal_points += Script.parse_string("OP_2SWAP OP_2OVER")
         lambda_equal_points += fq2.square(take_modulo=False, check_constant=False, clean_constant=False)  # Compute xP^2
         lambda_equal_points += Script.parse_string("OP_3")

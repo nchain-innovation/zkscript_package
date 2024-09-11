@@ -47,15 +47,15 @@ class Pairing:
         if N_POINTS_TWIST == 4:
             out += Script.parse_string("OP_2OVER OP_2OVER")
         else:
-            out += pick(position=N_POINTS_TWIST - 1, nElements=N_POINTS_TWIST)
-        for i in range(N_POINTS_TWIST - 1):
+            out += pick(position=N_POINTS_TWIST - 1, n_elements=N_POINTS_TWIST)
+        for _ in range(N_POINTS_TWIST - 1):
             out += Script.parse_string("OP_CAT")
         out += Script.parse_string("0x" + "00" * N_POINTS_TWIST + " OP_EQUAL OP_NOT")
         out += Script.parse_string("OP_IF")
 
         # Otherwise, check if P is point at infinity, in this case, return identity
-        out += pick(position=N_POINTS_TWIST + N_POINTS_CURVE - 1, nElements=N_POINTS_CURVE)  # Pick P
-        for i in range(N_POINTS_CURVE - 1):
+        out += pick(position=N_POINTS_TWIST + N_POINTS_CURVE - 1, n_elements=N_POINTS_CURVE)  # Pick P
+        for _ in range(N_POINTS_CURVE - 1):
             out += Script.parse_string("OP_CAT")
         out += Script.parse_string("0x" + "00" * N_POINTS_CURVE + " OP_EQUAL OP_NOT")
         out += Script.parse_string("OP_IF")
@@ -67,7 +67,7 @@ class Pairing:
 
         # This is where one would perform subgroup membership checks if they were needed
         # For Groth16, they are not, so we simply drop uQ
-        out += roll(position=N_ELEMENTS_MILLER_OUTPUT + N_POINTS_TWIST - 1, nElements=N_POINTS_TWIST)
+        out += roll(position=N_ELEMENTS_MILLER_OUTPUT + N_POINTS_TWIST - 1, n_elements=N_POINTS_TWIST)
         out += Script.parse_string(" ".join(["OP_DROP"] * N_POINTS_TWIST))
 
         out += easy_exponentiation_with_inverse_check(take_modulo=True, check_constant=False, clean_constant=False)
@@ -79,7 +79,7 @@ class Pairing:
 
         # Come here if P is point at infinity
         out += Script.parse_string("OP_ELSE")
-        for i in range((N_POINTS_TWIST + N_POINTS_CURVE) // 2):
+        for _ in range((N_POINTS_TWIST + N_POINTS_CURVE) // 2):
             out += Script.parse_string("OP_2DROP")
         out += Script.parse_string("OP_1") + Script.parse_string(" ".join(["OP_0"] * (N_ELEMENTS_MILLER_OUTPUT - 1)))
         if clean_constant:
@@ -91,7 +91,7 @@ class Pairing:
         if N_POINTS_TWIST == 4:
             out += Script.parse_string("OP_2DROP OP_2DROP OP_2DROP")
         else:
-            for i in range(N_POINTS_TWIST // 2):
+            for _ in range(N_POINTS_TWIST // 2):
                 out += Script.parse_string("OP_2DROP")
         out += Script.parse_string("OP_1") + Script.parse_string(" ".join(["OP_0"] * (N_ELEMENTS_MILLER_OUTPUT - 1)))
         if clean_constant:
@@ -164,8 +164,8 @@ class Pairing:
         N_POINTS_CURVE = self.N_POINTS_CURVE
         N_POINTS_TWIST = self.N_POINTS_TWIST
 
-        is_P_infinity = all([el == None for el in P])
-        is_Q_infinity = all([el == None for el in Q])
+        is_P_infinity = not any(P)
+        is_Q_infinity = not any(P)
 
         out = nums_to_script([q]) if load_q else Script()
 

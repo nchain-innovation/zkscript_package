@@ -49,7 +49,7 @@ class EllipticCurveFq:
         lambda_different_points = Script.parse_string("OP_2OVER")  # Duplicate xP yP
         lambda_different_points += Script.parse_string("OP_ROT OP_SUB OP_TOALTSTACK")  # Compute yP - yQ
         lambda_different_points += Script.parse_string("OP_OVER OP_SUB")  # Compute xP - xQ
-        lambda_different_points += roll(position=4, nElements=1)  # Roll lambda
+        lambda_different_points += roll(position=4, n_elements=1)  # Roll lambda
         lambda_different_points += Script.parse_string("OP_TUCK OP_MUL")  # Compute lambda *(xP - xQ)
         lambda_different_points += Script.parse_string(
             "OP_FROMALTSTACK OP_SUB"
@@ -129,7 +129,7 @@ class EllipticCurveFq:
         # After this, the stack is: xP yP lambda, altstack = [2*lambda*yP - 3*xP^2]
         lambda_equal_points = Script.parse_string("OP_ROT OP_2DUP")  # Rotate lambda and duplicate lambda, yP
         lambda_equal_points += Script.parse_string("OP_2 OP_MUL OP_MUL")  # Compute 2 lambda yP
-        lambda_equal_points += pick(position=3, nElements=1)  # Pick xP
+        lambda_equal_points += pick(position=3, n_elements=1)  # Pick xP
         lambda_equal_points += Script.parse_string("OP_DUP OP_3 OP_MUL OP_MUL")  # Compute 3xP^2
         if curve_a != 0:
             lambda_equal_points += nums_to_script([curve_a]) + Script.parse_string("OP_ADD")
@@ -229,7 +229,7 @@ class EllipticCurveFq:
 
         # Check if P = -Q, in that case terminate and return (0x00,0x00)
         out += Script.parse_string("OP_DUP")  # Duplicate yQ
-        out += pick(position=3, nElements=1)  # Pick yP
+        out += pick(position=3, n_elements=1)  # Pick yP
         out += Script.parse_string("OP_ADD")
         out += Script.parse_string("OP_DEPTH OP_1SUB OP_PICK OP_MOD OP_0 OP_NUMNOTEQUAL")
         out += Script.parse_string("OP_IF")
@@ -250,9 +250,9 @@ class EllipticCurveFq:
         out += Script.parse_string("OP_IF")
         out += Script.parse_string("OP_DUP")  # Duplicate y_P
         out += Script.parse_string("OP_2 OP_MUL")  # Compute 2y_P
-        out += pick(position=3, nElements=1)  # Pick lambda
+        out += pick(position=3, n_elements=1)  # Pick lambda
         out += Script.parse_string("OP_MUL")  # Compute 2 lambda y_P
-        out += pick(position=2, nElements=1)  # Pick x_P
+        out += pick(position=2, n_elements=1)  # Pick x_P
         out += Script.parse_string("OP_DUP")  # Duplicate x_P
         out += Script.parse_string("OP_MUL")  # Compute x_P^2
         out += Script.parse_string("OP_3 OP_MUL")  # Compute 3 x_P^2
@@ -262,7 +262,7 @@ class EllipticCurveFq:
 
         # If P != Q:
         out += Script.parse_string("OP_ELSE")
-        out += pick(position=4, nElements=2)  # Pick lambda and x_P
+        out += pick(position=4, n_elements=2)  # Pick lambda and x_P
         out += Script.parse_string("OP_MUL OP_ADD")  # compute lambda x_P + y_Q
         out += Script.parse_string("OP_OVER OP_5 OP_PICK OP_MUL OP_3 OP_PICK OP_ADD")  # compute lambda x_Q + y_P
         out += Script.parse_string("OP_SUB")

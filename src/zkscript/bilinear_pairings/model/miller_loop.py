@@ -92,15 +92,15 @@ class MillerLoop:
         if N_POINTS_TWIST == 4:
             set_T += Script.parse_string("OP_2OVER OP_2OVER")
         else:
-            set_T += pick(position=N_POINTS_TWIST - 1, nElements=N_POINTS_TWIST)
+            set_T += pick(position=N_POINTS_TWIST - 1, n_elements=N_POINTS_TWIST)
         set_T += point_negation_twisted_curve(take_modulo=False, check_constant=False, clean_constant=False)
         if exp_miller_loop[-1] == 1:
-            set_T += pick(position=2 * N_POINTS_TWIST - 1, nElements=N_POINTS_TWIST)  # Pick Q
+            set_T += pick(position=2 * N_POINTS_TWIST - 1, n_elements=N_POINTS_TWIST)  # Pick Q
         elif exp_miller_loop[-1] == -1:
             if N_POINTS_TWIST == 4:
                 set_T += Script.parse_string("OP_2OVER OP_2OVER")  # Pick -Q
             else:
-                set_T += pick(position=N_POINTS_TWIST - 1, nElements=N_POINTS_TWIST)  # Pick -Q
+                set_T += pick(position=N_POINTS_TWIST - 1, n_elements=N_POINTS_TWIST)  # Pick -Q
         else:
             raise ValueError("Last element of exp_miller_loop must be non-zero.")
         out += set_T
@@ -156,10 +156,10 @@ class MillerLoop:
                     STACK_LENGTH_ADDED = 0
                     out += pick(
                         position=(3 * N_POINTS_TWIST + N_POINTS_CURVE + EXTENSION_DEGREE) + STACK_LENGTH_ADDED - 1,
-                        nElements=EXTENSION_DEGREE,
+                        n_elements=EXTENSION_DEGREE,
                     )  # Pick lambda_2T
                     STACK_LENGTH_ADDED += EXTENSION_DEGREE
-                    out += pick(position=N_POINTS_TWIST + STACK_LENGTH_ADDED - 1, nElements=N_POINTS_TWIST)  # Pick T
+                    out += pick(position=N_POINTS_TWIST + STACK_LENGTH_ADDED - 1, n_elements=N_POINTS_TWIST)  # Pick T
                     STACK_LENGTH_ADDED += N_POINTS_TWIST
                     out += point_doubling_twisted_curve(
                         take_modulo=take_modulo_F, check_constant=False, clean_constant=False
@@ -168,14 +168,14 @@ class MillerLoop:
                     # After this, the stack is: P Q -Q 2T lambda_2T T P
                     out += roll(
                         position=(3 * N_POINTS_TWIST + N_POINTS_CURVE + EXTENSION_DEGREE) + STACK_LENGTH_ADDED - 1,
-                        nElements=EXTENSION_DEGREE,
+                        n_elements=EXTENSION_DEGREE,
                     )  # Roll lambda_2T
                     STACK_LENGTH_ADDED += EXTENSION_DEGREE
-                    out += roll(position=N_POINTS_TWIST + STACK_LENGTH_ADDED - 1, nElements=N_POINTS_TWIST)  # Roll T
+                    out += roll(position=N_POINTS_TWIST + STACK_LENGTH_ADDED - 1, n_elements=N_POINTS_TWIST)  # Roll T
                     STACK_LENGTH_ADDED += 0
                     out += pick(
                         position=(3 * N_POINTS_TWIST + N_POINTS_CURVE) + STACK_LENGTH_ADDED - 1,
-                        nElements=N_POINTS_CURVE,
+                        n_elements=N_POINTS_CURVE,
                     )  # Pick P
                     STACK_LENGTH_ADDED += N_POINTS_CURVE
                     # After this, the stack is P Q -Q 2T ev_(l_(T,T))(P)
@@ -185,7 +185,7 @@ class MillerLoop:
                     STACK_LENGTH_ADDED = N_ELEMENTS_EVALUATION_OUTPUT
                     # After this, the stack is: P Q -Q 2T ev_(l_(T,T))(P)^2
                     out += pick(
-                        position=N_ELEMENTS_EVALUATION_OUTPUT - 1, nElements=N_ELEMENTS_EVALUATION_OUTPUT
+                        position=N_ELEMENTS_EVALUATION_OUTPUT - 1, n_elements=N_ELEMENTS_EVALUATION_OUTPUT
                     )  # Duplicate ev_(l_(T,T))(P)
                     out += line_eval_times_eval(
                         take_modulo=take_modulo_F, check_constant=False, clean_constant=False, is_constant_reused=False
@@ -197,10 +197,10 @@ class MillerLoop:
                     STACK_LENGTH_ADDED = 0
                     out += pick(
                         position=(3 * N_POINTS_TWIST + N_POINTS_CURVE + EXTENSION_DEGREE) + STACK_LENGTH_ADDED - 1,
-                        nElements=EXTENSION_DEGREE,
+                        n_elements=EXTENSION_DEGREE,
                     )  # Pick lambda_2T
                     STACK_LENGTH_ADDED += EXTENSION_DEGREE
-                    out += pick(position=N_POINTS_TWIST + STACK_LENGTH_ADDED - 1, nElements=N_POINTS_TWIST)  # Pick T
+                    out += pick(position=N_POINTS_TWIST + STACK_LENGTH_ADDED - 1, n_elements=N_POINTS_TWIST)  # Pick T
                     STACK_LENGTH_ADDED += N_POINTS_TWIST
                     out += point_doubling_twisted_curve(
                         take_modulo=take_modulo_F, check_constant=False, clean_constant=False
@@ -209,14 +209,14 @@ class MillerLoop:
                     # After this, the stack is: lambda_(2T pm Q) P Q -Q 2T lambda_2T T P
                     out += roll(
                         position=(3 * N_POINTS_TWIST + N_POINTS_CURVE + EXTENSION_DEGREE) + STACK_LENGTH_ADDED - 1,
-                        nElements=EXTENSION_DEGREE,
+                        n_elements=EXTENSION_DEGREE,
                     )  # Roll lambda_2T
                     STACK_LENGTH_ADDED += EXTENSION_DEGREE
-                    out += roll(position=N_POINTS_TWIST + STACK_LENGTH_ADDED - 1, nElements=N_POINTS_TWIST)  # Roll T
+                    out += roll(position=N_POINTS_TWIST + STACK_LENGTH_ADDED - 1, n_elements=N_POINTS_TWIST)  # Roll T
                     STACK_LENGTH_ADDED += 0
                     out += pick(
                         position=(3 * N_POINTS_TWIST + N_POINTS_CURVE) + STACK_LENGTH_ADDED - 1,
-                        nElements=N_POINTS_CURVE,
+                        n_elements=N_POINTS_CURVE,
                     )  # Pick P
                     STACK_LENGTH_ADDED = N_POINTS_TWIST + EXTENSION_DEGREE + N_POINTS_CURVE
                     # After this, the stack is lambda_(2T pm Q) P Q -Q 2T ev_(l_(T,T))(P)
@@ -230,18 +230,18 @@ class MillerLoop:
                     # After this, the stack is: lambda_(2T pm Q) P Q -Q 2T (2T \pm Q), altstack = [ev_(l_(T,T))(P)]
                     out += pick(
                         position=(3 * N_POINTS_TWIST + N_POINTS_CURVE + EXTENSION_DEGREE) + STACK_LENGTH_ADDED - 1,
-                        nElements=EXTENSION_DEGREE,
+                        n_elements=EXTENSION_DEGREE,
                     )  # Pick lambda_(2T pm Q)
                     STACK_LENGTH_ADDED += EXTENSION_DEGREE
-                    out += pick(position=N_POINTS_TWIST + STACK_LENGTH_ADDED - 1, nElements=N_POINTS_TWIST)  # Pick 2T
+                    out += pick(position=N_POINTS_TWIST + STACK_LENGTH_ADDED - 1, n_elements=N_POINTS_TWIST)  # Pick 2T
                     STACK_LENGTH_ADDED += N_POINTS_TWIST
                     if exp_miller_loop[i] == 1:
                         out += pick(
-                            position=3 * N_POINTS_TWIST + STACK_LENGTH_ADDED - 1, nElements=N_POINTS_TWIST
+                            position=3 * N_POINTS_TWIST + STACK_LENGTH_ADDED - 1, n_elements=N_POINTS_TWIST
                         )  # Pick Q
                         STACK_LENGTH_ADDED += N_POINTS_TWIST
                     else:
-                        out += pick(2 * N_POINTS_TWIST + STACK_LENGTH_ADDED - 1, nElements=N_POINTS_TWIST)  # Pick -Q
+                        out += pick(2 * N_POINTS_TWIST + STACK_LENGTH_ADDED - 1, n_elements=N_POINTS_TWIST)  # Pick -Q
                         STACK_LENGTH_ADDED += N_POINTS_TWIST
                     out += point_addition_twisted_curve(
                         take_modulo=take_modulo_T, check_constant=False, clean_constant=False
@@ -250,13 +250,13 @@ class MillerLoop:
                     # After this, the stack is: P Q -Q (2T \pm Q) ev_(l_(2T,\pm Q))(P), altstack = [ev_(l_(T,T))(P)]
                     out += roll(
                         position=3 * N_POINTS_TWIST + N_POINTS_CURVE + EXTENSION_DEGREE + STACK_LENGTH_ADDED - 1,
-                        nElements=EXTENSION_DEGREE,
+                        n_elements=EXTENSION_DEGREE,
                     )  # Roll lambda_(2T pm Q)
                     STACK_LENGTH_ADDED += EXTENSION_DEGREE
-                    out += roll(position=N_POINTS_TWIST + STACK_LENGTH_ADDED - 1, nElements=N_POINTS_TWIST)  # Roll 2T
+                    out += roll(position=N_POINTS_TWIST + STACK_LENGTH_ADDED - 1, n_elements=N_POINTS_TWIST)  # Roll 2T
                     STACK_LENGTH_ADDED += 0
                     out += pick(
-                        position=3 * N_POINTS_TWIST + N_POINTS_CURVE + STACK_LENGTH_ADDED - 1, nElements=N_POINTS_CURVE
+                        position=3 * N_POINTS_TWIST + N_POINTS_CURVE + STACK_LENGTH_ADDED - 1, n_elements=N_POINTS_CURVE
                     )  # Pick P
                     out += line_eval(
                         take_modulo=True, check_constant=False, clean_constant=False, is_constant_reused=False
@@ -270,7 +270,7 @@ class MillerLoop:
                     # Duplicate ev_(l_(2T,\pm Q))(P) * ev_(l_(T,T))(P)
                     out += pick(
                         position=N_ELEMENTS_EVALUATION_TIMES_EVALUATION - 1,
-                        nElements=N_ELEMENTS_EVALUATION_TIMES_EVALUATION,
+                        n_elements=N_ELEMENTS_EVALUATION_TIMES_EVALUATION,
                     )
                     out += line_eval_times_eval_times_eval_times_eval(
                         take_modulo=take_modulo_F, check_constant=False, clean_constant=False, is_constant_reused=False
@@ -287,7 +287,7 @@ class MillerLoop:
                     STACK_LENGTH_ADDED = 0
                     out += pick(
                         position=N_ELEMENTS_MILLER_OUTPUT + N_POINTS_TWIST + STACK_LENGTH_ADDED - 1,
-                        nElements=N_POINTS_TWIST,
+                        n_elements=N_POINTS_TWIST,
                     )  # Pick T
                     STACK_LENGTH_ADDED += N_POINTS_TWIST
                     out += pick(
@@ -297,20 +297,20 @@ class MillerLoop:
                         + EXTENSION_DEGREE
                         + STACK_LENGTH_ADDED
                         - 1,
-                        nElements=EXTENSION_DEGREE,
+                        n_elements=EXTENSION_DEGREE,
                     )  # Pick lambda_2T
                     STACK_LENGTH_ADDED += EXTENSION_DEGREE
                     if EXTENSION_DEGREE == 2 and N_POINTS_TWIST == 4:
                         out += Script.parse_string("OP_2ROT OP_2ROT")  # Roll T
                     else:
-                        out += roll(position=N_POINTS_TWIST + EXTENSION_DEGREE - 1, nElements=N_POINTS_TWIST)  # Roll T
+                        out += roll(position=N_POINTS_TWIST + EXTENSION_DEGREE - 1, n_elements=N_POINTS_TWIST)  # Roll T
                     out += pick(
                         position=N_ELEMENTS_MILLER_OUTPUT
                         + 3 * N_POINTS_TWIST
                         + N_POINTS_CURVE
                         + STACK_LENGTH_ADDED
                         - 1,
-                        nElements=EXTENSION_DEGREE,
+                        n_elements=EXTENSION_DEGREE,
                     )  # Pick P
                     out += line_eval(
                         take_modulo=True, check_constant=False, clean_constant=False, is_constant_reused=False
@@ -325,13 +325,13 @@ class MillerLoop:
                     # After this, the stack is: P Q -Q 2T, altstack = [f_i^2 * ev_(l_(T,T))(P)]
                     out += roll(
                         position=3 * N_POINTS_TWIST + N_POINTS_CURVE + EXTENSION_DEGREE + STACK_LENGTH_ADDED - 1,
-                        nElements=EXTENSION_DEGREE,
+                        n_elements=EXTENSION_DEGREE,
                     )  # Roll lambda_2T
                     STACK_LENGTH_ADDED += EXTENSION_DEGREE
                     if EXTENSION_DEGREE == 2 and N_POINTS_TWIST == 4:
                         out += Script.parse_string("OP_2ROT OP_2ROT")  # Roll T
                     else:
-                        out += roll(position=N_POINTS_TWIST + EXTENSION_DEGREE - 1, nElements=N_POINTS_TWIST)  # Roll T
+                        out += roll(position=N_POINTS_TWIST + EXTENSION_DEGREE - 1, n_elements=N_POINTS_TWIST)  # Roll T
                     out += point_doubling_twisted_curve(
                         take_modulo=take_modulo_T, check_constant=False, clean_constant=clean_final
                     )
@@ -346,10 +346,10 @@ class MillerLoop:
                     # After this, the stack is: lambda_(2T \pm Q) lambda_(2T) P Q -Q T 2T, altstack = [f_i^2]
                     out += pick(
                         position=3 * N_POINTS_TWIST + N_POINTS_CURVE + EXTENSION_DEGREE + STACK_LENGTH_ADDED - 1,
-                        nElements=EXTENSION_DEGREE,
+                        n_elements=EXTENSION_DEGREE,
                     )  # Pick lambda_2T
                     STACK_LENGTH_ADDED += EXTENSION_DEGREE
-                    out += pick(position=N_POINTS_TWIST + STACK_LENGTH_ADDED - 1, nElements=N_POINTS_TWIST)  # Pick T
+                    out += pick(position=N_POINTS_TWIST + STACK_LENGTH_ADDED - 1, n_elements=N_POINTS_TWIST)  # Pick T
                     STACK_LENGTH_ADDED += N_POINTS_TWIST
                     out += point_doubling_twisted_curve(
                         take_modulo=take_modulo_T, check_constant=False, clean_constant=False
@@ -358,18 +358,18 @@ class MillerLoop:
                     # After this, the stack is: lambda_(2T \pm Q) lambda_(2T) P Q -Q T 2T (2T \pm Q), altstack = [f_i^2]
                     out += pick(
                         position=3 * N_POINTS_TWIST + N_POINTS_CURVE + 2 * EXTENSION_DEGREE + STACK_LENGTH_ADDED - 1,
-                        nElements=EXTENSION_DEGREE,
+                        n_elements=EXTENSION_DEGREE,
                     )  # Pick lambda_(2T pm Q)
                     STACK_LENGTH_ADDED += EXTENSION_DEGREE
-                    out += pick(position=EXTENSION_DEGREE + N_POINTS_TWIST - 1, nElements=N_POINTS_TWIST)  # Pick 2T
+                    out += pick(position=EXTENSION_DEGREE + N_POINTS_TWIST - 1, n_elements=N_POINTS_TWIST)  # Pick 2T
                     STACK_LENGTH_ADDED += N_POINTS_TWIST
                     if exp_miller_loop[i] == 1:
                         out += pick(
-                            position=3 * N_POINTS_TWIST + STACK_LENGTH_ADDED - 1, nElements=N_POINTS_TWIST
+                            position=3 * N_POINTS_TWIST + STACK_LENGTH_ADDED - 1, n_elements=N_POINTS_TWIST
                         )  # Pick Q
                     else:
                         out += pick(
-                            position=2 * N_POINTS_TWIST + STACK_LENGTH_ADDED - 1, nElements=N_POINTS_TWIST
+                            position=2 * N_POINTS_TWIST + STACK_LENGTH_ADDED - 1, n_elements=N_POINTS_TWIST
                         )  # Pick -Q
                     out += point_addition_twisted_curve(
                         take_modulo=take_modulo_T, check_constant=False, clean_constant=False
@@ -379,13 +379,13 @@ class MillerLoop:
                     # altstack = [f_i^2]
                     out += roll(
                         position=3 * N_POINTS_TWIST + N_POINTS_CURVE + EXTENSION_DEGREE + STACK_LENGTH_ADDED - 1,
-                        nElements=EXTENSION_DEGREE,
+                        n_elements=EXTENSION_DEGREE,
                     )  # Roll lambda_2T
                     STACK_LENGTH_ADDED += EXTENSION_DEGREE
-                    out += roll(position=N_POINTS_TWIST + STACK_LENGTH_ADDED - 1, nElements=N_POINTS_TWIST)  # Roll T
+                    out += roll(position=N_POINTS_TWIST + STACK_LENGTH_ADDED - 1, n_elements=N_POINTS_TWIST)  # Roll T
                     STACK_LENGTH_ADDED += 0
                     out += pick(
-                        position=3 * N_POINTS_TWIST + N_POINTS_CURVE + STACK_LENGTH_ADDED - 1, nElements=N_POINTS_CURVE
+                        position=3 * N_POINTS_TWIST + N_POINTS_CURVE + STACK_LENGTH_ADDED - 1, n_elements=N_POINTS_CURVE
                     )  # Pick P
                     STACK_LENGTH_ADDED += N_POINTS_CURVE
                     out += line_eval(
@@ -396,13 +396,13 @@ class MillerLoop:
                     # altstack = [f_i^2]
                     out += roll(
                         position=3 * N_POINTS_TWIST + N_POINTS_CURVE + EXTENSION_DEGREE + STACK_LENGTH_ADDED - 1,
-                        nElements=EXTENSION_DEGREE,
+                        n_elements=EXTENSION_DEGREE,
                     )  # Roll lambda_(2T pm Q)
                     STACK_LENGTH_ADDED += EXTENSION_DEGREE
-                    out += roll(position=N_POINTS_TWIST + STACK_LENGTH_ADDED - 1, nElements=N_POINTS_TWIST)  # Roll 2T
+                    out += roll(position=N_POINTS_TWIST + STACK_LENGTH_ADDED - 1, n_elements=N_POINTS_TWIST)  # Roll 2T
                     STACK_LENGTH_ADDED += 0
                     out += pick(
-                        position=3 * N_POINTS_TWIST + N_POINTS_CURVE + STACK_LENGTH_ADDED - 1, nElements=N_POINTS_CURVE
+                        position=3 * N_POINTS_TWIST + N_POINTS_CURVE + STACK_LENGTH_ADDED - 1, n_elements=N_POINTS_CURVE
                     )  # Pick P
                     out += line_eval(
                         take_modulo=True, check_constant=False, clean_constant=False, is_constant_reused=False
@@ -421,7 +421,7 @@ class MillerLoop:
         # After this, the stack is: (t-1)Q miller(P,Q)
         out += roll(
             position=N_ELEMENTS_MILLER_OUTPUT + 3 * N_POINTS_TWIST + N_POINTS_CURVE - 1,
-            nElements=2 * N_POINTS_TWIST + N_POINTS_CURVE,
+            n_elements=2 * N_POINTS_TWIST + N_POINTS_CURVE,
         )
         out += Script.parse_string(" ".join(["OP_DROP"] * (2 * N_POINTS_TWIST + N_POINTS_CURVE)))
 

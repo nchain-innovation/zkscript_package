@@ -164,7 +164,7 @@ class EllipticCurveFqUnrolled:
                 "OP_IF"
             )  # Check marker for +P; if we enter here, the stack is: P 2T lambda_(2T+P)
             out += Script.parse_string("OP_ROT OP_ROT")  # Roll 2T
-            out += pick(position=4, nElements=2)  # Pick P
+            out += pick(position=4, n_elements=2)  # Pick P
             out += ec_over_fq.point_addition(
                 take_modulo=take_modulo, check_constant=False, clean_constant=False
             )  # Compute 2T + P
@@ -174,7 +174,7 @@ class EllipticCurveFqUnrolled:
             # if marker_addition = False => auxiliary_data_addition)
 
         # Check if a == 0, in which case return 0x00 0x00
-        out += roll(position=4, nElements=1)
+        out += roll(position=4, n_elements=1)
         out += Script.parse_string("OP_IF")
         out += Script.parse_string("OP_2DROP 0x00 0x00")
         out += Script.parse_string("OP_ENDIF")

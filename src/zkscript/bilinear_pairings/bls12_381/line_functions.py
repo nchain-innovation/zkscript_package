@@ -54,7 +54,7 @@ class LineFunctions:
 
         # After this, the stack is: lambda xQ yQ yP, altstack = [-lambda*xP]
         third_component = Script.parse_string("OP_SWAP OP_NEGATE")  # Roll xP and negate
-        third_component += pick(position=7, nElements=2)  # Pick lambda
+        third_component += pick(position=7, n_elements=2)  # Pick lambda
         third_component += Script.parse_string("OP_ROT")  # Roll -xP
         third_component += fq2.scalar_mul(take_modulo=False, check_constant=False, clean_constant=False)
         third_component += Script.parse_string("OP_TOALTSTACK OP_TOALTSTACK")

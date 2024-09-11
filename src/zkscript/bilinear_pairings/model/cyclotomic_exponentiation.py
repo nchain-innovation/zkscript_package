@@ -81,17 +81,17 @@ class CyclotomicExponentiation:
             if exp_e[i] == 1:
                 if prev == 1:
                     # Duplicate f
-                    out += pick(position=N_ELEMENTS - 1, nElements=N_ELEMENTS)
+                    out += pick(position=N_ELEMENTS - 1, n_elements=N_ELEMENTS)
                     count_prev += 1
                 elif prev == -1:
                     if ever_seen_f:
                         # Duplicate f
-                        out += pick(position=N_ELEMENTS + N_ELEMENTS * count_prev - 1, nElements=N_ELEMENTS)
+                        out += pick(position=N_ELEMENTS + N_ELEMENTS * count_prev - 1, n_elements=N_ELEMENTS)
                         count_prev = 1
                         prev = 1
                     else:
                         # We have never seen f yet, we construct it
-                        out += pick(position=N_ELEMENTS - 1, nElements=N_ELEMENTS)  # Duplicate Inverse(f)
+                        out += pick(position=N_ELEMENTS - 1, n_elements=N_ELEMENTS)  # Duplicate Inverse(f)
                         out += cyclotomic_inverse(take_modulo=False, check_constant=False, clean_constant=False)
                         prev = 1
                         count_prev = 1
@@ -105,19 +105,19 @@ class CyclotomicExponentiation:
                 if prev == 1:
                     if ever_seen_inverse:
                         # Pick Inverse(f)
-                        out += pick(position=N_ELEMENTS + N_ELEMENTS * count_prev - 1, nElements=4)
+                        out += pick(position=N_ELEMENTS + N_ELEMENTS * count_prev - 1, n_elements=4)
                         prev = -1
                         count_prev = 1
                     else:
                         # We have never seen Inverse(f) yet, we construct it
-                        out += pick(position=N_ELEMENTS - 1, nElements=N_ELEMENTS)  # Duplicate f
+                        out += pick(position=N_ELEMENTS - 1, n_elements=N_ELEMENTS)  # Duplicate f
                         out += cyclotomic_inverse(take_modulo=False, check_constant=False, clean_constant=False)
                         prev = -1
                         count_prev = 1
                         ever_seen_inverse = True
                 elif prev == -1:
                     # Duplicate Inverse(f)
-                    out += pick(position=N_ELEMENTS - 1, nElements=N_ELEMENTS)
+                    out += pick(position=N_ELEMENTS - 1, n_elements=N_ELEMENTS)
                     count_prev += 1
                 else:
                     # Never seen either, so we set up Inverse(f)

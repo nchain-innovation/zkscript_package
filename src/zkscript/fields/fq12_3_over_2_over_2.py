@@ -54,16 +54,16 @@ class Fq12Cubic:
         # Computation of third component ---------------------------------------------------------
 
         # After this, the stack is: x0 x1 x2 y0 y1 y2 (x2*y0)
-        compute_third_component = pick(position=15, nElements=4)  # Pick x2
-        compute_third_component += pick(position=15, nElements=4)  # Pick y0
+        compute_third_component = pick(position=15, n_elements=4)  # Pick x2
+        compute_third_component += pick(position=15, n_elements=4)  # Pick y0
         compute_third_component += fq4.mul(take_modulo=False, check_constant=False, clean_constant=False)
         # After this, the stack is: x0 x1 x2 y0 y1 y2 (x2*y0) (x1*y1)
-        compute_third_component += pick(position=11, nElements=4)  # Pick y1
-        compute_third_component += pick(position=27, nElements=4)  # Pick x1
+        compute_third_component += pick(position=11, n_elements=4)  # Pick y1
+        compute_third_component += pick(position=27, n_elements=4)  # Pick x1
         compute_third_component += fq4.mul(take_modulo=False, check_constant=False, clean_constant=False)
         # After this, the stack is: x0 x1 x2 y0 y1 y2, altstack = [(x2*y0) + (x1*y1) + (x0*y2)]
-        compute_third_component += pick(position=31, nElements=4)  # Pick x0
-        compute_third_component += pick(position=15, nElements=4)  # Pick y2
+        compute_third_component += pick(position=31, n_elements=4)  # Pick x0
+        compute_third_component += pick(position=15, n_elements=4)  # Pick y2
         compute_third_component += fq4.mul(take_modulo=False, check_constant=False, clean_constant=False)
         compute_third_component += fq4.add_three(take_modulo=False, check_constant=False, clean_constant=False)
         compute_third_component += Script.parse_string("OP_TOALTSTACK OP_TOALTSTACK OP_TOALTSTACK OP_TOALTSTACK")
@@ -74,21 +74,21 @@ class Fq12Cubic:
 
         # After this, the stack is: x0 x1 x2 y0 y1 y2 (x2*y2*NON_RESIDUE_OVER_FQ4),
         # altstack = [(x2*y0) + (x1*y1) + (x0*y2)]
-        compute_second_component = pick(position=15, nElements=4)  # Pick x2
-        compute_second_component += pick(position=7, nElements=4)  # Pick y2
+        compute_second_component = pick(position=15, n_elements=4)  # Pick x2
+        compute_second_component += pick(position=7, n_elements=4)  # Pick y2
         compute_second_component += fq4.mul(take_modulo=False, check_constant=False, clean_constant=False)
         compute_second_component += fq4.mul_by_non_residue(
             take_modulo=False, check_constant=False, clean_constant=False
         )
         # After this, the stack is:  x0 x1 x2 y0 y1 y2 (x2*y2*NON_RESIDUE_OVER_FQ4) (x1*y0),
         # altstack = [(x2*y0) + (x1*y1) + (x0*y2)]
-        compute_second_component += pick(position=15, nElements=4)  # Pick y0
-        compute_second_component += pick(position=27, nElements=4)  # Pick x1
+        compute_second_component += pick(position=15, n_elements=4)  # Pick y0
+        compute_second_component += pick(position=27, n_elements=4)  # Pick x1
         compute_second_component += fq4.mul(take_modulo=False, check_constant=False, clean_constant=False)
         # After this, the stack is:  x0 x1 x2 y0 y1 y2,
         # altstack = [(x2*y0) + (x1*y1) + (x0*y2), (x2*y2*NON_RESIDUE_OVER_FQ4) + (x1*y0) + (x0*y1)]
-        compute_second_component += pick(position=15, nElements=4)  # Pick y1
-        compute_second_component += pick(position=35, nElements=4)  # Pick x0
+        compute_second_component += pick(position=15, n_elements=4)  # Pick y1
+        compute_second_component += pick(position=35, n_elements=4)  # Pick x0
         compute_second_component += fq4.mul(take_modulo=False, check_constant=False, clean_constant=False)
         compute_second_component += fq4.add_three(take_modulo=False, check_constant=False, clean_constant=False)
         compute_second_component += Script.parse_string("OP_TOALTSTACK OP_TOALTSTACK OP_TOALTSTACK OP_TOALTSTACK")
@@ -99,13 +99,13 @@ class Fq12Cubic:
 
         # After this, the stack is: x0 x1 y0 y2 (y1*x2),
         # altstack = [(x2*y0) + (x1*y1) + (x0*y2), (x2*y2*NON_RESIDUE_OVER_FQ4) + (x1*y0) + (x0*y1)]
-        compute_first_component = roll(position=15, nElements=4)  # Roll x2
-        compute_first_component += roll(position=11, nElements=4)  # Roll y1
+        compute_first_component = roll(position=15, n_elements=4)  # Roll x2
+        compute_first_component += roll(position=11, n_elements=4)  # Roll y1
         compute_first_component += fq4.mul(take_modulo=False, check_constant=False, clean_constant=False)
         # After this, the stack is: x0 y0 [(y1*x2) + (y2*x1)] * NON_RESIDUE_OVER_FQ2,
         # altstack = [(x2*y0) + (x1*y1) + (x0*y2), (x2*y2*s) + (x1*y0) + (x0*y1)]
-        compute_first_component += roll(position=15, nElements=4)  # Roll x1
-        compute_first_component += roll(position=11, nElements=4)  # Roll y2
+        compute_first_component += roll(position=15, n_elements=4)  # Roll x1
+        compute_first_component += roll(position=11, n_elements=4)  # Roll y2
         compute_first_component += fq4.mul(take_modulo=False, check_constant=False, clean_constant=False)
         compute_first_component += fq4.add(take_modulo=False, check_constant=False, clean_constant=False)
         compute_first_component += fq4.mul_by_non_residue(take_modulo=False, check_constant=False, clean_constant=False)
@@ -189,13 +189,13 @@ class Fq12Cubic:
 
         # After this, the stack is: x0 x1 x2 (2*x2*x0)
         compute_third_component = Script.parse_string("OP_2OVER OP_2OVER")  # Pick x2
-        compute_third_component += pick(position=15, nElements=4)  # Pick x0
+        compute_third_component += pick(position=15, n_elements=4)  # Pick x0
         compute_third_component += fq4.mul(take_modulo=False, check_constant=False, clean_constant=False)
         compute_third_component += Script.parse_string("OP_2") + fq4.fq_scalar_mul(
             take_modulo=False, check_constant=False, clean_constant=False
         )
         # After this, the stack is: x0 x1 x2, altstack = [2*x2*x0 + x1^2]
-        compute_third_component += pick(position=11, nElements=4)  # Pick x1
+        compute_third_component += pick(position=11, n_elements=4)  # Pick x1
         compute_third_component += fq4.square(take_modulo=False, check_constant=False, clean_constant=False)
         compute_third_component += fq4.add(take_modulo=False, check_constant=False, clean_constant=False)
         compute_third_component += Script.parse_string("OP_TOALTSTACK OP_TOALTSTACK OP_TOALTSTACK OP_TOALTSTACK")
@@ -205,15 +205,15 @@ class Fq12Cubic:
         # Computation of second component --------------------------------------------------------
 
         # After this, the stack is: x0 x2 2x1 2*x1*x0
-        compute_second_component = roll(position=7, nElements=4)  # Roll x1
+        compute_second_component = roll(position=7, n_elements=4)  # Roll x1
         compute_second_component += Script.parse_string("OP_2") + fq4.fq_scalar_mul(
             take_modulo=False, check_constant=False, clean_constant=False
         )
         compute_second_component += Script.parse_string("OP_2OVER OP_2OVER")  # Duplicate 2*x1
-        compute_second_component += pick(position=15, nElements=4)  # Pick x0
+        compute_second_component += pick(position=15, n_elements=4)  # Pick x0
         compute_second_component += fq4.mul(take_modulo=False, check_constant=False, clean_constant=False)
         # After this, the stack is: x0 x2 2x1, altstack = [thirdComponent, 2*x1*x0 + x2^2 * s]
-        compute_second_component += pick(position=11, nElements=4)  # Pick x2
+        compute_second_component += pick(position=11, n_elements=4)  # Pick x2
         compute_second_component += fq4.square(take_modulo=False, check_constant=False, clean_constant=False)
         compute_second_component += fq4.mul_by_non_residue(
             take_modulo=False, check_constant=False, clean_constant=False

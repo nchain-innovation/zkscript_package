@@ -67,7 +67,7 @@ class Fq6:
             out = Script()
 
         # After this, the stack is x0 x1 y0 y1 altstack = [x2 + y2]
-        out += roll(position=7, nElements=2)  # Roll x2
+        out += roll(position=7, n_elements=2)  # Roll x2
         out += fq2.add(take_modulo=False, check_constant=False, clean_constant=False)
         out += Script.parse_string("OP_TOALTSTACK OP_TOALTSTACK")
 
@@ -136,7 +136,7 @@ class Fq6:
             out = Script()
 
         # After this, the stack is: x0 x1 y0 y1, altstack = [x2 - y2]
-        out += roll(position=7, nElements=2)  # Roll x2
+        out += roll(position=7, n_elements=2)  # Roll x2
         out += Script.parse_string("OP_2SWAP")
         out += fq2.subtract(take_modulo=False, check_constant=False, clean_constant=False)
         out += Script.parse_string("OP_TOALTSTACK OP_TOALTSTACK")
@@ -412,15 +412,15 @@ class Fq6:
 
         # After this, the stack is: x0 x1 x2 y0 y1 y2 (x1*y1)
         compute_third_component = Script.parse_string("OP_2OVER")  # Pick y1
-        compute_third_component += pick(position=11, nElements=2)  # Pick x1
+        compute_third_component += pick(position=11, n_elements=2)  # Pick x1
         compute_third_component += fq2.mul(take_modulo=False, check_constant=False, clean_constant=False)
         # After this, the stack is: x0 x1 x2 y0 y1 y2 (x1*y1) (x0*y2)
         compute_third_component += Script.parse_string("OP_2OVER")  # Pick y2
-        compute_third_component += pick(position=15, nElements=2)  # Pick x0
+        compute_third_component += pick(position=15, n_elements=2)  # Pick x0
         compute_third_component += fq2.mul(take_modulo=False, check_constant=False, clean_constant=False)
         # After this, the stack is: x0 x1 x2 y0 y1 y2, altstack = [thirdComponent]
-        compute_third_component += pick(position=11, nElements=2)  # Pick x2
-        compute_third_component += pick(position=11, nElements=2)  # Pick y0
+        compute_third_component += pick(position=11, n_elements=2)  # Pick x2
+        compute_third_component += pick(position=11, n_elements=2)  # Pick y0
         compute_third_component += fq2.mul(take_modulo=False, check_constant=False, clean_constant=False)
         compute_third_component += fq2.add_three(take_modulo=False, check_constant=False, clean_constant=False)
         compute_third_component += Script.parse_string("OP_TOALTSTACK OP_TOALTSTACK")
@@ -431,18 +431,18 @@ class Fq6:
 
         # After this, the stack is: x0 x1 x2 y0 y1 y2 (y1*x0)
         compute_second_component = Script.parse_string("OP_2OVER")  # Pick y1
-        compute_second_component += pick(position=13, nElements=2)  # Pick x0
+        compute_second_component += pick(position=13, n_elements=2)  # Pick x0
         compute_second_component += fq2.mul(take_modulo=False, check_constant=False, clean_constant=False)
         # After this, the stack is: x0 x1 x2 y0 y1 y2 (y1*x0) (x2*y2*xi)
         compute_second_component += Script.parse_string("OP_2OVER")  # Pick y2
-        compute_second_component += pick(position=11, nElements=2)  # Pick x2
+        compute_second_component += pick(position=11, n_elements=2)  # Pick x2
         compute_second_component += fq2.mul(take_modulo=False, check_constant=False, clean_constant=False)
         compute_second_component += fq2.mul_by_non_residue(
             take_modulo=False, check_constant=False, clean_constant=False
         )
         # After this, the stack is: x0 x1 x2 y0 y1 y2, altstack = [thirdComponent,secondComponent]
-        compute_second_component += pick(position=13, nElements=2)  # Pick x1
-        compute_second_component += pick(position=11, nElements=2)  # Pick y0
+        compute_second_component += pick(position=13, n_elements=2)  # Pick x1
+        compute_second_component += pick(position=11, n_elements=2)  # Pick y0
         compute_second_component += fq2.mul(take_modulo=False, check_constant=False, clean_constant=False)
         compute_second_component += fq2.add_three(take_modulo=False, check_constant=False, clean_constant=False)
         compute_second_component += Script.parse_string("OP_TOALTSTACK OP_TOALTSTACK")
@@ -452,11 +452,11 @@ class Fq6:
         # Computation of first component -----------------------------------------------------------
 
         # After this, the stack is: x0 x2 y0 y1 (y2*x1), altstack = [thirdComponent,secondComponent]
-        compute_first_component = roll(position=9, nElements=2)  # Roll x1
+        compute_first_component = roll(position=9, n_elements=2)  # Roll x1
         compute_first_component += fq2.mul(take_modulo=False, check_constant=False, clean_constant=False)
         # After this, the stack is: x0 y0 [(y2*x1) + (x2*y1)] * xi, altstack = [thirdComponent,secondComponent]
         compute_first_component += Script.parse_string("OP_2SWAP")  # Roll y1
-        compute_first_component += roll(position=7, nElements=2)  # Roll x2
+        compute_first_component += roll(position=7, n_elements=2)  # Roll x2
         compute_first_component += fq2.mul(take_modulo=False, check_constant=False, clean_constant=False)
         compute_first_component += fq2.add(take_modulo=False, check_constant=False, clean_constant=False)
         compute_first_component += fq2.mul_by_non_residue(take_modulo=False, check_constant=False, clean_constant=False)
@@ -541,7 +541,7 @@ class Fq6:
         )
         compute_third_component += Script.parse_string("OP_2SWAP OP_2OVER")
         # After this, the stack is: x0 x1 x2 2x2, altstack = [thirdComponent]
-        compute_third_component += pick(position=11, nElements=2)  # Pick x0
+        compute_third_component += pick(position=11, n_elements=2)  # Pick x0
         compute_third_component += fq2.mul(take_modulo=False, check_constant=False, clean_constant=False)
         compute_third_component += fq2.add(take_modulo=False, check_constant=False, clean_constant=False)
         compute_third_component += Script.parse_string("OP_TOALTSTACK OP_TOALTSTACK")
@@ -558,7 +558,7 @@ class Fq6:
         )
         # After this, the stack is: x0 2x2 x1 x2^2 2x1*x0
         compute_second_component += Script.parse_string("OP_2ROT OP_2SWAP OP_2OVER")
-        compute_second_component += pick(position=9, nElements=2)  # Pick x0
+        compute_second_component += pick(position=9, n_elements=2)  # Pick x0
         compute_second_component += fq2.mul(take_modulo=False, check_constant=False, clean_constant=False)
         compute_second_component += Script.parse_string("OP_2") + fq2.scalar_mul(
             take_modulo=False, check_constant=False, clean_constant=False
