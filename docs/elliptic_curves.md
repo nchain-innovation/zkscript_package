@@ -78,9 +78,9 @@ assert(context.evaluate())
 - `check_constant`: a boolean value deciding whether the script should check that the constant supplied for modulo operations is correct
 - `clean_constant`: a boolean value deciding whether the script should clean the constant used for modulo operations
 
-The data needed to execute the output script of `unrolled_multiplication` is described in the function documentation. It works as follows: `q ... a [lamdbas,a] P`, where:
+The data needed to execute the output script of `unrolled_multiplication` is described in the function documentation. It works as follows: `q ... marker_a_is_zero [lamdbas,a] P`, where:
 - `q` is the modulus used to perform modulo operations
-- `a` is the multiplier
+- `marker_a_is_zero` is a marker which is set to `ÒP_1` if `a=0`, to `OP_0` otherwise
 - `P` is the point we are multiplying by
 - `[lambdas,a]` is the sequence of gradients (also called lamdbdas) needed to compute `a * P`, together with some flags used by the script to detect which operations to perform. The construction of the unlocking script can be seen in the function `unrolled_multiplication_input`; some examples are also given in the `unrolled_multiplication` function documentation.
 

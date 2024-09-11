@@ -29,7 +29,7 @@ class EllipticCurveFqUnrolled:
 
         Notice that modulo_threshold is given as bit length.
         Input parameters:
-            - Stack: q .. a [lambdas,a] P
+            - Stack: q .. marker_a_is_zero [lambdas,a] P
             - Altstack: []
         Output:
             - P aP
@@ -61,7 +61,7 @@ class EllipticCurveFqUnrolled:
             - M = log(8) = 3
             - N = log(a) = 1
         Thus:
-            - [lambdas,a] = lambda_(2T+P) OP_1 lambda_2T OP_1 OP_0 OP_0
+            - [lambdas,a] = lambda_(2T+P) OP_1 lambda_2T OP_1 OP_0 OP_0 OP_0 OP_0
 
         Example:
             - max_multiplier = 8
@@ -72,7 +72,7 @@ class EllipticCurveFqUnrolled:
             - M = log(8) = 3
             - N = log(a) = 3
         Thus:
-            - [lambdas,a] = OP_0 lambda_2T OP_1 OP_0 lambda_2T OP_1 OP_0 lambda_2T OP_1
+            - [lambdas,a] = OP_0 OP_0 lambda_2T OP_1 OP_0 OP_0 lambda_2T OP_1 OP_0 OP_0 lambda_2T OP_1
 
         The meaning of the list is the following:
             - if it starts with OP_0, then do not execute the loop
@@ -109,7 +109,7 @@ class EllipticCurveFqUnrolled:
 			auxiliary_data marker_doubling P T
 		where:
 			- T is the i-th step of the calculation of aP
-			- marker_doubling is the market that tells us if we need to double T
+			- marker_doubling is the marker that tells us if we need to double T
 		If marker_doubling:
 			- is OP_0 => remove auxiliary_data and move to next iteration
 			- is OP_1 => the auxiliary_data is assumed to be:
