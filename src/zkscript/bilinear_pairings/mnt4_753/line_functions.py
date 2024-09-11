@@ -78,14 +78,11 @@ class LineFunctions:
         if take_modulo:
             batched_modulo = Script()
 
-            try:
-                assert clean_constant is not None
-                assert is_constant_reused is not None
-            except Exception as _e:
+            if clean_constant is None and is_constant_reused is None:
                 raise ValueError(
                     f"If take_modulo is set, both clean_constant: {clean_constant} \
                         and is_constant_reused: {is_constant_reused} must be set."
-                ) from None
+                )
 
             if clean_constant:
                 fetch_q = Script.parse_string("OP_DEPTH OP_1SUB OP_ROLL")

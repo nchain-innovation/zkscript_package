@@ -150,8 +150,8 @@ class Pairing:
         P: list[int],
         Q: list[int],
         lambdas_Q_exp_miller_loop: list[list[list[int]]],
-        miller_output_inverse: list[int],
-        load_q=True,
+        miller_output_inverse: list[int] | None,
+        load_q: bool = True,
     ) -> Script:
         """Return the script needed to execute the single_pairing function above.
 
@@ -165,7 +165,7 @@ class Pairing:
         N_POINTS_TWIST = self.N_POINTS_TWIST
 
         is_P_infinity = not any(P)
-        is_Q_infinity = not any(P)
+        is_Q_infinity = not any(Q)
 
         out = nums_to_script([q]) if load_q else Script()
 
@@ -204,7 +204,7 @@ class Pairing:
         lambdas_Q2_exp_miller_loop: list[list[list[int]]],
         lambdas_Q3_exp_miller_loop: list[list[list[int]]],
         miller_output_inverse: list[int],
-        load_q=True,
+        load_q: bool = True,
     ) -> Script:
         """Return the script needed to execute the triple_pairing function above.
 
