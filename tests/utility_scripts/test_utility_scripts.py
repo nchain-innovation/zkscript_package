@@ -1,74 +1,68 @@
-from dataclasses import dataclass
-
 import pytest
-from tx_engine import Context
+from tx_engine import Context, Script
 
 from src.zkscript.util.utility_scripts import nums_to_script, pick, roll
-from tests.utility_scripts.util import generate_verify, save_scripts
 
 
-@dataclass
-class Roll:
-    test_script = roll
-    # Define filename for saving scripts
-    filename = "roll"
+def generate_verify(z) -> Script:
+    out = Script()
+    for ix, el in enumerate(z[::-1]):
+        out += nums_to_script([el])
+        if ix != len(z) - 1:
+            out += Script.parse_string("OP_EQUALVERIFY")
+        else:
+            out += Script.parse_string("OP_EQUAL")
 
-    test_data = [
-        {"position": 1, "n_elements": 1, "stack": list(range(10)), "expected": [0, 1, 2, 3, 4, 5, 6, 7, 9, 8]},
-        {"position": 2, "n_elements": 1, "stack": list(range(10)), "expected": [0, 1, 2, 3, 4, 5, 6, 8, 9, 7]},
-        {"position": 2, "n_elements": 2, "stack": list(range(10)), "expected": [0, 1, 2, 3, 4, 5, 6, 9, 7, 8]},
-        {"position": 3, "n_elements": 2, "stack": list(range(10)), "expected": [0, 1, 2, 3, 4, 5, 8, 9, 6, 7]},
-        {"position": 5, "n_elements": 2, "stack": list(range(10)), "expected": [0, 1, 2, 3, 6, 7, 8, 9, 4, 5]},
-        {"position": 5, "n_elements": 4, "stack": list(range(10)), "expected": [0, 1, 2, 3, 8, 9, 4, 5, 6, 7]},
-        {
-            "position": 10,
-            "n_elements": 3,
-            "stack": list(range(20)),
-            "expected": [0, 1, 2, 3, 4, 5, 6, 7, 8, 12, 13, 14, 15, 16, 17, 18, 19, 9, 10, 11],
-        },
+    return out
+
+
+@pytest.mark.parametrize(
+    ("position", "n_elements", "stack", "expected"),
+    [
+        (1, 1, list(range(10)), [0, 1, 2, 3, 4, 5, 6, 7, 9, 8]),
+        (2, 1, list(range(10)), [0, 1, 2, 3, 4, 5, 6, 8, 9, 7]),
+        (2, 2, list(range(10)), [0, 1, 2, 3, 4, 5, 6, 9, 7, 8]),
+        (3, 2, list(range(10)), [0, 1, 2, 3, 4, 5, 8, 9, 6, 7]),
+        (5, 2, list(range(10)), [0, 1, 2, 3, 6, 7, 8, 9, 4, 5]),
+        (5, 4, list(range(10)), [0, 1, 2, 3, 8, 9, 4, 5, 6, 7]),
+        (
+            10,
+            3,
+            list(range(20)),
+            [0, 1, 2, 3, 4, 5, 6, 7, 8, 12, 13, 14, 15, 16, 17, 18, 19, 9, 10, 11],
+        ),
     ]
+)
+def test_roll(position, n_elements, stack, expected):
+    unlock = nums_to_script(stack)
 
+    lock = roll(position, n_elements)
+    lock += generate_verify(expected)
 
-@dataclass
-class Pick:
-    test_script = pick
-    # Define filename for saving scripts
-    filename = "pick"
-
-    test_data = [
-        {"position": 0, "n_elements": 1, "stack": list(range(10)), "expected": [*list(range(10)), 9]},
-        {"position": 1, "n_elements": 1, "stack": list(range(10)), "expected": [*list(range(10)), 8]},
-        {"position": 1, "n_elements": 2, "stack": list(range(10)), "expected": [*list(range(10)), 8, 9]},
-        {"position": 3, "n_elements": 2, "stack": list(range(10)), "expected": [*list(range(10)), 6, 7]},
-        {"position": 3, "n_elements": 4, "stack": list(range(10)), "expected": [*list(range(10)), 6, 7, 8, 9]},
-        {"position": 10, "n_elements": 3, "stack": list(range(20)), "expected": [*list(range(20)), 9, 10, 11]},
-    ]
-
-
-def generate_test_cases():
-    configurations = [Pick, Roll]
-    return [
-        (config, test_data["position"], test_data["n_elements"], test_data["stack"], test_data["expected"])
-        for config in configurations
-        for test_data in config.test_data
-    ]
-
-
-def verify_script(lock, unlock):
     context = Context(script=unlock + lock)
 
     assert context.evaluate()
     assert len(context.get_altstack()) == 0
 
 
-@pytest.mark.parametrize(("config", "position", "n_elements", "stack", "expected"), generate_test_cases())
-def test_pick_and_roll(config, position, n_elements, stack, expected, save_to_json_folder):
+@pytest.mark.parametrize(
+    ("position", "n_elements", "stack", "expected"),
+    [
+        (0, 1, list(range(10)), [*list(range(10)), 9]),
+        (1, 1, list(range(10)), [*list(range(10)), 8]),
+        (1, 2, list(range(10)), [*list(range(10)), 8, 9]),
+        (3, 2, list(range(10)), [*list(range(10)), 6, 7]),
+        (3, 4, list(range(10)), [*list(range(10)), 6, 7, 8, 9]),
+        (10, 3, list(range(20)), [*list(range(20)), 9, 10, 11]),
+    ]
+)
+def test_pick(position, n_elements, stack, expected):
     unlock = nums_to_script(stack)
 
-    lock = config.test_script(position, n_elements)
+    lock = pick(position, n_elements)
     lock += generate_verify(expected)
 
-    verify_script(lock, unlock)
+    context = Context(script=unlock + lock)
 
-    if save_to_json_folder:
-        save_scripts(str(lock), str(unlock), save_to_json_folder, config.filename, "pick_and_roll")
+    assert context.evaluate()
+    assert len(context.get_altstack()) == 0
