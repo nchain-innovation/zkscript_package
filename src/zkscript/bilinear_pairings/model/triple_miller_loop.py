@@ -582,12 +582,9 @@ class TripleMillerLoop:
                         n_elements=EXTENSION_DEGREE,
                     )  # Roll lambda_(2* T1 pm Q1)
                     stack_length_added += EXTENSION_DEGREE
-                    if EXTENSION_DEGREE == 2 and N_POINTS_TWIST == 4:
-                        out += Script.parse_string("OP_2ROT OP_2ROT")  # Bring 2*T1 on top of the stack
-                    else:
-                        out += roll(
-                            position=EXTENSION_DEGREE + N_POINTS_TWIST - 1, n_elements=N_POINTS_TWIST
-                        )  # Bring 2*T1 on top of the stack
+                    out += roll(
+                        position=EXTENSION_DEGREE + N_POINTS_TWIST - 1, n_elements=N_POINTS_TWIST
+                    )  # Bring 2*T1 on top of the stack
                     if exp_miller_loop[i] == 1:
                         out += pick(
                             position=9 * N_POINTS_TWIST + stack_length_added - 1, n_elements=N_POINTS_TWIST
@@ -633,12 +630,9 @@ class TripleMillerLoop:
                         n_elements=EXTENSION_DEGREE,
                     )  # Roll lambda_(2* T2 pm Q2)
                     stack_length_added += EXTENSION_DEGREE
-                    if EXTENSION_DEGREE == 2 and N_POINTS_TWIST == 4:
-                        out += Script.parse_string("OP_2ROT OP_2ROT")  # Bring 2*T2 on top of the stack
-                    else:
-                        out += roll(
-                            position=EXTENSION_DEGREE + N_POINTS_TWIST - 1, n_elements=N_POINTS_TWIST
-                        )  # Bring 2*T2 on top of the stack
+                    out += roll(
+                        position=EXTENSION_DEGREE + N_POINTS_TWIST - 1, n_elements=N_POINTS_TWIST
+                    )  # Bring 2*T2 on top of the stack
                     if exp_miller_loop[i] == 1:
                         out += pick(
                             position=8 * N_POINTS_TWIST + stack_length_added - 1, n_elements=N_POINTS_TWIST
@@ -675,12 +669,9 @@ class TripleMillerLoop:
                         n_elements=EXTENSION_DEGREE,
                     )  # Roll lambda_(2* T3 pm Q3)
                     stack_length_added += EXTENSION_DEGREE
-                    if EXTENSION_DEGREE == 2 and N_POINTS_TWIST == 4:
-                        out += Script.parse_string("OP_2ROT OP_2ROT")  # Bring 2*T3 on top of the stack
-                    else:
-                        out += roll(
-                            position=EXTENSION_DEGREE + N_POINTS_TWIST - 1, n_elements=N_POINTS_TWIST
-                        )  # Bring 2*T3 on top of the stack
+                    out += roll(
+                        position=EXTENSION_DEGREE + N_POINTS_TWIST - 1, n_elements=N_POINTS_TWIST
+                    )  # Bring 2*T3 on top of the stack
                     if exp_miller_loop[i] == 1:
                         out += pick(
                             position=7 * N_POINTS_TWIST + stack_length_added - 1, n_elements=N_POINTS_TWIST
@@ -1171,12 +1162,9 @@ class TripleMillerLoop:
                     n_elements=EXTENSION_DEGREE,
                 )  # Roll lambda_(2* T1 pm Q1)
                 stack_length_added += EXTENSION_DEGREE
-                if EXTENSION_DEGREE == 2 and N_POINTS_TWIST == 4:
-                    out += Script.parse_string("OP_2ROT OP_2ROT")  # Bring 2*T1 on top of the stack
-                else:
-                    out += roll(
-                        position=EXTENSION_DEGREE + N_POINTS_TWIST - 1, n_elements=N_POINTS_TWIST
-                    )  # Bring 2*T1 on top of the stack
+                out += roll(
+                    position=EXTENSION_DEGREE + N_POINTS_TWIST - 1, n_elements=N_POINTS_TWIST
+                )  # Bring 2*T1 on top of the stack
                 if exp_miller_loop[i] == 1:
                     out += pick(
                         position=9 * N_POINTS_TWIST + stack_length_added - 1, n_elements=N_POINTS_TWIST
@@ -1212,12 +1200,9 @@ class TripleMillerLoop:
                     n_elements=EXTENSION_DEGREE,
                 )  # Roll lambda_(2* T2 pm Q2)
                 stack_length_added += EXTENSION_DEGREE
-                if EXTENSION_DEGREE == 2 and N_POINTS_TWIST == 4:
-                    out += Script.parse_string("OP_2ROT OP_2ROT")  # Bring 2*T2 on top of the stack
-                else:
-                    out += roll(
-                        position=EXTENSION_DEGREE + N_POINTS_TWIST - 1, n_elements=N_POINTS_TWIST
-                    )  # Bring 2*T2 on top of the stack
+                out += roll(
+                    position=EXTENSION_DEGREE + N_POINTS_TWIST - 1, n_elements=N_POINTS_TWIST
+                )  # Bring 2*T2 on top of the stack
                 if exp_miller_loop[i] == 1:
                     out += pick(
                         position=8 * N_POINTS_TWIST + stack_length_added - 1, n_elements=N_POINTS_TWIST
@@ -1252,12 +1237,9 @@ class TripleMillerLoop:
                     n_elements=EXTENSION_DEGREE,
                 )  # Roll lambda_(2* T3 pm Q3)
                 stack_length_added += EXTENSION_DEGREE
-                if EXTENSION_DEGREE == 2 and N_POINTS_TWIST == 4:
-                    out += Script.parse_string("OP_2ROT OP_2ROT")  # Bring 2*T3 on top of the stack
-                else:
-                    out += roll(
-                        position=EXTENSION_DEGREE + N_POINTS_TWIST - 1, n_elements=N_POINTS_TWIST
-                    )  # Bring 2*T3 on top of the stack
+                out += roll(
+                    position=EXTENSION_DEGREE + N_POINTS_TWIST - 1, n_elements=N_POINTS_TWIST
+                )  # Bring 2*T3 on top of the stack
                 if exp_miller_loop[i] == 1:
                     out += pick(
                         position=7 * N_POINTS_TWIST + stack_length_added - 1, n_elements=N_POINTS_TWIST
@@ -1290,22 +1272,22 @@ class TripleMillerLoop:
 
     def triple_miller_loop_input(
         self,
-        P1: list[int],
-        P2: list[int],
-        P3: list[int],
-        Q1: list[int],
-        Q2: list[int],
-        Q3: list[int],
-        lambdas_Q1_exp_miller_loop: list[list[list[int]]],
-        lambdas_Q2_exp_miller_loop: list[list[list[int]]],
-        lambdas_Q3_exp_miller_loop: list[list[list[int]]],
+        point_p1: list[int],
+        point_p2: list[int],
+        point_p3: list[int],
+        point_q1: list[int],
+        point_q2: list[int],
+        point_q3: list[int],
+        lambdas_q1_exp_miller_loop: list[list[list[int]]],
+        lambdas_q2_exp_miller_loop: list[list[list[int]]],
+        lambdas_q3_exp_miller_loop: list[list[list[int]]],
     ) -> Script:
         """Return the script needed to execute the triple_miller_loop function above.
 
         Take Pi, Qi, and the lamdbas for computing (t-1)Qi as input
         """
         q = self.MODULUS
-        lambdas = [lambdas_Q1_exp_miller_loop, lambdas_Q2_exp_miller_loop, lambdas_Q3_exp_miller_loop]
+        lambdas = [lambdas_q1_exp_miller_loop, lambdas_q2_exp_miller_loop, lambdas_q3_exp_miller_loop]
 
         out = nums_to_script([q])
         # Load lambdas
@@ -1314,11 +1296,11 @@ class TripleMillerLoop:
                 for k in range(3):
                     out += nums_to_script(lambdas[k][i][j])
 
-        out += nums_to_script(P1)
-        out += nums_to_script(P2)
-        out += nums_to_script(P3)
-        out += nums_to_script(Q1)
-        out += nums_to_script(Q2)
-        out += nums_to_script(Q3)
+        out += nums_to_script(point_p1)
+        out += nums_to_script(point_p2)
+        out += nums_to_script(point_p3)
+        out += nums_to_script(point_q1)
+        out += nums_to_script(point_q2)
+        out += nums_to_script(point_q3)
 
         return out

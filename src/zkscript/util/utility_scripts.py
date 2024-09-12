@@ -30,13 +30,20 @@ from tx_engine.engine.op_codes import (
     OP_SWAP,
 )
 
-patterns_to_pick = {(0, 1): [OP_DUP], (1, 1): [OP_OVER], (1, 2): [OP_2DUP], (3, 2): [OP_2OVER]}
+patterns_to_pick = {
+    (0, 1): [OP_DUP],
+    (1, 1): [OP_OVER],
+    (1, 2): [OP_2DUP],
+    (3, 2): [OP_2OVER],
+    (3, 4): [OP_2OVER, OP_2OVER],
+}
 patterns_to_roll = {
     (1, 1): [OP_SWAP],
     (2, 1): [OP_ROT],
     (2, 2): [OP_ROT, OP_ROT],
     (3, 2): [OP_2SWAP],
     (5, 2): [OP_2ROT],
+    (5, 4): [OP_2ROT, OP_2ROT],
 }
 op_range = range(-1, 17)
 op_range_to_opccode = {
@@ -80,7 +87,7 @@ def pick(position: int, n_elements: int) -> Script:
         out += Script([op_range_to_opccode[position], OP_PICK] * n_elements)
     else:
         num_encoded = encode_num(position)
-        for _i in range(n_elements):
+        for _ in range(n_elements):
             out.append_pushdata(num_encoded)
             out += Script([OP_PICK])
 

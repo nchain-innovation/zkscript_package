@@ -189,7 +189,7 @@ class Bls12381:
         "test_line_evaluation": [
             # Test with P = Q
             {
-                "P": BLS12_381(
+                "point_p": BLS12_381(
                     Fq(
                         3552880022460696608572256477880253350444280868160839581990288141592117480196756619592352637820697840674774297115877
                     ),
@@ -197,7 +197,7 @@ class Bls12381:
                         2709269896970082145263991252530787639675288215483386037402360697422131498755459835397680388437951814706734875643115
                     ),
                 ),
-                "Q": BLS12_381_Twist(
+                "point_q": BLS12_381_Twist(
                     Fq2(
                         Fq(
                             984776368677483480818219616795673488144052234621116179324278387343806296999922800894817879352551612698077686668338
@@ -256,7 +256,7 @@ class Bls12381:
             },
             # Test with P != Q
             {
-                "P": BLS12_381(
+                "point_p": BLS12_381(
                     Fq(
                         1683171493390355382204633683126174532988464948053077287746737091245592058012152423946670111217437157263237169749181
                     ),
@@ -264,7 +264,7 @@ class Bls12381:
                         620268835097054848659572119983618307676849664103440655181240227964614701904962519294478749933715758037984563342941
                     ),
                 ),
-                "Q": BLS12_381_Twist(
+                "point_q": BLS12_381_Twist(
                     Fq2(
                         Fq(
                             1964359303875367870370303854971717930927375079775382039874315751229285238332401060664758867999880211416570083034305
@@ -1490,7 +1490,7 @@ class Bls12381:
         ],
         "test_miller_loop": [
             {
-                "P": BLS12_381(
+                "point_p": BLS12_381(
                     Fq(
                         1608121574170059884560402737041075551004398222753167322502737202442103657878527703861294588816957778723978358656929
                     ),
@@ -1498,7 +1498,7 @@ class Bls12381:
                         2810743485049336686417731894326329677056358807341535683342934635322400997285682160742505930207760679245881967665294
                     ),
                 ),
-                "Q": BLS12_381_Twist(
+                "point_q": BLS12_381_Twist(
                     Fq2(
                         Fq(
                             3999096753806221938193196087566193520864855872588351781649866794914682840111282566711297983929539126493851563635185
@@ -1516,7 +1516,7 @@ class Bls12381:
                         ),
                     ),
                 ),
-                "Q_times_val_miller_loop": BLS12_381_Twist(
+                "q_times_val_miller_loop": BLS12_381_Twist(
                     Fq2(
                         Fq(
                             3278068326596990632802692875238327676419245951176508994282249301324515766694836317858631109550066664975403596849828
@@ -1596,7 +1596,7 @@ class Bls12381:
         ],
         "test_single_pairing": [
             {
-                "P": BLS12_381(
+                "point_p": BLS12_381(
                     Fq(
                         2164496310371602158625401652846445265711783933226748576971724475197497431624640485146214135103354961221545860757666
                     ),
@@ -1604,7 +1604,7 @@ class Bls12381:
                         3927721937187905147565673896457083842511788209223509741818571379715263914736501507254062765725070325879003018239389
                     ),
                 ),
-                "Q": BLS12_381_Twist(
+                "point_q": BLS12_381_Twist(
                     Fq2(
                         Fq(
                             3763763975204108445729736824603095119096163551087943235362871015145032022528910304754394655997505423714351305526852
@@ -1732,8 +1732,8 @@ class Bls12381:
                 ),
             },
             {
-                "P": BLS12_381(None, None),
-                "Q": BLS12_381_Twist(
+                "point_p": BLS12_381(None, None),
+                "point_q": BLS12_381_Twist(
                     Fq2(
                         Fq(
                             2527811126274150782362462984750514459178261288655408519510794143924196154457421800765888325088734040767889231749242
@@ -1755,7 +1755,7 @@ class Bls12381:
                 "expected": Fq12.identity(),
             },
             {
-                "P": BLS12_381(
+                "point_p": BLS12_381(
                     Fq(
                         447642131847111984779201362834081984682825107737641010263791904993627363530382117138797082213925519020717443251444
                     ),
@@ -1763,20 +1763,20 @@ class Bls12381:
                         3940316366197247449915798820633663783212539452369146855467651050299861267878828710144514659637219550683883930274961
                     ),
                 ),
-                "Q": BLS12_381_Twist(None, None),
+                "point_q": BLS12_381_Twist(None, None),
                 "miller_loop_inverse": None,
                 "expected": Fq12.identity(),
             },
             {
-                "P": BLS12_381(None, None),
-                "Q": BLS12_381_Twist(None, None),
+                "point_p": BLS12_381(None, None),
+                "point_q": BLS12_381_Twist(None, None),
                 "miller_loop_inverse": None,
                 "expected": Fq12.identity(),
             },
         ],
         "test_triple_miller_loop": [
             {
-                "P": [
+                "point_p": [
                     BLS12_381(
                         Fq(
                             2815169836410873834393647983886540743261242459561173383255288239730811076352757838419407199427171381211763391756183
@@ -1802,7 +1802,7 @@ class Bls12381:
                         ),
                     ),
                 ],
-                "Q": [
+                "point_q": [
                     BLS12_381_Twist(
                         Fq2(
                             Fq(
@@ -1920,7 +1920,7 @@ class Bls12381:
         ],
         "test_triple_pairing": [
             {
-                "P": [
+                "point_p": [
                     BLS12_381(
                         Fq(
                             3069926138539609894601338878290447162313141961991193193769116799774596342420674030565061534888390494922191509923097
@@ -1946,7 +1946,7 @@ class Bls12381:
                         ),
                     ),
                 ],
-                "Q": [
+                "point_q": [
                     BLS12_381_Twist(
                         Fq2(
                             Fq(
@@ -2143,7 +2143,7 @@ class Mnt4753:
         "test_line_evaluation": [
             # Test with P = Q
             {
-                "P": MNT4_753(
+                "point_p": MNT4_753(
                     Fq(
                         2943035718946563140535551731622071688826012267601483840566950709511666595228171168049412040842235954965616062691438659424344558201030283043328707428862049811655722732333051298433458352893283783436482075686030385465227721307986
                     ),
@@ -2151,7 +2151,7 @@ class Mnt4753:
                         39336537994342322996720041784537833660034304793043306540198501420372397262266297945251257108452366038680756288023358680810924589318935432051466993568851643259826515923501024791551335429421880490161655838326616618947703808587617
                     ),
                 ),
-                "Q": MNT4_753_Twist(
+                "point_q": MNT4_753_Twist(
                     Fq2(
                         Fq(
                             30133687151016488388918849945112595293454764007531829368875882016583077287442318364462723332724211995550487385600684403925350109630561432397375105127771513461718027401807630948510760603980713063532116983547252956869600263221770
@@ -2196,7 +2196,7 @@ class Mnt4753:
             },
             # Test with P != Q
             {
-                "P": MNT4_753(
+                "point_p": MNT4_753(
                     Fq(
                         39701188837158839599332240338868415468539503903682774786272393554054412772628854275615038466530962152059895339807856882265262252799497914738553723100752376712717325399105793231350009684753599123813879147723058318479466800863432
                     ),
@@ -2204,7 +2204,7 @@ class Mnt4753:
                         21556070235872291123524869787302508656838950098043385938353245727085608109102983558653715230510029280356391574331861504129391448250761624102861879044555456636898345743619671670705181676229095433024425382825929497574256934181830
                     ),
                 ),
-                "Q": MNT4_753_Twist(
+                "point_q": MNT4_753_Twist(
                     Fq2(
                         Fq(
                             33627408316147770904620847441430878562001414859817408752061800521442963105928677545587897106276151445940055678335950415735181421514990254262450644544204278034983894996624601956688139677118495636594836372758751502911017571101134
@@ -2514,7 +2514,7 @@ class Mnt4753:
         ],
         "test_miller_loop": [
             {
-                "P": MNT4_753(
+                "point_p": MNT4_753(
                     Fq(
                         19326698323509002998944973398822520051563555964203596418830543520584697290569142335586419599720972812674898469453936904950396393007729246574253785403602016322980176753930861702910082460573184733619513399632900330795519816148867
                     ),
@@ -2522,7 +2522,7 @@ class Mnt4753:
                         3029335385943847164898937403872779420817094861560021777566427100078026801426710076865387945100640487393697761419252447594302197336079918043076509088607636686115269957277647881962938406019888321500148097438726285869301240196763
                     ),
                 ),
-                "Q": MNT4_753_Twist(
+                "point_q": MNT4_753_Twist(
                     Fq2(
                         Fq(
                             13283806576284566187783649192966806519588508705741233581612552280550996595638968728953616024361761669170032393327606469487983417132578220258912273495965688828467827577181870121622309740377209120723837701659136966076221262796795
@@ -2540,7 +2540,7 @@ class Mnt4753:
                         ),
                     ),
                 ),
-                "Q_times_val_miller_loop": MNT4_753_Twist(
+                "q_times_val_miller_loop": MNT4_753_Twist(
                     Fq2(
                         Fq(
                             28614684391634387214560565598273830608582201214212715490170950640474356216932138044105277739428577252248038578560647316626370309397006164942679332226047437640463576770767970421385676587366253732996790350033004299226893458892806
@@ -2582,7 +2582,7 @@ class Mnt4753:
         ],
         "test_single_pairing": [
             {
-                "P": MNT4_753(
+                "point_p": MNT4_753(
                     Fq(
                         1833033138314188790955696626454410652156156513898272632554219496807702919122653093794610777127926376898889872382097966137716273898491910005676429347011691019450729405691544719125477315635168689273826691935665090683851306968702
                     ),
@@ -2590,7 +2590,7 @@ class Mnt4753:
                         23575390795159077034665466047570654182724566796781460972021329527041437476124316413367778433372110500274703923108147964541405045319708174731757378875572998113792729775531614459432128993082723419597483034264247879163628125274449
                     ),
                 ),
-                "Q": MNT4_753_Twist(
+                "point_q": MNT4_753_Twist(
                     Fq2(
                         Fq(
                             20107436964959809980653133173541792848112045037324804946356753271685258150743719384967546950233618137269588220899929738627908809619449875695062764578926106005275719195038259100876906790653582410788971212283724427011351068840051
@@ -2646,8 +2646,8 @@ class Mnt4753:
                 ),
             },
             {
-                "P": MNT4_753(None, None),
-                "Q": MNT4_753_Twist(
+                "point_p": MNT4_753(None, None),
+                "point_q": MNT4_753_Twist(
                     Fq2(
                         Fq(
                             25362111387247616179495672310472401015160895544535171257874707541526625493446650575265143270208159131272132273907305452231900849302579583565131281252211784736388328463510960221516423795436807301735404187175718633645553556551604
@@ -2669,7 +2669,7 @@ class Mnt4753:
                 "expected": Fq4.identity(),
             },
             {
-                "P": MNT4_753(
+                "point_p": MNT4_753(
                     Fq(
                         38789345272186400940282765202354361417131221444260534930353159484053883045174350452461543372612639767886147945452046389632760478474417737151336489657307910472031442141199324695553328034671727052141287712142770746429002298003004
                     ),
@@ -2677,20 +2677,20 @@ class Mnt4753:
                         20325966031831394281672895984688283809038125425690573112256183435917011524862850574014914532900883168961362559114919339620092152771933147985499183963568199822858460505213278294383736989802997792098612527746635385075238164216453
                     ),
                 ),
-                "Q": MNT4_753_Twist(None, None),
+                "point_q": MNT4_753_Twist(None, None),
                 "miller_loop_inverse": None,
                 "expected": Fq4.identity(),
             },
             {
-                "P": MNT4_753(None, None),
-                "Q": MNT4_753_Twist(None, None),
+                "point_p": MNT4_753(None, None),
+                "point_q": MNT4_753_Twist(None, None),
                 "miller_loop_inverse": None,
                 "expected": Fq4.identity(),
             },
         ],
         "test_triple_miller_loop": [
             {
-                "P": [
+                "point_p": [
                     MNT4_753(
                         Fq(
                             39194798937854579957367103569263113395079975250444772094412416589352864242794106199817636736963377572628465964899629794829912748638356845960305582826714260736476095725111637238587415247714329374990126196176379426009686462985467
@@ -2716,7 +2716,7 @@ class Mnt4753:
                         ),
                     ),
                 ],
-                "Q": [
+                "point_q": [
                     MNT4_753_Twist(
                         Fq2(
                             Fq(
@@ -2796,7 +2796,7 @@ class Mnt4753:
         ],
         "test_triple_pairing": [
             {
-                "P": [
+                "point_p": [
                     MNT4_753(
                         Fq(
                             2795065682308053001837030257198521273474676952051025551375945911537972137384870714717602218107546917412284213090052407161397245091899584174707321979644614202982287358967165557382823014476816880281781931178234419894988784963783
@@ -2822,7 +2822,7 @@ class Mnt4753:
                         ),
                     ),
                 ],
-                "Q": [
+                "point_q": [
                     MNT4_753_Twist(
                         Fq2(
                             Fq(
@@ -2930,7 +2930,15 @@ def generate_test_cases(test_name):
                     case "test_cubic_to_quadratic":
                         out.append((config, test_data["x"], test_data["expected"]))
                     case "test_line_evaluation":
-                        out.append((config, test_data["P"], test_data["Q"], test_data["lam"], test_data["expected"]))
+                        out.append(
+                            (
+                                config,
+                                test_data["point_p"],
+                                test_data["point_q"],
+                                test_data["lam"],
+                                test_data["expected"],
+                            )
+                        )
                     case "test_line_eval_times_eval":
                         out.append((config, test_data["x"], test_data["y"], test_data["expected"]))
                     case "test_line_eval_times_eval_times_eval":
@@ -2953,9 +2961,9 @@ def generate_test_cases(test_name):
                         out.append(
                             (
                                 config,
-                                test_data["P"],
-                                test_data["Q"],
-                                test_data["Q_times_val_miller_loop"],
+                                test_data["point_p"],
+                                test_data["point_q"],
+                                test_data["q_times_val_miller_loop"],
                                 test_data["expected"],
                             )
                         )
@@ -2963,20 +2971,20 @@ def generate_test_cases(test_name):
                         out.append(
                             (
                                 config,
-                                test_data["P"],
-                                test_data["Q"],
+                                test_data["point_p"],
+                                test_data["point_q"],
                                 test_data["miller_loop_inverse"],
                                 test_data["expected"],
                             )
                         )
                     case "test_triple_miller_loop":
-                        out.append((config, test_data["P"], test_data["Q"], test_data["expected"]))
+                        out.append((config, test_data["point_p"], test_data["point_q"], test_data["expected"]))
                     case "test_triple_pairing":
                         out.append(
                             (
                                 config,
-                                test_data["P"],
-                                test_data["Q"],
+                                test_data["point_p"],
+                                test_data["point_q"],
                                 test_data["miller_loop_inverse"],
                                 test_data["expected"],
                             )
@@ -3014,12 +3022,16 @@ def test_cubic_to_quadratic(config, x, expected, save_to_json_folder):
 
 @pytest.mark.parametrize("clean_constant", [True, False])
 @pytest.mark.parametrize("is_constant_reused", [True, False])
-@pytest.mark.parametrize(("config", "P", "Q", "lam", "expected"), generate_test_cases("test_line_evaluation"))
-def test_line_evaluation(config, P, Q, lam, expected, clean_constant, is_constant_reused, save_to_json_folder):
+@pytest.mark.parametrize(
+    ("config", "point_p", "point_q", "lam", "expected"), generate_test_cases("test_line_evaluation")
+)
+def test_line_evaluation(
+    config, point_p, point_q, lam, expected, clean_constant, is_constant_reused, save_to_json_folder
+):
     unlock = nums_to_script([config.q])
     unlock += generate_unlock(lam)
-    unlock += generate_unlock(Q)
-    unlock += generate_unlock(P)
+    unlock += generate_unlock(point_q)
+    unlock += generate_unlock(point_p)
 
     # Check correct evaluation
     lock = config.test_script_line_functions.line_evaluation(
@@ -3250,13 +3262,13 @@ def test_hard_exponentiation(config, f, expected, clean_constant, save_to_json_f
 
 @pytest.mark.parametrize("clean_constant", [True, False])
 @pytest.mark.parametrize(
-    ("config", "P", "Q", "Q_times_val_miller_loop", "expected"), generate_test_cases("test_miller_loop")
+    ("config", "point_p", "point_q", "q_times_val_miller_loop", "expected"), generate_test_cases("test_miller_loop")
 )
-def test_miller_loop(config, P, Q, Q_times_val_miller_loop, expected, clean_constant, save_to_json_folder):
-    lambdas_Q_exp_miller_loop = [[s.to_list() for s in el] for el in Q.get_lambdas(config.exp_miller_loop)]
+def test_miller_loop(config, point_p, point_q, q_times_val_miller_loop, expected, clean_constant, save_to_json_folder):
+    lambdas_q_exp_miller_loop = [[s.to_list() for s in el] for el in point_q.get_lambdas(config.exp_miller_loop)]
 
     unlock = config.test_script_pairing.miller_loop_input_data(
-        P=P.to_list(), Q=Q.to_list(), lambdas_Q_exp_miller_loop=lambdas_Q_exp_miller_loop
+        point_p=point_p.to_list(), point_q=point_q.to_list(), lambdas_q_exp_miller_loop=lambdas_q_exp_miller_loop
     )
 
     # Check correct evaluation
@@ -3265,7 +3277,7 @@ def test_miller_loop(config, P, Q, Q_times_val_miller_loop, expected, clean_cons
     )
     lock += generate_verify(expected, config.ix_miller_output)
     lock += Script.parse_string("OP_VERIFY")
-    lock += generate_verify(Q_times_val_miller_loop)
+    lock += generate_verify(q_times_val_miller_loop)
 
     verify_script(lock, unlock, clean_constant)
 
@@ -3275,22 +3287,22 @@ def test_miller_loop(config, P, Q, Q_times_val_miller_loop, expected, clean_cons
 
 @pytest.mark.parametrize("clean_constant", [True, False])
 @pytest.mark.parametrize(
-    ("config", "P", "Q", "miller_output_inverse", "expected"), generate_test_cases("test_single_pairing")
+    ("config", "point_p", "point_q", "miller_output_inverse", "expected"), generate_test_cases("test_single_pairing")
 )
-def test_single_pairing(config, P, Q, miller_output_inverse, expected, clean_constant, save_to_json_folder):
-    if Q.is_infinity():
-        lambdas_Q_exp_miller_loop = []
-        Q = [None, None]
+def test_single_pairing(config, point_p, point_q, miller_output_inverse, expected, clean_constant, save_to_json_folder):
+    if point_q.is_infinity():
+        lambdas_q_exp_miller_loop = []
+        point_q = [None, None]
     else:
-        lambdas_Q_exp_miller_loop = [[s.to_list() for s in el] for el in Q.get_lambdas(config.exp_miller_loop)]
-        Q = Q.to_list()
+        lambdas_q_exp_miller_loop = [[s.to_list() for s in el] for el in point_q.get_lambdas(config.exp_miller_loop)]
+        point_q = point_q.to_list()
 
-    P = [None, None] if P.is_infinity() else P.to_list()
+    point_p = [None, None] if point_p.is_infinity() else point_p.to_list()
 
     unlock = config.test_script_pairing.single_pairing_input(
-        P=P,
-        Q=Q,
-        lambdas_Q_exp_miller_loop=lambdas_Q_exp_miller_loop,
+        point_p=point_p,
+        point_q=point_q,
+        lambdas_q_exp_miller_loop=lambdas_q_exp_miller_loop,
         miller_output_inverse=miller_output_inverse,
     )
 
@@ -3307,20 +3319,20 @@ def test_single_pairing(config, P, Q, miller_output_inverse, expected, clean_con
 
 
 @pytest.mark.parametrize("clean_constant", [True, False])
-@pytest.mark.parametrize(("config", "P", "Q", "expected"), generate_test_cases("test_triple_miller_loop"))
-def test_triple_miller_loop(config, P, Q, expected, clean_constant, save_to_json_folder):
-    lambdas = [[[s.to_list() for s in el] for el in Q[i].get_lambdas(config.exp_miller_loop)] for i in range(3)]
+@pytest.mark.parametrize(("config", "point_p", "point_q", "expected"), generate_test_cases("test_triple_miller_loop"))
+def test_triple_miller_loop(config, point_p, point_q, expected, clean_constant, save_to_json_folder):
+    lambdas = [[[s.to_list() for s in el] for el in point_q[i].get_lambdas(config.exp_miller_loop)] for i in range(3)]
 
     unlock = config.test_script_pairing.triple_miller_loop_input(
-        P1=P[0].to_list(),
-        P2=P[1].to_list(),
-        P3=P[2].to_list(),
-        Q1=Q[0].to_list(),
-        Q2=Q[1].to_list(),
-        Q3=Q[2].to_list(),
-        lambdas_Q1_exp_miller_loop=lambdas[0],
-        lambdas_Q2_exp_miller_loop=lambdas[1],
-        lambdas_Q3_exp_miller_loop=lambdas[2],
+        point_p1=point_p[0].to_list(),
+        point_p2=point_p[1].to_list(),
+        point_p3=point_p[2].to_list(),
+        point_q1=point_q[0].to_list(),
+        point_q2=point_q[1].to_list(),
+        point_q3=point_q[2].to_list(),
+        lambdas_q1_exp_miller_loop=lambdas[0],
+        lambdas_q2_exp_miller_loop=lambdas[1],
+        lambdas_q3_exp_miller_loop=lambdas[2],
     )
 
     # Check correct evaluation
@@ -3337,21 +3349,21 @@ def test_triple_miller_loop(config, P, Q, expected, clean_constant, save_to_json
 
 @pytest.mark.parametrize("clean_constant", [True, False])
 @pytest.mark.parametrize(
-    ("config", "P", "Q", "miller_output_inverse", "expected"), generate_test_cases("test_triple_pairing")
+    ("config", "point_p", "point_q", "miller_output_inverse", "expected"), generate_test_cases("test_triple_pairing")
 )
-def test_triple_pairing(config, P, Q, miller_output_inverse, expected, clean_constant, save_to_json_folder):
-    lambdas = [[[s.to_list() for s in el] for el in Q[i].get_lambdas(config.exp_miller_loop)] for i in range(3)]
+def test_triple_pairing(config, point_p, point_q, miller_output_inverse, expected, clean_constant, save_to_json_folder):
+    lambdas = [[[s.to_list() for s in el] for el in point_q[i].get_lambdas(config.exp_miller_loop)] for i in range(3)]
 
     unlock = config.test_script_pairing.triple_pairing_input(
-        P1=P[0].to_list(),
-        P2=P[1].to_list(),
-        P3=P[2].to_list(),
-        Q1=Q[0].to_list(),
-        Q2=Q[1].to_list(),
-        Q3=Q[2].to_list(),
-        lambdas_Q1_exp_miller_loop=lambdas[0],
-        lambdas_Q2_exp_miller_loop=lambdas[1],
-        lambdas_Q3_exp_miller_loop=lambdas[2],
+        point_p1=point_p[0].to_list(),
+        point_p2=point_p[1].to_list(),
+        point_p3=point_p[2].to_list(),
+        point_q1=point_q[0].to_list(),
+        point_q2=point_q[1].to_list(),
+        point_q3=point_q[2].to_list(),
+        lambdas_q1_exp_miller_loop=lambdas[0],
+        lambdas_q2_exp_miller_loop=lambdas[1],
+        lambdas_q3_exp_miller_loop=lambdas[2],
         miller_output_inverse=miller_output_inverse.to_list(),
     )
 

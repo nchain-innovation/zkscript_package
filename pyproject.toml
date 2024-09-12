@@ -73,7 +73,6 @@ select = [
 
 ignore = [
     "S101",  # use of assert
-    "N803",  # argument name should be lowercase
     "N806",  # variable name in function should be lowercase
     # TODO: re-enable once documentation is well done
     "D100",

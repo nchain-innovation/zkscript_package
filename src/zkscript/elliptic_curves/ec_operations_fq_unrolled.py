@@ -185,7 +185,7 @@ class EllipticCurveFqUnrolled:
         return out
 
     def unrolled_multiplication_input(
-        self, P: list[int], a: int, lambdas: list[list[list[int]]], max_multiplier: int, load_modulus=True
+        self, point_p: list[int], a: int, lambdas: list[list[list[int]]], max_multiplier: int, load_modulus=True
     ) -> Script:
         """Return the input script needed to execute the unrolled multiplication script above.
 
@@ -230,6 +230,6 @@ class EllipticCurveFqUnrolled:
             out += Script.parse_string(" ".join(["OP_0", "OP_0"] * (M - N)))
 
         # Load P
-        out += nums_to_script(P)
+        out += nums_to_script(point_p)
 
         return out
