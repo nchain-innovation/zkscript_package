@@ -57,17 +57,17 @@ class Fq12:
         # After this, the stack is: x0 x1 y0 y1 (x_0 * y_1)
         compute_second_component = (
             Script.parse_string("OP_2OVER OP_2OVER")
-            + pick(position=9, nElements=2)
+            + pick(position=9, n_elements=2)
             + Script.parse_string("OP_2ROT OP_2ROT")
         )  # Pick y1
-        compute_second_component += pick(position=29, nElements=6)  # Pick x0
+        compute_second_component += pick(position=29, n_elements=6)  # Pick x0
         compute_second_component += fq6.mul(take_modulo=False, check_constant=False, clean_constant=False)
 
         # After this, the stack is: x0 x1 y0 y1 (x_0 * y_1) (x1 * y0)
         compute_second_component += (
-            pick(position=15, nElements=4) + pick(position=21, nElements=2) + Script.parse_string("OP_2ROT OP_2ROT")
+            pick(position=15, n_elements=4) + pick(position=21, n_elements=2) + Script.parse_string("OP_2ROT OP_2ROT")
         )  # Pick y0
-        compute_second_component += pick(position=29, nElements=6)  # Pick x1
+        compute_second_component += pick(position=29, n_elements=6)  # Pick x1
         compute_second_component += fq6.mul(take_modulo=False, check_constant=False, clean_constant=False)
 
         # After this, the stack is: x0 x1 y0 y1, altstack = [secondComponent]
@@ -82,7 +82,7 @@ class Fq12:
 
         # After this, the stack is: x_0 y_0, altstack = [secondComponent, (x_1 * y_1 * v)]
         compute_first_component = (
-            roll(position=15, nElements=4) + roll(position=17, nElements=2) + Script.parse_string("OP_2ROT OP_2ROT")
+            roll(position=15, n_elements=4) + roll(position=17, n_elements=2) + Script.parse_string("OP_2ROT OP_2ROT")
         )  # Roll x1
         compute_first_component += fq6.mul(take_modulo=False, check_constant=False, clean_constant=False)
         compute_first_component += fq6.mul_by_non_residue(take_modulo=False, check_constant=False, clean_constant=False)
@@ -166,17 +166,17 @@ class Fq12:
 
         # After this, the stack is: a b c d e f (b*e)
         compute_sixth_component = Script.parse_string("OP_2OVER")  # Pick e
-        compute_sixth_component += pick(position=11, nElements=2)  # Pick b
+        compute_sixth_component += pick(position=11, n_elements=2)  # Pick b
         compute_sixth_component += fq2.mul(take_modulo=False, check_constant=False, clean_constant=False)
 
         # After this, the stack is: a b c d e f (b*e) (a*f)
         compute_sixth_component += Script.parse_string("OP_2OVER")  # Pick f
-        compute_sixth_component += pick(position=15, nElements=2)  # Pick a
+        compute_sixth_component += pick(position=15, n_elements=2)  # Pick a
         compute_sixth_component += fq2.mul(take_modulo=False, check_constant=False, clean_constant=False)
 
         # After this, the stack is: a b c d e f, altstack = [((b*e) + (a*f) + (c*d))]
-        compute_sixth_component += pick(position=11, nElements=2)  # Pick c
-        compute_sixth_component += pick(position=11, nElements=2)  # Pick d
+        compute_sixth_component += pick(position=11, n_elements=2)  # Pick c
+        compute_sixth_component += pick(position=11, n_elements=2)  # Pick d
         compute_sixth_component += fq2.mul(take_modulo=False, check_constant=False, clean_constant=False)
         compute_sixth_component += fq2.add_three(take_modulo=False, check_constant=False, clean_constant=False)
         compute_sixth_component += Script.parse_string("OP_TOALTSTACK OP_TOALTSTACK")
@@ -185,18 +185,18 @@ class Fq12:
 
         # After this, the stack is: a b c d e f (a*e), altstack = [sixthComponent]
         compute_fifth_component = Script.parse_string("OP_2OVER")  # Pick e
-        compute_fifth_component += pick(position=13, nElements=2)  # Pick a
+        compute_fifth_component += pick(position=13, n_elements=2)  # Pick a
         compute_fifth_component += fq2.mul(take_modulo=False, check_constant=False, clean_constant=False)
 
         # After this, the stack is: a b c d e f (a*e) (c*f*xi), altstack = [sixthComponent]
         compute_fifth_component += Script.parse_string("OP_2OVER")  # Pick f
-        compute_fifth_component += pick(position=11, nElements=2)  # Pick c
+        compute_fifth_component += pick(position=11, n_elements=2)  # Pick c
         compute_fifth_component += fq2.mul(take_modulo=False, check_constant=False, clean_constant=False)
         compute_fifth_component += fq2.mul_by_non_residue(take_modulo=False, check_constant=False, clean_constant=False)
 
         # After this, the stack is: a b c d e f, altstack = [sixthComponent, [(a*e) + (c*f*xi) + (b*d)]]
-        compute_fifth_component += pick(position=13, nElements=2)  # Pick b
-        compute_fifth_component += pick(position=11, nElements=2)  # Pick d
+        compute_fifth_component += pick(position=13, n_elements=2)  # Pick b
+        compute_fifth_component += pick(position=11, n_elements=2)  # Pick d
         compute_fifth_component += fq2.mul(take_modulo=False, check_constant=False, clean_constant=False)
         compute_fifth_component += fq2.add_three(take_modulo=False, check_constant=False, clean_constant=False)
         compute_fifth_component += Script.parse_string("OP_TOALTSTACK OP_TOALTSTACK")
@@ -205,12 +205,12 @@ class Fq12:
 
         # After this, the stack is: a b c d e f (c*e), altstack = [sixthComponent, fifthComponent]
         compute_fourth_component = Script.parse_string("OP_2OVER")  # Pick e
-        compute_fourth_component += pick(position=9, nElements=2)  # Pick c
+        compute_fourth_component += pick(position=9, n_elements=2)  # Pick c
         compute_fourth_component += fq2.mul(take_modulo=False, check_constant=False, clean_constant=False)
 
         # After this, the stack is: a b c d e f [(c*e) + (b*f)]*xi, altstack = [sixthComponent, fifthComponent]
         compute_fourth_component += Script.parse_string("OP_2OVER")  # Pick f
-        compute_fourth_component += pick(position=13, nElements=2)  # Pick b
+        compute_fourth_component += pick(position=13, n_elements=2)  # Pick b
         compute_fourth_component += fq2.mul(take_modulo=False, check_constant=False, clean_constant=False)
         compute_fourth_component += fq2.add(take_modulo=False, check_constant=False, clean_constant=False)
         compute_fourth_component += fq2.mul_by_non_residue(
@@ -218,8 +218,8 @@ class Fq12:
         )
 
         # After this, the stack is: a b c d e f, altstack = [sixthComponent, fifthComponent, [(c*e) + (b*f)]*xi + a*d]]
-        compute_fourth_component += pick(position=13, nElements=2)  # Pick a
-        compute_fourth_component += pick(position=9, nElements=2)  # Pick d
+        compute_fourth_component += pick(position=13, n_elements=2)  # Pick a
+        compute_fourth_component += pick(position=9, n_elements=2)  # Pick d
         compute_fourth_component += fq2.mul(take_modulo=False, check_constant=False, clean_constant=False)
         compute_fourth_component += fq2.add(take_modulo=False, check_constant=False, clean_constant=False)
         compute_fourth_component += Script.parse_string("OP_TOALTSTACK OP_TOALTSTACK")
@@ -229,7 +229,7 @@ class Fq12:
         # After this, the stack is: a b c d e f (d*e),
         # altstack = [sixthComponent, fifthComponent, fourthComponent]
         compute_third_component = Script.parse_string("OP_2OVER")  # Pick e
-        compute_third_component += pick(position=7, nElements=2)  # Pick d
+        compute_third_component += pick(position=7, n_elements=2)  # Pick d
         compute_third_component += fq2.mul(take_modulo=False, check_constant=False, clean_constant=False)
 
         # After this, the stack is: a b c d e f (d*e) f^2*xi,
@@ -241,8 +241,8 @@ class Fq12:
         # After this, the stack is: a b c d e f f^2*xi 2*[(d*e) + (a*c)],
         # altstack = [sixthComponent, fifthComponent, fourthComponent]
         compute_third_component += Script.parse_string("OP_2SWAP")  # Roll (d*e)
-        compute_third_component += pick(position=15, nElements=2)  # Pick a
-        compute_third_component += pick(position=13, nElements=2)  # Pick c
+        compute_third_component += pick(position=15, n_elements=2)  # Pick a
+        compute_third_component += pick(position=13, n_elements=2)  # Pick c
         compute_third_component += fq2.mul(take_modulo=False, check_constant=False, clean_constant=False)
         compute_third_component += fq2.add(take_modulo=False, check_constant=False, clean_constant=False)
         compute_third_component += Script.parse_string("OP_2")
@@ -250,7 +250,7 @@ class Fq12:
 
         # After this, the stack is: a b c d e f,
         # altstack = [sixthComponent, fifthComponent, fourthComponent, 2*[f^2*xi 2*[(d*e) + (a*c)] + b^2]]
-        compute_third_component += pick(position=13, nElements=2)  # Pick b
+        compute_third_component += pick(position=13, n_elements=2)  # Pick b
         compute_third_component += fq2.square(take_modulo=False, check_constant=False, clean_constant=False)
         compute_third_component += fq2.add_three(take_modulo=False, check_constant=False, clean_constant=False)
         compute_third_component += Script.parse_string("OP_TOALTSTACK OP_TOALTSTACK")
@@ -267,7 +267,7 @@ class Fq12:
 
         # After this, the stack is: a b c d e f xi*[c^2 + 2*e*f],
         # altstack = [sixthComponent, fifthComponent, fourthComponent, thirdComponent]
-        compute_second_component += pick(position=9, nElements=2)  # Pick c
+        compute_second_component += pick(position=9, n_elements=2)  # Pick c
         compute_second_component += fq2.square(take_modulo=False, check_constant=False, clean_constant=False)
         compute_second_component += fq2.add(take_modulo=False, check_constant=False, clean_constant=False)
         compute_second_component += fq2.mul_by_non_residue(
@@ -276,15 +276,15 @@ class Fq12:
 
         # After this, the stack is: a b c d e f xi*[c^2 + 2*e*f] 2*a*b,
         # altstack = [sixthComponent, fifthComponent, fourthComponent, thirdComponent]
-        compute_second_component += pick(position=13, nElements=2)  # Pick a
-        compute_second_component += pick(position=13, nElements=2)  # Pick b
+        compute_second_component += pick(position=13, n_elements=2)  # Pick a
+        compute_second_component += pick(position=13, n_elements=2)  # Pick b
         compute_second_component += fq2.mul(take_modulo=False, check_constant=False, clean_constant=False)
         compute_second_component += Script.parse_string("OP_2")
         compute_second_component += fq2.scalar_mul(take_modulo=False, check_constant=False, clean_constant=False)
 
         # After this, the stack is: a b c d e f,
         # altstack = [sixthComponent, fifthComponent, fourthComponent, thirdComponent, xi*[c^2 + 2*e*f] + 2*a*b + d^2]
-        compute_second_component += pick(position=9, nElements=2)  # Pick d
+        compute_second_component += pick(position=9, n_elements=2)  # Pick d
         compute_second_component += fq2.square(take_modulo=False, check_constant=False, clean_constant=False)
         compute_second_component += fq2.add_three(take_modulo=False, check_constant=False, clean_constant=False)
         compute_second_component += Script.parse_string("OP_TOALTSTACK OP_TOALTSTACK")
@@ -296,8 +296,8 @@ class Fq12:
         compute_first_component += fq2.mul(take_modulo=False, check_constant=False, clean_constant=False)
 
         # After this, the stack is: a e (d*f) (b*c)
-        compute_first_component += roll(position=7, nElements=2)  # Pick b
-        compute_first_component += roll(position=7, nElements=2)  # Pick c
+        compute_first_component += roll(position=7, n_elements=2)  # Pick b
+        compute_first_component += roll(position=7, n_elements=2)  # Pick c
         compute_first_component += fq2.mul(take_modulo=False, check_constant=False, clean_constant=False)
 
         # After this, the stack is: a e 2*[(d*f)+(b*c)]
@@ -487,14 +487,14 @@ class Fq12:
             out = Script()
 
         # After this, the stack is: b c d Conjugate(a) e f
-        a_conjugate = roll(position=11, nElements=2)  # Bring a on top of the stack
+        a_conjugate = roll(position=11, n_elements=2)  # Bring a on top of the stack
         a_conjugate += fq2.conjugate(
             take_modulo=take_modulo, check_constant=False, clean_constant=False, is_constant_reused=False
         )  # Conjugate a
         a_conjugate += Script.parse_string("OP_2ROT OP_2ROT")  # Bring e and f on top of the stack
 
         # After this, the stack is: c d Conjugate(a) [Conjugate(b) * gamma12] e f
-        b_conjugate_times_gamma12 = roll(position=11, nElements=2)  # Bring b on top of the stack
+        b_conjugate_times_gamma12 = roll(position=11, n_elements=2)  # Bring b on top of the stack
         b_conjugate_times_gamma12 += fq2.conjugate(
             take_modulo=False, check_constant=False, clean_constant=False
         )  # Conjugate b
@@ -505,7 +505,7 @@ class Fq12:
         b_conjugate_times_gamma12 += Script.parse_string("OP_2ROT OP_2ROT")  # Bring e and f on top of the stack
 
         # After this, the stack is: d Conjugate(a) [Conjugate(b) * gamma12] [Conjugate(c) * gamma14] e f
-        c_conjugate_gamma14 = roll(position=11, nElements=2)  # Bring c on top of the stack
+        c_conjugate_gamma14 = roll(position=11, n_elements=2)  # Bring c on top of the stack
         c_conjugate_gamma14 += fq2.conjugate(
             take_modulo=False, check_constant=False, clean_constant=False
         )  # Conjugate c
@@ -517,7 +517,7 @@ class Fq12:
 
         # After this, the stack is: Conjugate(a) [Conjugate(b) * gamma12] [Conjugate(c) * gamma14]
         # [Conjugate(d) * gamma11] e f
-        d_conjugate_gamma11 = roll(position=11, nElements=2)  # Bring d on top of the stack
+        d_conjugate_gamma11 = roll(position=11, n_elements=2)  # Bring d on top of the stack
         d_conjugate_gamma11 += fq2.conjugate(
             take_modulo=False, check_constant=False, clean_constant=False
         )  # Conjugate d
@@ -602,7 +602,7 @@ class Fq12:
             out = Script()
 
         # After this, the stack is: b c d a e f
-        a = roll(position=11, nElements=2)  # Bring a on top of the stack
+        a = roll(position=11, n_elements=2)  # Bring a on top of the stack
         if take_modulo:
             a += Script.parse_string("OP_SWAP")
             a += Script.parse_string("OP_DEPTH OP_1SUB OP_PICK OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
@@ -611,7 +611,7 @@ class Fq12:
         a += Script.parse_string("OP_2ROT OP_2ROT")  # Bring e and f on top of the stack
 
         # After this, the stack is: c d a [b * gamma22] e f
-        b_gamma22 = roll(position=11, nElements=2)  # Bring b on top of the stack
+        b_gamma22 = roll(position=11, n_elements=2)  # Bring b on top of the stack
         b_gamma22 += nums_to_script(gammas[1])  # gamma22
         b_gamma22 += fq2.mul(
             take_modulo=take_modulo, check_constant=False, clean_constant=False, is_constant_reused=False
@@ -619,7 +619,7 @@ class Fq12:
         b_gamma22 += Script.parse_string("OP_2ROT OP_2ROT")  # Bring e and f on top of the stack
 
         # After this, the stack is: d a [b * gamma12] [c * gamma24] e f
-        c_gamma24 = roll(position=11, nElements=2)  # Bring c on top of the stack
+        c_gamma24 = roll(position=11, n_elements=2)  # Bring c on top of the stack
         c_gamma24 += nums_to_script(gammas[3])  # gamma24
         c_gamma24 += fq2.mul(
             take_modulo=take_modulo, check_constant=False, clean_constant=False, is_constant_reused=False
@@ -627,7 +627,7 @@ class Fq12:
         c_gamma24 += Script.parse_string("OP_2ROT OP_2ROT")  # Bring e and f on top of the stack
 
         # After this, the stack is: a [b * gamma12] [c * gamma14] [d * gamma21] e f
-        d_gamma21 = roll(position=11, nElements=2)  # Bring d on top of the stack
+        d_gamma21 = roll(position=11, n_elements=2)  # Bring d on top of the stack
         d_gamma21 += nums_to_script(gammas[0])  # gamma21
         d_gamma21 += fq2.mul(
             take_modulo=take_modulo, check_constant=False, clean_constant=False, is_constant_reused=False

@@ -29,13 +29,14 @@ class EllipticCurveFqUnrolled:
 
         Notice that modulo_threshold is given as bit length.
         Input parameters:
-            - Stack: q .. a [lambdas,a] P
+            - Stack: q .. marker_a_is_zero [lambdas,a] P
             - Altstack: []
         Output:
             - P aP
         Assumption on data:
             - P is passed as a couple of integers (minimally encoded, in little endian)
             - [lambdas,a] is a list, see below for its construction
+            - marker_a_is_zero: a == 0
 
         [lambdas,a] is the list constructed starting from:
             - exp_a, which is the binary expansion of a
@@ -60,7 +61,7 @@ class EllipticCurveFqUnrolled:
             - M = log(8) = 3
             - N = log(a) = 1
         Thus:
-            - [lambdas,a] = lambda_(2T+P) OP_1 lambda_2T OP_1 OP_0 OP_0
+            - [lambdas,a] = lambda_(2T+P) OP_1 lambda_2T OP_1 OP_0 OP_0 OP_0 OP_0
 
         Example:
             - max_multiplier = 8
@@ -71,7 +72,7 @@ class EllipticCurveFqUnrolled:
             - M = log(8) = 3
             - N = log(a) = 3
         Thus:
-            - [lambdas,a] = OP_0 lambda_2T OP_1 OP_0 lambda_2T OP_1 OP_0 lambda_2T OP_1
+            - [lambdas,a] = OP_0 OP_0 lambda_2T OP_1 OP_0 OP_0 lambda_2T OP_1 OP_0 OP_0 lambda_2T OP_1
 
         The meaning of the list is the following:
             - if it starts with OP_0, then do not execute the loop
@@ -105,14 +106,17 @@ class EllipticCurveFqUnrolled:
         Set a = (a0,a1,...,aN) where a = sum_i 2^i ai.
 
         At the beginning of every iteration of the loop the stack is assumed to be:
-            lambda_(2T) a_i P T m
-        where:
-            - T is the i-th step of the calculation of aP
-            - m is the i-th step of the calculation of a.
-
-        If exp_a[i] != 0, then the stack is:
-            lambda_(2T + P) lambda_(2T) a_i P T
-        where lambda_(2T + Q) is the gradient of the line through 2T and P.
+			auxiliary_data marker_doubling P T
+		where:
+			- T is the i-th step of the calculation of aP
+			- marker_doubling is the marker that tells us if we need to double T
+		If marker_doubling:
+			- is OP_0 => remove auxiliary_data and move to next iteration
+			- is OP_1 => the auxiliary_data is assumed to be:
+				auxiliary_data_addition marker_addition lambda_(2T)
+		If marker_addition:
+			- is OP_0 => after the doubling, remove auxiliary_data_addition
+			- is OP_1 => then auxiliary_data_addition is assumed to be: lambda_(2T+P)
         """
 
         if check_constant:
@@ -124,16 +128,17 @@ class EllipticCurveFqUnrolled:
         else:
             out = Script()
 
-        # After this, the stack is: [lambdas,a] P T m
-        set_T_and_m = Script.parse_string("OP_2DUP OP_1")
-        out += set_T_and_m
+        # After this, the stack is: marker_a_is_zero [lambdas,a] P T
+        set_T = Script.parse_string("OP_2DUP")
+        out += set_T
 
         size_q = ceil(log2(self.MODULUS))
         current_size = size_q
 
-        # After this, the stack is: P aP m
+        # After this, the stack is: marker_a_is_zero P aP
         for i in range(int(log2(max_multiplier)) - 1, -1, -1):
-            # This is an approximation, but I'm quite sure it works. We always have to take into account both operations
+            # This is an approximation, but I'm quite sure it works.
+            # We always have to take into account both operations
             # because we don't know which ones are going to be executed.
             size_after_operations = 2 * 4 * current_size
             if size_after_operations > modulo_threshold or i == 0:
@@ -143,40 +148,35 @@ class EllipticCurveFqUnrolled:
                 take_modulo = False
                 current_size = size_after_operations
 
-            out += roll(position=5, nElements=1)  # Roll marker to decide whether to excute the loop
-            out += Script.parse_string("OP_IF")  # Check marker for executing iteration
-            out += roll(position=5, nElements=1)  # Roll lambda_2T
-            out += Script.parse_string("OP_2SWAP")  # Roll T
-            # After this, the stack is: P m 2T
+            # After this, the stack is: P T auxiliary_data marker_doubling
+            out += Script.parse_string(
+                "OP_2ROT"
+            )  # Roll marker to decide whether to excute the loop and the auxiliary data
+            out += Script.parse_string(
+                "OP_IF"
+            )  # Check marker for executing iteration; if we enter here, the stack is: P T lambda_2T
+            out += Script.parse_string("OP_ROT OP_ROT")  # Roll T
             out += ec_over_fq.point_doubling(
                 take_modulo=take_modulo, check_constant=False, clean_constant=False
             )  # Compute 2T
-            out += roll(position=5, nElements=1)  # Roll marker for addition
-            out += Script.parse_string("OP_IF")  # Check marker for +P
-            out += roll(position=5, nElements=1)  # Roll lambda_(2T+P)
+            out += Script.parse_string("OP_2ROT")  # Roll marker for addition and auxiliary data addition
+            out += Script.parse_string(
+                "OP_IF"
+            )  # Check marker for +P; if we enter here, the stack is: P 2T lambda_(2T+P)
             out += Script.parse_string("OP_ROT OP_ROT")  # Roll 2T
-            out += pick(position=5, nElements=2)  # Pick P
-            # After this, the stack is: P m (2T+P)
+            out += pick(position=4, n_elements=2)  # Pick P
             out += ec_over_fq.point_addition(
                 take_modulo=take_modulo, check_constant=False, clean_constant=False
             )  # Compute 2T + P
-            # After this, the stack is: P (2T+P) (2m + 1)
-            out += Script.parse_string("OP_ROT")  # Roll m
-            out += Script.parse_string("OP_2 OP_MUL OP_1ADD")  # Update m
-            out += Script.parse_string("OP_ELSE")  # Conclude branch with addition
-            # After this, the stack is: P (2T+P) 2m
-            out += Script.parse_string("OP_ROT")  # Roll m
-            out += Script.parse_string("OP_2 OP_MUL")  # Update m
-            out += Script.parse_string("OP_ENDIF OP_ENDIF")
+            out += Script.parse_string("OP_0")  # Add data to be dropped
+            out += Script.parse_string("OP_ENDIF OP_ENDIF")  # Conclude the conditional branches
+            out += Script.parse_string("OP_DROP")  # Drop useless data (if marker_doubling = False => auxiliary_data,
+            # if marker_addition = False => auxiliary_data_addition)
 
-        # Check is a == 0, in which case return 0x00 0x00
-        out += roll(position=5, nElements=1)
-        out += Script.parse_string("OP_DUP OP_0 OP_EQUAL OP_IF")
-        out += Script.parse_string("OP_2DROP OP_2DROP 0x00 0x00")
-
-        # If not, check that the multiplication computed is correct: a == m and if not fail
-        out += Script.parse_string("OP_ELSE")
-        out += Script.parse_string("OP_NUMNOTEQUAL OP_IF OP_0 OP_RETURN OP_ENDIF")
+        # Check if a == 0, in which case return 0x00 0x00
+        out += roll(position=4, n_elements=1)
+        out += Script.parse_string("OP_IF")
+        out += Script.parse_string("OP_2DROP 0x00 0x00")
         out += Script.parse_string("OP_ENDIF")
 
         if clean_constant:
@@ -185,7 +185,7 @@ class EllipticCurveFqUnrolled:
         return out
 
     def unrolled_multiplication_input(
-        self, P: list[int], a: int, lambdas: list[list[list[int]]], max_multiplier: int, load_modulus=True
+        self, point_p: list[int], a: int, lambdas: list[list[list[int]]], max_multiplier: int, load_modulus=True
     ) -> Script:
         """Return the input script needed to execute the unrolled multiplication script above.
 
@@ -207,16 +207,16 @@ class EllipticCurveFqUnrolled:
 
         out = nums_to_script([self.MODULUS]) if load_modulus else Script()
 
-        # Load a
-        out += nums_to_script([a])
-
         # Add the lambdas
         if a == 0:
-            out += Script.parse_string(" ".join(["OP_0"] * M))
+            out += Script.parse_string("OP_1") + Script.parse_string(" ".join(["OP_0", "OP_0"] * M))
         else:
             exp_a = [int(bin(a)[j]) for j in range(2, len(bin(a)))][::-1]
 
             N = len(exp_a) - 1
+
+            # Marker marker_a_equal_zero
+            out += Script.parse_string("OP_0")
 
             # Load the lambdas and the markers
             for j in range(len(lambdas) - 1, -1, -1):
@@ -224,10 +224,12 @@ class EllipticCurveFqUnrolled:
                     out += nums_to_script(lambdas[j][1]) + Script.parse_string("OP_1")
                     out += nums_to_script(lambdas[j][0]) + Script.parse_string("OP_1")
                 else:
-                    out += Script.parse_string("OP_0") + nums_to_script(lambdas[j][0]) + Script.parse_string("OP_1")
-            out += Script.parse_string(" ".join(["OP_0"] * (M - N)))
+                    out += Script.parse_string("OP_0 OP_0")
+                    out += nums_to_script(lambdas[j][0])
+                    out += Script.parse_string("OP_1")
+            out += Script.parse_string(" ".join(["OP_0", "OP_0"] * (M - N)))
 
         # Load P
-        out += nums_to_script(P)
+        out += nums_to_script(point_p)
 
         return out

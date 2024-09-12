@@ -51,7 +51,7 @@ class MillerOutputOperations(Fq4ScriptModel):
         compute_fourth_component = Script.parse_string("OP_2OVER")  # Pick a2 and c1
         compute_fourth_component += Script.parse_string("OP_MUL")
         compute_fourth_component += Script.parse_string("OP_OVER")  # Pick c2
-        compute_fourth_component += pick(position=7, nElements=1)  # Pick a1
+        compute_fourth_component += pick(position=7, n_elements=1)  # Pick a1
         compute_fourth_component += Script.parse_string("OP_MUL OP_ADD")
         compute_fourth_component += Script.parse_string("OP_TOALTSTACK")
 
@@ -62,10 +62,10 @@ class MillerOutputOperations(Fq4ScriptModel):
         # After this, the stack is: # After this, the stack is: a1 b1 c1 a2 b2 c2,
         # altstack = [fourthComponent, 12*(b1*c2 + c1*b2)]
         compute_third_component = Script.parse_string("OP_OVER")  # Pick b2
-        compute_third_component += pick(position=4, nElements=1)  # Pick c1
+        compute_third_component += pick(position=4, n_elements=1)  # Pick c1
         compute_third_component += Script.parse_string("OP_MUL")
         compute_third_component += Script.parse_string("OP_OVER")  # Pick c2
-        compute_third_component += pick(position=6, nElements=1)  # Pick b1
+        compute_third_component += pick(position=6, n_elements=1)  # Pick b1
         compute_third_component += Script.parse_string("OP_MUL")
         compute_third_component += Script.parse_string("OP_ADD OP_13 OP_MUL")
         compute_third_component += Script.parse_string("OP_TOALTSTACK")
@@ -77,13 +77,13 @@ class MillerOutputOperations(Fq4ScriptModel):
         # After this, the stack is: # After this, the stack is: a1 b1 a2 b2,
         # altstack = [fourthComponent, thirdComponent, a1*b2 = b1*a2 + c1*c2*13]
         compute_second_component = Script.parse_string("OP_OVER")  # Pick b2
-        compute_second_component += pick(position=6, nElements=1)  # Pick a1
+        compute_second_component += pick(position=6, n_elements=1)  # Pick a1
         compute_second_component += Script.parse_string("OP_MUL")
         compute_second_component += Script.parse_string("OP_SWAP")  # Roll c2
-        compute_second_component += roll(position=4, nElements=1)  # Roll c1
+        compute_second_component += roll(position=4, n_elements=1)  # Roll c1
         compute_second_component += Script.parse_string("OP_MUL OP_13 OP_MUL")
-        compute_second_component += pick(position=3, nElements=1)  # Pick a2
-        compute_second_component += pick(position=5, nElements=1)  # Pick b1
+        compute_second_component += pick(position=3, n_elements=1)  # Pick a2
+        compute_second_component += pick(position=5, n_elements=1)  # Pick b1
         compute_second_component += Script.parse_string("OP_MUL OP_ADD OP_ADD")
         compute_second_component += Script.parse_string("OP_TOALTSTACK")
 
@@ -166,7 +166,7 @@ class MillerOutputOperations(Fq4ScriptModel):
 
         # After this, the stack is: a1 b1 a2 b2 (a1*b2*u), altstack = []
         compute_second_component = Script.parse_string("OP_DUP")  # Duplicate b2
-        compute_second_component += pick(position=7, nElements=2)  # Pick a1
+        compute_second_component += pick(position=7, n_elements=2)  # Pick a1
         compute_second_component += Script.parse_string("OP_ROT")  # Roll b2
         compute_second_component += fq2.scalar_mul(
             take_modulo=False, check_constant=False, clean_constant=False, is_constant_reused=False
@@ -176,8 +176,8 @@ class MillerOutputOperations(Fq4ScriptModel):
         )
 
         # After this, the stack is: a1 b1 a2 b2, altstack = [(a1*b2*u) + b1*a2]
-        compute_second_component += pick(position=6, nElements=2)  # Pick b1
-        compute_second_component += pick(position=6, nElements=2)  # Pick a2
+        compute_second_component += pick(position=6, n_elements=2)  # Pick b1
+        compute_second_component += pick(position=6, n_elements=2)  # Pick a2
         compute_second_component += fq2.mul(
             take_modulo=False, check_constant=False, clean_constant=False, is_constant_reused=False
         )
@@ -192,7 +192,7 @@ class MillerOutputOperations(Fq4ScriptModel):
 
         # After this, the stack is: # After this, the stack is: a1*a2 + b1*b2*13, altstack = [secondComponent]
         compute_first_component = Script.parse_string("OP_13 OP_MUL")  # b2*13
-        compute_first_component += roll(position=4, nElements=2)  # Roll b1
+        compute_first_component += roll(position=4, n_elements=2)  # Roll b1
         compute_first_component += Script.parse_string("OP_ROT")
         compute_first_component += fq2.scalar_mul(
             take_modulo=False, check_constant=False, clean_constant=False, is_constant_reused=False
@@ -263,14 +263,14 @@ class MillerOutputOperations(Fq4ScriptModel):
             out = Script()
 
         # The stack at the beginning is: a1 b1 a2 b2 with:
-        # 	- a1,b1,a2 in Fq2
-        # 	- b2 in Fq
+        # 	- a1,a2,b2 in Fq2
+        # 	- b1 in Fq
 
         # Computation of second component --------------------------------------------------------
 
         # After this, the stack is: a1 b1 a2 b2 (a2*b1*u), altstack = []
         compute_second_component = Script.parse_string("OP_2OVER")  # Duplicate a2
-        compute_second_component += pick(position=6, nElements=1)  # Pick b1
+        compute_second_component += pick(position=6, n_elements=1)  # Pick b1
         compute_second_component += fq2.scalar_mul(
             take_modulo=False, check_constant=False, clean_constant=False, is_constant_reused=False
         )
@@ -280,7 +280,7 @@ class MillerOutputOperations(Fq4ScriptModel):
 
         # After this, the stack is: a1 b1 a2 b2, altstack = [(a1*b2) + u*b1*a2]
         compute_second_component += Script.parse_string("OP_2OVER")  # Duplicate b2
-        compute_second_component += pick(position=10, nElements=2)  # Pick a1
+        compute_second_component += pick(position=10, n_elements=2)  # Pick a1
         compute_second_component += fq2.mul(
             take_modulo=False, check_constant=False, clean_constant=False, is_constant_reused=False
         )
@@ -294,7 +294,7 @@ class MillerOutputOperations(Fq4ScriptModel):
         # Computation of first component ---------------------------------------------------------
 
         # After this, the stack is: # After this, the stack is: a1*a2 + b1*b2*13, altstack = [secondComponent]
-        compute_first_component = roll(position=4, nElements=1)  # Roll b1
+        compute_first_component = roll(position=4, n_elements=1)  # Roll b1
         compute_first_component += Script.parse_string("OP_13 OP_MUL")  # Compute b1*13
         compute_first_component += fq2.scalar_mul(
             take_modulo=False, check_constant=False, clean_constant=False, is_constant_reused=False

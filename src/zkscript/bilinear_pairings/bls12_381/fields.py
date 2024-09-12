@@ -51,22 +51,22 @@ def to_quadratic(self) -> Script:
     out = Script()
 
     # After this, the stack is: b c d e f a
-    out += roll(position=11, nElements=2)
+    out += roll(position=11, n_elements=2)
 
     # After this, the stack is b c d f a e
     out += Script.parse_string("OP_2ROT")
 
     # After this, the stack is b c f a e d
-    out += roll(position=7, nElements=2)
+    out += roll(position=7, n_elements=2)
 
     # After this, the stack is b f a e d c
-    out += roll(position=9, nElements=2)
+    out += roll(position=9, n_elements=2)
 
     # After this, the stack is f a e d c b
-    out += roll(position=11, nElements=2)
+    out += roll(position=11, n_elements=2)
 
     # After this, the stack is a e d c b f
-    out += roll(position=11, nElements=2)
+    out += roll(position=11, n_elements=2)
 
     return out
 

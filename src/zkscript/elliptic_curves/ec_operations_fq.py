@@ -1,7 +1,7 @@
 from tx_engine import Script
 
 # Utility scripts
-from src.zkscript.util.utility_scripts import nums_to_script, pick
+from src.zkscript.util.utility_scripts import nums_to_script, pick, roll
 
 
 class EllipticCurveFq:
@@ -45,39 +45,38 @@ class EllipticCurveFq:
             out = Script()
 
         # P \neq Q, then check that lambda (x_Q - x_P) = (y_Q - y_P)
-        # After this, the stack is: <lambda> x_P y_P x_Q, altstack = [(lambda * (yP - yQ) - (xP- xQ) == 0)]
-        lambda_different_points = pick(position=4, nElements=2)  # Pick lambda and x_P
-        lambda_different_points += Script.parse_string("OP_MUL OP_ADD")  # compute lambda x_P + y_Q
+        # After this, the stack is: x_P y_P x_Q lambda, altstack = [(lambda *(xP - xQ) - (yP - yQ) == 0)]
+        lambda_different_points = Script.parse_string("OP_2OVER")  # Duplicate xP yP
+        lambda_different_points += Script.parse_string("OP_ROT OP_SUB OP_TOALTSTACK")  # Compute yP - yQ
+        lambda_different_points += Script.parse_string("OP_OVER OP_SUB")  # Compute xP - xQ
+        lambda_different_points += roll(position=4, n_elements=1)  # Roll lambda
+        lambda_different_points += Script.parse_string("OP_TUCK OP_MUL")  # Compute lambda *(xP - xQ)
         lambda_different_points += Script.parse_string(
-            "OP_OVER OP_5 OP_PICK OP_MUL OP_3 OP_PICK OP_ADD"
-        )  # compute lambda x_Q + y_P
-        lambda_different_points += Script.parse_string("OP_SUB")
+            "OP_FROMALTSTACK OP_SUB"
+        )  # Compute lambda *(xP - xQ) - (yP - yQ)
         lambda_different_points += Script.parse_string("OP_TOALTSTACK")
 
         # Compute x_(P+Q) = lambda^2 - x_P - x_Q
-        # After this, the base stack is: <lambda> x_P y_P x_(P+Q), altstack = [(lambda * (yP - yQ) - (xP- xQ) == 0)]
-        compute_x_coordinate = Script.parse_string("OP_2OVER")
-        compute_x_coordinate += Script.parse_string("OP_SWAP")
-        compute_x_coordinate += Script.parse_string("OP_DUP OP_MUL")  # Compute lambda^2
-        compute_x_coordinate += Script.parse_string("OP_ROT OP_ROT OP_ADD OP_SUB")  # Compute lambda^2 - (x_P + x_Q)
+        # After this, the stack is: lambda xP x_(P+Q), altstack = [(lambda *(xP - xQ) - (yP - yQ) == 0), yP]
+        compute_coordinates = Script.parse_string("OP_DUP OP_DUP OP_MUL")  # Duplicate lambda and compute lambda^2
+        compute_coordinates += Script.parse_string("OP_ROT OP_SUB")  # Rotate xQ and compute lambda^2 - xQ
+        compute_coordinates += Script.parse_string(
+            "OP_2SWAP OP_TOALTSTACK OP_TUCK"
+        )  # Swap xP yP, place yP on altstack, duplicate xP
+        compute_coordinates += Script.parse_string("OP_SUB")  # Compute lambda^2 - xP - xQ
 
-        # Compute y_(P+Q) = lambda (x_P - x_(P+Q)) - y_P
-        # After this, the stack is: x_(P+Q) y_(P+Q), altstack = [(lambda * (yP - yQ) - (xP- xQ) == 0)]
-        compute_y_coordinate = Script.parse_string("OP_TUCK")
-        compute_y_coordinate += Script.parse_string("OP_2SWAP")
-        compute_y_coordinate += Script.parse_string("OP_SUB")  # Compute xP - x_(P+Q)
-        compute_y_coordinate += Script.parse_string("OP_2SWAP OP_TOALTSTACK")
-        compute_y_coordinate += Script.parse_string(
-            "OP_MUL OP_FROMALTSTACK OP_SUB"
-        )  # Compute lambda (x_P - x_(P+Q)) - y_P
+        # Compute y_(P+Q)
+        compute_coordinates += Script.parse_string("OP_TUCK OP_SUB")  # Compute xP - x_(P+Q)
+        compute_coordinates += Script.parse_string("OP_ROT OP_MUL")  # Compute lambda * (xP - x_(P+Q))
+        compute_coordinates += Script.parse_string("OP_FROMALTSTACK OP_SUB")  # Compute y_(P+Q)
 
         if clean_constant:
             fetch_q = Script.parse_string("OP_DEPTH OP_1SUB OP_ROLL")
         else:
             fetch_q = Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
 
-        # After this, the stack is: x_(P+Q) y_(P+Q) q, altstack = [(lambda * (yP - yQ) - (xP- xQ) == 0)]
-        out += lambda_different_points + compute_x_coordinate + compute_y_coordinate + fetch_q
+        # After this, the stack is: x_(P+Q) y_(P+Q) q, altstack = [(lambda *(xP - xQ) - (yP - yQ) == 0)]
+        out += lambda_different_points + compute_coordinates + fetch_q
 
         batched_modulo = Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")  # Mod out y
         batched_modulo += Script.parse_string("OP_TOALTSTACK")
@@ -85,15 +84,15 @@ class EllipticCurveFq:
         batched_modulo += Script.parse_string("OP_FROMALTSTACK OP_ROT")
 
         # If needed, mod out
-        # After this, the stack is: x_(P+Q) y_(P+Q) q, altstack = [(lambda * (yP - yQ) - (xP- xQ) == 0)] with the
-        # coefficients in Fq (if executed)
+        # After this, the stack is: x_(P+Q) y_(P+Q) q, altstack = [(lambda *(xP - xQ) - (yP - yQ) == 0)]
+        # with the coefficients in Fq (if executed)
         if take_modulo:
             out += batched_modulo
 
         check_lambda = Script.parse_string("OP_FROMALTSTACK")
         check_lambda += Script.parse_string(
             "OP_OVER OP_MOD OP_OVER OP_ADD OP_SWAP OP_MOD"
-        )  # Mod out lambda * (yP - yQ) - (xP- xQ)
+        )  # Mod out lambda *(xP - xQ) - (yP - yQ)
         check_lambda += Script.parse_string("OP_0 OP_EQUALVERIFY")
 
         # Check lambda was correct
@@ -127,39 +126,31 @@ class EllipticCurveFq:
         curve_a = self.CURVE_A
 
         # P = Q, then check 2 lambda y_P = 3 x_P^2
-        # After this, the base stack is: <lambda> x_P y_P
-        lambda_equal_points = Script.parse_string("OP_DUP")  # Duplicate y_P
-        lambda_equal_points += Script.parse_string("OP_2 OP_MUL")  # Compute 2y_P
-        lambda_equal_points += pick(position=3, nElements=1)  # Pick lambda
-        lambda_equal_points += Script.parse_string("OP_MUL")  # Compute 2 lambda y_P
-        lambda_equal_points += pick(position=2, nElements=1)  # Pick x_P
-        lambda_equal_points += Script.parse_string("OP_DUP")  # Duplicate x_P
-        lambda_equal_points += Script.parse_string("OP_MUL")  # Compute x_P^2
-        lambda_equal_points += Script.parse_string("OP_3 OP_MUL")  # Compute 3 x_P^2
+        # After this, the stack is: xP yP lambda, altstack = [2*lambda*yP - 3*xP^2]
+        lambda_equal_points = Script.parse_string("OP_ROT OP_2DUP")  # Rotate lambda and duplicate lambda, yP
+        lambda_equal_points += Script.parse_string("OP_2 OP_MUL OP_MUL")  # Compute 2 lambda yP
+        lambda_equal_points += pick(position=3, n_elements=1)  # Pick xP
+        lambda_equal_points += Script.parse_string("OP_DUP OP_3 OP_MUL OP_MUL")  # Compute 3xP^2
         if curve_a != 0:
-            lambda_equal_points += nums_to_script([curve_a]) + Script.parse_string(
-                "OP_ADD"
-            )  # Compute 3 x_P^2 + a if a != 0
+            lambda_equal_points += nums_to_script([curve_a]) + Script.parse_string("OP_ADD")
         lambda_equal_points += Script.parse_string("OP_SUB")
         lambda_equal_points += Script.parse_string("OP_TOALTSTACK")
 
-        # Compute x_(2P) = lambda^2 - 2 x_P
-        # After this, the base stack is: <lambda> x_P y_P x_(2P), altstack = [lambda * 2yP == 3xP^2]
-        compute_x_coordinate = pick(position=2, nElements=1)  # Pick lambda
-        compute_x_coordinate += Script.parse_string("OP_DUP OP_MUL")  # Compute lambda^2
-        compute_x_coordinate += pick(position=2, nElements=1)  # Pick x_P
-        compute_x_coordinate += Script.parse_string("OP_2 OP_MUL")  # Compute 2 x_P
-        compute_x_coordinate += Script.parse_string("OP_SUB")  # Compute lambda^2 - (2 x_P)
+        # Compute coodinates
+        # After this, the stack is: yP lambda xP x_(2P)
+        compute_coordinates = Script.parse_string("OP_ROT OP_OVER")  # Rotate xP, duplicate lambda
+        compute_coordinates += Script.parse_string("OP_DUP OP_MUL")  # Compute lambda^2
+        compute_coordinates += Script.parse_string("OP_OVER")  # Roll xP
+        compute_coordinates += Script.parse_string("OP_2 OP_MUL")  # Compute 2xP
+        compute_coordinates += Script.parse_string("OP_SUB")  # Compute x_(2P)
 
-        # Compute y_(P+Q) = lambda (x_P - x_(P+Q)) - y_P
-        # After this, the stack is: x_(P+Q) y_(P+Q), altstack = [lambda * 2yP == 3xP^2]
-        compute_y_coordinate = Script.parse_string("OP_TUCK")
-        compute_y_coordinate += Script.parse_string("OP_2SWAP")
-        compute_y_coordinate += Script.parse_string("OP_SUB")  # Compute xP - x_(P+Q)
-        compute_y_coordinate += Script.parse_string("OP_2SWAP OP_TOALTSTACK")
-        compute_y_coordinate += Script.parse_string(
-            "OP_MUL OP_FROMALTSTACK OP_SUB"
-        )  # Compute lambda (x_P - x_(P+Q)) - y_P
+        # After this, the stack is: x_(2P) y_(2P)
+        compute_coordinates += Script.parse_string("OP_TUCK")  # Duplicate x_(2P)
+        compute_coordinates += Script.parse_string("OP_SUB")  # Compute xP - x_(2P)
+        compute_coordinates += Script.parse_string("OP_ROT")  # Roll lambda
+        compute_coordinates += Script.parse_string("OP_MUL")  # Compute lambda * (xP - x_(2P))
+        compute_coordinates += Script.parse_string("OP_ROT")  # Roll lambda
+        compute_coordinates += Script.parse_string("OP_SUB")  # Compute lambda * (xP - x_(2P))
 
         if clean_constant:
             fetch_q = Script.parse_string("OP_DEPTH OP_1SUB OP_ROLL")
@@ -167,7 +158,7 @@ class EllipticCurveFq:
             fetch_q = Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
 
         # After this, the stack is: x_(P+Q) y_(P+Q) q, altstack = [lambda * 2yP == 3xP^2]
-        out += lambda_equal_points + compute_x_coordinate + compute_y_coordinate + fetch_q
+        out += lambda_equal_points + compute_coordinates + fetch_q
 
         batched_modulo = Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")  # Mod out y
         batched_modulo += Script.parse_string("OP_TOALTSTACK")
@@ -175,8 +166,8 @@ class EllipticCurveFq:
         batched_modulo += Script.parse_string("OP_FROMALTSTACK OP_ROT")
 
         # If needed, mod out
-        # After this, the stack is: x_(P+Q) y_(P+Q) q, altstack = [lambda * 2yP == 3xP^2] with the coefficients in Fq
-        # (if executed)
+        # After this, the stack is: x_(P+Q) y_(P+Q) q, altstack = [lambda * 2yP == 3xP^2]
+        # with the coefficients in Fq (if executed)
         if take_modulo:
             out += batched_modulo
 
@@ -238,7 +229,7 @@ class EllipticCurveFq:
 
         # Check if P = -Q, in that case terminate and return (0x00,0x00)
         out += Script.parse_string("OP_DUP")  # Duplicate yQ
-        out += pick(position=3, nElements=1)  # Pick yP
+        out += pick(position=3, n_elements=1)  # Pick yP
         out += Script.parse_string("OP_ADD")
         out += Script.parse_string("OP_DEPTH OP_1SUB OP_PICK OP_MOD OP_0 OP_NUMNOTEQUAL")
         out += Script.parse_string("OP_IF")
@@ -259,9 +250,9 @@ class EllipticCurveFq:
         out += Script.parse_string("OP_IF")
         out += Script.parse_string("OP_DUP")  # Duplicate y_P
         out += Script.parse_string("OP_2 OP_MUL")  # Compute 2y_P
-        out += pick(position=3, nElements=1)  # Pick lambda
+        out += pick(position=3, n_elements=1)  # Pick lambda
         out += Script.parse_string("OP_MUL")  # Compute 2 lambda y_P
-        out += pick(position=2, nElements=1)  # Pick x_P
+        out += pick(position=2, n_elements=1)  # Pick x_P
         out += Script.parse_string("OP_DUP")  # Duplicate x_P
         out += Script.parse_string("OP_MUL")  # Compute x_P^2
         out += Script.parse_string("OP_3 OP_MUL")  # Compute 3 x_P^2
@@ -271,7 +262,7 @@ class EllipticCurveFq:
 
         # If P != Q:
         out += Script.parse_string("OP_ELSE")
-        out += pick(position=4, nElements=2)  # Pick lambda and x_P
+        out += pick(position=4, n_elements=2)  # Pick lambda and x_P
         out += Script.parse_string("OP_MUL OP_ADD")  # compute lambda x_P + y_Q
         out += Script.parse_string("OP_OVER OP_5 OP_PICK OP_MUL OP_3 OP_PICK OP_ADD")  # compute lambda x_Q + y_P
         out += Script.parse_string("OP_SUB")

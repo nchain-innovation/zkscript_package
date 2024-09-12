@@ -271,11 +271,11 @@ class Fq4:
         # After this, the stack is: x0 x1 y0 y1 y0 y1
         out += Script.parse_string("OP_2OVER OP_2OVER")
         # After this, the stack is: x0 x1 y0 y1 y0 (y1 * x0)
-        out += pick(position=11, nElements=2)  # Pick x0
+        out += pick(position=11, n_elements=2)  # Pick x0
         out += fq2.mul(take_modulo=False, check_constant=False, clean_constant=False)
         # After this, the stack is x0 x1 y0 y1, altstack = [(x0*y1) + (x1*y0)]
         out += Script.parse_string("OP_2SWAP")
-        out += pick(position=9, nElements=2)  # Pick x1
+        out += pick(position=9, n_elements=2)  # Pick x1
         out += fq2.mul(take_modulo=False, check_constant=False, clean_constant=False)
         out += fq2.add(take_modulo=False, check_constant=False, clean_constant=False)
         out += Script.parse_string("OP_TOALTSTACK OP_TOALTSTACK")
@@ -426,7 +426,7 @@ class Fq4:
 
         # After this, the stack is: x0 y0 z0, altstack = [ x1 + y1 + z1]
         out += Script.parse_string("OP_2ROT")  # Roll y1
-        out += roll(position=9, nElements=2)  # Roll x1
+        out += roll(position=9, n_elements=2)  # Roll x1
         out += fq2.add_three(take_modulo=False, check_constant=False, clean_constant=False)
         out += Script.parse_string("OP_TOALTSTACK OP_TOALTSTACK")
 
@@ -567,7 +567,7 @@ class Fq4:
                 # After this, the stack is: [q, a, b * gamma]
                 batched_modulo += Script.parse_string("OP_FROMALTSTACK OP_FROMALTSTACK OP_FROMALTSTACK")
                 # After this, the stack is: [a, (b*gamma)_0, q, (b*gamma)_1]
-                batched_modulo += roll(position=4, nElements=1)
+                batched_modulo += roll(position=4, n_elements=1)
                 batched_modulo += Script.parse_string("OP_SWAP")
             else:
                 # After this, the stack is: [a0 % q], altstack = [b*gamma, a1 % q]

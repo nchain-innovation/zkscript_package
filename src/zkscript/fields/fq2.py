@@ -4,9 +4,7 @@ from src.zkscript.util.utility_scripts import nums_to_script
 
 
 def fq2_for_towering(mul_by_non_residue):
-    """Function to export Fq2 class below together with a mul_by_non_residue method which is used to construct towering
-    extensions.
-    """
+    """Export Fq2 class with a mul_by_non_residue method which is used to construct towering extensions."""
 
     class Fq2ForTowering(Fq2):
         pass

@@ -46,10 +46,10 @@ A transaction spending an output locked by a Groth16 verifier can be found [here
 
 The script sizes for Groth16 are:
 
-| Curve | # public statements | Unlocking script size | Locking script size | Total |
-| ----- | ------------------- | --------------------- | ------------------- | ----- |
-| `BLS12-381` | 2 | ~ 60 KB | ~ 480 KB | ~ 540 KB |
-| `MNT4-753` | 1 | ~ 400 KB | ~ 720 KB | ~ 1.12 MB |
+| Curve | # public statements | Unlocking script size | Locking script size | Modulo threshold | Total |
+| ----- | ------------------- | --------------------- | ------------------- | ---------------- | ----- |
+| `BLS12-381` | 2 | ~ 60 KB | ~ 473 KB | 200B | ~ 533 KB |
+| `MNT4-753` | 1 | ~ 400 KB | ~ 658 KB | 200B | ~ 1.06 MB |
 
 Note: the unlocking script is dependent on the public statements. 
 

@@ -2,7 +2,7 @@ from tx_engine import Script
 
 # Fq2 Script implementation
 from src.zkscript.bilinear_pairings.mnt4_753.fields import fq2_script
-from src.zkscript.util.utility_scripts import nums_to_script, pick
+from src.zkscript.util.utility_scripts import nums_to_script
 
 
 class LineFunctions:
@@ -50,51 +50,58 @@ class LineFunctions:
         else:
             out = Script()
 
-        # Compute third component -----------------------------------------------------
+        # Line evaluation for MNT4 returns: (lambda, Q, P) --> (-yQ + lambda * (xQ - xP*u), yP) as a point in Fq4
 
-        # After this, the stack is: lambda xQ yQ xP, altstack = [yP]
+        # Second component ---------
+
+        # After this, the stack is: lambda Q xP, altstack = [yP]
         second_component = Script.parse_string("OP_TOALTSTACK")
 
-        # -----------------------------------------------------------------------------
+        # First component ----------
 
-        # Compute second component ----------------------------------------------------
-
-        # After this, the stack is: lambda xQ yQ, altstack = [second_component, -lambda*xP*u]
-        first_component = Script.parse_string("OP_NEGATE")  # Negate xP
-        first_component += pick(position=6, nElements=2)  # Pick lambda
-        first_component += Script.parse_string("OP_ROT")  # Roll -xP
-        first_component += fq2.scalar_mul(take_modulo=False, check_constant=False, clean_constant=False)
-        first_component += fq2.mul_by_non_residue(take_modulo=False, check_constant=False, clean_constant=False)
-        first_component += Script.parse_string("OP_TOALTSTACK OP_TOALTSTACK")
-
-        # After this, the stack is: -yQ + lambda*xQ -lambda*xP*u, altsack = [yP]
-        first_component += Script.parse_string("OP_2ROT OP_2ROT")  # Roll lambda and xQ
-        first_component += fq2.mul(take_modulo=False, check_constant=False, clean_constant=False)
-        first_component += Script.parse_string("OP_2SWAP")  # Roll yQ
-        first_component += fq2.subtract(
+        # After this, the stack is: lambda yQ (xQ - xP*u)
+        first_component = Script.parse_string("OP_TOALTSTACK")
+        first_component += Script.parse_string("OP_2SWAP OP_FROMALTSTACK OP_SUB")
+        # After this, the stack is yQ lambda * (xQ - xP*u)
+        first_component += Script.parse_string("OP_2ROT")
+        first_component += fq2.mul(
             take_modulo=False, check_constant=False, clean_constant=False, is_constant_reused=False
         )
-        first_component += Script.parse_string("OP_FROMALTSTACK OP_FROMALTSTACK")
-        if take_modulo:
-            first_component += fq2.add(
-                take_modulo=take_modulo, check_constant=False, clean_constant=clean_constant, is_constant_reused=True
-            )
-        else:
-            first_component += fq2.add(take_modulo=False, check_constant=False, clean_constant=False)
+        # After this, the stack is: (-yQ + lambda * (xQ - xP*u))_0, altstack = [yP, (-yQ + lambda * (xQ - xP*u))_1]
+        first_component += Script.parse_string("OP_ROT OP_SUB OP_TOALTSTACK")
+        first_component += Script.parse_string("OP_SWAP OP_SUB")
 
-        # ----------------------------------------------------------------------------
+        # --------------------------
 
         out += second_component + first_component
 
         if take_modulo:
-            # Batched modulo operations: pull from altstack, rotate, mod out, repeat
-            out += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            if is_constant_reused:
-                out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
+            batched_modulo = Script()
+
+            if clean_constant is None and is_constant_reused is None:
+                raise ValueError(
+                    f"If take_modulo is set, both clean_constant: {clean_constant} \
+                        and is_constant_reused: {is_constant_reused} must be set."
+                )
+
+            if clean_constant:
+                fetch_q = Script.parse_string("OP_DEPTH OP_1SUB OP_ROLL")
             else:
-                out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_SWAP OP_MOD")
+                fetch_q = Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
+
+            batched_modulo += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
+            batched_modulo += Script.parse_string("OP_FROMALTSTACK OP_ROT")
+            batched_modulo += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
+            batched_modulo += Script.parse_string("OP_FROMALTSTACK OP_ROT")
+
+            if is_constant_reused:
+                batched_modulo += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
+            else:
+                batched_modulo += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_SWAP OP_MOD")
+
+            out += fetch_q + batched_modulo
         else:
-            out += Script.parse_string("OP_FROMALTSTACK")
+            out += Script.parse_string("OP_FROMALTSTACK OP_FROMALTSTACK")
 
         return out
 

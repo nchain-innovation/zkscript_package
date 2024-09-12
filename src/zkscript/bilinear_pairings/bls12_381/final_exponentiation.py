@@ -47,8 +47,8 @@ class FinalExponentiation(CyclotomicExponentiation):
             out = Script()
 
         # After this, the stack is: Inverse(f_quadratic) f_quadratic
-        check_f_inverse = pick(position=23, nElements=12)  # Bring Inverse(f_quadratic) on top of the stack
-        check_f_inverse += pick(position=23, nElements=12)  # Bring f_quadratic on top of the stack
+        check_f_inverse = pick(position=23, n_elements=12)  # Bring Inverse(f_quadratic) on top of the stack
+        check_f_inverse += pick(position=23, n_elements=12)  # Bring f_quadratic on top of the stack
         check_f_inverse += fq12.mul(
             take_modulo=True, check_constant=False, clean_constant=False, is_constant_reused=False
         )  # Multiply
@@ -61,7 +61,7 @@ class FinalExponentiation(CyclotomicExponentiation):
         # Compute Inverse(f_quadratic) * Conjugate(f_quadratic)
         easy_exponentiation += fq12.mul(take_modulo=False, check_constant=False, clean_constant=False)
         # Duplicate Inverse(f_quadratic) * Conjugate(f_quadratic)
-        easy_exponentiation += pick(position=11, nElements=12)
+        easy_exponentiation += pick(position=11, n_elements=12)
         # Compute (Inverse(f_quadratic) * Conjugate(f_quadratic))^(q^2)
         easy_exponentiation += fq12.frobenius_even(n=2, take_modulo=False, check_constant=False, clean_constant=False)
         easy_exponentiation += fq12.mul(
@@ -109,12 +109,12 @@ class FinalExponentiation(CyclotomicExponentiation):
 
         # Step 1
         # After this, the stack is g t0
-        out += pick(position=11, nElements=12)
+        out += pick(position=11, n_elements=12)
         out += fq12.square(take_modulo=True, check_constant=False, clean_constant=False, is_constant_reused=False)
 
         # Step 2
         # After this, the stack is g t0 t1
-        out += pick(position=11, nElements=12)  # Duplicate t0
+        out += pick(position=11, n_elements=12)  # Duplicate t0
         out += self.cyclotomic_exponentiation(
             exp_e=exp_miller_loop,
             take_modulo=True,
@@ -125,7 +125,7 @@ class FinalExponentiation(CyclotomicExponentiation):
 
         # Step 3
         # After this, the stack is g t0 t1 t2
-        out += pick(position=11, nElements=12)  # Duplicate t1
+        out += pick(position=11, n_elements=12)  # Duplicate t1
         out += self.cyclotomic_exponentiation(
             exp_e=exp_miller_loop[1:],
             take_modulo=True,
@@ -136,11 +136,11 @@ class FinalExponentiation(CyclotomicExponentiation):
 
         # Step 4
         # After this, the stack is g t0 t1 t2 t3
-        out += pick(position=47, nElements=12)  # Pick g
+        out += pick(position=47, n_elements=12)  # Pick g
         out += fq12.conjugate(take_modulo=False, check_constant=False, clean_constant=False)  # Compute t3
         # Step 5
         # After this, the stack is: g t0 t2 t1
-        out += roll(position=35, nElements=12)  # Roll t1
+        out += roll(position=35, n_elements=12)  # Roll t1
         out += fq12.mul(take_modulo=False, check_constant=False, clean_constant=False)  # Compute t1 * t3
 
         # Step 6
@@ -155,7 +155,7 @@ class FinalExponentiation(CyclotomicExponentiation):
 
         # Step 8
         # After this, the stack is g t0 t1 t2
-        out += pick(position=11, nElements=12)  # Duplicate t1
+        out += pick(position=11, n_elements=12)  # Duplicate t1
         out += self.cyclotomic_exponentiation(
             exp_e=exp_miller_loop,
             take_modulo=True,
@@ -166,7 +166,7 @@ class FinalExponentiation(CyclotomicExponentiation):
 
         # Step 9
         # After this, the stack is g t0 t1 t2 t3
-        out += pick(position=11, nElements=12)  # Duplicate t2
+        out += pick(position=11, n_elements=12)  # Duplicate t2
         out += self.cyclotomic_exponentiation(
             exp_e=exp_miller_loop,
             take_modulo=True,
@@ -177,7 +177,7 @@ class FinalExponentiation(CyclotomicExponentiation):
 
         # Step 10
         # After this, the stack is g t0 t1 t2 t3 Conjugate(t1)
-        out += pick(position=35, nElements=12)  # Pick t1
+        out += pick(position=35, n_elements=12)  # Pick t1
         out += fq12.conjugate(take_modulo=False, check_constant=False, clean_constant=False)  # Compute Conjugate(t1)
 
         # Step 11
@@ -188,14 +188,14 @@ class FinalExponentiation(CyclotomicExponentiation):
 
         # Step 12 - 13
         # After this, the stack is: g t0 t2 t3 t1
-        out += roll(position=35, nElements=12)  # Roll t1
+        out += roll(position=35, n_elements=12)  # Roll t1
         out += fq12.frobenius_odd(
             n=3, take_modulo=False, check_constant=False, clean_constant=False
         )  # Compute t1^(q^3)
 
         # Step 14
         # After this, the stack is: g t0 t3 t1 t2
-        out += roll(position=35, nElements=12)  # Roll t2
+        out += roll(position=35, n_elements=12)  # Roll t2
         out += fq12.frobenius_even(
             n=2, take_modulo=False, check_constant=False, clean_constant=False
         )  # Compute t2^(q^2)
@@ -206,7 +206,7 @@ class FinalExponentiation(CyclotomicExponentiation):
 
         # Step 16
         # After this, the stack is: g t0 t3 t1 t2
-        out += pick(position=23, nElements=12)  # Pick t3
+        out += pick(position=23, n_elements=12)  # Pick t3
         out += self.cyclotomic_exponentiation(
             exp_e=exp_miller_loop,
             take_modulo=True,
@@ -217,12 +217,12 @@ class FinalExponentiation(CyclotomicExponentiation):
 
         # Step 17
         # After this, the stack is: g t3 t1 t2
-        out += roll(position=47, nElements=12)  # Roll t0
+        out += roll(position=47, n_elements=12)  # Roll t0
         out += fq12.mul(take_modulo=False, check_constant=False, clean_constant=False)  # Compute t2 * t0
 
         # Step 18
         # After this, the stack is: t3 t1 t2
-        out += roll(position=47, nElements=12)  # Roll g
+        out += roll(position=47, n_elements=12)  # Roll g
         out += fq12.mul(take_modulo=False, check_constant=False, clean_constant=False)  # Compute t2 * g
 
         # Step 19
@@ -231,7 +231,7 @@ class FinalExponentiation(CyclotomicExponentiation):
 
         # Step 20
         # After this, the stack is: t1 t2
-        out += roll(position=23, nElements=12)  # Roll t3
+        out += roll(position=23, n_elements=12)  # Roll t3
         out += fq12.frobenius_odd(n=1, take_modulo=False, check_constant=False, clean_constant=False)  # Compute t3^q
 
         # Step 21

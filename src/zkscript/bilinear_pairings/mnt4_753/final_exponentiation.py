@@ -46,8 +46,8 @@ class FinalExponentiation(CyclotomicExponentiation):
             out = Script()
 
         # After this, the stack is: Inverse(f) f
-        check_f_inverse = pick(position=7, nElements=4)  # Bring Inverse(f) on top of the stack
-        check_f_inverse += pick(position=7, nElements=4)  # Bring f on top of the stack
+        check_f_inverse = pick(position=7, n_elements=4)  # Bring Inverse(f) on top of the stack
+        check_f_inverse += pick(position=7, n_elements=4)  # Bring f on top of the stack
         check_f_inverse += fq4.mul(
             take_modulo=True, check_constant=False, clean_constant=False, is_constant_reused=False
         )  # Multiply
@@ -98,12 +98,12 @@ class FinalExponentiation(CyclotomicExponentiation):
             out = Script()
 
         # After this, the stack is: g, altstack = [g^q]
-        out += pick(position=3, nElements=4)
+        out += pick(position=3, n_elements=4)
         out += fq4.frobenius_odd(n=1, take_modulo=False, check_constant=False, clean_constant=False)
         out += Script.parse_string("OP_TOALTSTACK OP_TOALTSTACK OP_TOALTSTACK OP_TOALTSTACK")
 
         # After this, the stack is: g g^u, altstack = [g^q]
-        out += pick(position=3, nElements=4)
+        out += pick(position=3, n_elements=4)
         out += self.cyclotomic_exponentiation(
             exp_e=exp_miller_loop,
             take_modulo=True,
