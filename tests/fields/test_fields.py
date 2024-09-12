@@ -9,6 +9,7 @@ from tx_engine import Context
 from src.zkscript.fields.fq2 import Fq2 as Fq2Script
 from src.zkscript.fields.fq2 import Fq2 as Fq2ScriptModel
 from src.zkscript.fields.fq2 import fq2_for_towering
+from src.zkscript.fields.fq2_over_2_residue_equal_u import Fq2Over2ResidueEqualU as Fq2Over2ResidueEqualUScript
 from src.zkscript.fields.fq4 import Fq4 as Fq4Script
 from src.zkscript.fields.fq4 import Fq4 as Fq4ScriptModel
 from src.zkscript.fields.fq4 import fq4_for_towering
@@ -178,6 +179,57 @@ class Fq4:
                 "x": Fq4(Fq2(Fq(1), Fq(1)), Fq2(Fq(2), Fq(3))),
                 "expected": Fq4(Fq2(Fq(1), Fq(1)), Fq2(Fq(2), Fq(3))).conjugate(),
             }
+        ],
+    }
+
+
+@dataclass
+class Fq2Over2ResidueEqualU:
+    # Define Fq and Fq2
+    q = 19
+    Fq = base_field_from_modulus(q=q)
+    NON_RESIDUE = Fq(2)
+    Fq2 = quadratic_extension_from_base_field_and_non_residue(base_field=Fq, non_residue=NON_RESIDUE)
+    # Define Fq2Over2ResidueEqualU
+    NON_RESIDUE_FQ2 = Fq2.u()
+    Fq2Over2ResidueEqualU = quadratic_extension_from_base_field_and_non_residue(
+        base_field=Fq2, non_residue=NON_RESIDUE_FQ2
+    )
+    # Define fq2_script
+    Fq2Script = fq2_for_towering(mul_by_non_residue=Fq2ScriptModel.mul_by_one_plus_u)
+    fq2_script = Fq2Script(q=q, non_residue=NON_RESIDUE.to_list()[0])
+    gammas_frobenius = []
+    for j in range(1, 4):
+        gammas_frobenius.append(NON_RESIDUE_FQ2.power((q**j - 1) // 2).to_list())
+    # Define script run in tests
+    test_script = Fq2Over2ResidueEqualUScript(q=q, base_field=fq2_script, gammas_frobenius=gammas_frobenius)
+    # Define filename for saving scripts
+    filename = "fq2_over_2_residue_equal_u"
+
+    test_data = {
+        "test_square": [
+            {
+                "x": Fq2Over2ResidueEqualU(Fq2(Fq(1), Fq(1)), Fq2(Fq(2), Fq(3))),
+                "expected": Fq2Over2ResidueEqualU(Fq2(Fq(1), Fq(1)), Fq2(Fq(2), Fq(3)))
+                * Fq2Over2ResidueEqualU(Fq2(Fq(1), Fq(1)), Fq2(Fq(2), Fq(3))),
+            },
+            {
+                "x": Fq2Over2ResidueEqualU(Fq2(Fq(18), Fq(18)), Fq2(Fq(12), Fq(13))),
+                "expected": Fq2Over2ResidueEqualU(Fq2(Fq(18), Fq(18)), Fq2(Fq(12), Fq(13)))
+                * Fq2Over2ResidueEqualU(Fq2(Fq(18), Fq(18)), Fq2(Fq(12), Fq(13))),
+            },
+            {
+                "x": Fq2Over2ResidueEqualU.identity(),
+                "expected": Fq2Over2ResidueEqualU.identity(),
+            },
+            {
+                "x": Fq2Over2ResidueEqualU.zero(),
+                "expected": Fq2Over2ResidueEqualU.zero(),
+            },
+            {
+                "x": Fq2Over2ResidueEqualU.u(),
+                "expected": Fq2Over2ResidueEqualU.u() * Fq2Over2ResidueEqualU.u(),
+            },
         ],
     }
 
@@ -444,6 +496,7 @@ def generate_test_cases(test_name):
         Fq2ResidueMinusOne,
         Fq2ResidueNotMinusOne,
         Fq4,
+        Fq2Over2ResidueEqualU,
         Fq6ThreeOverTwo,
         Fq12TwoOverThreeOverTwo,
         Fq12ThreeOverTwoOverTwo,
