@@ -89,18 +89,12 @@ class MillerLoop:
 
         # After this, the stack is: xP yP xQ yQ xQ -yQ xT yT
         set_T = Script()
-        if N_POINTS_TWIST == 4:
-            set_T += Script.parse_string("OP_2OVER OP_2OVER")
-        else:
-            set_T += pick(position=N_POINTS_TWIST - 1, n_elements=N_POINTS_TWIST)
+        set_T += pick(position=N_POINTS_TWIST - 1, n_elements=N_POINTS_TWIST)
         set_T += point_negation_twisted_curve(take_modulo=False, check_constant=False, clean_constant=False)
         if exp_miller_loop[-1] == 1:
             set_T += pick(position=2 * N_POINTS_TWIST - 1, n_elements=N_POINTS_TWIST)  # Pick Q
         elif exp_miller_loop[-1] == -1:
-            if N_POINTS_TWIST == 4:
-                set_T += Script.parse_string("OP_2OVER OP_2OVER")  # Pick -Q
-            else:
-                set_T += pick(position=N_POINTS_TWIST - 1, n_elements=N_POINTS_TWIST)  # Pick -Q
+            set_T += pick(position=N_POINTS_TWIST - 1, n_elements=N_POINTS_TWIST)  # Pick -Q
         else:
             raise ValueError("Last element of exp_miller_loop must be non-zero.")
         out += set_T
@@ -300,10 +294,7 @@ class MillerLoop:
                         n_elements=EXTENSION_DEGREE,
                     )  # Pick lambda_2T
                     stack_length_added += EXTENSION_DEGREE
-                    if EXTENSION_DEGREE == 2 and N_POINTS_TWIST == 4:
-                        out += Script.parse_string("OP_2ROT OP_2ROT")  # Roll T
-                    else:
-                        out += roll(position=N_POINTS_TWIST + EXTENSION_DEGREE - 1, n_elements=N_POINTS_TWIST)  # Roll T
+                    out += roll(position=N_POINTS_TWIST + EXTENSION_DEGREE - 1, n_elements=N_POINTS_TWIST)  # Roll T
                     out += pick(
                         position=N_ELEMENTS_MILLER_OUTPUT
                         + 3 * N_POINTS_TWIST
@@ -328,10 +319,7 @@ class MillerLoop:
                         n_elements=EXTENSION_DEGREE,
                     )  # Roll lambda_2T
                     stack_length_added += EXTENSION_DEGREE
-                    if EXTENSION_DEGREE == 2 and N_POINTS_TWIST == 4:
-                        out += Script.parse_string("OP_2ROT OP_2ROT")  # Roll T
-                    else:
-                        out += roll(position=N_POINTS_TWIST + EXTENSION_DEGREE - 1, n_elements=N_POINTS_TWIST)  # Roll T
+                    out += roll(position=N_POINTS_TWIST + EXTENSION_DEGREE - 1, n_elements=N_POINTS_TWIST)  # Roll T
                     out += point_doubling_twisted_curve(
                         take_modulo=take_modulo_T, check_constant=False, clean_constant=clean_final
                     )
@@ -428,7 +416,7 @@ class MillerLoop:
         return optimise_script(out)
 
     def miller_loop_input_data(
-        self, P: list[int], Q: list[int], lambdas_Q_exp_miller_loop: list[list[list[int]]]
+        self, point_p: list[int], point_q: list[int], lambdas_q_exp_miller_loop: list[list[list[int]]]
     ) -> Script:
         """Return the input data required to execute the function miller_loop above.
 
@@ -436,11 +424,11 @@ class MillerLoop:
         lambdas_Q are the lambdas needed to compute the multiplication (t-1)Q. See unrolled_multiplication_input.
         """
         out = nums_to_script([self.MODULUS])
-        for i in range(len(lambdas_Q_exp_miller_loop) - 1, -1, -1):
-            for j in range(len(lambdas_Q_exp_miller_loop[i]) - 1, -1, -1):
-                out += nums_to_script(lambdas_Q_exp_miller_loop[i][j])
+        for i in range(len(lambdas_q_exp_miller_loop) - 1, -1, -1):
+            for j in range(len(lambdas_q_exp_miller_loop[i]) - 1, -1, -1):
+                out += nums_to_script(lambdas_q_exp_miller_loop[i][j])
 
-        out += nums_to_script(P)
-        out += nums_to_script(Q)
+        out += nums_to_script(point_p)
+        out += nums_to_script(point_q)
 
         return out

@@ -19,6 +19,7 @@ class Roll:
         {"position": 2, "n_elements": 2, "stack": list(range(10)), "expected": [0, 1, 2, 3, 4, 5, 6, 9, 7, 8]},
         {"position": 3, "n_elements": 2, "stack": list(range(10)), "expected": [0, 1, 2, 3, 4, 5, 8, 9, 6, 7]},
         {"position": 5, "n_elements": 2, "stack": list(range(10)), "expected": [0, 1, 2, 3, 6, 7, 8, 9, 4, 5]},
+        {"position": 5, "n_elements": 4, "stack": list(range(10)), "expected": [0, 1, 2, 3, 8, 9, 4, 5, 6, 7]},
         {
             "position": 10,
             "n_elements": 3,
@@ -39,6 +40,7 @@ class Pick:
         {"position": 1, "n_elements": 1, "stack": list(range(10)), "expected": [*list(range(10)), 8]},
         {"position": 1, "n_elements": 2, "stack": list(range(10)), "expected": [*list(range(10)), 8, 9]},
         {"position": 3, "n_elements": 2, "stack": list(range(10)), "expected": [*list(range(10)), 6, 7]},
+        {"position": 3, "n_elements": 4, "stack": list(range(10)), "expected": [*list(range(10)), 6, 7, 8, 9]},
         {"position": 10, "n_elements": 3, "stack": list(range(20)), "expected": [*list(range(20)), 9, 10, 11]},
     ]
 

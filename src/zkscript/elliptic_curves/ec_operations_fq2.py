@@ -20,8 +20,8 @@ class EllipticCurveFq2:
         check_constant: bool | None,
         clean_constant: bool | None,
         position_lambda: int = 9,
-        position_P: int = 7,
-        position_Q: int = 3,
+        position_p: int = 7,
+        position_q: int = 3,
     ) -> Script:
         """Point addition.
 
@@ -38,27 +38,27 @@ class EllipticCurveFq2:
             - P != -Q --> It is very important that this assumption is satisfied, otherwise lambda = 0 will pass the
             test
             - P and Q are not the point at infinity --> This function is not able to handle such case
-            - position_lambda, position_P and position_Q denote the positions in the stack (top of stack is position 1)
+            - position_lambda, position_p and position_q denote the positions in the stack (top of stack is position 1)
             of the first element of lambda, P, and Q respectively
         Assumption on arguments:
-            - position_lambda, position_P, position_Q > 0
-            - position_lambda > position_P + 1, position_P > position_Q + 3
+            - position_lambda, position_p, position_q > 0
+            - position_lambda > position_p + 1, position_p > position_q + 3
 
         If take_modulo = True, the coordinates of P + Q are in Fq2.
 
-        By default position_lambda = 9, position_P = 7, positon_Q = 3, which means we assume the stack looks as follows:
+        By default position_lambda = 9, position_p = 7, positon_Q = 3, which means we assume the stack looks as follows:
         .. <lambda> P Q
         namely, we assume the stack has been prepared in advance.
         """
         assert position_lambda > 0, f"Position lambda {position_lambda} must be bigger than 0"
-        assert position_P > 0, f"Position P {position_P} must be bigger than 0"
-        assert position_Q > 0, f"Position Q {position_Q} must be bigger than 0"
+        assert position_p > 0, f"Position P {position_p} must be bigger than 0"
+        assert position_q > 0, f"Position Q {position_q} must be bigger than 0"
         assert (
-            position_lambda - position_P > 1
-        ), f"Position lambda {position_lambda} must be bigger than position P {position_P} plus one"
+            position_lambda - position_p > 1
+        ), f"Position lambda {position_lambda} must be bigger than position P {position_p} plus one"
         assert (
-            position_P - position_Q > 3
-        ), f"Position P {position_lambda} must be bigger than position Q {position_P} plus three"
+            position_p - position_q > 3  # noqa: PLR2004
+        ), f"Position P {position_lambda} must be bigger than position Q {position_p} plus three"
 
         if check_constant:
             out = Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
@@ -77,12 +77,12 @@ class EllipticCurveFq2:
         stack_length_added = 0
         lambda_different_points = roll(position=position_lambda, n_elements=2)  # Roll lambda
         stack_length_added += 2
-        lambda_different_points += roll(position=position_P + stack_length_added, n_elements=2)  # Roll xP
+        lambda_different_points += roll(position=position_p + stack_length_added, n_elements=2)  # Roll xP
         stack_length_added += 2
         lambda_different_points += Script.parse_string("OP_2OVER OP_2OVER")  # Duplicate lambda, xP
         stack_length_added += 4
         # After this, the stack is: lambda xP xQ [lambda * (xP - xQ)]
-        lambda_different_points += roll(position=position_Q + stack_length_added, n_elements=2)  # Roll xQ
+        lambda_different_points += roll(position=position_q + stack_length_added, n_elements=2)  # Roll xQ
         stack_length_added += 2
         lambda_different_points += Script.parse_string("OP_2SWAP OP_2OVER")  # Swap xP and xQ, duplicate xQ
         stack_length_added += 2
@@ -96,10 +96,10 @@ class EllipticCurveFq2:
         )  # Compute lambda * (x_P - x_Q)
         stack_length_added -= 2
         # After this, the stack is: lambda xP xQ yP
-        lambda_different_points += roll(position=position_Q + stack_length_added - 2, n_elements=2)  # Roll yQ
+        lambda_different_points += roll(position=position_q + stack_length_added - 2, n_elements=2)  # Roll yQ
         stack_length_added += 0  # These elements were already in front of P
         lambda_different_points += roll(
-            position=position_P + stack_length_added - 2 - 2, n_elements=2
+            position=position_p + stack_length_added - 2 - 2, n_elements=2
         )  # Roll yP: -2 is for y coordinates, -2 is because xQ was already in front of P
         lambda_different_points += Script.parse_string("OP_2SWAP OP_2OVER")  # Swap yQ and yP, duplicate yP
         lambda_different_points += fq2.subtract(
@@ -155,7 +155,7 @@ class EllipticCurveFq2:
         check_constant: bool | None,
         clean_constant: bool | None,
         position_lambda: int = 5,
-        position_P: int = 3,
+        position_p: int = 3,
     ) -> Script:
         """Point doubling.
 
@@ -168,26 +168,26 @@ class EllipticCurveFq2:
             - P is a point on E(F_q^2), passed as an element in Fq2
             - lambda is the gradient of the line tangent at P, passed as an element in Fq2
             - P is not the point at infinity --> This function is not able to handle such case
-            - position_lambda, position_P denote the positions in the stack (top of stack is position 0)
+            - position_lambda, position_p denote the positions in the stack (top of stack is position 0)
             of the first element of lambda, P
         Assumption on variables:
             - a is the a coefficient in the Short-Weierstrass equation of the curve (an element in Fq2)
         Assumption on arguments:
             - position_lambda > 0
-            - position_P > 0
-            - position_lambda > position_P + 1
+            - position_p > 0
+            - position_lambda > position_p + 1
 
         If take_modulo = True, the coordinates of 2P are in F_q
 
-        By default, position_lambda = 5 and position_P = 3, which means we assume the stack looks as follows:
+        By default, position_lambda = 5 and position_p = 3, which means we assume the stack looks as follows:
         .. <lambda> P
         namely, we assume the stack has been prepared in advance.
         """
         assert position_lambda > 0, f"Position lambda {position_lambda} must be bigger than 0"
-        assert position_P > 0, f"Position Q {position_P} must be bigger than 0"
+        assert position_p > 0, f"Position Q {position_p} must be bigger than 0"
         assert (
-            position_lambda - position_P > 1
-        ), f"Position lambda {position_lambda} must be bigger than position P {position_P} plus one"
+            position_lambda - position_p > 1
+        ), f"Position lambda {position_lambda} must be bigger than position P {position_p} plus one"
 
         # Fq2 implementation
         fq2 = self.FQ2
@@ -208,7 +208,7 @@ class EllipticCurveFq2:
         stack_length_added = 0
         lambda_equal_points = roll(position=position_lambda, n_elements=2)  # Roll lambda
         stack_length_added += 2
-        lambda_equal_points += roll(position=position_P + stack_length_added - 2, n_elements=2)  # Roll yP
+        lambda_equal_points += roll(position=position_p + stack_length_added - 2, n_elements=2)  # Roll yP
         stack_length_added += 0  # Elements were already in front of xP
         lambda_equal_points += Script.parse_string("OP_2OVER OP_2OVER")  # Duplicate lambda, yP
         stack_length_added += 4
@@ -222,7 +222,7 @@ class EllipticCurveFq2:
             take_modulo=False, check_constant=False, clean_constant=False
         )  # Compute 2 * lamdba * yP
         # After this, the stack is: lambda yP xP
-        lambda_equal_points += roll(position=position_P + stack_length_added, n_elements=2)  # Roll xP
+        lambda_equal_points += roll(position=position_p + stack_length_added, n_elements=2)  # Roll xP
         lambda_equal_points += Script.parse_string("OP_2SWAP OP_2OVER")
         lambda_equal_points += fq2.square(take_modulo=False, check_constant=False, clean_constant=False)  # Compute xP^2
         lambda_equal_points += Script.parse_string("OP_3")

@@ -144,10 +144,10 @@ class Groth16(PairingModel):
     def groth16_verifier_unlock(
         self,
         pub: list[int],
-        A: list[int],
-        B: list[int],
-        C: list[int],
-        lambdas_B_exp_miller_loop: list[list[list[int]]],
+        A: list[int],  # noqa: N803
+        B: list[int],  # noqa: N803
+        C: list[int],  # noqa: N803
+        lambdas_B_exp_miller_loop: list[list[list[int]]],  # noqa: N803
         lambdas_minus_gamma_exp_miller_loop: list[list[list[int]]],
         lambdas_minus_delta_exp_miller_loop: list[list[list[int]]],
         inverse_miller_loop: list[int],

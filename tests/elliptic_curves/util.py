@@ -6,12 +6,12 @@ from tx_engine import Script
 from src.zkscript.util.utility_scripts import nums_to_script
 
 
-def generate_verify(P, degree) -> Script:
+def generate_verify(point_p, degree) -> Script:
     out = Script()
-    if not P.is_infinity():
-        for ix, el in enumerate(P.to_list()[::-1]):
+    if not point_p.is_infinity():
+        for ix, el in enumerate(point_p.to_list()[::-1]):
             out += nums_to_script([el])
-            if ix != len(P.to_list()) - 1:
+            if ix != len(point_p.to_list()) - 1:
                 out += Script.parse_string("OP_EQUALVERIFY")
             else:
                 out += Script.parse_string("OP_EQUAL")
@@ -22,10 +22,10 @@ def generate_verify(P, degree) -> Script:
     return out
 
 
-def generate_unlock(P, degree) -> Script:
+def generate_unlock(point_p, degree) -> Script:
     out = Script()
-    if not P.is_infinity():
-        out += nums_to_script(P.to_list())
+    if not point_p.is_infinity():
+        out += nums_to_script(point_p.to_list())
     else:
         out += Script.parse_string("0x00 0x00 " * degree)
     return out
