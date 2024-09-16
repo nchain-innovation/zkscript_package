@@ -62,7 +62,7 @@ Note that we are slightly abusing language here: when we write __script__ we rea
 |`pad_eval_times_eval_times_eval_times_eval_to_miller_output`: `t1 = ev * ev * ev * ev` to element in `Fqk`| `q .. t1`|
 |`cyclotomic_inverse`: `f` to `f^{-1}`| `q .. f`|
 |`easy_exponentiation_with_inverse_check`: `f` to `f^{(q^k-1)/Phi_k(q)}`| `q .. f^{-1} f`|
-|`hard_exponentiation`: `f` to `Phi_k(q) / r`| `q .. f`|
+|`hard_exponentiation`: `f` to `f^{Phi_k(q) / r}`| `q .. f`|
 
 ## Use an instance of PairingModel
 
@@ -70,7 +70,7 @@ The Bitcoin Script Library contains two instantiations of PairingModel. One for 
 
 ```python
 # Import the PairingModel instantiation for BLS12-381
-from lib.bilinear_pairings.bls12_381.bls12_381 import bls12_381
+from src.zkscript.bilinear_pairings.bls12_381.bls12_381 import bls12_381
 
 # The following is the script that, taken two points P, Q and some additional data, compute the pairing e(P,Q)
 bls12_381_pairing = bls12_381.pairing(

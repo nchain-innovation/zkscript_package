@@ -21,8 +21,8 @@ The zk Script Library contains the implementation of arithmetic for elliptic cur
 # For testing
 from tx_engine import Script, Context
 # Let's set up secp256k1
-from zkscript.elliptic_curves.ec_operations_fq import EllipticCurveFq
-from zkscript.util.utility_scripts import nums_to_script
+from src.zkscript.elliptic_curves.ec_operations_fq import EllipticCurveFq
+from src.zkscript.util.utility_scripts import nums_to_script
 
 secp256k1_MODULUS = 115792089237316195423570985008687907853269984665640564039457584007908834671663
 # Script class for operations on secp256k1
@@ -70,6 +70,10 @@ assert(context.evaluate())
 
 `ec_operations_fq2` work in the same way as per `ec_operations_fq`, with the difference that when we instantiate an object of the class `ElliptiCurveFq2` we need to supply the instantiation of the Bitcoin Script arithmetic in `Fq2`.
 
+The other difference between `ElliptiCurveFq`and `ElliptiCurveFq2`is that the methods `point_addition` and `point_doubling` of the latter take a few additional arguments. Namely:
+- `point_addition` takes the arguments: `position_lambda`, `position_P` and `position_Q`, which are the positions in the stack of the elements `P` and `Q` that are being summed, and the position of the gradient between them. Thanks to these arguments, the script is able to pick `P`, `Q` and the gradient without the user preparing the stack beforehand.
+- `point_doubling` takes the arguments: `position_lambda` and `position_P`, which are the positions in the stack of the element `P` that is being doubled, and the position of the gradient of the line tangent to the curve at `P`. Thanks to these arguments, the script is able to pick `P` and the gradient without the user preparing the stack beforehand.
+
 # Unrolled EC arithmetic
 
 `EllipticCurveFqUnrolled` is a class that allows us to compute scalar point multiplication over any curve over a prime field. The function producing such script is `unrolled_multiplication`, which takes the following variables:
@@ -78,9 +82,9 @@ assert(context.evaluate())
 - `check_constant`: a boolean value deciding whether the script should check that the constant supplied for modulo operations is correct
 - `clean_constant`: a boolean value deciding whether the script should clean the constant used for modulo operations
 
-The data needed to execute the output script of `unrolled_multiplication` is described in the function documentation. It works as follows: `q ... a [lamdbas,a] P`, where:
+The data needed to execute the output script of `unrolled_multiplication` is described in the function documentation. It works as follows: `q ... marker_a_is_zero [lamdbas,a] P`, where:
 - `q` is the modulus used to perform modulo operations
-- `a` is the multiplier
+- `marker_a_is_zero` is a marker which is set to `ÒP_1` if `a=0`, to `OP_0` otherwise
 - `P` is the point we are multiplying by
 - `[lambdas,a]` is the sequence of gradients (also called lamdbdas) needed to compute `a * P`, together with some flags used by the script to detect which operations to perform. The construction of the unlocking script can be seen in the function `unrolled_multiplication_input`; some examples are also given in the `unrolled_multiplication` function documentation.
 

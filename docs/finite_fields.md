@@ -15,7 +15,7 @@ The code below shows how to use the scripts for these fields.
 
 ```python
 # This is the class containing the script for Fq2 arithmetic
-from zkscript.fields.fq2 import Fq2
+from src.zkscript.fields.fq2 import Fq2
 # For testing
 from tx_engine import Script, Context
 
@@ -48,9 +48,9 @@ assert(not Context(script=unlock_wrong+lock).evaluate(quiet=True))
 
 ```python
 # This is the class containing the script for Fq4 arithmetic
-from zkscript.fields.fq4 import Fq4
+from src.zkscript.fields.fq4 import Fq4
 # To build extension of Fq2
-from zkscript.fields.fq2 import Fq2, fq2_for_towering
+from src.zkscript.fields.fq2 import Fq2, fq2_for_towering
 # For testing
 from tx_engine import Script, Context
 

@@ -6,11 +6,11 @@ Given a `PairingModel`, building the Groth16 object is very easy
 
 ```python
 # Import the Groth16 class
-from zkscript.groth16.model.groth16 import Groth16
+from src.zkscript.groth16.model.groth16 import Groth16
 # Import the PairingModel instantiations
-from zkscript.bilinear_pairings.bls12_381.bls12_381 import bls12_381 as bls12_381_pairing_model
+from src.zkscript.bilinear_pairings.bls12_381.bls12_381 import bls12_381 as bls12_381_pairing_model
 # Import some auxiliary parameters
-from zkscript.bilinear_pairings.bls12_381.parameters import a, r
+from src.zkscript.bilinear_pairings.bls12_381.parameters import a, r
 
 bls12_381 = Groth16(
     pairing_model=bls12_381_pairing_model,
