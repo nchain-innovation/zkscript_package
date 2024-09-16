@@ -1,0 +1,12 @@
+# Transaction ID
+tx = "1111111"
+# Index of UTXO to be spent
+index = 0
+# Private key to sign the transaction - WIF format
+private_key = "1111111"
+# Network: testnet or mainnet
+network = "testnet"
+# Broadcast to the network: True or False
+broadcast = false
+# Fee rate: sat / KB
+fee_rate =  60

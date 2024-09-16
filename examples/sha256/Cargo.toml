@@ -1,0 +1,18 @@
+[package]
+name = "sha256"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+ark-crypto-primitives = {version = "0.4.0", features = ["crh", "r1cs"] }
+ark-ff = "0.4.2"
+ark-groth16 = "0.4.0"
+ark-r1cs-std = "0.4.0"
+ark-relations = "0.4.0"
+ark-serialize = "0.4.2"
+ark-snark = "0.4.0"
+ark-test-curves = { version = "0.4.2", features = ["bls12_381_curve"] }
+arkworks-gadgets = "0.4.20"
+rand = "0.8.5"
+rand_chacha = "0.3.1"
+serde_json = "1.0.128"
