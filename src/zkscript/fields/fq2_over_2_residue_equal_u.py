@@ -1,7 +1,7 @@
 from tx_engine import Script
 
 from src.zkscript.fields.fq4 import Fq4
-from src.zkscript.util.utility_scripts import nums_to_script
+from src.zkscript.util.utility_scripts import nums_to_script, pick, roll
 
 
 class Fq2Over2ResidueEqualU(Fq4):
@@ -127,10 +127,14 @@ class Fq2Over2ResidueEqualU(Fq4):
 
         # After this, the stack is: x0 x1 x2 x3 y0 y1 y2 y3, altstack = [x0*y3 + x1*y2 + x2*y1 + x3*y0]
         out += Script.parse_string("OP_2OVER OP_2OVER")
-        out += Script.parse_string("OP_11 OP_PICK OP_MUL")
-        out += Script.parse_string("OP_ROT OP_9 OP_PICK OP_MUL OP_ADD")
-        out += Script.parse_string("OP_ROT OP_7 OP_PICK OP_MUL OP_ADD")
-        out += Script.parse_string("OP_SWAP OP_8 OP_PICK OP_MUL OP_ADD")
+        out += pick(position=11, n_elements=1)
+        out += Script.parse_string("OP_MUL OP_ROT")
+        out += pick(position=9, n_elements=1)
+        out += Script.parse_string("OP_MUL OP_ADD OP_ROT")
+        out += pick(position=7, n_elements=1)
+        out += Script.parse_string("OP_MUL OP_ADD OP_SWAP")
+        out += pick(position=8, n_elements=1)
+        out += Script.parse_string("OP_MUL OP_ADD")
         out += Script.parse_string("OP_TOALTSTACK")
 
         # Third component -------
@@ -138,25 +142,34 @@ class Fq2Over2ResidueEqualU(Fq4):
         # After this, the stack is: x0 x1 x2 x3 y0 y1 y2 y3, altstack = [fourth_component,
         # x2 * y0 + x0 * y2 + (x1 * y3 + x3 * y1) * NON_RESIDUE]
         out += Script.parse_string("OP_3DUP")
-        out += Script.parse_string("OP_9 OP_PICK OP_MUL OP_ROT")
-        out += Script.parse_string("OP_7 OP_PICK OP_MUL OP_ADD")
+        out += pick(position=9, n_elements=1)
+        out += Script.parse_string("OP_MUL OP_ROT")
+        out += pick(position=7, n_elements=1)
+        out += Script.parse_string("OP_MUL OP_ADD")
         out += nums_to_script([self.BASE_FIELD.NON_RESIDUE])
         out += Script.parse_string("OP_MUL OP_SWAP")
-        out += Script.parse_string("OP_9 OP_PICK OP_MUL OP_ADD")
-        out += Script.parse_string("OP_6 OP_PICK OP_5 OP_PICK OP_MUL OP_ADD")
+        out += pick(position=9, n_elements=1)
+        out += Script.parse_string("OP_MUL OP_ADD")
+        out += pick(position=6, n_elements=1)
+        out += pick(position=5, n_elements=1)
+        out += Script.parse_string("OP_MUL OP_ADD")
         out += Script.parse_string("OP_TOALTSTACK")
 
         # Second component ------
 
         # After this, the stack is: x0 x1 x2 x3 y0 y1 y2 y3,
-        # altstack = [fourth_component, third_component, x0 * x1 + y0 * y1 + x2 * y2 + x3 * y3 * NON_RESIDUE]
+        # altstack = [fourth_component, third_component, x0 * y1 + x1 * y0 + x2 * y2 + x3 * y3 * NON_RESIDUE]
         out += Script.parse_string("OP_2OVER OP_2OVER")
-        out += Script.parse_string("OP_8 OP_PICK OP_MUL")
-        out += nums_to_script([self.BASE_FIELD.NON_RESIDUE])
+        out += pick(position=8, n_elements=1)
         out += Script.parse_string("OP_MUL")
-        out += Script.parse_string("OP_SWAP OP_9 OP_PICK OP_MUL OP_ADD")
-        out += Script.parse_string("OP_SWAP OP_10 OP_PICK OP_MUL OP_ADD")
-        out += Script.parse_string("OP_SWAP OP_8 OP_PICK OP_MUL OP_ADD")
+        out += nums_to_script([self.BASE_FIELD.NON_RESIDUE])
+        out += Script.parse_string("OP_MUL OP_SWAP")
+        out += pick(position=9, n_elements=1)
+        out += Script.parse_string("OP_MUL OP_ADD OP_SWAP")
+        out += pick(position=10, n_elements=1)
+        out += Script.parse_string("OP_MUL OP_ADD OP_SWAP")
+        out += pick(position=8, n_elements=1)
+        out += Script.parse_string("OP_MUL OP_ADD")
         out += Script.parse_string("OP_TOALTSTACK")
 
         # First component -------
@@ -164,8 +177,9 @@ class Fq2Over2ResidueEqualU(Fq4):
         # After this, the stack is: x0 *y0 + (x1 * y1 + x2 * y3 + x3 * y2) * NON_RESIDUE,
         # altstack = [fourth_component, third_component, second_component]
         out += Script.parse_string("OP_2ROT OP_ROT OP_ROT OP_MUL")
-        out += Script.parse_string("OP_ROT OP_ROT OP_MUL OP_ADD")
-        out += Script.parse_string("OP_SWAP OP_3 OP_ROLL OP_MUL OP_ADD")
+        out += Script.parse_string("OP_ROT OP_ROT OP_MUL OP_ADD OP_SWAP")
+        out += roll(position=3, n_elements=1)
+        out += Script.parse_string("OP_MUL OP_ADD")
         out += nums_to_script([self.BASE_FIELD.NON_RESIDUE])
         out += Script.parse_string("OP_MUL")
         out += Script.parse_string("OP_ROT OP_ROT OP_MUL OP_ADD")
