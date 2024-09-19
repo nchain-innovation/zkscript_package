@@ -80,10 +80,103 @@ class Fq2Over2ResidueEqualU(Fq4):
             batched_modulo = Script()
 
             if clean_constant is None and is_constant_reused is None:
-                raise ValueError(
-                    f"If take_modulo is set, both clean_constant: {clean_constant} \
+                err = f"If take_modulo is set, both clean_constant: {clean_constant} \
                         and is_constant_reused: {is_constant_reused} must be set."
-                )
+                raise ValueError(err)
+
+            if clean_constant:
+                fetch_q = Script.parse_string("OP_DEPTH OP_1SUB OP_ROLL")
+            else:
+                fetch_q = Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
+
+            batched_modulo += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
+            batched_modulo += Script.parse_string("OP_FROMALTSTACK OP_ROT")
+            batched_modulo += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
+            batched_modulo += Script.parse_string("OP_FROMALTSTACK OP_ROT")
+            batched_modulo += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
+            batched_modulo += Script.parse_string("OP_FROMALTSTACK OP_ROT")
+
+            if is_constant_reused:
+                batched_modulo += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
+            else:
+                batched_modulo += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_SWAP OP_MOD")
+
+            out += fetch_q + batched_modulo
+        else:
+            out += Script.parse_string("OP_FROMALTSTACK OP_FROMALTSTACK OP_FROMALTSTACK")
+
+        return out
+
+    def mul(
+        self,
+        take_modulo: bool,
+        check_constant: bool | None,
+        clean_constant: bool | None,
+        is_constant_reused: bool | None = None,
+    ) -> Script:
+        """Multiplication in Fq4 = F_q^2[v] / (v^2 - u)."""
+
+        if check_constant:
+            out = Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
+            out += nums_to_script([self.MODULUS])
+            out += Script.parse_string("OP_EQUALVERIFY")
+        else:
+            out = Script()
+
+        # Fourth component ------
+
+        # After this, the stack is: x0 x1 x2 x3 y0 y1 y2 y3, altstack = [x0*y3 + x1*y2 + x2*y1 + x3*y0]
+        out += Script.parse_string("OP_2OVER OP_2OVER")
+        out += Script.parse_string("OP_11 OP_PICK OP_MUL")
+        out += Script.parse_string("OP_ROT OP_9 OP_PICK OP_MUL OP_ADD")
+        out += Script.parse_string("OP_ROT OP_7 OP_PICK OP_MUL OP_ADD")
+        out += Script.parse_string("OP_SWAP OP_8 OP_PICK OP_MUL OP_ADD")
+        out += Script.parse_string("OP_TOALTSTACK")
+
+        # Third component -------
+
+        # After this, the stack is: x0 x1 x2 x3 y0 y1 y2 y3, altstack = [fourth_component,
+        # x2 * y0 + x0 * y2 + (x1 * y3 + x3 * y1) * NON_RESIDUE]
+        out += Script.parse_string("OP_3DUP")
+        out += Script.parse_string("OP_9 OP_PICK OP_MUL OP_ROT")
+        out += Script.parse_string("OP_7 OP_PICK OP_MUL OP_ADD")
+        out += nums_to_script([self.BASE_FIELD.NON_RESIDUE])
+        out += Script.parse_string("OP_MUL OP_SWAP")
+        out += Script.parse_string("OP_9 OP_PICK OP_MUL OP_ADD")
+        out += Script.parse_string("OP_6 OP_PICK OP_5 OP_PICK OP_MUL OP_ADD")
+        out += Script.parse_string("OP_TOALTSTACK")
+
+        # Second component ------
+
+        # After this, the stack is: x0 x1 x2 x3 y0 y1 y2 y3,
+        # altstack = [fourth_component, third_component, x0 * x1 + y0 * y1 + x2 * y2 + x3 * y3 * NON_RESIDUE]
+        out += Script.parse_string("OP_2OVER OP_2OVER")
+        out += Script.parse_string("OP_8 OP_PICK OP_MUL")
+        out += nums_to_script([self.BASE_FIELD.NON_RESIDUE])
+        out += Script.parse_string("OP_MUL")
+        out += Script.parse_string("OP_SWAP OP_9 OP_PICK OP_MUL OP_ADD")
+        out += Script.parse_string("OP_SWAP OP_10 OP_PICK OP_MUL OP_ADD")
+        out += Script.parse_string("OP_SWAP OP_8 OP_PICK OP_MUL OP_ADD")
+        out += Script.parse_string("OP_TOALTSTACK")
+
+        # First component -------
+
+        # After this, the stack is: x0 *y0 + (x1 * y1 + x2 * y3 + x3 * y2) * NON_RESIDUE,
+        # altstack = [fourth_component, third_component, second_component]
+        out += Script.parse_string("OP_2ROT OP_ROT OP_ROT OP_MUL")
+        out += Script.parse_string("OP_ROT OP_ROT OP_MUL OP_ADD")
+        out += Script.parse_string("OP_SWAP OP_3 OP_ROLL OP_MUL OP_ADD")
+        out += nums_to_script([self.BASE_FIELD.NON_RESIDUE])
+        out += Script.parse_string("OP_MUL")
+        out += Script.parse_string("OP_ROT OP_ROT OP_MUL OP_ADD")
+
+        if take_modulo:
+            batched_modulo = Script()
+
+            if clean_constant is None and is_constant_reused is None:
+                err = f"If take_modulo is set, both clean_constant: {clean_constant} \
+                        and is_constant_reused: {is_constant_reused} must be set."
+                raise ValueError(err)
 
             if clean_constant:
                 fetch_q = Script.parse_string("OP_DEPTH OP_1SUB OP_ROLL")
