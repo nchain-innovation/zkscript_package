@@ -570,13 +570,15 @@ def generate_test_cases(test_name):
         Fq12ThreeOverTwoOverTwo,
     ]
 
-    return [
+    test_cases =  [
         extract_test_case(config, test_data)
         for config in configurations
         if test_name in config.test_data
         for test_data in config.test_data[test_name]
     ]
 
+    # Remove any None values returned by extract_test_case
+    return [case for case in test_cases if case]
 
 def verify_script(lock, unlock, clean_constant):
     context = Context(script=unlock + lock)
