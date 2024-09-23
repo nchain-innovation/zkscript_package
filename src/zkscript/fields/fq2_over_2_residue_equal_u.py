@@ -176,15 +176,16 @@ class Fq2Over2ResidueEqualU(Fq4):
 
         # After this, the stack is: x0 *y0 + (x1 * y1 + x2 * y3 + x3 * y2) * NON_RESIDUE,
         # altstack = [fourth_component, third_component, second_component]
-        out += Script.parse_string("OP_2ROT OP_ROT OP_ROT OP_MUL")
-        out += Script.parse_string("OP_ROT OP_ROT OP_MUL OP_ADD OP_SWAP")
-        out += roll(position=3, n_elements=1)
-        out += Script.parse_string("OP_MUL OP_ADD")
-        out += nums_to_script([self.BASE_FIELD.NON_RESIDUE])
+
+        out += Script.parse_string("OP_2ROT OP_TOALTSTACK OP_MUL OP_SWAP OP_FROMALTSTACK OP_MUL OP_ADD OP_TOALTSTACK")
+        out += Script.parse_string("OP_ROT OP_MUL OP_TOALTSTACK")
         out += Script.parse_string("OP_MUL")
-        out += Script.parse_string("OP_ROT OP_ROT OP_MUL OP_ADD")
+        out += Script.parse_string("OP_FROMALTSTACK OP_FROMALTSTACK OP_ADD")
+        out += nums_to_script([self.BASE_FIELD.NON_RESIDUE])
+        out += Script.parse_string("OP_MUL OP_ADD")
 
         if take_modulo:
+
             batched_modulo = Script()
 
             if clean_constant is None and is_constant_reused is None:
