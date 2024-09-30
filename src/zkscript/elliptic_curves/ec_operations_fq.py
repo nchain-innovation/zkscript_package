@@ -1,6 +1,6 @@
 from tx_engine import Script
 
-# Utility scripts
+from src.zkscript.elliptic_curves.util import CurvePoint, FieldElement
 from src.zkscript.util.utility_scripts import nums_to_script, pick, roll
 
 
@@ -13,28 +13,47 @@ class EllipticCurveFq:
         # A coefficient of the curve over which we are performing the operations
         self.CURVE_A = curve_a
 
-    def point_addition(
-        self, take_modulo: bool, check_constant: bool | None = None, clean_constant: bool | None = None
+    def point_algebraic_addition(
+        self,
+        take_modulo: bool,
+        check_constant: bool | None = None,
+        clean_constant: bool | None = None,
+        lam: FieldElement | None = None,
+        P: CurvePoint | None = None,  # noqa: N803
+        Q: CurvePoint | None = None,  # noqa: N803
     ) -> Script:
-        """Sum two points that we know are not equal, nor the inverse of one another.
+        """Sum or subtract two points that we know are not equal, nor the inverse of one another.
 
-        NOTE: When using this function, we need to be sure that P != Q.
-        If P = Q, any lambda will pass the validity check, but the point computed is not necessarily going to be 2P.
+        NOTE: use this function only if P != Q and P != -Q, and neither is the point at infinity
 
         Input Parameters:
             - Stack: q .. <lambda> P Q
             - Altstack: []
         Output:
-            - P + Q
+            - q .. .. .. .. P + Q if P.move = roll and neither P nor Q is negated
+            - q .. .. .. .. P - Q if P.move = roll and Q is negated
         Assumption on parameters:
             - P and Q are points on E(F_q), passed as couple of integers (minimally encoded, little endian)
             - lambda is the gradient of the line through P and Q, passed as an integers (minimally encoded, little
             endian)
             - P != Q
             - P != -Q
+            - Neither of the points is the point at infinity
         If take_modulo = True, the coordinates of P + Q are in F_q
 
         """
+        # the function enforce the stack element to be in certain positions
+        if lam is None:
+            lam = FieldElement(4, roll)
+        if P is None:
+            P = CurvePoint(3, False, roll)
+        if Q is None:
+            Q = CurvePoint(1, False, roll)
+
+        assert lam == FieldElement(4, roll)
+        assert CurvePoint(3, False, roll) == P
+        assert CurvePoint(1, False, roll) == Q or CurvePoint(1, True, roll) == Q
+
         if check_constant:
             out = (
                 Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
@@ -44,20 +63,27 @@ class EllipticCurveFq:
         else:
             out = Script()
 
-        # P \neq Q, then check that lambda (x_Q - x_P) = (y_Q - y_P)
-        # After this, the stack is: x_P y_P x_Q lambda, altstack = [(lambda *(xP - xQ) - (yP - yQ) == 0)]
+        # P \neq \pm Q, then check that lambda (x_P - x_Q) = (\pm y_P - \pm y_Q)
+        # depending on which point we are negating
+
+        # After this, the stack is: x_P y_P x_Q lambda, the altstack is
+        # altstack = [(lambda *(xP - xQ) - (yP - yQ) == 0)] if Q_negate
+        # altstack = [(lambda *(xP - xQ) - (yP + yQ) == 0)] otherwise
         lambda_different_points = Script.parse_string("OP_2OVER")  # Duplicate xP yP
-        lambda_different_points += Script.parse_string("OP_ROT OP_SUB OP_TOALTSTACK")  # Compute yP - yQ
+        if Q.negate:
+            lambda_different_points += Script.parse_string("OP_ROT OP_ADD OP_TOALTSTACK")  # Compute yP - yQ
+        else:
+            lambda_different_points += Script.parse_string("OP_ROT OP_SUB OP_TOALTSTACK")  # Compute yP + yQ
         lambda_different_points += Script.parse_string("OP_OVER OP_SUB")  # Compute xP - xQ
         lambda_different_points += roll(position=4, n_elements=1)  # Roll lambda
         lambda_different_points += Script.parse_string("OP_TUCK OP_MUL")  # Compute lambda *(xP - xQ)
         lambda_different_points += Script.parse_string(
             "OP_FROMALTSTACK OP_SUB"
-        )  # Compute lambda *(xP - xQ) - (yP - yQ)
+        )  # Compute lambda *(xP - xQ) - (yP - yQ) if is_addition, else lambda *(xP - xQ) - (yP -/+ yQ)
         lambda_different_points += Script.parse_string("OP_TOALTSTACK")
 
         # Compute x_(P+Q) = lambda^2 - x_P - x_Q
-        # After this, the stack is: lambda xP x_(P+Q), altstack = [(lambda *(xP - xQ) - (yP - yQ) == 0), yP]
+        # After this, the stack is: lambda xP x_(P+Q), altstack = [(lambda *(xP - xQ) - (yP -/+ yQ) == 0), yP]
         compute_coordinates = Script.parse_string("OP_DUP OP_DUP OP_MUL")  # Duplicate lambda and compute lambda^2
         compute_coordinates += Script.parse_string("OP_ROT OP_SUB")  # Rotate xQ and compute lambda^2 - xQ
         compute_coordinates += Script.parse_string(
@@ -75,7 +101,7 @@ class EllipticCurveFq:
         else:
             fetch_q = Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
 
-        # After this, the stack is: x_(P+Q) y_(P+Q) q, altstack = [(lambda *(xP - xQ) - (yP - yQ) == 0)]
+        # After this, the stack is: x_(P+Q) y_(P+Q) q, altstack = [(lambda *(xP - xQ) - (yP -/+ yQ) == 0)]
         out += lambda_different_points + compute_coordinates + fetch_q
 
         batched_modulo = Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")  # Mod out y
@@ -84,7 +110,7 @@ class EllipticCurveFq:
         batched_modulo += Script.parse_string("OP_FROMALTSTACK OP_ROT")
 
         # If needed, mod out
-        # After this, the stack is: x_(P+Q) y_(P+Q) q, altstack = [(lambda *(xP - xQ) - (yP - yQ) == 0)]
+        # After this, the stack is: x_(P+Q) y_(P+Q) q, altstack = [(lambda *(xP - xQ) - (yP -/+ yQ) == 0)]
         # with the coefficients in Fq (if executed)
         if take_modulo:
             out += batched_modulo
@@ -92,7 +118,7 @@ class EllipticCurveFq:
         check_lambda = Script.parse_string("OP_FROMALTSTACK")
         check_lambda += Script.parse_string(
             "OP_OVER OP_MOD OP_OVER OP_ADD OP_SWAP OP_MOD"
-        )  # Mod out lambda *(xP - xQ) - (yP - yQ)
+        )  # Mod out lambda *(xP - xQ) - (yP -/+ yQ)
         check_lambda += Script.parse_string("OP_0 OP_EQUALVERIFY")
 
         # Check lambda was correct
@@ -101,19 +127,32 @@ class EllipticCurveFq:
         return out
 
     def point_doubling(
-        self, take_modulo: bool, check_constant: bool | None = None, clean_constant: bool | None = None
+        self,
+        take_modulo: bool,
+        check_constant: bool | None = None,
+        clean_constant: bool | None = None,
+        lam: FieldElement | None = None,
+        P: CurvePoint | None = None,  # noqa: N803
     ) -> Script:
         """Double a point.
 
         Input Parameters:
             - Stack: q .. <lambda> P
         Output:
-            - 2P
+            - 2P or -2P depending on the value of P.negative.
         Assumption on parameters:
             - P is a point on E(F_q), passed as couple of integers (minimally encoded, little endian)
             - lambda is the gradient of the line tangent at P, passed as an integers (minimally encoded, little endian)
         If take_modulo = True, the coordinates of 2P are in F_q
         """
+        if lam is None:
+            lam = FieldElement(2, roll)
+        if P is None:
+            P = CurvePoint(1, False, roll)
+
+        assert lam == FieldElement(2, roll)
+        assert CurvePoint(1, False, roll) == P or CurvePoint(1, True, roll) == P
+
         if check_constant:
             out = (
                 Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
@@ -122,6 +161,9 @@ class EllipticCurveFq:
             )
         else:
             out = Script()
+
+        if P.negate:
+            out += Script.parse_string("OP_NEGATE")  # Negate yP
 
         curve_a = self.CURVE_A
 

@@ -165,7 +165,7 @@ class EllipticCurveFqUnrolled:
             )  # Check marker for +P; if we enter here, the stack is: P 2T lambda_(2T+P)
             out += Script.parse_string("OP_ROT OP_ROT")  # Roll 2T
             out += pick(position=4, n_elements=2)  # Pick P
-            out += ec_over_fq.point_addition(
+            out += ec_over_fq.point_algebraic_addition(
                 take_modulo=take_modulo, check_constant=False, clean_constant=False
             )  # Compute 2T + P
             out += Script.parse_string("OP_0")  # Add data to be dropped
@@ -185,7 +185,12 @@ class EllipticCurveFqUnrolled:
         return out
 
     def unrolled_multiplication_input(
-        self, point_p: list[int], a: int, lambdas: list[list[list[int]]], max_multiplier: int, load_modulus=True
+        self,
+        P: list[int],
+        a: int,
+        lambdas: list[list[list[int]]],
+        max_multiplier: int,
+        load_modulus=True,
     ) -> Script:
         """Return the input script needed to execute the unrolled multiplication script above.
 
@@ -230,6 +235,6 @@ class EllipticCurveFqUnrolled:
             out += Script.parse_string(" ".join(["OP_0", "OP_0"] * (M - N)))
 
         # Load P
-        out += nums_to_script(point_p)
+        out += nums_to_script(P)
 
         return out

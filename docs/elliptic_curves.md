@@ -2,14 +2,24 @@
 
 The zk Script Library contains the implementation of arithmetic for elliptic curves. More precisely, it contains scripts for:
 - EC arithmetic over a prime field `Fq`:
-    - `point_addition`: a script to sum two points that we know are not equal, nor the inverse of one another
+    - `point_algebraic_addition`: a script to sum or subtract two points that we know are not equal, nor the inverse of one another, not the point at infinity.
     - `point_doubling`: a script to double a point
     - `point_addition_with_unknown_points`: a script to sum two points which we do not know whether they are equal, different, or the inverse of one another
 - Unrolled EC arithmetic over a prime field `Fq`: `unrolled_multiplication` returns a script to compute the scalar point multiplication `a * P` for any point `P` and any `a` which is smaller that the `max_multiplier` parameter supplied to the `unrolled_multiplication` function when the script was constructed
 - EC arithmetic over a quadratic extension field `Fq2`:
-    - `point_addition`
+    - `point_algebraic_addition`: compared with the function over `Fq` this function can handle `-P - Q`
     - `point_doubling`
     - `point_negation`
+
+Ec functions rely on two classes `CurvePoint` and `FieldElement`.
+- `CurvePoint` has attributes:
+    - `position`: of the point in the stack
+    - `negate`: the sign of the point
+    - `move`: the function used to move the point to the correct position in the stack
+- `FieldElement`
+    - `position`: of the point in the stack
+    - `move`: the function used to move the point to the correct position in the stack
+
 
  In all the implementations, the point at infinity is modelled as a sequence of `0x00`, as many as the number of elements required to specify a point on the curve. E.g, `0x00 0x00` is the point at infinity in a curve over `Fq`, `0x00 0x00 0x00 0x00` is the point at infinity in a curve over `Fq2`.
 
@@ -33,7 +43,7 @@ secp256k1_double_generator = [0xc6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7
 secp256k1_generator_plus_double_generator = [0xf9308a019258c31049344f85f89d5229b531c845836f99b08601f113bce036f9, 0x388f7b0f632de8140fe337e62a37f3566500a99934c2231b6cb9fd7584b8e672]
 
 # Let's sum two points on secp256k1: generator + 2*generator
-lock = secp256k1_script.point_addition(take_modulo=True,check_constant=True,clean_constant=True)
+lock = secp256k1_script.point_algebraic_addition(take_modulo=True,check_constant=True,clean_constant=True, is_addition=True)
 lock += nums_to_script([secp256k1_generator_plus_double_generator[1]]) + Script.parse_string('OP_EQUALVERIFY')
 lock += nums_to_script([secp256k1_generator_plus_double_generator[0]]) + Script.parse_string('OP_EQUAL')
 
@@ -69,10 +79,6 @@ assert(context.evaluate())
 # EC arithmetic over Fq2
 
 `ec_operations_fq2` work in the same way as per `ec_operations_fq`, with the difference that when we instantiate an object of the class `ElliptiCurveFq2` we need to supply the instantiation of the Bitcoin Script arithmetic in `Fq2`.
-
-The other difference between `ElliptiCurveFq`and `ElliptiCurveFq2`is that the methods `point_addition` and `point_doubling` of the latter take a few additional arguments. Namely:
-- `point_addition` takes the arguments: `position_lambda`, `position_P` and `position_Q`, which are the positions in the stack of the elements `P` and `Q` that are being summed, and the position of the gradient between them. Thanks to these arguments, the script is able to pick `P`, `Q` and the gradient without the user preparing the stack beforehand.
-- `point_doubling` takes the arguments: `position_lambda` and `position_P`, which are the positions in the stack of the element `P` that is being doubled, and the position of the gradient of the line tangent to the curve at `P`. Thanks to these arguments, the script is able to pick `P` and the gradient without the user preparing the stack beforehand.
 
 # Unrolled EC arithmetic
 
