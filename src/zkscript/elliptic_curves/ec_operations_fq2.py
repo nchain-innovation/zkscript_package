@@ -1,6 +1,7 @@
 from tx_engine import Script
 
-from src.zkscript.util.utility_scripts import nums_to_script, roll
+from src.zkscript.elliptic_curves.util import CurvePoint, FieldElement
+from src.zkscript.util.utility_scripts import nums_to_script, pick, roll
 
 
 class EllipticCurveFq2:
@@ -14,29 +15,35 @@ class EllipticCurveFq2:
         # Fq2 implementation in script
         self.FQ2 = fq2
 
-    def point_addition(
+    def point_algebraic_addition(
         self,
         take_modulo: bool,
         check_constant: bool | None,
         clean_constant: bool | None,
-        position_lambda: int = 9,
-        position_p: int = 7,
-        position_q: int = 3,
+        lam: FieldElement | None = None,
+        P: CurvePoint | None = None,  # noqa: N803
+        Q: CurvePoint | None = None,  # noqa: N803
     ) -> Script:
-        """Point addition.
+        """Point algebraic addition.
 
+        NOTE: use this function only if P != Q and P != -Q, and neither is the point at infinity
         Input Parameters:
             - Stack: q .. <lambda> .. P .. Q ..
             - Altstack: []
         Output:
-            - P + Q
+            - q .. <lambda> .. P .. .. P + Q if P.move = pick and neither P nor Q is negated
+            - q .. <lambda> .. P .. .. P - Q if P.move = pick and Q is negated
+            - q .. <lambda> .. P .. .. -P + Q if P.move = pick and P is negated
+            - q .. <lambda> .. P .. .. - P - Q if P.move = pick and P and Q are negated
+            - q .. .. .. .. P + Q if P.move = roll and neither P nor Q is negated
+            - q .. .. .. .. P - Q if P.move = roll and Q is negated
+            - q .. .. .. .. -P + Q if P.move = roll and P is negated
+            - q .. .. .. .. - P - Q if P.move = roll and P and Q are negated
         Assumption on parameters:
             - P and Q are points on E(F_q^2), passed as couple of elements of Fq2
             - lambda is the gradient of the line through P and Q, passed as an element in Fq2
-            - P != Q --> It is very important that this assumption is satisfied, otherwise any lambda will pass the test
-            if P == Q
-            - P != -Q --> It is very important that this assumption is satisfied, otherwise lambda = 0 will pass the
-            test
+            - P != Q
+            - P != -Q
             - P and Q are not the point at infinity --> This function is not able to handle such case
             - position_lambda, position_p and position_q denote the positions in the stack (top of stack is position 1)
             of the first element of lambda, P, and Q respectively
@@ -46,19 +53,32 @@ class EllipticCurveFq2:
 
         If take_modulo = True, the coordinates of P + Q are in Fq2.
 
-        By default position_lambda = 9, position_p = 7, positon_Q = 3, which means we assume the stack looks as follows:
+        By default:
+            - lam = FieldElement(9,roll)
+            - P = CurvePoint(7,False,roll)
+            - Q = CurvePoint(3,False,roll)
+        which means we assume the stack looks as follows (and that P and Q don't need to be negated):
         .. <lambda> P Q
         namely, we assume the stack has been prepared in advance.
         """
-        assert position_lambda > 0, f"Position lambda {position_lambda} must be bigger than 0"
-        assert position_p > 0, f"Position P {position_p} must be bigger than 0"
-        assert position_q > 0, f"Position Q {position_q} must be bigger than 0"
+        if lam is None:
+            lam = FieldElement(9, roll)
+        if P is None:
+            P = CurvePoint(7, False, roll)
+        if Q is None:
+            Q = CurvePoint(3, False, roll)
+
+        assert lam.position > 0, f"Position lambda {lam.position} must be bigger than 0"
+        assert P.position > 0, f"Position P {P.position} must be bigger than 0"
+        assert Q.position > 0, f"Position Q {Q.position} must be bigger than 0"
         assert (
-            position_lambda - position_p > 1
-        ), f"Position lambda {position_lambda} must be bigger than position P {position_p} plus one"
+            lam.position - P.position > 1
+        ), f"Position lambda {lam.position} must be bigger than position P {P.position} plus one"
         assert (
-            position_p - position_q > 3  # noqa: PLR2004
-        ), f"Position P {position_lambda} must be bigger than position Q {position_p} plus three"
+            P.position - Q.position > 3  # noqa: PLR2004
+        ), f"Position P {P.position} must be bigger than position Q {Q.position} plus three"
+        assert lam.move == roll, "The moving function for lambda must be rollin"
+        assert Q.move == roll, "The moving function for Q must be rolling"
 
         if check_constant:
             out = Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
@@ -70,50 +90,55 @@ class EllipticCurveFq2:
         # Fq2 implementation
         fq2 = self.FQ2
 
-        # P \neq Q, then check that lambda (x_P - x_Q) = (y_P - y_Q)
-        # At the end of this part, the stack is: lambda xP xQ yP
+        # Checks consistency of P, Q, and lambda. The notation [P / yP] means that we have either P or yP in the stack
+        # After this, the stack is: q .. .. [P / yP] .. Q ..
 
-        # After this, the stack is: lambda xP lambda xP
-        stack_length_added = 0
-        lambda_different_points = roll(position=position_lambda, n_elements=2)  # Roll lambda
-        stack_length_added += 2
-        lambda_different_points += roll(position=position_p + stack_length_added, n_elements=2)  # Roll xP
-        stack_length_added += 2
+        # lambda xP lambda xP
+        lambda_different_points = lam.move(position=lam.position, n_elements=2)  # Roll lambda
+        lambda_different_points += P.move(position=P.position + 2, n_elements=2)  # Move xP
         lambda_different_points += Script.parse_string("OP_2OVER OP_2OVER")  # Duplicate lambda, xP
-        stack_length_added += 4
-        # After this, the stack is: lambda xP xQ [lambda * (xP - xQ)]
-        lambda_different_points += roll(position=position_q + stack_length_added, n_elements=2)  # Roll xQ
-        stack_length_added += 2
+        # After this, the stack is: q .. .. [P / yP] .. yQ ..
+        # lambda xP xQ [lambda * (xP - xQ)]
+        lambda_different_points += Q.move(position=Q.position + 8, n_elements=2)  # Roll xQ
         lambda_different_points += Script.parse_string("OP_2SWAP OP_2OVER")  # Swap xP and xQ, duplicate xQ
-        stack_length_added += 2
         lambda_different_points += fq2.subtract(
             take_modulo=False, check_constant=False, clean_constant=False
         )  # Compute x_P - x_Q
-        stack_length_added -= 2
         lambda_different_points += Script.parse_string("OP_2ROT")  # Bring lambda on top of the stack
         lambda_different_points += fq2.mul(
             take_modulo=False, check_constant=False, clean_constant=False
         )  # Compute lambda * (x_P - x_Q)
-        stack_length_added -= 2
-        # After this, the stack is: lambda xP xQ yP
-        lambda_different_points += roll(position=position_q + stack_length_added - 2, n_elements=2)  # Roll yQ
-        stack_length_added += 0  # These elements were already in front of P
-        lambda_different_points += roll(
-            position=position_p + stack_length_added - 2 - 2, n_elements=2
-        )  # Roll yP: -2 is for y coordinates, -2 is because xQ was already in front of P
-        lambda_different_points += Script.parse_string("OP_2SWAP OP_2OVER")  # Swap yQ and yP, duplicate yP
+        # After this, the stack is: q .. .. [P / ""] .. ..
+        # lambda xP xQ (\pm yP)
+        # Dealing with different combination of P, Q, -P, and -Q
+        lambda_different_points += Q.move(position=Q.position + 8 - 2, n_elements=1)  # Roll yQ_0
+        if Q.negate:
+            lambda_different_points += Script.parse_string("OP_NEGATE")
+        lambda_different_points += Q.move(position=Q.position + 8 - 3 + 1, n_elements=1)  # Roll yQ_1
+        if Q.negate:
+            lambda_different_points += Script.parse_string("OP_NEGATE")
+        lambda_different_points += P.move(position=P.position - 2 + 6, n_elements=1)  # Move yP_0
+        if P.negate:
+            lambda_different_points += Script.parse_string("OP_NEGATE")
+        lambda_different_points += P.move(position=P.position - 3 + 6 + 1, n_elements=1)  # Roll yP_1
+        if P.negate:
+            lambda_different_points += Script.parse_string("OP_NEGATE")
+        lambda_different_points += Script.parse_string(
+            "OP_2SWAP OP_2OVER"
+        )  # Swap (\pm yQ) and (\pm yP), duplicate (\pm  yP)
         lambda_different_points += fq2.subtract(
             take_modulo=False, check_constant=False, clean_constant=False
-        )  # Compute yQ - yP
+        )  # Compute (\pm yQ) - (\pm yP)
         lambda_different_points += Script.parse_string("OP_2ROT")  # Bring lambda * (x_P - x_Q)
         lambda_different_points += fq2.add(
             take_modulo=True, check_constant=False, clean_constant=False, is_constant_reused=False
-        )  # Compute lambda * (x_P - x_Q) + yQ- yP
+        )  # Compute lambda * (x_P - x_Q) + (\pm yQ - \pm yP)
+
         lambda_different_points += Script.parse_string("OP_CAT OP_0 OP_EQUALVERIFY")
 
         # Compute coordinates
         # After this, the stack is: xP lambda x_(P+Q)
-        compute_coordinates = Script.parse_string("OP_TOALTSTACK OP_TOALTSTACK")  # Put yP on altstack
+        compute_coordinates = Script.parse_string("OP_TOALTSTACK OP_TOALTSTACK")  # Put (\pm yP) on altstack
         compute_coordinates += Script.parse_string("OP_2OVER")  # Duplicate xP
         compute_coordinates += fq2.add(
             take_modulo=False, check_constant=False, clean_constant=False
@@ -154,8 +179,8 @@ class EllipticCurveFq2:
         take_modulo: bool,
         check_constant: bool | None,
         clean_constant: bool | None,
-        position_lambda: int = 5,
-        position_p: int = 3,
+        lam: FieldElement | None = None,
+        P: CurvePoint | None = None,  # noqa: N803
     ) -> Script:
         """Point doubling.
 
@@ -163,7 +188,10 @@ class EllipticCurveFq2:
             - Stack: q .. <lambda> .. P ..
             - Altstack: []
         Output:
-            - 2P
+            - q .. .. P .. 2P if P.move == pick and P.negate = False
+            - q .. .. .. 2P if P.move == roll and P.negate = False
+            - q .. .. P .. -2P if P.move == pick and P.negate = True
+            - q .. .. .. -2P if P.move == roll and P.negate = True
         Assumption on parameters:
             - P is a point on E(F_q^2), passed as an element in Fq2
             - lambda is the gradient of the line tangent at P, passed as an element in Fq2
@@ -173,21 +201,27 @@ class EllipticCurveFq2:
         Assumption on variables:
             - a is the a coefficient in the Short-Weierstrass equation of the curve (an element in Fq2)
         Assumption on arguments:
-            - position_lambda > 0
-            - position_p > 0
-            - position_lambda > position_p + 1
+            - lam.position > 0
+            - P.position > 0
+            - lam.position > P.position + 1
 
         If take_modulo = True, the coordinates of 2P are in F_q
 
-        By default, position_lambda = 5 and position_p = 3, which means we assume the stack looks as follows:
+        By default, lam = FieldElement(5,roll) and P = CurvePoint(3,roll), which means we assume the stack looks like:
         .. <lambda> P
         namely, we assume the stack has been prepared in advance.
         """
-        assert position_lambda > 0, f"Position lambda {position_lambda} must be bigger than 0"
-        assert position_p > 0, f"Position Q {position_p} must be bigger than 0"
+        if lam is None:
+            lam = FieldElement(5, roll)
+        if P is None:
+            P = CurvePoint(3, False, roll)
+
+        assert lam.position > 0, f"Position lambda {lam.position} must be bigger than 0"
+        assert P.position > 0, f"Position Q {P.position} must be bigger than 0"
         assert (
-            position_lambda - position_p > 1
-        ), f"Position lambda {position_lambda} must be bigger than position P {position_p} plus one"
+            lam.position - P.position > 1
+        ), f"Position lambda {lam.position} must be bigger than position P {P.position} plus one"
+        assert lam.move == roll, "The moving function for lambda must be rolling"
 
         # Fq2 implementation
         fq2 = self.FQ2
@@ -202,27 +236,26 @@ class EllipticCurveFq2:
             out = Script()
 
         # P \neq Q, then check that 2 lambda y_P = 3 x_P^2 + a
-        # At the end of this part, the stack is: lambda yP xP
-
-        # After this, the stack is: lambda yP lambda yP
-        stack_length_added = 0
-        lambda_equal_points = roll(position=position_lambda, n_elements=2)  # Roll lambda
-        stack_length_added += 2
-        lambda_equal_points += roll(position=position_p + stack_length_added - 2, n_elements=2)  # Roll yP
-        stack_length_added += 0  # Elements were already in front of xP
+        # The notation [P / yP] means that we have either P or yP in the stack
+        # After this, the stack is: q .. .. [P / xP] ..
+        # lambda yP lambda yP
+        lambda_equal_points = lam.move(position=lam.position, n_elements=2)  # Roll lambda
+        lambda_equal_points += P.move(position=P.position + 2 - 2, n_elements=2)  # Move yP
         lambda_equal_points += Script.parse_string("OP_2OVER OP_2OVER")  # Duplicate lambda, yP
-        stack_length_added += 4
-        # After this, the stack is: lambda yP (2*lambda*yP)
+        # After this, the stack is:q .. .. [P / xP] ..
+        # lambda yP (2*lambda*yP)
         lambda_equal_points += fq2.mul(
             take_modulo=False, check_constant=False, clean_constant=False
         )  # Compute lamdba * yP
-        stack_length_added -= 2
         lambda_equal_points += Script.parse_string("OP_2")
+        if P.negate:
+            lambda_equal_points += Script.parse_string("OP_NEGATE")
         lambda_equal_points += fq2.scalar_mul(
             take_modulo=False, check_constant=False, clean_constant=False
         )  # Compute 2 * lamdba * yP
-        # After this, the stack is: lambda yP xP
-        lambda_equal_points += roll(position=position_p + stack_length_added, n_elements=2)  # Roll xP
+        # After this, the stack is: q .. .. [P / ""] ..
+        # lambda yP xP
+        lambda_equal_points += P.move(position=P.position + 4 + 2 * (P.move == pick), n_elements=2)  # Move xP
         lambda_equal_points += Script.parse_string("OP_2SWAP OP_2OVER")
         lambda_equal_points += fq2.square(take_modulo=False, check_constant=False, clean_constant=False)  # Compute xP^2
         lambda_equal_points += Script.parse_string("OP_3")
@@ -266,9 +299,14 @@ class EllipticCurveFq2:
 
         # After this, the stack is: x_(2P) y_(2P)
         compute_coordinates += Script.parse_string("OP_2ROT")
-        compute_coordinates += fq2.subtract(
-            take_modulo=take_modulo, check_constant=False, clean_constant=clean_constant, is_constant_reused=False
-        )  # Compute y_(2P)
+        if P.negate:
+            compute_coordinates += fq2.add(
+                take_modulo=take_modulo, check_constant=False, clean_constant=clean_constant, is_constant_reused=False
+            )  # Compute y_(2P)
+        else:
+            compute_coordinates += fq2.subtract(
+                take_modulo=take_modulo, check_constant=False, clean_constant=clean_constant, is_constant_reused=False
+            )  # Compute y_(2P)
 
         out += lambda_equal_points + compute_coordinates
 
