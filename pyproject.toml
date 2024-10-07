@@ -74,19 +74,6 @@ select = [
 ignore = [
     "S101",  # use of assert
     "N806",  # variable name in function should be lowercase
-    # TODO: re-enable once documentation is well done
-    "D100",
-    # TODO: re-enable once documentation is well done
-    "D101",
-    # TODO: re-enable once documentation is well done
-    "D102",
-    # TODO: re-enable once documentation is well done
-    "D103",
-    "D107",  # missing docstring in __init__
-    "D203",  # 1 blank line required before class docstring. This conflicts with D211.
-    "D213",  # Multi-line docstring summary should start at the second line
-    "D406",  # Section name should end with a newline ("{name}")
-    "D407",  # Missing dashed underline after section ("{name}")
     # Lint rules incompatible with Ruff formatter
     "W191",
     "E111",
@@ -110,6 +97,9 @@ unfixable = []
 
 # Allow unused variables when underscore-prefixed.
 dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = [
