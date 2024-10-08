@@ -539,20 +539,20 @@ class Fq12ThreeOverTwoOverTwo:
 
 
 def extract_test_case(config, data):
-    is_x = "x" in data
-    is_y = "y" in data
-    is_z = "z" in data
-    is_lam = "lam" in data
+    x_in_data = "x" in data
+    y_in_data = "y" in data
+    z_in_data = "z" in data
+    lam_in_data = "lam" in data
 
     test = None
 
-    if is_x and not is_y and not is_z and not is_lam:
+    if x_in_data and not y_in_data and not z_in_data and not lam_in_data:
         test = (config, data["x"], data["expected"])
-    elif is_x and is_y and not is_z and not is_lam:
+    elif x_in_data and y_in_data and not z_in_data and not lam_in_data:
         test = (config, data["x"], data["y"], data["expected"])
-    elif is_x and is_y and is_z and not is_lam:
+    elif x_in_data and y_in_data and z_in_data and not lam_in_data:
         test = (config, data["x"], data["y"], data["z"], data["expected"])
-    elif is_x and not is_y and not is_z and is_lam:
+    elif x_in_data and not y_in_data and not z_in_data and lam_in_data:
         test = (config, data["x"], data["lam"], data["expected"])
 
     return test

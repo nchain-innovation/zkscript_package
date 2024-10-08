@@ -7,8 +7,11 @@ from src.zkscript.util.utility_scripts import nums_to_script, pick
 class Fq2Over2ResidueEqualU(Fq4):
     """Represents F_q^4 = F_q^2[v] / (v^2 - u).
 
-    This class constructs F_q^4 as a quadratic extension of
-    F_q^2 = F_q[u] / (u^2 - NON_RESIDUE), with residue equal to u.
+    This class constructs F_q^4 as a quadratic extension of F_q^2 = F_q[u] / (u^2 - NON_RESIDUE), with residue u.
+
+    The generic element of this field is of the form x0 + x1*u + x2*v + x3*uv, with relations:
+        u^2 = NON_RESIDUE
+        v^2 = u
     """
 
     def square(
@@ -20,23 +23,30 @@ class Fq2Over2ResidueEqualU(Fq4):
     ) -> Script:
         """Perform squaring in Fq4 = F_q^2[v] / (v^2 - u).
 
+        Stack input:
+            - stack    = [modulo, ..., x0, x1, x2, x3]
+            - altstack = []
+
+        Stack output:
+            - stack    = [modulo, ..., x0, x1, x2, x3, (x0 + x1*u + x2*v + x3*uv)^2]
+            - altstack = []
+
         Args:
             take_modulo (bool): Whether to take modulo after the operation.
             check_constant (bool | None): Whether to check the modulo constant.
             clean_constant (bool | None): Whether to delete the modulo constant after the operation.
-            is_constant_reused (bool | None, optional): Whether the modulo constant is reused after the current operation.
+            is_constant_reused (bool | None, optional): Whether the modulo constant is reused after the current
+                operation.
 
         Returns:
             Script: Locking script performing squaring in Fq4 = F_q^2[v] / (v^2 - u).
 
+        Raises:
+            AssertionError: If `clean_constant` or `check_constant` are not provided when required.
+
         """
 
         # Check the modulo constant
-        # stack in:    [modulo, ..., x0, x1, x2, x3]
-        # altstack in: []
-        # stack out:    [modulo, ..., x0, x1, x2, x3]
-        # altstack out: []
-
         if check_constant:
             out = Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
             out += nums_to_script([self.MODULUS])
@@ -93,8 +103,6 @@ class Fq2Over2ResidueEqualU(Fq4):
         out += Script.parse_string("OP_DUP OP_MUL OP_ADD")
 
         # Take the modulo of the computed terms or not and move them to the stack
-        # stack out:    [..., x0, x1, x2, x3, zero term, uv coefficient, v coefficient, u coefficient]
-        # altstack out: []
         if take_modulo:
             batched_modulo = Script()
 
@@ -137,22 +145,30 @@ class Fq2Over2ResidueEqualU(Fq4):
     ) -> Script:
         """Perform multiplication in Fq4 = F_q^2[v] / (v^2 - u).
 
+        Stack input:
+            - stack    = [modulo, ..., x0, x1, x2, x3, y0, y1, y2, y3]
+            - altstack = []
+
+        Stack output:
+            - stack    = [modulo, ..., x0, x1, x2, x3, (x0 + x1*u + x2*v + x3*uv)*(y0 + y1*u + y2*v + y3*uv)]
+            - altstack = []
+
         Args:
             take_modulo (bool): Whether to take modulo after the operation.
             check_constant (bool | None): Whether to check the modulo constant.
             clean_constant (bool | None): Whether to delete the modulo constant after the operation.
-            is_constant_reused (bool | None, optional): Whether the modulo constant is reused after the current operation.
+            is_constant_reused (bool | None, optional): Whether the modulo constant is reused after the current
+                operation.
 
         Returns:
             Script: Locking script performing multiplication in Fq4 = F_q^2[v] / (v^2 - u).
 
+        Raises:
+            AssertionError: If `clean_constant` or `check_constant` are not provided when required.
+
         """
 
         # Check the modulo constant
-        # stack in:    [modulo, ..., x0, x1, x2, x3, y0, y1, y2, y3]
-        # altstack in: []
-        # stack out:    [modulo, ..., x0, x1, x2, x3, y0, y1, y2, y3]
-        # altstack out: []
         if check_constant:
             out = Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
             out += nums_to_script([self.MODULUS])
@@ -218,8 +234,6 @@ class Fq2Over2ResidueEqualU(Fq4):
         out += Script.parse_string("OP_MUL OP_ADD")
 
         # Take the modulo of the computed terms or not and move them to the stack
-        # stack out:    [..., x0, x1, x2, x3, zero term, uv coefficient, v coefficient, u coefficient]
-        # altstack out: []
         if take_modulo:
             batched_modulo = Script()
 
