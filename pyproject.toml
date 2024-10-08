@@ -20,7 +20,7 @@ include = ["src/zkscript"]
 exclude = ["tests"]
 
 [tool.ruff]
-include = ["src/**/*.py", "tests/**/*.py"]
+include = ["src/zkscript/**/*.py", "tests/**/*.py"]
 line-length = 120
 indent-width = 4
 
