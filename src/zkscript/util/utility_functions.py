@@ -5,7 +5,7 @@ def optimise_script(script: Script) -> Script:
     """Optimize a script by removing redundant operations from and to the altstack.
 
     This function removes pairs of redundant operations, such as `OP_TOALTSTACK OP_FROMALTSTACK` and
-    `OP_FROMALTSTACK OP_TOALTSTACK`, hich cancel each other out. The function iterates over the script
+    `OP_FROMALTSTACK OP_TOALTSTACK`, which cancel each other out. The function iterates over the script
     until no further redundant operations can be removed.
 
     Args:
