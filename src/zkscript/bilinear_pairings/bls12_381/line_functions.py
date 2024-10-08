@@ -2,7 +2,7 @@ from tx_engine import Script
 
 # Fq2 Script implementation
 from src.zkscript.bilinear_pairings.bls12_381.fields import fq2_script
-from src.zkscript.util.utility_scripts import nums_to_script, pick
+from src.zkscript.util.utility_scripts import mod, pick, verify_constant
 
 
 class LineFunctions:
@@ -41,14 +41,7 @@ class LineFunctions:
         # Fq2 implementation
         fq2 = self.FQ2
 
-        if check_constant:
-            out = (
-                Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
-                + nums_to_script([self.MODULUS])
-                + Script.parse_string("OP_EQUALVERIFY")
-            )
-        else:
-            out = Script()
+        out = verify_constant(self.MODULUS, check_constant=check_constant)
 
         # Compute third component -----------------------------------------------------
 
@@ -86,17 +79,11 @@ class LineFunctions:
 
         if take_modulo:
             # Batched modulo operations: pull from altstack, rotate, mod out, repeat
-            out += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            out += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            out += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            if is_constant_reused:
-                out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            else:
-                out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_SWAP OP_MOD")
+            out += mod()
+            out += mod()
+            out += mod(is_constant_reused=is_constant_reused)
         else:
-            out += Script.parse_string("OP_FROMALTSTACK OP_FROMALTSTACK OP_FROMALTSTACK")
+            out += Script.parse_string(" ".join(["OP_FROMALTSTACK"] * 3))
 
         return out
 

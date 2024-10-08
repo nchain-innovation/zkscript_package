@@ -1,6 +1,6 @@
 from tx_engine import Script
 
-from src.zkscript.util.utility_scripts import nums_to_script, roll
+from src.zkscript.util.utility_scripts import mod, nums_to_script, roll, verify_constant
 
 
 class EllipticCurveFq2:
@@ -60,12 +60,7 @@ class EllipticCurveFq2:
             position_p - position_q > 3  # noqa: PLR2004
         ), f"Position P {position_lambda} must be bigger than position Q {position_p} plus three"
 
-        if check_constant:
-            out = Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
-            out += nums_to_script([self.MODULUS])
-            out += Script.parse_string("OP_EQUALVERIFY")
-        else:
-            out = Script()
+        out = verify_constant(self.MODULUS, check_constant=check_constant)
 
         # Fq2 implementation
         fq2 = self.FQ2
@@ -194,12 +189,7 @@ class EllipticCurveFq2:
         # A coefficient
         curve_a = self.CURVE_A
 
-        if check_constant:
-            out = Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
-            out += nums_to_script([self.MODULUS])
-            out += Script.parse_string("OP_EQUALVERIFY")
-        else:
-            out = Script()
+        out = verify_constant(self.MODULUS, check_constant=check_constant)
 
         # P \neq Q, then check that 2 lambda y_P = 3 x_P^2 + a
         # At the end of this part, the stack is: lambda yP xP
@@ -300,14 +290,7 @@ class EllipticCurveFq2:
         # Fq2 implementation
         fq2 = self.FQ2
 
-        if check_constant:
-            out = (
-                Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
-                + nums_to_script([self.MODULUS])
-                + Script.parse_string("OP_EQUALVERIFY")
-            )
-        else:
-            out = Script()
+        out = verify_constant(self.MODULUS, check_constant=check_constant)
 
         # Check if P is point at infinity
         out += Script.parse_string("OP_2OVER OP_2OVER")
@@ -319,21 +302,14 @@ class EllipticCurveFq2:
         if take_modulo:
             assert is_constant_reused is not None
             # After this, the stack is: P.x0, altstack = [-P.y, P.x1]
-            out += Script.parse_string("OP_TOALTSTACK OP_TOALTSTACK OP_TOALTSTACK")
+            out += Script.parse_string(" ".join(["OP_TOALTSTACK"] * 3))
 
             fetch_q = Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
 
-            batched_modulo = Script()
-            batched_modulo += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            batched_modulo += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            batched_modulo += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            batched_modulo += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            batched_modulo += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            batched_modulo += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            if is_constant_reused:
-                batched_modulo += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            else:
-                batched_modulo += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_SWAP OP_MOD")
+            batched_modulo = mod(is_from_alt=False)
+            batched_modulo += mod()
+            batched_modulo += mod()
+            batched_modulo += mod(is_constant_reused=is_constant_reused)
 
             out += fetch_q + batched_modulo
 

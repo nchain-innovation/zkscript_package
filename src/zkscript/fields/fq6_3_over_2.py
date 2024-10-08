@@ -1,6 +1,6 @@
 from tx_engine import Script
 
-from src.zkscript.util.utility_scripts import nums_to_script, pick, roll
+from src.zkscript.util.utility_scripts import mod, pick, roll, verify_constant
 
 
 def fq6_for_towering(mul_by_non_residue):
@@ -57,14 +57,7 @@ class Fq6:
         # Fq2 implementation
         fq2 = self.BASE_FIELD
 
-        if check_constant:
-            out = (
-                Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
-                + nums_to_script([self.MODULUS])
-                + Script.parse_string("OP_EQUALVERIFY")
-            )
-        else:
-            out = Script()
+        out = verify_constant(self.MODULUS, check_constant=check_constant)
 
         # After this, the stack is x0 x1 y0 y1 altstack = [x2 + y2]
         out += roll(position=7, n_elements=2)  # Roll x2
@@ -82,17 +75,9 @@ class Fq6:
                 take_modulo=True, check_constant=False, clean_constant=clean_constant, is_constant_reused=True
             )
             # Batched modulo operations: pull from altstack, rotate, mod out, repeat
-            out += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            out += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            out += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            out += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            if is_constant_reused:
-                out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            else:
-                out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_SWAP OP_MOD")
+            for _ in range(3):
+                out += mod()
+            out += mod(is_constant_reused=is_constant_reused)
         else:
             # After this the stack is: (x0 + y0) (x1 + y1), altstack = [x2 + y2]
             out += Script.parse_string("OP_2ROT OP_2ROT")
@@ -126,14 +111,7 @@ class Fq6:
         # Fq2 implementation
         fq2 = self.BASE_FIELD
 
-        if check_constant:
-            out = (
-                Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
-                + nums_to_script([self.MODULUS])
-                + Script.parse_string("OP_EQUALVERIFY")
-            )
-        else:
-            out = Script()
+        out = verify_constant(self.MODULUS, check_constant=check_constant)
 
         # After this, the stack is: x0 x1 y0 y1, altstack = [x2 - y2]
         out += roll(position=7, n_elements=2)  # Roll x2
@@ -151,17 +129,9 @@ class Fq6:
                 take_modulo=True, check_constant=False, clean_constant=clean_constant, is_constant_reused=True
             )
             # Batched modulo operations: pull from altstack, rotate, mod out, repeat
-            out += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            out += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            out += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            out += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            if is_constant_reused:
-                out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            else:
-                out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_SWAP OP_MOD")
+            for _ in range(3):
+                out += mod()
+            out += mod(is_constant_reused=is_constant_reused)
         else:
             # After this the stack is: (x0 + y0) (x1 + y1), altstack = [x2 + y2]
             out += Script.parse_string("OP_2ROT OP_2ROT")
@@ -196,14 +166,7 @@ class Fq6:
         # Fq2 implementation
         fq2 = self.BASE_FIELD
 
-        if check_constant:
-            out = (
-                Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
-                + nums_to_script([self.MODULUS])
-                + Script.parse_string("OP_EQUALVERIFY")
-            )
-        else:
-            out = Script()
+        out = verify_constant(self.MODULUS, check_constant=check_constant)
 
         # After this, the stack is: x0 x1 lambda, altstack = [x2*lambda]
         out += Script.parse_string("OP_TUCK OP_MUL OP_TOALTSTACK")
@@ -219,21 +182,13 @@ class Fq6:
                 take_modulo=True, check_constant=False, clean_constant=clean_constant, is_constant_reused=True
             )
             # Batched modulo operations: pull from altstack, rotate, mod out, repeat
-            out += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            out += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            out += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            out += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            if is_constant_reused:
-                out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            else:
-                out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_SWAP OP_MOD")
+            for _ in range(3):
+                out += mod()
+            out += mod(is_constant_reused=is_constant_reused)
         else:
             # After this, the stack is: x00*lambda q x01*lambda, altstack = [x2*lambda, x1*lambda]
             out += fq2.scalar_mul(take_modulo=False, check_constant=False, clean_constant=False)
-            out += Script.parse_string("OP_FROMALTSTACK OP_FROMALTSTACK OP_FROMALTSTACK OP_FROMALTSTACK")
+            out += Script.parse_string(" ".join(["OP_FROMALTSTACK"] * 4))
 
         return out
 
@@ -261,14 +216,7 @@ class Fq6:
         # Fq2 implementation
         fq2 = self.BASE_FIELD
 
-        if check_constant:
-            out = (
-                Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
-                + nums_to_script([self.MODULUS])
-                + Script.parse_string("OP_EQUALVERIFY")
-            )
-        else:
-            out = Script()
+        out = verify_constant(self.MODULUS, check_constant=check_constant)
 
         # After this, the stack is: x0 x1 lambda, altstack = [x2 * lambda]
         out += Script.parse_string("OP_2SWAP OP_2OVER")
@@ -285,17 +233,9 @@ class Fq6:
                 take_modulo=True, check_constant=False, clean_constant=clean_constant, is_constant_reused=True
             )
             # Batched modulo operations: pull from altstack, rotate, mod out, repeat
-            out += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            out += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            out += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            out += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            if is_constant_reused:
-                out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            else:
-                out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_SWAP OP_MOD")
+            for _ in range(3):
+                out += mod()
+            out += mod(is_constant_reused=is_constant_reused)
         else:
             # After this, the stack is: (x0 * lambda) (x1 * lambda) (x2 * lamdba)
             out += Script.parse_string("OP_2ROT OP_2ROT")
@@ -328,14 +268,7 @@ class Fq6:
         # Fq2 implementation
         fq2 = self.BASE_FIELD
 
-        if check_constant:
-            out = (
-                Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
-                + nums_to_script([self.MODULUS])
-                + Script.parse_string("OP_EQUALVERIFY")
-            )
-        else:
-            out = Script()
+        out = verify_constant(self.MODULUS, check_constant=check_constant)
 
         if take_modulo:
             # After this, stack is: x0 x1, altstack = [-x2]
@@ -349,17 +282,9 @@ class Fq6:
                 take_modulo=True, check_constant=False, clean_constant=clean_constant, is_constant_reused=True
             )
             # Batched modulo operations: pull from altstack, rotate, mod out, repeat
-            out += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            out += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            out += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            out += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            if is_constant_reused:
-                out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            else:
-                out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_SWAP OP_MOD")
+            for _ in range(3):
+                out += mod()
+            out += mod(is_constant_reused=is_constant_reused)
         else:
             # After this, stack is: x_1 x_2 -x_0
             out += Script.parse_string("OP_2ROT")
@@ -399,14 +324,7 @@ class Fq6:
         # Fq2 implementation
         fq2 = self.BASE_FIELD
 
-        if check_constant:
-            out = (
-                Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
-                + nums_to_script([self.MODULUS])
-                + Script.parse_string("OP_EQUALVERIFY")
-            )
-        else:
-            out = Script()
+        out = verify_constant(self.MODULUS, check_constant=check_constant)
 
         # Computation of third component ---------------------------------------------------------
 
@@ -476,23 +394,15 @@ class Fq6:
             out += compute_third_component + compute_second_component + compute_first_component
 
             # Batched modulo operations: pull from altstack, rotate, mod out, repeat
-            out += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            out += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            out += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            out += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            if is_constant_reused:
-                out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            else:
-                out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_SWAP OP_MOD")
+            for _ in range(3):
+                out += mod()
+            out += mod(is_constant_reused=is_constant_reused)
         else:
             out += (
                 compute_third_component
                 + compute_second_component
                 + compute_first_component
-                + Script.parse_string("OP_FROMALTSTACK OP_FROMALTSTACK OP_FROMALTSTACK OP_FROMALTSTACK")
+                + Script.parse_string(" ".join(["OP_FROMALTSTACK"] * 4))
             )
 
         return out
@@ -520,14 +430,7 @@ class Fq6:
         # Fq2 implementation
         fq2 = self.BASE_FIELD
 
-        if check_constant:
-            out = (
-                Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
-                + nums_to_script([self.MODULUS])
-                + Script.parse_string("OP_EQUALVERIFY")
-            )
-        else:
-            out = Script()
+        out = verify_constant(self.MODULUS, check_constant=check_constant)
 
         # Computation third component ------------------------------------------------------------
 
@@ -589,23 +492,15 @@ class Fq6:
             out += compute_third_component + compute_second_component + compute_first_component
 
             # Batched modulo operations: pull from altstack, rotate, mod out, repeat
-            out += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            out += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            out += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            out += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            if is_constant_reused:
-                out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            else:
-                out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_SWAP OP_MOD")
+            for _ in range(3):
+                out += mod()
+            out += mod(is_constant_reused=is_constant_reused)
         else:
             out += (
                 compute_third_component
                 + compute_second_component
                 + compute_first_component
-                + Script.parse_string("OP_FROMALTSTACK OP_FROMALTSTACK OP_FROMALTSTACK OP_FROMALTSTACK")
+                + Script.parse_string(" ".join(["OP_FROMALTSTACK"] * 4))
             )
 
         return out
@@ -633,14 +528,7 @@ class Fq6:
         # Fq2 implementation
         fq2 = self.BASE_FIELD
 
-        if check_constant:
-            out = (
-                Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
-                + nums_to_script([self.MODULUS])
-                + Script.parse_string("OP_EQUALVERIFY")
-            )
-        else:
-            out = Script()
+        out = verify_constant(self.MODULUS, check_constant=check_constant)
 
         if take_modulo:
             # After this, the stack is: x0 x1 x2*NON_RESIDUE
@@ -651,9 +539,9 @@ class Fq6:
             out += Script.parse_string("OP_2ROT OP_SWAP")
             out += Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
             # Mod out twice - after this the stack is: x1 (x2*NON_RESIDUE) x0
-            out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
+            out += mod(is_from_alt=False)
             out += Script.parse_string("OP_SWAP OP_ROT")
-            out += Script.parse_string("OP_OVER OP_MOD OP_OVER OP_ADD OP_SWAP OP_MOD")
+            out += mod(is_from_alt=False, is_tuck=False, is_constant_reused=False)
 
             if clean_constant:
                 fetch_q = Script.parse_string("OP_DEPTH OP_1SUB OP_ROLL")
@@ -663,12 +551,9 @@ class Fq6:
             # Mod out twice - after this the stack is: (x2*NON_RESIDUE) x0 x1
             out += Script.parse_string("OP_2ROT OP_SWAP")
             out += fetch_q
-            out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
+            out += mod(is_from_alt=False)
             out += Script.parse_string("OP_SWAP OP_ROT")
-            if is_constant_reused:
-                out += Script.parse_string("OP_OVER OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            else:
-                out += Script.parse_string("OP_OVER OP_MOD OP_OVER OP_ADD OP_SWAP OP_MOD")
+            out += mod(is_tuck=False, is_from_alt=False, is_constant_reused=is_constant_reused)
         else:
             out += fq2.mul_by_non_residue(take_modulo=False, check_constant=False, clean_constant=False)
             out += Script.parse_string("OP_2ROT OP_2ROT")

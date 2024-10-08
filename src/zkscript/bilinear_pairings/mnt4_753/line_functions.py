@@ -2,7 +2,7 @@ from tx_engine import Script
 
 # Fq2 Script implementation
 from src.zkscript.bilinear_pairings.mnt4_753.fields import fq2_script
-from src.zkscript.util.utility_scripts import nums_to_script
+from src.zkscript.util.utility_scripts import mod, verify_constant
 
 
 class LineFunctions:
@@ -41,14 +41,7 @@ class LineFunctions:
         # Fq2 implementation
         fq2 = self.FQ2
 
-        if check_constant:
-            out = (
-                Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
-                + nums_to_script([self.MODULUS])
-                + Script.parse_string("OP_EQUALVERIFY")
-            )
-        else:
-            out = Script()
+        out = verify_constant(self.MODULUS, check_constant=check_constant)
 
         # Line evaluation for MNT4 returns: (lambda, Q, P) --> (-yQ + lambda * (xQ - xP*u), yP) as a point in Fq4
 
@@ -89,15 +82,9 @@ class LineFunctions:
             else:
                 fetch_q = Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
 
-            batched_modulo += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            batched_modulo += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            batched_modulo += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            batched_modulo += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-
-            if is_constant_reused:
-                batched_modulo += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            else:
-                batched_modulo += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_SWAP OP_MOD")
+            batched_modulo += mod(is_from_alt=False)
+            batched_modulo += mod()
+            batched_modulo += mod(is_constant_reused=is_constant_reused)
 
             out += fetch_q + batched_modulo
         else:
