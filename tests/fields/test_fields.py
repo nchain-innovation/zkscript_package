@@ -231,6 +231,53 @@ class Fq2Over2ResidueEqualU:
                 "expected": Fq2Over2ResidueEqualU.u() * Fq2Over2ResidueEqualU.u(),
             },
         ],
+        "test_mul": [
+            {
+                "x": Fq2Over2ResidueEqualU(Fq2(Fq(1), Fq(2)), Fq2(Fq(3), Fq(4))),
+                "y": Fq2Over2ResidueEqualU(Fq2(Fq(2), Fq(1)), Fq2(Fq(4), Fq(3))),
+                "expected": Fq2Over2ResidueEqualU(Fq2(Fq(1), Fq(2)), Fq2(Fq(3), Fq(4)))
+                * Fq2Over2ResidueEqualU(Fq2(Fq(2), Fq(1)), Fq2(Fq(4), Fq(3))),
+            },
+            {
+                "x": Fq2Over2ResidueEqualU(Fq2(Fq(0), Fq(3)), Fq2(Fq(5), Fq(0))),
+                "y": Fq2Over2ResidueEqualU(Fq2(Fq(2), Fq(7)), Fq2(Fq(11), Fq(13))),
+                "expected": Fq2Over2ResidueEqualU(Fq2(Fq(0), Fq(3)), Fq2(Fq(5), Fq(0)))
+                * Fq2Over2ResidueEqualU(Fq2(Fq(2), Fq(7)), Fq2(Fq(11), Fq(13))),
+            },
+            {
+                "x": Fq2Over2ResidueEqualU(Fq2(Fq(4), Fq(1)), Fq2(Fq(3), Fq(0))),
+                "y": Fq2Over2ResidueEqualU(Fq2(Fq(2), Fq(0)), Fq2(Fq(11), Fq(13))),
+                "expected": Fq2Over2ResidueEqualU(Fq2(Fq(4), Fq(1)), Fq2(Fq(3), Fq(0)))
+                * Fq2Over2ResidueEqualU(Fq2(Fq(2), Fq(0)), Fq2(Fq(11), Fq(13))),
+            },
+            {
+                "x": Fq2Over2ResidueEqualU.identity(),
+                "y": Fq2Over2ResidueEqualU(Fq2(Fq(2), Fq(7)), Fq2(Fq(11), Fq(13))),
+                "expected": Fq2Over2ResidueEqualU(Fq2(Fq(2), Fq(7)), Fq2(Fq(11), Fq(13))),
+            },
+            {
+                "x": Fq2Over2ResidueEqualU(Fq2(Fq(2), Fq(7)), Fq2(Fq(11), Fq(13))),
+                "y": Fq2Over2ResidueEqualU.u(),
+                "expected": Fq2Over2ResidueEqualU.u() * Fq2Over2ResidueEqualU(Fq2(Fq(2), Fq(7)), Fq2(Fq(11), Fq(13))),
+            },
+            {
+                "x": Fq2Over2ResidueEqualU.zero(),
+                "y": Fq2Over2ResidueEqualU(Fq2(Fq(2), Fq(7)), Fq2(Fq(11), Fq(13))),
+                "expected": Fq2Over2ResidueEqualU.zero(),
+            },
+            {
+                "x": Fq2Over2ResidueEqualU(Fq2(Fq(7), Fq(5)), Fq2.zero()),
+                "y": Fq2Over2ResidueEqualU(Fq2(Fq(2), Fq(1)), Fq2(Fq(11), Fq(3))),
+                "expected": Fq2Over2ResidueEqualU(Fq2(Fq(7), Fq(5)), Fq2.zero())
+                * Fq2Over2ResidueEqualU(Fq2(Fq(2), Fq(1)), Fq2(Fq(11), Fq(3))),
+            },
+            {
+                "x": Fq2Over2ResidueEqualU(Fq2.zero(), Fq2(Fq(3), Fq(0))),
+                "y": Fq2Over2ResidueEqualU(Fq2(Fq(2), Fq(0)), Fq2.identity()),
+                "expected": Fq2Over2ResidueEqualU(Fq2.zero(), Fq2(Fq(3), Fq(0)))
+                * Fq2Over2ResidueEqualU(Fq2(Fq(2), Fq(0)), Fq2.identity()),
+            },
+        ],
     }
 
 
@@ -491,7 +538,28 @@ class Fq12ThreeOverTwoOverTwo:
     }
 
 
+def extract_test_case(config, data):
+    x_in_data = "x" in data
+    y_in_data = "y" in data
+    z_in_data = "z" in data
+    lam_in_data = "lam" in data
+
+    test = None
+
+    if x_in_data and not y_in_data and not z_in_data and not lam_in_data:
+        test = (config, data["x"], data["expected"])
+    elif x_in_data and y_in_data and not z_in_data and not lam_in_data:
+        test = (config, data["x"], data["y"], data["expected"])
+    elif x_in_data and y_in_data and z_in_data and not lam_in_data:
+        test = (config, data["x"], data["y"], data["z"], data["expected"])
+    elif x_in_data and not y_in_data and not z_in_data and lam_in_data:
+        test = (config, data["x"], data["lam"], data["expected"])
+
+    return test
+
+
 def generate_test_cases(test_name):
+    # Parse and return config and the test_data for each config
     configurations = [
         Fq2ResidueMinusOne,
         Fq2ResidueNotMinusOne,
@@ -501,19 +569,16 @@ def generate_test_cases(test_name):
         Fq12TwoOverThreeOverTwo,
         Fq12ThreeOverTwoOverTwo,
     ]
-    # Parse and return config and the test_data for each config
-    return [
-        (config, test_data["x"], test_data["expected"])
-        if "y" not in test_data and "z" not in test_data and "lam" not in test_data
-        else (config, test_data["x"], test_data["y"], test_data["expected"])
-        if "y" in test_data and "z" not in test_data and "lam" not in test_data
-        else (config, test_data["x"], test_data["y"], test_data["z"], test_data["expected"])
-        if "y" in test_data and "z" in test_data and "lam" not in test_data
-        else (config, test_data["x"], test_data["lam"], test_data["expected"])
+
+    test_cases = [
+        extract_test_case(config, test_data)
         for config in configurations
         if test_name in config.test_data
         for test_data in config.test_data[test_name]
     ]
+
+    # Remove any None values returned by extract_test_case
+    return [case for case in test_cases if case]
 
 
 def verify_script(lock, unlock, clean_constant):
