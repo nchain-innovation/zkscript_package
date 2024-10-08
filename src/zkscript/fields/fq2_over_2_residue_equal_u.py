@@ -9,7 +9,8 @@ class Fq2Over2ResidueEqualU(Fq4):
 
     This class constructs F_q^4 as a quadratic extension of F_q^2 = F_q[u] / (u^2 - NON_RESIDUE), with residue u.
 
-    The generic element of this field is of the form x0 + x1*u + x2*v + x3*uv, with relations:
+    The generic element of this field is represented by 4 elements of F_q and is of the form x0 + x1*u + x2*v + x3*uv,
+    with relations:
         u^2 = NON_RESIDUE
         v^2 = u
     """
@@ -24,11 +25,11 @@ class Fq2Over2ResidueEqualU(Fq4):
         """Perform squaring in Fq4 = F_q^2[v] / (v^2 - u).
 
         Stack input:
-            - stack    = [modulo, ..., x0, x1, x2, x3]
+            - stack    = [modulo, ..., x := (x0, x1, x2, x3)]
             - altstack = []
 
         Stack output:
-            - stack    = [modulo, ..., x0, x1, x2, x3, (x0 + x1*u + x2*v + x3*uv)^2]
+            - stack    = [modulo, ..., x, x^2]
             - altstack = []
 
         Args:
@@ -146,11 +147,11 @@ class Fq2Over2ResidueEqualU(Fq4):
         """Perform multiplication in Fq4 = F_q^2[v] / (v^2 - u).
 
         Stack input:
-            - stack    = [modulo, ..., x0, x1, x2, x3, y0, y1, y2, y3]
+            - stack    = [modulo, ..., x := (x0, x1, x2, x3), y := (y0, y1, y2, y3)]
             - altstack = []
 
         Stack output:
-            - stack    = [modulo, ..., x0, x1, x2, x3, (x0 + x1*u + x2*v + x3*uv)*(y0 + y1*u + y2*v + y3*uv)]
+            - stack    = [modulo, ..., x, y, x*y]
             - altstack = []
 
         Args:
