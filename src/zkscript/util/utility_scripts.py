@@ -3,6 +3,7 @@ from tx_engine.engine.op_codes import (
     OP_0,
     OP_1,
     OP_1NEGATE,
+    OP_1SUB,
     OP_2,
     OP_2DUP,
     OP_2OVER,
@@ -22,12 +23,18 @@ from tx_engine.engine.op_codes import (
     OP_14,
     OP_15,
     OP_16,
+    OP_ADD,
+    OP_DEPTH,
     OP_DUP,
+    OP_EQUALVERIFY,
+    OP_FROMALTSTACK,
+    OP_MOD,
     OP_OVER,
     OP_PICK,
     OP_ROLL,
     OP_ROT,
     OP_SWAP,
+    OP_TUCK,
 )
 
 patterns_to_pick = {
@@ -130,3 +137,59 @@ def nums_to_script(nums: list[int]) -> Script:
             out.append_pushdata(encode_num(n))
 
     return out
+
+
+def mod(
+    is_tuck: bool = True, is_from_alt: bool = True, is_positive: bool = True, is_constant_reused: bool = True
+) -> Script:
+    """Perform modulo operation in Bitcoin Script.
+
+    This function generates a Bitcoin Script that performs a modulo operation. The behavior of the
+    operation can be customized using the provided parameters.
+
+    Args:
+        is_tuck (bool, optional): If True, uses OP_TUCK; if False, uses OP_OVER. Defaults to True.
+        is_from_alt (bool, optional): If True, the value is loaded from the altstack. Defaults to True.
+        is_positive (bool, optional): If True, adds operations to ensure the modulo value is positive.
+            Defaults to True.
+        is_constant_reused (bool, optional): If True, modifies the script to leave the modulo constant in the stack.
+            Defaults to True.
+
+    Returns:
+        Script: A Bitcoin Script that performs the modulo operation based on the specified parameters.
+
+    """
+    out = Script()
+    if is_from_alt:
+        out += Script([OP_FROMALTSTACK, OP_ROT])
+    pick_mod_opcode = OP_TUCK if is_tuck else OP_OVER
+    reuse_mod_opcode = OP_OVER if is_constant_reused else OP_SWAP
+    if is_positive:
+        out += Script([pick_mod_opcode, OP_MOD, OP_OVER, OP_ADD, reuse_mod_opcode, OP_MOD])
+    elif is_constant_reused:
+        out += Script([pick_mod_opcode, OP_MOD])
+    elif is_tuck:
+        out += Script([OP_MOD])
+    else:
+        out += Script([OP_SWAP, OP_MOD])
+    return out
+
+
+def verify_constant(n: int, check_constant: bool) -> Script:
+    """Verify a constant against a provided value in Bitcoin Script.
+
+    This function generates a Bitcoin Script that checks if a specific constant value is equal to the value present at
+    the top of the stack. If the check passes, the script continues; otherwise, it terminates the transaction.
+
+    Args:
+        n (int): The constant value to check against.
+        check_constant (bool): If True, performs the constant verification; otherwise, no check is performed.
+
+    Returns:
+        Script: A Bitcoin Script that verifies the constant against the value at the top of the stack.
+                Returns an empty script if no check is performed.
+
+    """
+    if check_constant:
+        return Script([OP_DEPTH, OP_1SUB, OP_PICK]) + nums_to_script([n]) + Script([OP_EQUALVERIFY])
+    return Script()
