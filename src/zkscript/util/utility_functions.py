@@ -1,3 +1,5 @@
+"""Utility functions."""
+
 from typing import List, Union
 
 from tx_engine import Script
