@@ -1,8 +1,17 @@
+"""Utility functions."""
+
 from tx_engine import Script
 
 
 def optimise_script(script: Script) -> Script:
-    """Optimise a script by removing redundant operations."""
+    """Optimise a script by removing redundant operations.
+
+    Args:
+        script (Script): Script to optimise.
+
+    Returns:
+        Optimised script.
+    """
     patterns = ["OP_TOALTSTACK OP_FROMALTSTACK", "OP_FROMALTSTACK OP_TOALTSTACK"]
 
     optimised_script = script.to_string()
