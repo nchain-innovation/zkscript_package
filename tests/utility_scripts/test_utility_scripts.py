@@ -1,7 +1,7 @@
 import pytest
 from tx_engine import Context, Script
 
-from src.zkscript.util.utility_scripts import nums_to_script, pick, roll
+from src.zkscript.util.utility_scripts import mod, nums_to_script, pick, roll, verify_constant
 
 
 def generate_verify(z) -> Script:
@@ -60,6 +60,73 @@ def test_pick(position, n_elements, stack, expected):
     unlock = nums_to_script(stack)
 
     lock = pick(position, n_elements)
+    lock += generate_verify(expected)
+
+    context = Context(script=unlock + lock)
+
+    assert context.evaluate()
+    assert len(context.get_altstack()) == 0
+
+
+@pytest.mark.parametrize(
+    ("is_from_alt", "is_tuck", "is_constant_reused", "is_positive", "stack", "expected"),
+    [
+        (False, False, False, False, [5, -7], [-2]),
+        (False, False, False, True, [5, -7], [3]),
+        (False, False, True, False, [5, -7], [5, -2]),
+        (False, False, True, True, [5, -7], [5, 3]),
+        (False, True, False, False, [-7, 5], [-2]),
+        (False, True, False, True, [-7, 5], [3]),
+        (False, True, True, False, [-7, 5], [5, -2]),
+        (False, True, True, True, [-7, 5], [5, 3]),
+        (True, False, False, False, [-7, 3, 5], [3, -2]),
+        (True, False, False, True, [-7, 3, 5], [3, 3]),
+        (True, False, True, False, [-7, 3, 5], [3, 5, -2]),
+        (True, False, True, True, [-7, 3, 5], [3, 5, 3]),
+        (True, True, False, False, [5, 3, -7], [3, -2]),
+        (True, True, False, True, [5, 3, -7], [3, 3]),
+        (True, True, True, False, [5, 3, -7], [3, 5, -2]),
+        (True, True, True, True, [5, 3, -7], [3, 5, 3]),
+        (False, False, False, False, [13, -17], [-4]),
+        (False, False, False, True, [13, -17], [9]),
+        (False, False, True, False, [13, -17], [13, -4]),
+        (False, False, True, True, [13, -17], [13, 9]),
+        (False, True, False, False, [-17, 13], [-4]),
+        (False, True, False, True, [-17, 13], [9]),
+        (False, True, True, False, [-17, 13], [13, -4]),
+        (False, True, True, True, [-17, 13], [13, 9]),
+    ],
+)
+def test_mod(is_tuck, is_from_alt, is_positive, is_constant_reused, stack, expected):
+    unlock = nums_to_script(stack)
+    lock = Script()
+    if is_from_alt:
+        lock += Script.parse_string("OP_TOALTSTACK")
+
+    lock += mod(
+        is_tuck=is_tuck, is_from_alt=is_from_alt, is_positive=is_positive, is_constant_reused=is_constant_reused
+    )
+    lock += generate_verify(expected)
+
+    context = Context(script=unlock + lock)
+
+    assert context.evaluate()
+    assert len(context.get_altstack()) == 0
+
+
+@pytest.mark.parametrize(
+    ("n", "check_constant", "stack", "expected"),
+    [
+        (1, True, [1, 0, 0], [1, 0, 0]),
+        (10, False, [1, 0, 0], [1, 0, 0]),
+        (100, True, [100, 0, 0], [100, 0, 0]),
+        (1000, True, [1000] + [0] * 1000, [1000] + [0] * 1000),
+    ],
+)
+def test_verify_constant(n, check_constant, stack, expected):
+    unlock = nums_to_script(stack)
+
+    lock = verify_constant(n=n, check_constant=check_constant)
     lock += generate_verify(expected)
 
     context = Context(script=unlock + lock)
