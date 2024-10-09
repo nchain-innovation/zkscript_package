@@ -22,7 +22,7 @@ class Fq2Over2ResidueEqualU(Fq4):
         clean_constant: bool | None,
         is_constant_reused: bool | None = None,
     ) -> Script:
-        """Perform squaring in Fq4 = F_q^2[v] / (v^2 - u).
+        """Perform squaring in F_q^4 = F_q^2[v] / (v^2 - u).
 
         Stack input:
             - stack    = [modulo, ..., x := (x0, x1, x2, x3)]
