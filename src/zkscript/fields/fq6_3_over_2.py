@@ -38,21 +38,23 @@ class Fq6:
     ) -> Script:
         """Addition in F_q^6.
 
-        Input parameters:
-            - Stack: q .. X Y
-            - Altstack: []
-        Output:
-            - X + Y
-        Assumption on data:
-            - X and Y are passed as triplets of elements of Fq2
-        Variables:
-            - If take_modulo is set to True, then the coordinates of X + Y are in Z_q; otherwise, the coordinates are
-            not taken modulo q.
+        Stack input:
+            - stack:    [q, ..., x := (x00, x01, x10, x11, x20, x21), y := (y00, y01, y10, y11, y20, y21)]
+            - altstack: []
 
-        Example:
-            - x00 x01 x10 x11 x20 x21 y00 y01 y10 y11 y20 y21 [add] --> (x00 + y00) (x01 + y01) (x10 + y10) (x11 + y11)
-            (x20 + y20) (x21 + y21)
+        Stack output:
+            - stack:    [q, ..., x + y := (x00 + y00, x01 + y01, x10 + y10, x11 + y11, x20 + y20, x21 + y21)]
+            - altstack: []
 
+        Preconditions:
+            - x and y are passed as triplets of elements of Fq_2 (see Fq2.py)
+
+        Args:
+            take_modulo (bool): Whether to take modulo after the operation.
+            check_constant (bool | None): Whether to check the modulo constant.
+            clean_constant (bool | None): Whether to delete the modulo constant after the operation.
+            is_constant_reused (bool | None, optional): Whether the modulo constant is reused after the current
+            operation.
         """
         # Fq2 implementation
         fq2 = self.BASE_FIELD

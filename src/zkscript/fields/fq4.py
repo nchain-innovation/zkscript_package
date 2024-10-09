@@ -41,23 +41,23 @@ class Fq4:
     ) -> Script:
         """Addition in F_q^4.
 
-        Input parameters:
-            - Stack: q .. X Y
-            - Altstack: []
-        Output:
-            - X + Y
-        Assumption on data:
-            - X and Y are passed as couples of elements of Fq2 (see Fq2.py)
-        Variables:
-            - If take_modulo is set to True, then the coordinates of X + Y are in Z_q; otherwise, the coordinates are
-            not taken modulo q.
+        Stack input:
+            - stack:    [q, ..., x, y]
+            - altstack: []
 
-        Example:
-            take_modulo = False:
-                x_0 x_1 y_0 y_1 [add] --> (x_0 + y_0) (x_1 + y_1)
-            take_modulo = True:
-                x_0 x_1 y_0 y_1 [add] --> [(x_0 + y_0) % q] [(x_1 + y_1) % q]
+        Stack output:
+            - stack:    [q, ..., x + y]
+            - altstack: []
 
+        Preconditions:
+            - x and y are passed as couples of elements of Fq2 (see Fq2.py)
+
+        Args:
+            take_modulo (bool): Whether to take modulo after the operation.
+            check_constant (bool | None): Whether to check the modulo constant.
+            clean_constant (bool | None): Whether to delete the modulo constant after the operation.
+            is_constant_reused (bool | None, optional): Whether the modulo constant is reused after the current
+            operation.
         """
         # Fq2 implementation
         fq2 = self.BASE_FIELD
