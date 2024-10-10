@@ -69,7 +69,7 @@ def test_pick(position, n_elements, stack, expected):
 
 
 @pytest.mark.parametrize(
-    ("is_from_alt", "is_tuck", "is_constant_reused", "is_positive", "stack", "expected"),
+    ("is_from_alt", "is_mod_on_top", "is_constant_reused", "is_positive", "stack", "expected"),
     [
         (False, False, False, False, [5, -7], [-2]),
         (False, False, False, True, [5, -7], [3]),
@@ -97,14 +97,17 @@ def test_pick(position, n_elements, stack, expected):
         (False, True, True, True, [-17, 13], [13, 9]),
     ],
 )
-def test_mod(is_tuck, is_from_alt, is_positive, is_constant_reused, stack, expected):
+def test_mod(is_from_alt, is_mod_on_top, is_positive, is_constant_reused, stack, expected):
     unlock = nums_to_script(stack)
     lock = Script()
     if is_from_alt:
         lock += Script.parse_string("OP_TOALTSTACK")
 
     lock += mod(
-        is_tuck=is_tuck, is_from_alt=is_from_alt, is_positive=is_positive, is_constant_reused=is_constant_reused
+        is_from_alt=is_from_alt,
+        is_mod_on_top=is_mod_on_top,
+        is_positive=is_positive,
+        is_constant_reused=is_constant_reused,
     )
     lock += generate_verify(expected)
 

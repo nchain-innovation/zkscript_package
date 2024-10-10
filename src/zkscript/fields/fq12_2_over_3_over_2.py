@@ -514,7 +514,7 @@ class Fq12:
             a += Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
             a += mod(is_from_alt=False)
             a += Script.parse_string("OP_SWAP OP_ROT")
-            a += mod(is_from_alt=False, is_tuck=False, is_constant_reused=False)
+            a += mod(is_from_alt=False, is_mod_on_top=False, is_constant_reused=False)
         a += Script.parse_string("OP_2ROT OP_2ROT")  # Bring e and f on top of the stack
 
         # After this, the stack is: c d a [b * gamma22] e f

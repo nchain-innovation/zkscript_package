@@ -140,7 +140,7 @@ def nums_to_script(nums: list[int]) -> Script:
 
 
 def mod(
-    is_tuck: bool = True, is_from_alt: bool = True, is_positive: bool = True, is_constant_reused: bool = True
+    is_from_alt: bool = True, is_mod_on_top: bool = True, is_positive: bool = True, is_constant_reused: bool = True
 ) -> Script:
     """Perform modulo operation in Bitcoin Script.
 
@@ -148,8 +148,10 @@ def mod(
     operation can be customized using the provided parameters.
 
     Args:
-        is_tuck (bool, optional): If True, uses OP_TUCK; if False, uses OP_OVER. Defaults to True.
-        is_from_alt (bool, optional): If True, the value is loaded from the altstack. Defaults to True.
+        is_from_alt (bool, optional): If True, a value is loaded from the altstack and the stack is rotated.
+            Defaults to True.
+        is_mod_on_top (bool, optional): If True, the modulo constant is the one at the top of the stack after the
+            stack manipulation operation, otherwise it is the second one from the top. Defaults to True.
         is_positive (bool, optional): If True, adds operations to ensure the modulo value is positive.
             Defaults to True.
         is_constant_reused (bool, optional): If True, modifies the script to leave the modulo constant in the stack.
@@ -161,16 +163,16 @@ def mod(
     Examples:
         -   The simpler situation is when is_positive = False, is_from_alt = False, and is_constant_reused = False. In
             this situation, the script only performs a modulo operation.
-                Let stack_in = [-5, 3], and is_tuck = True, then stack_out = [-5%3 = -2].
-                Let stack_in = [2, 7], and is_tuck = False, then stack_out = [7%2 = 1].
+                Let stack_in = [-5, 3], and is_mod_on_top = True, then stack_out = [-5%3 = -2].
+                Let stack_in = [2, 7], and is_mod_on_top = False, then stack_out = [7%2 = 1].
         -   If we have is_positive = False, is_from_alt = False, and is_constant_resued = True, after the modulo
             operation the modulo constant is still present in the stack.
-                Let stack_in = [-5, 3], and is_tuck = True, then stack_out = [3, -2]
-                Let stack_in = [2, 7], and is_tuck = False, then stack_out = [2, 1].
+                Let stack_in = [-5, 3], and is_mod_on_top = True, then stack_out = [3, -2]
+                Let stack_in = [2, 7], and is_mod_on_top = False, then stack_out = [2, 1].
         -   If we have is_positive = True, is_from_alt = False, after taking the modulo the first time we pick a
             positive representative for the modulo.
-                Let stack_in = [-5, 3], and is_tuck = True, then stack_out = [(3 if is_constant_reused = True), 2].
-                Let stack_in = [2, 7], and is_tuck = False, then stack_out = [(2 if is constant reused = True), 1].
+                Let stack_in = [-5, 3], and is_mod_on_top = True, then stack_out = [(3 if is_constant_reused = True), 2].
+                Let stack_in = [2, 7], and is_mod_on_top = False, then stack_out = [(2 if is constant reused = True), 1].
         -   If is_from_alt = True, before starting the modulo operation, a new element is loaded from the alt stack.
             The two opcodes added to the script if is_from_alt = True, modify the stack as follows:
                 Let stack_in = [1, 2], alt_stack_in = [3], after OP_FROMALTSTACK OP_ROT, we get:
@@ -180,13 +182,13 @@ def mod(
     out = Script()
     if is_from_alt:
         out += Script([OP_FROMALTSTACK, OP_ROT])
-    pick_mod_opcode = OP_TUCK if is_tuck else OP_OVER
+    pick_mod_opcode = OP_TUCK if is_mod_on_top else OP_OVER
     reuse_mod_opcode = OP_OVER if is_constant_reused else OP_SWAP
     if is_positive:
         out += Script([pick_mod_opcode, OP_MOD, OP_OVER, OP_ADD, reuse_mod_opcode, OP_MOD])
     elif is_constant_reused:
         out += Script([pick_mod_opcode, OP_MOD])
-    elif is_tuck:
+    elif is_mod_on_top:
         out += Script([OP_MOD])
     else:
         out += Script([OP_SWAP, OP_MOD])

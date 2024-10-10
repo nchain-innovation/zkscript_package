@@ -526,7 +526,7 @@ class Fq4:
             # After this, the stack is: (x_1 * NON_RESIDUE_OVER_FQ2) x_01 q (x00 % q)
             out += fetch_q + mod(is_from_alt=False)
             out += Script.parse_string("OP_SWAP OP_ROT")
-            out += mod(is_tuck=False, is_from_alt=False, is_constant_reused=is_constant_reused)
+            out += mod(is_from_alt=False, is_mod_on_top=False, is_constant_reused=is_constant_reused)
         else:
             # After this, the stack is: x_0 (x_1 * NON_RESIDUE_OVER_FQ2)
             out += fq2.mul_by_non_residue(take_modulo=False, check_constant=False, clean_constant=False)

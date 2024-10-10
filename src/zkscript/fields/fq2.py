@@ -497,7 +497,7 @@ class Fq2:
             out += Script.parse_string("OP_SWAP OP_ROT")
             # After this, the stack is: [(x0 + y0 + z0) % q] q (x1+y1+z1)
             out += Script.parse_string("OP_FROMALTSTACK OP_ADD")
-            out += mod(is_tuck=False, is_from_alt=False, is_constant_reused=is_constant_reused)
+            out += mod(is_from_alt=False, is_mod_on_top=False, is_constant_reused=is_constant_reused)
         else:
             out += Script.parse_string("OP_SWAP")
             # After this, the stack is: (x0 + y0 + z0) (x1 + y1 + z1)

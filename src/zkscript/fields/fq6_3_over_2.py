@@ -541,7 +541,7 @@ class Fq6:
             # Mod out twice - after this the stack is: x1 (x2*NON_RESIDUE) x0
             out += mod(is_from_alt=False)
             out += Script.parse_string("OP_SWAP OP_ROT")
-            out += mod(is_from_alt=False, is_tuck=False, is_constant_reused=False)
+            out += mod(is_from_alt=False, is_mod_on_top=False, is_constant_reused=False)
 
             if clean_constant:
                 fetch_q = Script.parse_string("OP_DEPTH OP_1SUB OP_ROLL")
@@ -553,7 +553,7 @@ class Fq6:
             out += fetch_q
             out += mod(is_from_alt=False)
             out += Script.parse_string("OP_SWAP OP_ROT")
-            out += mod(is_tuck=False, is_from_alt=False, is_constant_reused=is_constant_reused)
+            out += mod(is_from_alt=False, is_mod_on_top=False, is_constant_reused=is_constant_reused)
         else:
             out += fq2.mul_by_non_residue(take_modulo=False, check_constant=False, clean_constant=False)
             out += Script.parse_string("OP_2ROT OP_2ROT")

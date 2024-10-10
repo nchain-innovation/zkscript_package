@@ -83,7 +83,7 @@ class EllipticCurveFq:
             out += batched_modulo
 
         check_lambda = Script.parse_string("OP_FROMALTSTACK")
-        check_lambda += mod(is_from_alt=False, is_tuck=False, is_constant_reused=False)  # take the mod
+        check_lambda += mod(is_from_alt=False, is_mod_on_top=False, is_constant_reused=False)  # take the mod
         check_lambda += Script.parse_string("OP_0 OP_EQUALVERIFY")
 
         # Check lambda was correct
@@ -156,7 +156,7 @@ class EllipticCurveFq:
             out += batched_modulo
 
         check_lambda = Script.parse_string("OP_FROMALTSTACK")
-        check_lambda += mod(is_from_alt=False, is_tuck=False, is_constant_reused=False)  # take the mod
+        check_lambda += mod(is_from_alt=False, is_mod_on_top=False, is_constant_reused=False)  # take the mod
         check_lambda += Script.parse_string("OP_0 OP_EQUALVERIFY")
 
         # Check lambda was correct
@@ -284,7 +284,7 @@ class EllipticCurveFq:
             out += batched_modulo
 
         check_lambda = Script.parse_string("OP_FROMALTSTACK")
-        check_lambda += mod(is_from_alt=False, is_tuck=False, is_constant_reused=False)  # take the mod
+        check_lambda += mod(is_from_alt=False, is_mod_on_top=False, is_constant_reused=False)  # take the mod
         check_lambda += Script.parse_string("OP_0 OP_EQUALVERIFY")
 
         # Check lambda was correct
