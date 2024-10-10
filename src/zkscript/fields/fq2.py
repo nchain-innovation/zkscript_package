@@ -28,15 +28,15 @@ class Fq2:
     some `non_residue` in F_q.
 
     Attributes:
-        MODULUS: The modulus of the base field F_q.
+        MODULUS: The characteristic of the base field F_q.
         NON_RESIDUE: The non-residue element used to define the quadratic extension.
     """
 
     def __init__(self, q: int, non_residue: int):
-        """Initialise the quadratic extension.
+        """Initialise the quadratic extension of F_q.
 
         Args:
-            q: The modulus of the base field F_q.
+            q: The characteristic of the base field F_q.
             non_residue: The non-residue element used to define the quadratic extension.
         """
         self.MODULUS = q

@@ -31,12 +31,16 @@ class Fq4:
     """
 
     def __init__(self, q: int, base_field, gammas_frobenius: list[list[int]] | None = None):
-        # Characteristic of the field
+        """Initialise the quadratic extension of F_q^2.
+
+        Args:
+            q: The characteristic of the field F_q.
+            base_field: The script implementation of the field F_q^2.
+            gammas_frobenius: The list of [gamma1,gamma2,...,gamma3] for the Frobenius where gammai = [gammai1],
+            with gammai1 = non_residue_over_fq2.power((q**i-1)//2)
+        """
         self.MODULUS = q
-        # Script implementation of the base field Fq2
         self.BASE_FIELD = base_field
-        # Gammas for the Frobenius - list of [gamma1,gamma2,...,gamma3] where gammai = [gammai1],
-        # with gammai1 = NON_RESIDUE_OVER_FQ2.power((q**i-1)//2)
         self.GAMMAS_FROBENIUS = gammas_frobenius
 
     def add(
