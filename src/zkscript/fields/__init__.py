@@ -1,6 +1,7 @@
 """fields package.
 
-This package provides modules for constructing Bitcoin scripts that perform arithmetic in various finite fields.
+This package provides modules for constructing Bitcoin scripts that perform arithmetic operations in various finite
+fields.
 
 Modules:
     - fq2: Contains the Fq2 class for arithmetic operations over the finite field F_q^2 built as a quadratic extension
