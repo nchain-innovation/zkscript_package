@@ -1,6 +1,6 @@
 """fq2 module.
 
-This module enables constructing Bitcoin scripts that perform arithmetic operations in a quadratic extension field.
+This module enables constructing Bitcoin scripts that perform arithmetic operations in a quadratic extension of F_q.
 """
 
 from tx_engine import Script
@@ -10,6 +10,7 @@ from src.zkscript.util.utility_scripts import mod, nums_to_script, verify_bottom
 
 def fq2_for_towering(mul_by_non_residue):
     """Export Fq2 class with a mul_by_non_residue method which is used to construct towering extensions."""
+
     class Fq2ForTowering(Fq2):
         pass
 
@@ -19,7 +20,7 @@ def fq2_for_towering(mul_by_non_residue):
 
 
 class Fq2:
-    """Construct Bitcoin scripts that perform arithmetic operation in a quadratic extension field F_q^2.
+    """Construct Bitcoin scripts that perform arithmetic operation in F_q^2 = F_q[x] / (x^2 - non_residue).
 
     F_q^2 = F_q[x] / (x^2 - non_residue) is a quadratic extension of a base field F_q. Elements in F_q^2 are of the form
     `x0 + x1 * u`, where `x0` and `x1` are elements of F_q, and `u^2` is equal to some `non_residue` in F_q.
@@ -61,7 +62,7 @@ class Fq2:
             check_constant (bool | None): If `True`, check if q is valid before proceeding.
             clean_constant (bool | None): If `True`, remove q from the bottom of the stack.
             is_constant_reused (bool | None, optional): If `True`, at the end of the execution, q is left as the second
-            element at the top of the stack.
+                element at the top of the stack.
 
         Returns:
             Script to add two elements in F_q^2.
@@ -119,7 +120,7 @@ class Fq2:
             check_constant (bool | None): If `True`, check if q is valid before proceeding.
             clean_constant (bool | None): If `True`, remove q from the bottom of the stack.
             is_constant_reused (bool | None, optional): If `True`, at the end of the execution, q is left as the second
-            element at the top of the stack.
+                element at the top of the stack.
 
         Returns:
             Script to subtract two elements in F_q^2.
@@ -176,7 +177,7 @@ class Fq2:
             check_constant (bool | None): If `True`, check if q is valid before proceeding.
             clean_constant (bool | None): If `True`, remove q from the bottom of the stack.
             is_constant_reused (bool | None, optional): If `True`, at the end of the execution, q is left as the second
-            element at the top of the stack.
+                element at the top of the stack.
 
         Returns:
             Script to negate an element in F_q^2.
@@ -232,7 +233,7 @@ class Fq2:
             check_constant (bool | None): If `True`, check if q is valid before proceeding.
             clean_constant (bool | None): If `True`, remove q from the bottom of the stack.
             is_constant_reused (bool | None, optional): If `True`, at the end of the execution, q is left as the second
-            element at the top of the stack.
+                element at the top of the stack.
 
         Returns:
             Script to multiply an element by a scalar `lambda` in F_q^2.
@@ -293,7 +294,7 @@ class Fq2:
             check_constant (bool | None): If `True`, check if q is valid before proceeding.
             clean_constant (bool | None): If `True`, remove q from the bottom of the stack.
             is_constant_reused (bool | None, optional): If `True`, at the end of the execution, q is left as the second
-            element at the top of the stack.
+                element at the top of the stack.
 
         Returns:
             Script to multiply two elements in F_q^2.
@@ -363,7 +364,7 @@ class Fq2:
             check_constant (bool | None): If `True`, check if q is valid before proceeding.
             clean_constant (bool | None): If `True`, remove q from the bottom of the stack.
             is_constant_reused (bool | None, optional): If `True`, at the end of the execution, q is left as the second
-            element at the top of the stack.
+                element at the top of the stack.
 
         Returns:
             Script to square an element in F_q^2.
@@ -452,7 +453,7 @@ class Fq2:
             check_constant (bool | None): If `True`, check if q is valid before proceeding.
             clean_constant (bool | None): If `True`, remove q from the bottom of the stack.
             is_constant_reused (bool | None, optional): If `True`, at the end of the execution, q is left as the second
-            element at the top of the stack.
+                element at the top of the stack.
 
         Returns:
             Script to add three elements in F_q^2.
@@ -511,7 +512,7 @@ class Fq2:
             check_constant (bool | None): If `True`, check if q is valid before proceeding.
             clean_constant (bool | None): If `True`, remove q from the bottom of the stack.
             is_constant_reused (bool | None, optional): If `True`, at the end of the execution, q is left as the second
-            element at the top of the stack.
+                element at the top of the stack.
 
         Returns:
             Script to conjugate an element in F_q^2.
@@ -563,7 +564,7 @@ class Fq2:
             check_constant (bool | None): If `True`, check if q is valid before proceeding.
             clean_constant (bool | None): If `True`, remove q from the bottom of the stack.
             is_constant_reused (bool | None, optional): If `True`, at the end of the execution, q is left as the second
-            element at the top of the stack.
+                element at the top of the stack.
 
         Returns:
             A script to multiply an element by u in F_q^2.
@@ -619,7 +620,7 @@ class Fq2:
             check_constant (bool | None): If `True`, check if q is valid before proceeding.
             clean_constant (bool | None): If `True`, remove q from the bottom of the stack.
             is_constant_reused (bool | None, optional): If `True`, at the end of the execution, q is left as the second
-            element at the top of the stack.
+                element at the top of the stack.
 
         Returns:
             A script to multiply an element by 1 + u in F_q^2.
