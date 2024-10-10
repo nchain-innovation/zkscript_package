@@ -158,6 +158,24 @@ def mod(
     Returns:
         Script: A Bitcoin Script that performs the modulo operation based on the specified parameters.
 
+    Examples:
+        -   The simpler situation is when is_positive = False, is_from_alt = False, and is_constant_reused = False. In
+            this situation, the script only performs a modulo operation.
+                Let stack_in = [-5, 3], and is_tuck = True, then stack_out = [-5%3 = -2].
+                Let stack_in = [2, 7], and is_tuck = False, then stack_out = [7%2 = 1].
+        -   If we have is_positive = False, is_from_alt = False, and is_constant_resued = True, after the modulo
+            operation the modulo constant is still present in the stack.
+                Let stack_in = [-5, 3], and is_tuck = True, then stack_out = [3, -2]
+                Let stack_in = [2, 7], and is_tuck = False, then stack_out = [2, 1].
+        -   If we have is_positive = True, is_from_alt = False, after taking the modulo the first time we pick a
+            positive representative for the modulo.
+                Let stack_in = [-5, 3], and is_tuck = True, then stack_out = [(3 if is_constant_reused = True), 2].
+                Let stack_in = [2, 7], and is_tuck = False, then stack_out = [(2 if is constant reused = True), 1].
+        -   If is_from_alt = True, before starting the modulo operation, a new element is loaded from the alt stack.
+            The two opcodes added to the script if is_from_alt = True, modify the stack as follows:
+                Let stack_in = [1, 2], alt_stack_in = [3], after OP_FROMALTSTACK OP_ROT, we get:
+                stack_out = [2, 3, 1], alt_stack_out = [].
+
     """
     out = Script()
     if is_from_alt:
