@@ -9,7 +9,7 @@ from src.zkscript.util.utility_scripts import mod, nums_to_script, verify_bottom
 
 
 def fq2_for_towering(mul_by_non_residue):
-    """Export Fq2 class with a mul_by_non_residue method which is used to construct towering extensions."""
+    """Export Fq2 class with a mul_by_non_residue method to construct towering extensions."""
 
     class Fq2ForTowering(Fq2):
         pass
@@ -22,8 +22,10 @@ def fq2_for_towering(mul_by_non_residue):
 class Fq2:
     """Construct Bitcoin scripts that perform arithmetic operation in F_q^2 = F_q[x] / (x^2 - non_residue).
 
-    F_q^2 = F_q[x] / (x^2 - non_residue) is a quadratic extension of a base field F_q. Elements in F_q^2 are of the form
-    `x0 + x1 * u`, where `x0` and `x1` are elements of F_q, and `u^2` is equal to some `non_residue` in F_q.
+    F_q^2 = F_q[x] / (x^2 - non_residue) is a quadratic extension of a base field F_q.
+
+    Elements in F_q^2 are of the form `x0 + x1 * u`, where `x0` and `x1` are elements of F_q, and `u^2` is equal to
+    some `non_residue` in F_q.
 
     Attributes:
         MODULUS: The modulus of the base field F_q.
@@ -445,7 +447,7 @@ class Fq2:
             - altstack: []
 
         Stack output:
-            - stack:    [q, ..., x + y + z := (x_0 + y_0 + z_0, x_1 + y_1 + z_1)]
+            - stack:    [q, ..., x + y + z := (x0 + y0 + z0, x1 + y1 + z1)]
             - altstack: []
 
         Args:

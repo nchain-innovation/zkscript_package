@@ -1,13 +1,15 @@
+"""fq4 module.
+
+This module enables constructing Bitcoin scripts that perform arithmetic operations in a quadratic extension of F_q^2.
+"""
+
 from tx_engine import Script
 
 from src.zkscript.util.utility_scripts import mod, nums_to_script, pick, roll, verify_bottom_constant
 
 
 def fq4_for_towering(mul_by_non_residue):
-    """Construct towering extensions.
-
-    This export Fq4 class below together with a mul_by_non_residue method.
-    """
+    """Export Fq4 class with a mul_by_non_residue method to construct towering extensions."""
 
     class Fq4ForTowering(Fq4):
         pass
@@ -18,9 +20,14 @@ def fq4_for_towering(mul_by_non_residue):
 
 
 class Fq4:
-    """F_q^4 built as quadratic extension of F_q^2.
+    """Construct Bitcoin scripts that perform arithmetic operation in F_q^4 = F_q^2[u] / (u^2 - non_residue_over_fq2).
 
-    The non residue is specified by defining the method self.BASE_FIELD.mul_by_non_residue.
+    F_q^4 = F_q^2[u] / (u^2 - non_residue_over_fq2) is a quadratic extension of F_q^2.
+
+    Elements in F_q^4 are of the form `a + b * u`, where `a`, `b` are elements of F_q^2, `u^2` is equal to
+    the non-residue over F_q^2, and the arithmetic operations `+` and `*` are derived from the operations in F_q^2.
+
+    The non-residue over F_q^2 is specified by defining the method self.BASE_FIELD.mul_by_non_residue.
     """
 
     def __init__(self, q: int, base_field, gammas_frobenius: list[list[int]] | None = None):
@@ -42,22 +49,22 @@ class Fq4:
         """Addition in F_q^4.
 
         Stack input:
-            - stack:    [q, ..., x, y]
+            - stack:    [q, ..., x := (x0, x1, x2, x3), y := (y0, y1, y2, y3)]
             - altstack: []
 
         Stack output:
-            - stack:    [q, ..., x + y]
+            - stack:    [q, ..., x + y := (x0 + y0, x1 + y1, x2 + y2, x3 + y3)]
             - altstack: []
 
-        Preconditions:
-            - x and y are passed as couples of elements of Fq2 (see Fq2.py)
-
         Args:
-            take_modulo (bool): Whether to take modulo after the operation.
-            check_constant (bool | None): Whether to check the modulo constant.
-            clean_constant (bool | None): Whether to delete the modulo constant after the operation.
-            is_constant_reused (bool | None, optional): Whether the modulo constant is reused after the current
-            operation.
+            take_modulo (bool): If `True`, the result is reduced modulo q.
+            check_constant (bool | None): If `True`, check if q is valid before proceeding.
+            clean_constant (bool | None): If `True`, remove q from the bottom of the stack.
+            is_constant_reused (bool | None, optional): If `True`, at the end of the execution, q is left as the ???
+                element at the top of the stack.
+
+        Returns:
+            Script to add two elements in F_q^4.
         """
         # Fq2 implementation
         fq2 = self.BASE_FIELD
@@ -93,24 +100,23 @@ class Fq4:
     ) -> Script:
         """Multiplication in F_q^4 by a scalar in F_q.
 
-        Input parameters:
-            - Stack: q .. X <lambda>
-            - Altstack: []
-        Output:
-            - lambda * X
-        Assumption on data:
-            - X is passed as a couple of elements of Fq2 (see Fq2.py)
-            - lambda is passed as an integer: minimally encoded, little endian
-        Variables:
-            - If take_modulo is set to True, then the coordinates X are in Z_q; otherwise, the coordinates are not taken
-            modulo q.
+        Stack input:
+            - stack:    [q, ..., x := (x0, x1, x2, x3), lambda]
+            - altstack: []
 
-        Example:
-            take_modulo = False:
-                x_0 x_1 lambda [scalarMul] --> (lambda * x_0) (lambda * x_1)
-            take_modulo = True:
-                x_0 x_1 lambda [scalarMul] --> [(lambda * x_0) % q] [(lambda * x_1) % q]
+        Stack output:
+            - stack:    [q, ..., x * lambda]
+            - altstack: []
 
+        Args:
+            take_modulo (bool): If `True`, the result is reduced modulo q.
+            check_constant (bool | None): If `True`, check if q is valid before proceeding.
+            clean_constant (bool | None): If `True`, remove q from the bottom of the stack.
+            is_constant_reused (bool | None, optional): If `True`, at the end of the execution, q is left as the ???
+                element at the top of the stack.
+
+        Returns:
+            Script to multiply an element in F_q^4 by a scalar `lambda` in F_q.
         """
         # Fq2 implementation
         fq2 = self.BASE_FIELD
@@ -145,24 +151,23 @@ class Fq4:
     ) -> Script:
         """Scalar multiplication in F_q^4.
 
-        Input parameters:
-            - Stack: q .. X <lambda>
-            - Altstack: []
-        Output:
-            - lambda * X
-        Assumption on data:
-            - X is passed as a couple of elements of Fq2 (see Fq2.py)
-            - lambda is in F_q2^2 (see Fq2.py)
-        Variables:
-            - If take_modulo is set to True, then the coordinates X are in Z_q; otherwise, the coordinates are not taken
-            modulo q.
+        Stack input:
+            - stack:    [q, ..., x := (x0, x1, x2, x3), lambda := (l0, l1)]
+            - altstack: []
 
-        Example:
-            take_modulo = False:
-                x_0 x_1 lambda [scalarMul] --> (lambda * x_0) (lambda * x_1)
-            take_modulo = True:
-                x_0 x_1 lambda [scalarMul] --> [(lambda * x_0) % q] [(lambda * x_1) % q]
+        Stack output:
+            - stack:    [q, ..., x * lambda]
+            - altstack: []
 
+        Args:
+            take_modulo (bool): If `True`, the result is reduced modulo q.
+            check_constant (bool | None): If `True`, check if q is valid before proceeding.
+            clean_constant (bool | None): If `True`, remove q from the bottom of the stack.
+            is_constant_reused (bool | None, optional): If `True`, at the end of the execution, q is left as the ???
+                element at the top of the stack.
+
+        Returns:
+            Script to multiply an element in F_q^4 by a scalar `lambda` in F_q^2.
         """
         # Fq2 implementation
         fq2 = self.BASE_FIELD
@@ -202,23 +207,23 @@ class Fq4:
     ) -> Script:
         """Multiplication in F_q^4.
 
-        Input parameters:
-            - Stack: q .. X Y
-            - Altstack: []
-        Output:
-            - X * Y
-        Assumption on data:
-            - X and Y are passed as couples of elements of Fq2 (see Fq2.py)
-        Variables:
-            - If take_modulo is set to True, then the coordinates of the result are in Z_q; otherwise, the coordinates
-            are not taken modulo q.
+        Stack input:
+            - stack:    [q, ..., x := (x0, x1, x2, x3), y := (y0, y1, y2, y3)]
+            - altstack: []
 
-        Example:
-            take_modulo = False:
-                x_0 x_1 y_0 y_1 [mul] --> (x_0 * y_0 + x_1 * y_1 * xi) (x_0 * y_1 + x_1 * y_0)
-            take_modulo = True:
-                x_0 x_1 y_0 y_1 [mul] --> [(x_0 * y_0 + x_1 * y_1 * xi) % q] [(x_0 * y_1 + x_1 * y_0) % q]
+        Stack output:
+            - stack:    [q, ..., x * y]
+            - altstack: []
 
+        Args:
+            take_modulo (bool): If `True`, the result is reduced modulo q.
+            check_constant (bool | None): If `True`, check if q is valid before proceeding.
+            clean_constant (bool | None): If `True`, remove q from the bottom of the stack.
+            is_constant_reused (bool | None, optional): If `True`, at the end of the execution, q is left as the ???
+                element at the top of the stack.
+
+        Returns:
+            Script to multiply two elements in F_q^4.
         """
         # Fq2 implementation
         fq2 = self.BASE_FIELD
@@ -266,23 +271,23 @@ class Fq4:
     ) -> Script:
         """Squaring in F_q^4.
 
-        Input parameters:
-            - Stack: q .. X
-            - Altstack: []
-        Output:
-            - X**2
-        Assumption on data:
-            - X is passed as as a couple of elements of Fq2 (see Fq2.py)
-        Variables:
-            - If take_modulo is set to True, then the coordinates of the result are in Z_q; otherwise, the coordinates
-            are not taken modulo q.
+        Stack input:
+            - stack:    [q, ..., x := (x0, x1, x2, x3)]
+            - altstack: []
 
-        Example:
-            take_modulo = False:
-                x_0 x_1 [square] --> (x_0^2 + x_1^2 * xi) (2 * x_0 * x_1)
-            take_modulo = True:
-                x_0 x_1 [square] --> [(x_0^2 + x_1^2 * xi) % q] [(2 * x_0 * x_1) % q]
+        Stack output:
+            - stack:    [q, ..., x^2]
+            - altstack: []
 
+        Args:
+            take_modulo (bool): If `True`, the result is reduced modulo q.
+            check_constant (bool | None): If `True`, check if q is valid before proceeding.
+            clean_constant (bool | None): If `True`, remove q from the bottom of the stack.
+            is_constant_reused (bool | None, optional): If `True`, at the end of the execution, q is left as the ???
+                element at the top of the stack.
+
+        Returns:
+            Script to square an element in F_q^4.
         """
         # Fq2 implementation
         fq2 = self.BASE_FIELD
@@ -339,18 +344,25 @@ class Fq4:
         clean_constant: bool | None = None,
         is_constant_reused: bool | None = None,
     ) -> Script:
-        """Add three elements in F_q^4.
+        """Addition of three elements in F_q^4.
 
-        Input parameters:
-            - Stack: q .. X Y Z
-            - Altstack: []
-        Output:
-            - X + Y + Z
-        Assumption on data:
-            - X, Y and Z are passed as a couple of elements of Fq2
-        Variables:
-            - If take_modulo is set to True, then the coordinates of the result are in Z_q; otherwise, the coordinates
-            are not taken modulo q.
+        Stack input:
+            - stack:    [q, ..., x := (x0, x1, x2, x3), y := (y0, y1, y2, y3), z := (z0, z1, z2, z3)]
+            - altstack: []
+
+        Stack output:
+            - stack:    [q, ..., x + y + z]
+            - altstack: []
+
+        Args:
+            take_modulo (bool): If `True`, the result is reduced modulo q.
+            check_constant (bool | None): If `True`, check if q is valid before proceeding.
+            clean_constant (bool | None): If `True`, remove q from the bottom of the stack.
+            is_constant_reused (bool | None, optional): If `True`, at the end of the execution, q is left as the ???
+                element at the top of the stack.
+
+        Returns:
+            Script to add three elements in F_q^4.
         """
         # Fq2 implementation
         fq2 = self.BASE_FIELD
@@ -387,15 +399,26 @@ class Fq4:
         clean_constant: bool | None = None,
         is_constant_reused: bool | None = None,
     ) -> Script:
-        """Frobenius for odd powers n = 2k + 1 in in F_q^4.
+        """Frobenius for odd powers n = 2k + 1 in F_q^4.
 
-        Input parameters:
-            - Stack: q .. X
-            - Altstack:
-        Output:
-            - X**q**n
-        Assumption on data:
-            - X is passed as as a couple of elements of Fq2. Namely, X = a b
+        Stack input:
+            - stack:    [q, ..., x := (x0, x1, x2, x3)]
+            - altstack: []
+
+        Stack output:
+            - stack:    [q, ..., x^q^n]
+            - altstack: []
+
+        Args:
+            n (int): Frobenius odd power.
+            take_modulo (bool): If `True`, the result is reduced modulo q.
+            check_constant (bool | None): If `True`, check if q is valid before proceeding.
+            clean_constant (bool | None): If `True`, remove q from the bottom of the stack.
+            is_constant_reused (bool | None, optional): If `True`, at the end of the execution, q is left as the ???
+                element at the top of the stack.
+
+        Returns:
+            Script to compute the Frobenius endomorphism for odd powers of an element in F_q^4.
         """
         assert n % 2 == 1
         assert n % 4 != 0
@@ -440,13 +463,24 @@ class Fq4:
     ) -> Script:
         """Frobenius for even powers n = 2k in F_q^4.
 
-        Input parameters:
-            - Stack: q .. X
-            - Altstack: []
-        Output:
-            - X**(q**2)
-        Assumption on data:
-            - X is passed as as a couple of elements of Fq2 (see Fq2.py). Namely, X = a b
+        Stack input:
+            - stack:    [q, ..., x := (x0, x1, x2, x3)]
+            - altstack: []
+
+        Stack output:
+            - stack:    [q, ..., x^q^2]
+            - altstack: []
+
+        Args:
+            n (int): Frobenius even power.
+            take_modulo (bool): If `True`, the result is reduced modulo q.
+            check_constant (bool | None): If `True`, check if q is valid before proceeding.
+            clean_constant (bool | None): If `True`, remove q from the bottom of the stack.
+            is_constant_reused (bool | None, optional): If `True`, at the end of the execution, q is left as the ???
+                element at the top of the stack.
+
+        Returns:
+            Script to compute the Frobenius endomorphism for even powers of an element in F_q^4.
         """
         assert n % 2 == 0
         assert n % 4 != 0
@@ -494,18 +528,25 @@ class Fq4:
         clean_constant: bool | None = None,
         is_constant_reused: bool | None = None,
     ) -> Script:
-        """Multiplication by u in F_q^4 = F_q^2[u] / u^2 - NON_RESIDUE_OVER_FQ2.
+        """Multiplication by u in F_q^4 = F_q^2[u] / (u^2 - non_residue_over_fq2).
 
-        Input parameters:
-            - Stack: q .. X
-            - Altstack: []
-        Output:
-            - X * s
-        Assumption on data:
-            - X is passed as a couple of elements of Fq2 (see Fq2.py)
-        Variables:
-            - If take_modulo is set to True, then the coordinates of the result are in Z_q; otherwise, the coordinates
-            are not taken modulo q.
+        Stack input:
+            - stack:    [q, ..., x := (x0, x1, x2, x3)]
+            - altstack: []
+
+        Stack output:
+            - stack:    [q, ..., x * u]
+            - altstack: []
+
+        Args:
+            take_modulo (bool): If `True`, the result is reduced modulo q.
+            check_constant (bool | None): If `True`, check if q is valid before proceeding.
+            clean_constant (bool | None): If `True`, remove q from the bottom of the stack.
+            is_constant_reused (bool | None, optional): If `True`, at the end of the execution, q is left as the ???
+                element at the top of the stack.
+
+        Returns:
+            Script to multiply an element by u in F_q^4.
         """
         # Fq2 implementation
         fq2 = self.BASE_FIELD
@@ -543,16 +584,23 @@ class Fq4:
     ) -> Script:
         """Conjugation in F_q^4.
 
-        Input parameters:
-            - Stack: q .. X
-            - Altstack: []
-        Output:
-            - Conjugate(X)
-        Assumption on data:
-            - X is passed as a couple of elements in Fq2
-        Variables:
-            - If take_modulo is set to True, then the coordinates of the result are in Z_q; otherwise, the coordinates
-            are not taken modulo q.
+        Stack input:
+            - stack:    [q, ..., x := (x0, x1, x2, x3)]
+            - altstack: []
+
+        Stack output:
+            - stack:    [q, ..., conjugate(x)]
+            - altstack: []
+
+        Args:
+            take_modulo (bool): If `True`, the result is reduced modulo q.
+            check_constant (bool | None): If `True`, check if q is valid before proceeding.
+            clean_constant (bool | None): If `True`, remove q from the bottom of the stack.
+            is_constant_reused (bool | None, optional): If `True`, at the end of the execution, q is left as the second
+                element at the top of the stack.
+
+        Returns:
+            Script to conjugate an element in F_q^4.
         """
         out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 

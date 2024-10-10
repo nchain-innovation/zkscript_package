@@ -13,9 +13,10 @@ class Fq2Over2ResidueEqualU(Fq4):
     """Construct Bitcoin scripts that perform arithmetic operation in F_q^4 = F_q^2[v] / (v^2 - u).
 
     F_q^4 = F_q^2[v] / (v^2 - u) is a quadratic extension of F_q^2 = F_q[u] / (u^2 - non_residue).
+
     Elements in F_q^4 are of the form `a + b * v`, where `a` and `b` are elements of F_q^2, `v^2` is equal to
     `u`, and `u^2` is equal to the non-residue used to define F_q^2. Elements in F_q^4 can also be written as
-    `x0 + x1*u + x2*v + x3*uv`, where x0, x1, x2, x3 are elements of F_q.
+    `x0 + x1*u + x2*v + x3*uv`, where `x0`, `x1`, `x2`, `x3` are elements of F_q.
     """
 
     def square(
@@ -39,7 +40,7 @@ class Fq2Over2ResidueEqualU(Fq4):
             take_modulo (bool): If `True`, the result is reduced modulo q.
             check_constant (bool | None): If `True`, check if q is valid before proceeding.
             clean_constant (bool | None): If `True`, remove q from the bottom of the stack.
-            is_constant_reused (bool | None, optional): If `True`, at the end of the execution, q is left as the second
+            is_constant_reused (bool | None, optional): If `True`, at the end of the execution, q is left as the ???
                 element at the top of the stack.
 
         Returns:
@@ -145,7 +146,7 @@ class Fq2Over2ResidueEqualU(Fq4):
             take_modulo (bool): If `True`, the result is reduced modulo q.
             check_constant (bool | None): If `True`, check if q is valid before proceeding.
             clean_constant (bool | None): If `True`, remove q from the bottom of the stack.
-            is_constant_reused (bool | None, optional): If `True`, at the end of the execution, q is left as the second
+            is_constant_reused (bool | None, optional): If `True`, at the end of the execution, q is left as the ???
                 element at the top of the stack.
 
         Returns:
