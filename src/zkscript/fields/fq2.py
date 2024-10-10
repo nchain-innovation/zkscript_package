@@ -1,3 +1,8 @@
+"""fq2 module.
+
+This module enables constructing Bitcoin scripts that perform arithmetic operations in a quadratic extension field.
+"""
+
 from tx_engine import Script
 
 from src.zkscript.util.utility_scripts import mod, nums_to_script, verify_bottom_constant
@@ -5,7 +10,6 @@ from src.zkscript.util.utility_scripts import mod, nums_to_script, verify_bottom
 
 def fq2_for_towering(mul_by_non_residue):
     """Export Fq2 class with a mul_by_non_residue method which is used to construct towering extensions."""
-
     class Fq2ForTowering(Fq2):
         pass
 
@@ -15,33 +19,23 @@ def fq2_for_towering(mul_by_non_residue):
 
 
 class Fq2:
-    """Implementation of Quadratic Extension of base field.
+    """Construct Bitcoin scripts that perform arithmetic operation in a quadratic extension field F_q^2.
 
-    The modulus and the non_residue are specified when instantiating an object of this class.
+    F_q^2 = F_q[x] / (x^2 - non_residue) is a quadratic extension of a base field F_q. Elements in F_q^2 are of the form
+    `x0 + x1 * u`, where `x0` and `x1` are elements of F_q, and `u^2` is equal to some `non_residue` in F_q.
 
-    - MODULUS: an integer
-    - NON_RESIDUE: an integer
-
-    F_q^2 = F_q[x] / (x^2 - NON_RESIDUE)
-
-    Note:
-    ----
-    Each function has a take_modulo boolean variable that lets us choose whether the coordinates of the result should be
-    taken modulo q.
-
-    This variable is introduced for future flexibility: it will allows us to reduce the number of opcodes.
-    By looking at the number of multiplications in each formula, e.g. a * b + c * d requires only a final OP_MOD if a,b,
-    c,d belong to Z_q;
-    on the other hand, a * b * c * d requires three modulo operations to avoid going above the limit for stack numbers:
-    { [(a*b) % q] * [(c*d) % q] } % q.
-
-    check_constant -> Check if constant supplied is the one it is supposed to be
-    clean_constant -> Remove constant from bottom of the stack?
-    is_constant_reused -> Will we need q again after modulo operations have been carried out?
-
+    Attributes:
+        MODULUS: The modulus of the base field F_q.
+        NON_RESIDUE: The non-residue element used to define the quadratic extension.
     """
 
     def __init__(self, q: int, non_residue: int):
+        """Initialise the quadratic extension.
+
+        Args:
+            q: The modulus of the base field F_q.
+            non_residue: The non-residue element used to define the quadratic extension.
+        """
         self.MODULUS = q
         self.NON_RESIDUE = non_residue
 
@@ -68,6 +62,9 @@ class Fq2:
             clean_constant (bool | None): If `True`, remove q from the bottom of the stack.
             is_constant_reused (bool | None, optional): If `True`, at the end of the execution, q is left as the second
             element at the top of the stack.
+
+        Returns:
+            Script to add two elements in F_q^2.
         """
         out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
@@ -123,6 +120,9 @@ class Fq2:
             clean_constant (bool | None): If `True`, remove q from the bottom of the stack.
             is_constant_reused (bool | None, optional): If `True`, at the end of the execution, q is left as the second
             element at the top of the stack.
+
+        Returns:
+            Script to subtract two elements in F_q^2.
         """
         out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
@@ -177,6 +177,9 @@ class Fq2:
             clean_constant (bool | None): If `True`, remove q from the bottom of the stack.
             is_constant_reused (bool | None, optional): If `True`, at the end of the execution, q is left as the second
             element at the top of the stack.
+
+        Returns:
+            Script to negate an element in F_q^2.
         """
         out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
@@ -231,8 +234,11 @@ class Fq2:
             is_constant_reused (bool | None, optional): If `True`, at the end of the execution, q is left as the second
             element at the top of the stack.
 
+        Returns:
+            Script to multiply an element by a scalar `lambda` in F_q^2.
+
         Preconditions:
-            - lambda is a positive integer.
+            - `lambda` is a positive integer.
         """
         out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
@@ -288,6 +294,9 @@ class Fq2:
             clean_constant (bool | None): If `True`, remove q from the bottom of the stack.
             is_constant_reused (bool | None, optional): If `True`, at the end of the execution, q is left as the second
             element at the top of the stack.
+
+        Returns:
+            Script to multiply two elements in F_q^2.
         """
         out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
@@ -355,6 +364,9 @@ class Fq2:
             clean_constant (bool | None): If `True`, remove q from the bottom of the stack.
             is_constant_reused (bool | None, optional): If `True`, at the end of the execution, q is left as the second
             element at the top of the stack.
+
+        Returns:
+            Script to square an element in F_q^2.
         """
         out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
@@ -442,6 +454,9 @@ class Fq2:
             is_constant_reused (bool | None, optional): If `True`, at the end of the execution, q is left as the second
             element at the top of the stack.
 
+        Returns:
+            Script to add three elements in F_q^2.
+
         Preconditions:
             - If take_modulo is `True`, then the coordinates of x, y and z must be positive.
         """
@@ -497,6 +512,9 @@ class Fq2:
             clean_constant (bool | None): If `True`, remove q from the bottom of the stack.
             is_constant_reused (bool | None, optional): If `True`, at the end of the execution, q is left as the second
             element at the top of the stack.
+
+        Returns:
+            Script to conjugate an element in F_q^2.
         """
         out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
@@ -546,6 +564,9 @@ class Fq2:
             clean_constant (bool | None): If `True`, remove q from the bottom of the stack.
             is_constant_reused (bool | None, optional): If `True`, at the end of the execution, q is left as the second
             element at the top of the stack.
+
+        Returns:
+            A script to multiply an element by u in F_q^2.
         """
         out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
@@ -599,6 +620,9 @@ class Fq2:
             clean_constant (bool | None): If `True`, remove q from the bottom of the stack.
             is_constant_reused (bool | None, optional): If `True`, at the end of the execution, q is left as the second
             element at the top of the stack.
+
+        Returns:
+            A script to multiply an element by 1 + u in F_q^2.
         """
         out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
