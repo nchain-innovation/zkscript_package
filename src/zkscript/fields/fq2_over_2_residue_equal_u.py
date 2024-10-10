@@ -1,7 +1,7 @@
 from tx_engine import Script
 
 from src.zkscript.fields.fq4 import Fq4
-from src.zkscript.util.utility_scripts import nums_to_script, pick
+from src.zkscript.util.utility_scripts import mod, nums_to_script, pick, verify_constant
 
 
 class Fq2Over2ResidueEqualU(Fq4):
@@ -48,12 +48,7 @@ class Fq2Over2ResidueEqualU(Fq4):
         """
 
         # Check the modulo constant
-        if check_constant:
-            out = Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
-            out += nums_to_script([self.MODULUS])
-            out += Script.parse_string("OP_EQUALVERIFY")
-        else:
-            out = Script()
+        out = verify_constant(self.MODULUS, check_constant=check_constant)
 
         # Compute the coefficient of uv in (x0 + x1*u + x2*v + x3*uv)^2
         # stack out:    [..., x0, x1, x2, x3]
@@ -114,22 +109,15 @@ class Fq2Over2ResidueEqualU(Fq4):
                 )
                 raise ValueError(msg)
 
-            fetch_q = (
-                Script.parse_string("OP_DEPTH OP_1SUB OP_ROLL")
-                if clean_constant
-                else Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
-            )
-            batched_modulo += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            batched_modulo += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            batched_modulo += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            batched_modulo += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            batched_modulo += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            batched_modulo += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-
-            if is_constant_reused:
-                batched_modulo += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
+            if clean_constant:
+                fetch_q = Script.parse_string("OP_DEPTH OP_1SUB OP_ROLL")
             else:
-                batched_modulo += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_SWAP OP_MOD")
+                fetch_q = Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
+
+            batched_modulo += mod(is_from_alt=False)
+            batched_modulo += mod()
+            batched_modulo += mod()
+            batched_modulo += mod(is_constant_reused=is_constant_reused)
 
             out += fetch_q + batched_modulo
         else:
@@ -170,12 +158,7 @@ class Fq2Over2ResidueEqualU(Fq4):
         """
 
         # Check the modulo constant
-        if check_constant:
-            out = Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
-            out += nums_to_script([self.MODULUS])
-            out += Script.parse_string("OP_EQUALVERIFY")
-        else:
-            out = Script()
+        out = verify_constant(self.MODULUS, check_constant=check_constant)
 
         # Compute the coefficient of uv in (x0 + x1*u + x2*v + x3*uv)*(y0 + y1*u + y2*v + y3*uv)
         # stack out:    [..., x0, x1, x2, x3, y0, y1, y2, y3]
@@ -188,8 +171,7 @@ class Fq2Over2ResidueEqualU(Fq4):
         out += pick(position=7, n_elements=1)
         out += Script.parse_string("OP_MUL OP_ADD OP_SWAP")
         out += pick(position=8, n_elements=1)
-        out += Script.parse_string("OP_MUL OP_ADD")
-        out += Script.parse_string("OP_TOALTSTACK")
+        out += Script.parse_string("OP_MUL OP_ADD OP_TOALTSTACK")
 
         # Compute the coefficient of v in (x0 + x1*u + x2*v + x3*uv)*(y0 + y1*u + y2*v + y3*uv)
         # stack out:    [..., x0, x1, x2, x3, y0, y1, y2, y3]
@@ -205,8 +187,7 @@ class Fq2Over2ResidueEqualU(Fq4):
         out += Script.parse_string("OP_MUL OP_ADD")
         out += pick(position=6, n_elements=1)
         out += pick(position=5, n_elements=1)
-        out += Script.parse_string("OP_MUL OP_ADD")
-        out += Script.parse_string("OP_TOALTSTACK")
+        out += Script.parse_string("OP_MUL OP_ADD OP_TOALTSTACK")
 
         # Compute the coefficient of u in (x0 + x1*u + x2*v + x3*uv)*(y0 + y1*u + y2*v + y3*uv)
         # stack out:    [..., x0, x1, x2, x3, y0, y1, y2, y3]
@@ -221,15 +202,13 @@ class Fq2Over2ResidueEqualU(Fq4):
         out += pick(position=10, n_elements=1)
         out += Script.parse_string("OP_MUL OP_ADD OP_SWAP")
         out += pick(position=8, n_elements=1)
-        out += Script.parse_string("OP_MUL OP_ADD")
-        out += Script.parse_string("OP_TOALTSTACK")
+        out += Script.parse_string("OP_MUL OP_ADD OP_TOALTSTACK")
 
         # Compute the zero term in (x0 + x1*u + x2*v + x3*uv)*(y0 + y1*u + y2*v + y3*uv)
         # stack out:    [..., x0, x1, x2, x3, y0, y1, y2, y3, zero term := x0*y0 + (x1*y1 + x2*y3 + x3*y2)*NON_RESIDUE]
         # altstack out: [uv coefficient, v coefficient, u coefficient]
         out += Script.parse_string("OP_2ROT OP_TOALTSTACK OP_MUL OP_SWAP OP_FROMALTSTACK OP_MUL OP_ADD OP_TOALTSTACK")
-        out += Script.parse_string("OP_ROT OP_MUL OP_TOALTSTACK")
-        out += Script.parse_string("OP_MUL")
+        out += Script.parse_string("OP_ROT OP_MUL OP_TOALTSTACK OP_MUL")
         out += Script.parse_string("OP_FROMALTSTACK OP_FROMALTSTACK OP_ADD")
         out += nums_to_script([self.BASE_FIELD.NON_RESIDUE])
         out += Script.parse_string("OP_MUL OP_ADD")
@@ -245,25 +224,19 @@ class Fq2Over2ResidueEqualU(Fq4):
                 )
                 raise ValueError(msg)
 
-            fetch_q = (
-                Script.parse_string("OP_DEPTH OP_1SUB OP_ROLL")
-                if clean_constant
-                else Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
-            )
-            batched_modulo += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            batched_modulo += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            batched_modulo += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            batched_modulo += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            batched_modulo += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            batched_modulo += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-
-            if is_constant_reused:
-                batched_modulo += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
+            if clean_constant:
+                fetch_q = Script.parse_string("OP_DEPTH OP_1SUB OP_ROLL")
             else:
-                batched_modulo += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_SWAP OP_MOD")
+                fetch_q = Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
+
+            batched_modulo += mod(is_from_alt=False)
+            batched_modulo += mod()
+            batched_modulo += mod()
+            batched_modulo += mod(is_constant_reused=is_constant_reused)
 
             out += fetch_q + batched_modulo
+
         else:
-            out += Script.parse_string("OP_FROMALTSTACK OP_FROMALTSTACK OP_FROMALTSTACK")
+            out += Script.parse_string(" ".join(["OP_FROMALTSTACK"] * 3))
 
         return out

@@ -6,7 +6,7 @@ from src.zkscript.bilinear_pairings.bls12_381.fields import fq2_script, fq4_scri
 
 # Fq2 Script implementation
 from src.zkscript.fields.fq12_3_over_2_over_2 import Fq12Cubic as Fq12CubicScriptModel
-from src.zkscript.util.utility_scripts import nums_to_script, pick, roll
+from src.zkscript.util.utility_scripts import mod, pick, roll, verify_constant
 
 
 class MillerOutputOperations(Fq12CubicScriptModel):
@@ -41,14 +41,7 @@ class MillerOutputOperations(Fq12CubicScriptModel):
         # Fq2 implementation
         fq2 = self.FQ2
 
-        if check_constant:
-            out = (
-                Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
-                + nums_to_script([self.MODULUS])
-                + Script.parse_string("OP_EQUALVERIFY")
-            )
-        else:
-            out = Script()
+        out = verify_constant(self.MODULUS, check_constant=check_constant)
 
         # Computation of fifth component ---------------------------------------------------------
 
@@ -129,9 +122,8 @@ class MillerOutputOperations(Fq12CubicScriptModel):
                 fetch_q = Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
 
             compute_first_component += fetch_q
-            compute_first_component += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            compute_first_component += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            compute_first_component += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
+            compute_first_component += mod(is_from_alt=False)
+            compute_first_component += mod()
         else:
             compute_first_component += Script.parse_string("OP_FROMALTSTACK")
 
@@ -147,30 +139,11 @@ class MillerOutputOperations(Fq12CubicScriptModel):
 
         if take_modulo:
             # Batched modulo operations: pull from altstack, rotate, mod out, repeat
-            out += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            out += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            out += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            out += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            out += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            out += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            out += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            out += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            if is_constant_reused:
-                out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            else:
-                out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_SWAP OP_MOD")
+            for _ in range(7):
+                out += mod()
+            out += mod(is_constant_reused=is_constant_reused)
         else:
-            out += Script.parse_string(
-                "OP_FROMALTSTACK OP_FROMALTSTACK OP_FROMALTSTACK OP_FROMALTSTACK OP_FROMALTSTACK OP_FROMALTSTACK \
-                    OP_FROMALTSTACK OP_FROMALTSTACK"
-            )
+            out += Script.parse_string(" ".join(["OP_FROMALTSTACK"] * 8))
 
         return out
 
@@ -200,14 +173,7 @@ class MillerOutputOperations(Fq12CubicScriptModel):
         # Fq2 implementation
         fq2 = self.FQ2
 
-        if check_constant:
-            out = (
-                Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
-                + nums_to_script([self.MODULUS])
-                + Script.parse_string("OP_EQUALVERIFY")
-            )
-        else:
-            out = Script()
+        out = verify_constant(self.MODULUS, check_constant=check_constant)
 
         # Computation of sixth component --------------------------------------------------------
 
@@ -366,34 +332,11 @@ class MillerOutputOperations(Fq12CubicScriptModel):
 
         if take_modulo:
             # Batched modulo operations: pull from altstack, rotate, mod out, repeat
-            out += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            out += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            out += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            out += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            out += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            out += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            out += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            out += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            out += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            out += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            if is_constant_reused:
-                out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            else:
-                out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_SWAP OP_MOD")
+            for _ in range(9):
+                out += mod()
+            out += mod(is_constant_reused=is_constant_reused)
         else:
-            out += Script.parse_string(
-                "OP_FROMALTSTACK OP_FROMALTSTACK OP_FROMALTSTACK OP_FROMALTSTACK OP_FROMALTSTACK OP_FROMALTSTACK \
-                    OP_FROMALTSTACK OP_FROMALTSTACK OP_FROMALTSTACK OP_FROMALTSTACK"
-            )
+            out += Script.parse_string(" ".join(["OP_FROMALTSTACK"] * 10))
 
         return out
 
@@ -423,14 +366,7 @@ class MillerOutputOperations(Fq12CubicScriptModel):
         # Fq2 implementation
         fq2 = self.FQ2
 
-        if check_constant:
-            out = (
-                Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
-                + nums_to_script([self.MODULUS])
-                + Script.parse_string("OP_EQUALVERIFY")
-            )
-        else:
-            out = Script()
+        out = verify_constant(self.MODULUS, check_constant=check_constant)
 
         # Computation of sixth component --------------------------------------------------------
 
@@ -567,34 +503,11 @@ class MillerOutputOperations(Fq12CubicScriptModel):
 
         if take_modulo:
             # Batched modulo operations: pull from altstack, rotate, mod out, repeat
-            out += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            out += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            out += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            out += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            out += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            out += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            out += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            out += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            out += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            out += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            if is_constant_reused:
-                out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            else:
-                out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_SWAP OP_MOD")
+            for _ in range(9):
+                out += mod()
+            out += mod(is_constant_reused=is_constant_reused)
         else:
-            out += Script.parse_string(
-                "OP_FROMALTSTACK OP_FROMALTSTACK OP_FROMALTSTACK OP_FROMALTSTACK OP_FROMALTSTACK OP_FROMALTSTACK \
-                    OP_FROMALTSTACK OP_FROMALTSTACK OP_FROMALTSTACK OP_FROMALTSTACK"
-            )
+            out += Script.parse_string(" ".join(["OP_FROMALTSTACK"] * 10))
 
         return out
 
@@ -622,14 +535,7 @@ class MillerOutputOperations(Fq12CubicScriptModel):
         # Fq2 implementation
         fq2 = self.FQ2
 
-        if check_constant:
-            out = (
-                Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
-                + nums_to_script([self.MODULUS])
-                + Script.parse_string("OP_EQUALVERIFY")
-            )
-        else:
-            out = Script()
+        out = verify_constant(self.MODULUS, check_constant=check_constant)
 
         # Computation sixth component --------------------------------------------------------
 
@@ -855,34 +761,11 @@ class MillerOutputOperations(Fq12CubicScriptModel):
 
         if take_modulo:
             # Batched modulo operations: pull from altstack, rotate, mod out, repeat
-            out += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            out += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            out += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            out += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            out += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            out += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            out += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            out += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            out += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            out += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            if is_constant_reused:
-                out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            else:
-                out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_SWAP OP_MOD")
+            for _ in range(9):
+                out += mod()
+            out += mod(is_constant_reused=is_constant_reused)
         else:
-            out += Script.parse_string(
-                "OP_FROMALTSTACK OP_FROMALTSTACK OP_FROMALTSTACK OP_FROMALTSTACK OP_FROMALTSTACK OP_FROMALTSTACK \
-                    OP_FROMALTSTACK OP_FROMALTSTACK OP_FROMALTSTACK OP_FROMALTSTACK"
-            )
+            out += Script.parse_string(" ".join(["OP_FROMALTSTACK"] * 10))
 
         return out
 
@@ -911,14 +794,7 @@ class MillerOutputOperations(Fq12CubicScriptModel):
         # Fq2 implementation
         fq2 = self.FQ2
 
-        if check_constant:
-            out = (
-                Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
-                + nums_to_script([self.MODULUS])
-                + Script.parse_string("OP_EQUALVERIFY")
-            )
-        else:
-            out = Script()
+        out = verify_constant(self.MODULUS, check_constant=check_constant)
 
         # Computation sixth component --------------------------------------------------------
 
@@ -1178,34 +1054,11 @@ class MillerOutputOperations(Fq12CubicScriptModel):
 
         if take_modulo:
             # Batched modulo operations: pull from altstack, rotate, mod out, repeat
-            out += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            out += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            out += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            out += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            out += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            out += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            out += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            out += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            out += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            out += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            if is_constant_reused:
-                out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            else:
-                out += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_SWAP OP_MOD")
+            for _ in range(9):
+                out += mod()
+            out += mod(is_constant_reused=is_constant_reused)
         else:
-            out += Script.parse_string(
-                "OP_FROMALTSTACK OP_FROMALTSTACK OP_FROMALTSTACK OP_FROMALTSTACK OP_FROMALTSTACK OP_FROMALTSTACK \
-                    OP_FROMALTSTACK OP_FROMALTSTACK OP_FROMALTSTACK OP_FROMALTSTACK"
-            )
+            out += Script.parse_string(" ".join(["OP_FROMALTSTACK"] * 10))
 
         return out
 

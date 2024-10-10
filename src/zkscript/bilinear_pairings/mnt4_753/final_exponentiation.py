@@ -5,7 +5,7 @@ from tx_engine import Script
 from src.zkscript.bilinear_pairings.mnt4_753.fields import fq2_script, fq4_script
 from src.zkscript.bilinear_pairings.mnt4_753.parameters import exp_miller_loop
 from src.zkscript.bilinear_pairings.model.cyclotomic_exponentiation import CyclotomicExponentiation
-from src.zkscript.util.utility_scripts import nums_to_script, pick
+from src.zkscript.util.utility_scripts import pick, verify_constant
 
 
 class FinalExponentiation(CyclotomicExponentiation):
@@ -36,14 +36,7 @@ class FinalExponentiation(CyclotomicExponentiation):
         # Fq4 implementation
         fq4 = self.FQ4
 
-        if check_constant:
-            out = (
-                Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
-                + nums_to_script([self.MODULUS])
-                + Script.parse_string("OP_EQUALVERIFY")
-            )
-        else:
-            out = Script()
+        out = verify_constant(self.MODULUS, check_constant=check_constant)
 
         # After this, the stack is: Inverse(f) f
         check_f_inverse = pick(position=7, n_elements=4)  # Bring Inverse(f) on top of the stack
@@ -88,19 +81,12 @@ class FinalExponentiation(CyclotomicExponentiation):
         # Fq4 implementation
         fq4 = self.FQ4
 
-        if check_constant:
-            out = (
-                Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
-                + nums_to_script([self.MODULUS])
-                + Script.parse_string("OP_EQUALVERIFY")
-            )
-        else:
-            out = Script()
+        out = verify_constant(self.MODULUS, check_constant=check_constant)
 
         # After this, the stack is: g, altstack = [g^q]
         out += pick(position=3, n_elements=4)
         out += fq4.frobenius_odd(n=1, take_modulo=False, check_constant=False, clean_constant=False)
-        out += Script.parse_string("OP_TOALTSTACK OP_TOALTSTACK OP_TOALTSTACK OP_TOALTSTACK")
+        out += Script.parse_string(" ".join(["OP_TOALTSTACK"] * 4))
 
         # After this, the stack is: g g^u, altstack = [g^q]
         out += pick(position=3, n_elements=4)
@@ -113,7 +99,7 @@ class FinalExponentiation(CyclotomicExponentiation):
         )
 
         # After this, the stack is: g^[q + u + 1]
-        out += Script.parse_string("OP_FROMALTSTACK OP_FROMALTSTACK OP_FROMALTSTACK OP_FROMALTSTACK")
+        out += Script.parse_string(" ".join(["OP_FROMALTSTACK"] * 4))
         out += fq4.mul(take_modulo=False, check_constant=False, clean_constant=False, is_constant_reused=False)
         out += fq4.mul(
             take_modulo=take_modulo, check_constant=False, clean_constant=clean_constant, is_constant_reused=False

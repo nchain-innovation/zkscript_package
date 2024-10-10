@@ -2,7 +2,7 @@ from math import ceil, log2
 
 from tx_engine import Script
 
-from src.zkscript.util.utility_scripts import nums_to_script, pick
+from src.zkscript.util.utility_scripts import pick, verify_constant
 
 
 class CyclotomicExponentiation:
@@ -56,14 +56,7 @@ class CyclotomicExponentiation:
 
         # --------------------------------------------------------------------------------------------------------------
 
-        if check_constant:
-            out = (
-                Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
-                + nums_to_script([q])
-                + Script.parse_string("OP_EQUALVERIFY")
-            )
-        else:
-            out = Script()
+        out = verify_constant(q, check_constant=check_constant)
 
         # Prepare the stack with the copies of f and Inverse(f) needed
 

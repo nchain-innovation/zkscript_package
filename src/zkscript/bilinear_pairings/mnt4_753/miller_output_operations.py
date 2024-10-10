@@ -6,7 +6,7 @@ from src.zkscript.bilinear_pairings.mnt4_753.fields import fq4_script
 
 # Fq2 Script implementation
 from src.zkscript.fields.fq4 import Fq4 as Fq4ScriptModel
-from src.zkscript.util.utility_scripts import nums_to_script, pick, roll
+from src.zkscript.util.utility_scripts import mod, pick, roll, verify_constant
 
 
 class MillerOutputOperations(Fq4ScriptModel):
@@ -36,14 +36,7 @@ class MillerOutputOperations(Fq4ScriptModel):
             - If take_modulo is set to True, then the coordinates of the result are in Z_q; otherwise, the coordinates
             are not taken modulo q.
         """
-        if check_constant:
-            out = (
-                Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
-                + nums_to_script([self.MODULUS])
-                + Script.parse_string("OP_EQUALVERIFY")
-            )
-        else:
-            out = Script()
+        out = verify_constant(self.MODULUS, check_constant=check_constant)
 
         # Computation of fourth component --------------------------------------------------------
 
@@ -109,20 +102,14 @@ class MillerOutputOperations(Fq4ScriptModel):
                 fetch_q = Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
 
             # Batched modulo operations: pull from altstack, rotate, mod out, repeat
-            batched_modulo = Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            batched_modulo += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            batched_modulo += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            batched_modulo += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            batched_modulo += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            batched_modulo += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            if is_constant_reused:
-                batched_modulo += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            else:
-                batched_modulo += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_SWAP OP_MOD")
+            batched_modulo = mod(is_from_alt=False)
+            batched_modulo += mod()
+            batched_modulo += mod()
+            batched_modulo += mod(is_constant_reused=is_constant_reused)
 
             out += fetch_q + batched_modulo
         else:
-            out += Script.parse_string("OP_FROMALTSTACK OP_FROMALTSTACK OP_FROMALTSTACK")
+            out += Script.parse_string(" ".join(["OP_FROMALTSTACK"] * 3))
 
         return out
 
@@ -149,14 +136,7 @@ class MillerOutputOperations(Fq4ScriptModel):
         # Fq2 implementation
         fq2 = self.BASE_FIELD
 
-        if check_constant:
-            out = (
-                Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
-                + nums_to_script([self.MODULUS])
-                + Script.parse_string("OP_EQUALVERIFY")
-            )
-        else:
-            out = Script()
+        out = verify_constant(self.MODULUS, check_constant=check_constant)
 
         # The stack at the beginning is: a1 b1 a2 b2 with:
         # 	- a1,b1,a2 in Fq2
@@ -216,13 +196,8 @@ class MillerOutputOperations(Fq4ScriptModel):
 
         if take_modulo:
             # Batched modulo operations: pull from altstack, rotate, mod out, repeat
-            batched_modulo = Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            batched_modulo += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            batched_modulo += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            if is_constant_reused:
-                batched_modulo += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            else:
-                batched_modulo += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_SWAP OP_MOD")
+            batched_modulo = mod()
+            batched_modulo += mod(is_constant_reused=is_constant_reused)
 
             out += batched_modulo
         else:
@@ -253,14 +228,7 @@ class MillerOutputOperations(Fq4ScriptModel):
         # Fq2 implementation
         fq2 = self.BASE_FIELD
 
-        if check_constant:
-            out = (
-                Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
-                + nums_to_script([self.MODULUS])
-                + Script.parse_string("OP_EQUALVERIFY")
-            )
-        else:
-            out = Script()
+        out = verify_constant(self.MODULUS, check_constant=check_constant)
 
         # The stack at the beginning is: a1 b1 a2 b2 with:
         # 	- a1,a2,b2 in Fq2
@@ -318,14 +286,8 @@ class MillerOutputOperations(Fq4ScriptModel):
 
         if take_modulo:
             # Batched modulo operations: pull from altstack, rotate, mod out, repeat
-            batched_modulo = Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            batched_modulo += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            batched_modulo += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            if is_constant_reused:
-                batched_modulo += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
-            else:
-                batched_modulo += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_SWAP OP_MOD")
-
+            batched_modulo = mod()
+            batched_modulo += mod(is_constant_reused=is_constant_reused)
             out += batched_modulo
         else:
             out += Script.parse_string("OP_FROMALTSTACK OP_FROMALTSTACK")

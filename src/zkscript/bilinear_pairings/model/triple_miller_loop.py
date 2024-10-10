@@ -5,7 +5,7 @@ from math import ceil, log2
 from tx_engine import Script
 
 from src.zkscript.util.utility_functions import optimise_script
-from src.zkscript.util.utility_scripts import nums_to_script, pick, roll
+from src.zkscript.util.utility_scripts import nums_to_script, pick, roll, verify_constant
 
 
 class TripleMillerLoop:
@@ -82,14 +82,7 @@ class TripleMillerLoop:
         being that the update of f is now always of the form: f <-- f^2 * Dense
         """
 
-        if check_constant:
-            out = (
-                Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
-                + nums_to_script([q])
-                + Script.parse_string("OP_EQUALVERIFY")
-            )
-        else:
-            out = Script()
+        out = verify_constant(q, check_constant=check_constant)
 
         # After this, the stack is: xP1 yP1 xP2 yP2 xP3 yP3 xQ1 yQ1 xQ2 yQ2 xQ3 yQ3 xQ1 -yQ1 xQ2 -yQ2 xQ3 -yQ3
         set_Qs = pick(position=3 * N_POINTS_TWIST - 1, n_elements=N_POINTS_TWIST)
