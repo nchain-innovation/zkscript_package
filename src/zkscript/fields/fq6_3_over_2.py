@@ -51,7 +51,8 @@ class Fq6:
         """Addition in F_q^6.
 
         Stack input:
-            - stack:    [q, ..., x := (x0, x1, x2, x3, x4, x5), y := (y0, y1, y2, y3, y4, y5)]
+            - stack:    [q, ..., x := (x0, x1, x2, x3, x4, x5), y := (y0, y1, y2, y3, y4, y5)], `x`, `y` are triplets of
+            elements of F_q^2
             - altstack: []
 
         Stack output:
@@ -112,7 +113,8 @@ class Fq6:
         """Subtraction in F_q^6.
 
         Stack input:
-            - stack:    [q, ..., x := (x0, x1, x2, x3, x4, x5), y := (y0, y1, y2, y3, y4, y5)]
+            - stack:    [q, ..., x := (x0, x1, x2, x3, x4, x5), y := (y0, y1, y2, y3, y4, y5)], `x`, `y` are triplets of
+            elements of F_q^2
             - altstack: []
 
         Stack output:
@@ -173,7 +175,8 @@ class Fq6:
         """Multiplication in F_q^6 by a scalar in F_q.
 
         Stack input:
-            - stack:    [q, ..., x := (x0, x1, x2, x3, x4, x5), lambda]
+            - stack:    [q, ..., x := (x0, x1, x2, x3, x4, x5), lambda], `x` is a triplet of elements of F_q^2,
+            `lambda` is an element of F_q
             - altstack: []
 
         Stack output:
@@ -229,7 +232,8 @@ class Fq6:
         """Scalar multiplication in F_q^6.
 
         Stack input:
-            - stack:    [q, ..., x := (x0, x1, x2, x3, x4, x5), lambda := (l0, l1)]
+            - stack:    [q, ..., x := (x0, x1, x2, x3, x4, x5), lambda := (l0, l1)], `x` is a triplet of elements of
+            F_q^2, `lambda` is an element of F_q^2
             - altstack: []
 
         Stack output:
@@ -287,7 +291,7 @@ class Fq6:
         """Negation in F_q^6.
 
         Stack input:
-            - stack:    [q, ..., x := (x0, x1, x2, x3, x4, x5)]
+            - stack:    [q, ..., x := (x0, x1, x2, x3, x4, x5)], `x` is a triplet of elements of F_q^2
             - altstack: []
 
         Stack output:
@@ -349,7 +353,8 @@ class Fq6:
         """Multiplication in F_q^6.
 
         Stack input:
-            - stack:    [q, ..., x := (x0, x1, x2, x3, x4, x5), y := (y0, y1, y2, y3, y4, y5)]
+            - stack:    [q, ..., x := (x0, x1, x2, x3, x4, x5), y := (y0, y1, y2, y3, y4, y5)], `x`, `y` are triplets of
+            elements of F_q^2
             - altstack: []
 
         Stack output:
@@ -462,7 +467,7 @@ class Fq6:
         """Squaring in F_q^6.
 
         Stack input:
-            - stack:    [q, ..., x := (x0, x1, x2, x3, x4, x5)]
+            - stack:    [q, ..., x := (x0, x1, x2, x3, x4, x5)], `x` is a triplet of elements of F_q^2
             - altstack: []
 
         Stack output:
@@ -567,7 +572,7 @@ class Fq6:
         """Multiplication by v in F_q^6 = F_q^2[v] / (v^3 - non_residue_over_fq2).
 
         Stack input:
-            - stack:    [q, ..., x := (x0, x1, x2, x3, x4, x5)]
+            - stack:    [q, ..., x := (x0, x1, x2, x3, x4, x5)], `x` is a triplet of elements of F_q^2
             - altstack: []
 
         Stack output:

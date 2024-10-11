@@ -43,7 +43,8 @@ class Fq12:
         """Multiplication in F_q^12.
 
         Stack input:
-            - stack:    [q, ..., x := (x0, x1, ..., x11), y := (y0, y1, ..., y11)], x, y are couples of elements of Fq6
+            - stack:    [q, ..., x := (x0, x1, ..., x11), y := (y0, y1, ..., y11)], `x`, `y` are couples of elements of
+            F_q^6
             - altstack: []
 
         Stack output:
@@ -133,7 +134,7 @@ class Fq12:
         """Squaring in F_q^12.
 
         Stack input:
-            - stack:    [q, ..., x := (x0, x1, ..., x11)], x is a couple of elements of Fq6
+            - stack:    [q, ..., x := (x0, x1, ..., x11)], `x` is a couple of elements of F_q^6
             - altstack: []
 
         Stack output:
@@ -356,7 +357,7 @@ class Fq12:
         """Conjugation in F_q^12.
 
         Stack input:
-            - stack:    [q, ..., x := (x0, x1, ..., x12)], x is a couple of elements of Fq6
+            - stack:    [q, ..., x := (x0, x1, ..., x12)], `x` is a couple of elements of F_q^6
             - altstack: []
 
         Stack output:
@@ -417,7 +418,7 @@ class Fq12:
             ~ F_q^2[t] / (t^6 - non_residue_over_fq2)
 
         Stack input:
-            - stack:    [q, ..., x := (x0, x1, ..., x11)], x is a sixtuple of elements of F_q^2
+            - stack:    [q, ..., x := (x0, x1, ..., x11)], `x` is a sixtuple of elements of F_q^2
             - altstack: []
 
         Stack output:
@@ -537,7 +538,7 @@ class Fq12:
             ~ F_q^2[t] / (t^6 - non_residue_over_fq2)
 
         Stack input:
-            - stack:    [q, ..., x := (x0, x1, ..., x11)], x is a sixtuple of elements of F_q^2
+            - stack:    [q, ..., x := (x0, x1, ..., x11)], `x` is a sixtuple of elements of F_q^2
             - altstack: []
 
         Stack output:

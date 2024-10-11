@@ -43,7 +43,7 @@ class Fq12Cubic:
         """Multiplication in F_q^12.
 
         Stack input:
-            - stack:    [q, ..., x := (x0, x1, ..., x11), y := (y0, y1, ..., y11)], x, y are triplets of elements of
+            - stack:    [q, ..., x := (x0, x1, ..., x11), y := (y0, y1, ..., y11)], `x`, `y` are triplets of elements of
             F_q^4
             - altstack: []
 
@@ -159,7 +159,7 @@ class Fq12Cubic:
         """Squaring in F_q^12.
 
         Stack input:
-            - stack:    [q, ..., x := (x0, x1, ..., x11)], x is a triplet of elements of F_q^4
+            - stack:    [q, ..., x := (x0, x1, ..., x11)], `x` is a triplet of elements of F_q^4
             - altstack: []
 
         Stack output:

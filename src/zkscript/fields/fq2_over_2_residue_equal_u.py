@@ -29,7 +29,7 @@ class Fq2Over2ResidueEqualU(Fq4):
         """Squaring in F_q^4 = F_q^2[v] / (v^2 - u).
 
         Stack input:
-            - stack    = [q, ..., x := (x0, x1, x2, x3)]
+            - stack    = [q, ..., x := (x0, x1, x2, x3)], `x` is a couple of elements of F_q^2
             - altstack = []
 
         Stack output:
@@ -135,7 +135,8 @@ class Fq2Over2ResidueEqualU(Fq4):
         """Multiplication in Fq4 = F_q^2[v] / (v^2 - u).
 
         Stack input:
-            - stack    = [q, ..., x := (x0, x1, x2, x3), y := (y0, y1, y2, y3)]
+            - stack    = [q, ..., x := (x0, x1, x2, x3), y := (y0, y1, y2, y3)], `x`, `y` are couples of elements of
+            F_q^2
             - altstack = []
 
         Stack output:
