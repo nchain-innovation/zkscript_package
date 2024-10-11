@@ -20,7 +20,7 @@ def fq4_for_towering(mul_by_non_residue):
 
 
 class Fq4:
-    """Construct Bitcoin scripts that perform arithmetic operation in F_q^4 = F_q^2[u] / (u^2 - non_residue_over_fq2).
+    """Construct Bitcoin scripts that perform arithmetic operations in F_q^4 = F_q^2[u] / (u^2 - non_residue_over_fq2).
 
     F_q^4 = F_q^2[u] / (u^2 - non_residue_over_fq2) is a quadratic extension of F_q^2.
 
