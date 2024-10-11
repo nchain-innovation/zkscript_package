@@ -207,7 +207,7 @@ class Groth16(PairingModel):
             M = int(log2(r)) if max_multipliers is None else int(log2(max_multipliers[i]))
 
             if pub[i] == 0:
-                out += Script.parse_string("OP_1") + Script.parse_string(" ".join(["OP_0", "OP_0"] * M))
+                out += Script.parse_string("OP_1") + Script.parse_string(" ".join(["OP_0"] * M))
             else:
                 # Binary expansion of pub[i]
                 exp_pub_i = [int(bin(pub[i])[j]) for j in range(2, len(bin(pub[i])))][::-1]
@@ -224,10 +224,10 @@ class Groth16(PairingModel):
                         out += nums_to_script(lambdas_multiplications[i][j][0]) + Script.parse_string("OP_1")
                     else:
                         out += (
-                            Script.parse_string("OP_0 OP_0")
+                            Script.parse_string("OP_0")
                             + nums_to_script(lambdas_multiplications[i][j][0])
                             + Script.parse_string("OP_1")
                         )
-                out += Script.parse_string(" ".join(["OP_0 OP_0"] * (M - N)))
+                out += Script.parse_string(" ".join(["OP_0"] * (M - N)))
 
         return out
