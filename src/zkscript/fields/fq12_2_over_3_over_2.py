@@ -13,7 +13,7 @@ class Fq12:
 
     F_q^12 = F_q^6[u] / u^2 - v is a quadratic extension of F_q^6 = F_q^2[v] / v^3 - non_residue_over_fq2.
 
-    Elements in F_q^12 are of the form `a + b * u`, where `a`, `b`, `c` are elements of F_q^6, `u^2` is equal
+    Elements in F_q^12 are of the form `a + b * u`, where `a`, `b` are elements of F_q^6, `u^2` is equal
     to `v`, and the arithmetic operations `+` and `*` are derived from the operations in F_q^6.
     """
 

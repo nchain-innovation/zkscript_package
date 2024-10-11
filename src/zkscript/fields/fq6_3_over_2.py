@@ -25,10 +25,10 @@ class Fq6:
     F_q^6 = F_q^2[v] / (v^3 - non_residue_over_fq2) is a cubic extension of F_q^2.
 
     Elements in F_q^6 are of the form `a + b * v + c * v^2`, where `a`, `b`, `c` are elements of F_q^2, `v^3` is equal
-    to the cubic non-residue over F_q^2, and the arithmetic operations `+` and `*` are derived from the operations in
+    to the cubic non_residue_over_fq2, and the arithmetic operations `+` and `*` are derived from the operations in
     F_q^2.
 
-    The non-residue over F_q^2 is specified by defining the method self.BASE_FIELD.mul_by_non_residue.
+    The cubic non_residue_over_fq2 is specified by defining the method self.BASE_FIELD.mul_by_non_residue.
     """
 
     def __init__(self, q: int, base_field):
