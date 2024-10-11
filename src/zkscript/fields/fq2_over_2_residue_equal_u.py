@@ -10,7 +10,7 @@ from src.zkscript.util.utility_scripts import mod, nums_to_script, pick, verify_
 
 
 class Fq2Over2ResidueEqualU(Fq4):
-    """Construct Bitcoin scripts that perform arithmetic operation in F_q^4 = F_q^2[v] / (v^2 - u).
+    """Construct Bitcoin scripts that perform arithmetic operations in F_q^4 = F_q^2[v] / (v^2 - u).
 
     F_q^4 = F_q^2[v] / (v^2 - u) is a quadratic extension of F_q^2 = F_q[u] / (u^2 - non_residue).
 
