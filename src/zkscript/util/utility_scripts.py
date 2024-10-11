@@ -115,6 +115,8 @@ def roll(position: int, n_elements: int) -> Script:
 
     if (position, n_elements) in patterns_to_roll:
         out += Script(patterns_to_roll[(position, n_elements)])
+    elif position == n_elements - 1:
+        pass
     elif position in op_range:
         out += Script([op_range_to_opccode[position], OP_ROLL] * n_elements)
     else:
