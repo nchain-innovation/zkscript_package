@@ -6,14 +6,13 @@ from elliptic_curves.fields.quadratic_extension import quadratic_extension_from_
 from elliptic_curves.models.curve import Curve
 from elliptic_curves.models.ec import elliptic_curve_from_curve
 from tx_engine import Context, Script
-from tx_engine.engine.op_codes import OP_1, OP_DROP, OP_VERIFY
 
 from src.zkscript.elliptic_curves.ec_operations_fq import EllipticCurveFq
 from src.zkscript.elliptic_curves.ec_operations_fq2 import EllipticCurveFq2
 from src.zkscript.elliptic_curves.ec_operations_fq_unrolled import EllipticCurveFqUnrolled
 from src.zkscript.fields.fq2 import Fq2 as Fq2ScriptModel
 from src.zkscript.util.utility_scripts import nums_to_script
-from tests.elliptic_curves.util import generate_unlock, generate_verify, save_scripts
+from tests.elliptic_curves.util import generate_tests, generate_unlock, generate_verify_point, save_scripts
 
 
 @dataclass
@@ -31,7 +30,20 @@ class Secp256k1:
     )
     test_script = EllipticCurveFq(q=modulus, curve_a=0)
     test_script_unrolled = EllipticCurveFqUnrolled(q=modulus, ec_over_fq=test_script)
-    test_positions = False
+    positions_addition = [
+        {"modulus": 5, "lambda": 4, "P": 3, "Q": 1},
+        {"modulus": 8, "lambda": 6, "P": 3, "Q": 1},
+        {"modulus": 11, "lambda": 9, "P": 5, "Q": 1},
+        {"modulus": 20, "lambda": 15, "P": 10, "Q": 6},
+        {"modulus": 25, "lambda": 20, "P": 14, "Q": 5},
+    ]
+    positions_doubling = [
+        {"modulus": 3, "lambda": 2, "P": 1},
+        {"modulus": 8, "lambda": 6, "P": 3},
+        {"modulus": 11, "lambda": 9, "P": 5},
+        {"modulus": 20, "lambda": 15, "P": 10},
+        {"modulus": 25, "lambda": 20, "P": 14},
+    ]
     # Define filename for saving scripts
     filename = "secp256k1"
     # Test data
@@ -45,17 +57,17 @@ class Secp256k1:
     )
     a = 64046112301879843941239178948101222343000413030798872646069227448863068996094
     test_data = {
-        "test_addition": [{"point_p": P, "point_q": Q, "positions": None, "expected": P + Q}],
-        "test_doubling": [{"point_p": P, "positions": None, "expected": P + P}],
+        "test_addition": generate_tests(modulus, P, Q, positions_addition),
+        "test_doubling": generate_tests(modulus, P, P, positions_doubling),
         "test_addition_unknown_points": [
-            # {"point_p": P, "point_q": Q, "expected": P + Q},
-            {"point_p": P, "point_q": -P, "expected": point_at_infinity},
-            {"point_p": P, "point_q": point_at_infinity, "expected": P},
-            {"point_p": point_at_infinity, "point_q": Q, "expected": Q},
+            # {"P": P, "Q": Q, "expected": P + Q},
+            {"P": P, "Q": -P, "expected": point_at_infinity},
+            {"P": P, "Q": point_at_infinity, "expected": P},
+            {"P": point_at_infinity, "Q": Q, "expected": Q},
         ],
         "test_multiplication_unrolled": [
-            {"point_p": P, "a": a, "expected": P.multiply(a)},
-            {"point_p": P, "a": 0, "expected": P.multiply(0)},
+            {"P": P, "a": a, "expected": P.multiply(a)},
+            {"P": P, "a": 0, "expected": P.multiply(0)},
         ],
     }
 
@@ -80,7 +92,20 @@ class Secp256r1:
     )
     test_script = EllipticCurveFq(q=modulus, curve_a=0xFFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFC)
     test_script_unrolled = EllipticCurveFqUnrolled(q=modulus, ec_over_fq=test_script)
-    test_positions = False
+    positions_addition = [
+        {"modulus": 5, "lambda": 4, "P": 3, "Q": 1},
+        {"modulus": 8, "lambda": 6, "P": 3, "Q": 1},
+        {"modulus": 11, "lambda": 9, "P": 5, "Q": 1},
+        {"modulus": 20, "lambda": 15, "P": 10, "Q": 6},
+        {"modulus": 25, "lambda": 20, "P": 14, "Q": 5},
+    ]
+    positions_doubling = [
+        {"modulus": 3, "lambda": 2, "P": 1},
+        {"modulus": 8, "lambda": 6, "P": 3},
+        {"modulus": 11, "lambda": 9, "P": 5},
+        {"modulus": 20, "lambda": 15, "P": 10},
+        {"modulus": 25, "lambda": 20, "P": 14},
+    ]
     # Define filename for saving scripts
     filename = "secp256r1"
     # Test data
@@ -94,15 +119,18 @@ class Secp256r1:
     )
     a = 104614095137500434070196828944928516815982260532830080798264081596642730786155
     test_data = {
-        "test_addition": [{"point_p": P, "point_q": Q, "positions": None, "expected": P + Q}],
-        "test_doubling": [{"point_p": P, "positions": None, "expected": P + P}],
+        "test_addition": generate_tests(modulus, P, Q, positions_addition),
+        "test_doubling": generate_tests(modulus, P, P, positions_doubling),
         "test_addition_unknown_points": [
-            # {"point_p": P, "point_q": Q, "expected": P + Q},
-            {"point_p": P, "point_q": -P, "expected": point_at_infinity},
-            {"point_p": P, "point_q": point_at_infinity, "expected": P},
-            {"point_p": point_at_infinity, "point_q": Q, "expected": Q},
+            # {"P": P, "Q": Q, "expected": P + Q},
+            {"P": P, "Q": -P, "expected": point_at_infinity},
+            {"P": P, "Q": point_at_infinity, "expected": P},
+            {"P": point_at_infinity, "Q": Q, "expected": Q},
         ],
-        "test_multiplication_unrolled": [{"point_p": P, "a": a, "expected": P.multiply(a)}],
+        "test_multiplication_unrolled": [
+            {"P": P, "a": a, "expected": P.multiply(a)},
+            {"P": P, "a": 0, "expected": P.multiply(0)},
+        ],
     }
 
 
@@ -124,35 +152,49 @@ class Secp256k1Extension:
     test_script = EllipticCurveFq2(
         q=modulus, curve_a=[0, 0], fq2=Fq2ScriptModel(q=modulus, non_residue=NON_RESIDUE_K1.to_list()[0])
     )
-    test_positions = True
+    positions_addition = [
+        {"modulus": 10, "lambda": 9, "P": 7, "Q": 3},
+        {"modulus": 12, "lambda": 11, "P": 7, "Q": 3},
+        {"modulus": 18, "lambda": 13, "P": 9, "Q": 3},
+        {"modulus": 20, "lambda": 15, "P": 10, "Q": 6},
+        {"modulus": 25, "lambda": 20, "P": 14, "Q": 5},
+    ]
+    positions_doubling = [
+        {"modulus": 6, "lambda": 5, "P": 3},
+        {"modulus": 12, "lambda": 11, "P": 7},
+        {"modulus": 18, "lambda": 13, "P": 9},
+        {"modulus": 20, "lambda": 15, "P": 10},
+        {"modulus": 25, "lambda": 20, "P": 14},
+    ]
     # Define filename for saving scripts
     filename = "secp256k1_extension"
     # Test data
     P = secp256k1ext(
-        x=Fq2_k1(Fq_k1(94095614298307368546814548474253270428029709253177010004762002524804913895755), Fq_k1.zero()),
-        y=Fq2_k1(Fq_k1(89185879682398848498440952890745529774620859762156036354282049377491887931647), Fq_k1.zero()),
+        x=Fq2_k1(
+            Fq_k1(0xB981DA1FE0F34CA56B4C7A15F7A33946DCD3E60C7A12727068D8ED449D15F70E),
+            Fq_k1(0xFA2C34DA64A420D491AD1743D09445FAC971C28B03C203A7AF2768619391463C),
+        ),
+        y=Fq2_k1(
+            Fq_k1(0xDAADB913FAFB7EEAC301D7F430AA98FC1EAA5CAED1FE66D3399074CCFAA78B32),
+            Fq_k1(0x93620E1F5AE7B6F2B46ACA13F339BBAAFDBBA268F6A61E7571B5EA5F25C662A7),
+        ),
     )
     Q = secp256k1ext(
-        x=Fq2_k1(Fq_k1(8990164901158448935493903050084808313444829307709037715141411306530244885211), Fq_k1.zero()),
-        y=Fq2_k1(Fq_k1(23965057585496331673584477237659815348801473852880524662243981309175446085731), Fq_k1.zero()),
+        x=Fq2_k1(
+            Fq_k1(0xFBD173BDFFC6C303177D831811800DAE3A7EDC335F420BE0FE3FC643E2019DDF),
+            Fq_k1(0xB2CD8B5AF66F524BBC351B2A3EA4687408644A9871C6C00973C47F2CEFD03FA9),
+        ),
+        y=Fq2_k1(
+            Fq_k1(0xC61512666F8EC06B462C3002045D59525C63BCD0BFC4E2BB83BA19E1111CD2DE),
+            Fq_k1(0xC52748235BFD3380D1620DE3B2CD038BDDEBB98064902EA0303214E7B273C7D5),
+        ),
     )
     test_data = {
-        "test_addition": [
-            {"point_p": P, "point_q": Q, "positions": {"lam": 9, "point_p": 7, "point_q": 3}, "expected": P + Q},
-            {"point_p": P, "point_q": Q, "positions": {"lam": 11, "point_p": 7, "point_q": 3}, "expected": P + Q},
-            {"point_p": P, "point_q": Q, "positions": {"lam": 15, "point_p": 13, "point_q": 3}, "expected": P + Q},
-            {"point_p": P, "point_q": Q, "positions": {"lam": 15, "point_p": 10, "point_q": 6}, "expected": P + Q},
-            {"point_p": P, "point_q": Q, "positions": {"lam": 20, "point_p": 14, "point_q": 5}, "expected": P + Q},
-        ],
-        "test_doubling": [
-            {"point_p": P, "positions": {"lam": 5, "point_p": 3}, "expected": P + P},
-            {"point_p": P, "positions": {"lam": 8, "point_p": 3}, "expected": P + P},
-            {"point_p": P, "positions": {"lam": 8, "point_p": 6}, "expected": P + P},
-            {"point_p": P, "positions": {"lam": 10, "point_p": 6}, "expected": P + P},
-        ],
+        "test_addition": generate_tests(modulus, P, Q, positions_addition),
+        "test_doubling": generate_tests(modulus, P, P, positions_doubling),
         "test_negation": [
-            {"point_p": P, "expected": -P},
-            {"point_p": point_at_infinity, "expected": -point_at_infinity},
+            {"P": P, "expected": -P},
+            {"P": point_at_infinity, "expected": -point_at_infinity},
         ],
     }
 
@@ -182,35 +224,49 @@ class Secp256r1Extension:
         curve_a=[0xFFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFC, 0],
         fq2=Fq2ScriptModel(q=modulus, non_residue=NON_RESIDUE_R1.to_list()[0]),
     )
-    test_positions = True
+    positions_addition = [
+        {"modulus": 10, "lambda": 9, "P": 7, "Q": 3},
+        {"modulus": 12, "lambda": 11, "P": 7, "Q": 3},
+        {"modulus": 18, "lambda": 13, "P": 9, "Q": 3},
+        {"modulus": 20, "lambda": 15, "P": 10, "Q": 6},
+        {"modulus": 25, "lambda": 20, "P": 14, "Q": 5},
+    ]
+    positions_doubling = [
+        {"modulus": 6, "lambda": 5, "P": 3},
+        {"modulus": 12, "lambda": 11, "P": 7},
+        {"modulus": 18, "lambda": 13, "P": 9},
+        {"modulus": 20, "lambda": 15, "P": 10},
+        {"modulus": 25, "lambda": 20, "P": 14},
+    ]
     # Define filename for saving scripts
     filename = "secp256r1_extension"
     # Test data
     P = secp256r1ext(
-        x=Fq2_r1(Fq_r1(76087740444190817290444644797556573089541616229078847927560711689283487831468), Fq_r1.zero()),
-        y=Fq2_r1(Fq_r1(32475108468112430759583481824287526908923893331159908098629651711008277175075), Fq_r1.zero()),
+        x=Fq2_r1(
+            Fq_r1(0x9D764123F35983906F6D4835B1843F8B842355BD1744B7CB1A28CFE182FB45F3),
+            Fq_r1(0xD739D84ADA8F5C667F71179D87A811E3C81C13A373F2F147758E038B0AA4D173),
+        ),
+        y=Fq2_r1(
+            Fq_r1(0xB76CF9D7E1FB44B9D229A7C1412AC648F1DFDAB223DE92E42E02C7E5057E390F),
+            Fq_r1(0x2AC60E3EBC7F1E8EF6DB6D07009F6FAF10C7F3AA71FAEE13FE273DF57C174F9F),
+        ),
     )
     Q = secp256r1ext(
-        x=Fq2_r1(Fq_r1(19506571565678743920976889829202594248997307381203809914252094040594564960028), Fq_r1.zero()),
-        y=Fq2_r1(Fq_r1(92067975979439830169715993237718936276517713925749869689989196918696315341149), Fq_r1.zero()),
+        x=Fq2_r1(
+            Fq_r1(0x6C3AC0A83056E2E5DD4C1883D69F9BD64A2ACB655D843F7B7695EFA2392E30F4),
+            Fq_r1(0xBAA280A48466BB5BBD73ED70054947C4A929BF2529E20489E99490CFFE1E4EA6),
+        ),
+        y=Fq2_r1(
+            Fq_r1(0xFEA7280CF96F9012ED154141E753047EEBD3D810469BAADA62CC43CE26B63858),
+            Fq_r1(0x9C26432B2554E32601E74658E881AAE4A6285106CE5E943467FE30E7396446EB),
+        ),
     )
     test_data = {
-        "test_addition": [
-            {"point_p": P, "point_q": Q, "positions": {"lam": 9, "point_p": 7, "point_q": 3}, "expected": P + Q},
-            {"point_p": P, "point_q": Q, "positions": {"lam": 11, "point_p": 7, "point_q": 3}, "expected": P + Q},
-            {"point_p": P, "point_q": Q, "positions": {"lam": 15, "point_p": 13, "point_q": 3}, "expected": P + Q},
-            {"point_p": P, "point_q": Q, "positions": {"lam": 15, "point_p": 10, "point_q": 6}, "expected": P + Q},
-            {"point_p": P, "point_q": Q, "positions": {"lam": 20, "point_p": 14, "point_q": 5}, "expected": P + Q},
-        ],
-        "test_doubling": [
-            {"point_p": P, "positions": {"lam": 5, "point_p": 3}, "expected": P + P},
-            {"point_p": P, "positions": {"lam": 8, "point_p": 3}, "expected": P + P},
-            {"point_p": P, "positions": {"lam": 8, "point_p": 6}, "expected": P + P},
-            {"point_p": P, "positions": {"lam": 10, "point_p": 6}, "expected": P + P},
-        ],
+        "test_addition": generate_tests(modulus, P, Q, positions_addition),
+        "test_doubling": generate_tests(modulus, P, P, positions_doubling),
         "test_negation": [
-            {"point_p": P, "expected": -P},
-            {"point_p": point_at_infinity, "expected": -point_at_infinity},
+            {"P": P, "expected": -P},
+            {"P": point_at_infinity, "expected": -point_at_infinity},
         ],
     }
 
@@ -218,63 +274,45 @@ class Secp256r1Extension:
 def generate_test_cases(test_name):
     configurations = [Secp256k1, Secp256r1, Secp256k1Extension, Secp256r1Extension]
     # Parse and return config and the test_data for each config
-    return [
-        (config, test_data["point_p"], test_data["expected"])
-        if "point_p" in test_data
-        and "point_q" not in test_data
-        and "positions" not in test_data
-        and "a" not in test_data
-        else (config, test_data["point_p"], test_data["positions"], test_data["expected"])
-        if "point_p" in test_data and "point_q" not in test_data and "positions" in test_data and "a" not in test_data
-        else (config, test_data["point_p"], test_data["point_q"], test_data["expected"])
-        if "point_p" in test_data and "point_q" in test_data and "positions" not in test_data and "a" not in test_data
-        else (config, test_data["point_p"], test_data["point_q"], test_data["positions"], test_data["expected"])
-        if "point_p" in test_data and "point_q" in test_data and "positions" in test_data and "a" not in test_data
-        else (config, test_data["point_p"], test_data["a"], test_data["expected"])
-        for config in configurations
-        if test_name in config.test_data
-        for test_data in config.test_data[test_name]
-    ]
+    out = []
+
+    for config in configurations:
+        if test_name in config.test_data:
+            for test_data in config.test_data[test_name]:
+                match test_name:
+                    case "test_addition":
+                        out.append(
+                            (config, test_data["unlocking_script"], test_data["expected"], test_data["stack_elements"])
+                        )
+                    case "test_doubling":
+                        out.append(
+                            (config, test_data["unlocking_script"], test_data["expected"], test_data["stack_elements"])
+                        )
+                    case "test_addition_unknown_points":
+                        out.append((config, test_data["P"], test_data["Q"], test_data["expected"]))
+                    case "test_multiplication_unrolled":
+                        out.append((config, test_data["P"], test_data["a"], test_data["expected"]))
+                    case "test_negation":
+                        out.append((config, test_data["P"], test_data["expected"]))
+    return out
 
 
+@pytest.mark.parametrize("verify_gradient", [True, False])
 @pytest.mark.parametrize(
-    ("config", "point_p", "point_q", "positions", "expected"), generate_test_cases("test_addition")
+    ("config", "unlocking_script", "expected", "stack_elements"), generate_test_cases("test_addition")
 )
-def test_addition(config, point_p, point_q, positions, expected, save_to_json_folder):
-    lam = point_p.get_lambda(point_q)
+def test_addition(config, unlocking_script, expected, stack_elements, verify_gradient, save_to_json_folder):
+    unlock = unlocking_script
 
-    unlock = nums_to_script([config.modulus])
-
-    if config.test_positions:
-        unlock += nums_to_script(lam.to_list())
-        unlock += Script([OP_1] * (positions["lam"] - positions["point_p"] - 2))
-        unlock += generate_unlock(point_p, degree=config.degree)
-        unlock += Script([OP_1] * (positions["point_p"] - positions["point_q"] - 4))
-        unlock += generate_unlock(point_q, degree=config.degree)
-        unlock += Script([OP_1] * (positions["point_q"] - 3))
-    else:
-        unlock += nums_to_script(lam.to_list())
-        unlock += generate_unlock(point_p, degree=config.degree)
-        unlock += generate_unlock(point_q, degree=config.degree)
-
-    lock = (
-        config.test_script.point_addition(
-            take_modulo=True,
-            check_constant=True,
-            clean_constant=True,
-            position_lambda=positions["lam"],
-            position_p=positions["point_p"],
-            position_q=positions["point_q"],
-        )
-        if config.test_positions
-        else config.test_script.point_addition(take_modulo=True, check_constant=True, clean_constant=True)
+    lock = config.test_script.point_algebraic_addition(
+        take_modulo=True,
+        check_constant=True,
+        clean_constant=True,
+        verify_gradient=verify_gradient,
+        stack_elements=stack_elements,
     )
 
-    lock += generate_verify(expected, degree=config.degree)
-    if config.test_positions:
-        lock += Script([OP_VERIFY])
-        lock += Script([OP_DROP] * (positions["lam"] - 9))
-        lock += Script([OP_1])
+    lock += expected
 
     context = Context(script=unlock + lock)
     assert context.evaluate()
@@ -285,37 +323,22 @@ def test_addition(config, point_p, point_q, positions, expected, save_to_json_fo
         save_scripts(str(lock), str(unlock), save_to_json_folder, config.filename, "point addition")
 
 
-@pytest.mark.parametrize(("config", "point_p", "positions", "expected"), generate_test_cases("test_doubling"))
-def test_doubling(config, point_p, positions, expected, save_to_json_folder):
-    lam = point_p.get_lambda(point_p)
+@pytest.mark.parametrize("verify_gradient", [True, False])
+@pytest.mark.parametrize(
+    ("config", "unlocking_script", "expected", "stack_elements"), generate_test_cases("test_doubling")
+)
+def test_doubling(config, unlocking_script, expected, stack_elements, verify_gradient, save_to_json_folder):
+    unlock = unlocking_script
 
-    unlock = nums_to_script([config.modulus])
-
-    if config.test_positions:
-        unlock += nums_to_script(lam.to_list())
-        unlock += Script([OP_1] * (positions["lam"] - positions["point_p"] - 2))
-        unlock += generate_unlock(point_p, degree=config.degree)
-        unlock += Script([OP_1] * (positions["point_p"] - 3))
-    else:
-        unlock += nums_to_script(lam.to_list())
-        unlock += generate_unlock(point_p, degree=config.degree)
-
-    lock = (
-        config.test_script.point_doubling(
-            take_modulo=True,
-            check_constant=True,
-            clean_constant=True,
-            position_lambda=positions["lam"],
-            position_p=positions["point_p"],
-        )
-        if config.test_positions
-        else config.test_script.point_doubling(take_modulo=True, check_constant=True, clean_constant=True)
+    lock = config.test_script.point_algebraic_doubling(
+        take_modulo=True,
+        check_constant=True,
+        clean_constant=True,
+        verify_gradient=verify_gradient,
+        stack_elements=stack_elements,
     )
-    lock += generate_verify(expected, degree=config.degree)
-    if config.test_positions:
-        lock += Script([OP_VERIFY])
-        lock += Script([OP_DROP] * (positions["lam"] - 5))
-        lock += Script([OP_1])
+
+    lock += expected
 
     context = Context(script=unlock + lock)
     assert context.evaluate()
@@ -326,23 +349,21 @@ def test_doubling(config, point_p, positions, expected, save_to_json_folder):
         save_scripts(str(lock), str(unlock), save_to_json_folder, config.filename, "point doubling")
 
 
-@pytest.mark.parametrize(
-    ("config", "point_p", "point_q", "expected"), generate_test_cases("test_addition_unknown_points")
-)
-def test_addition_unknown_points(config, point_p, point_q, expected, save_to_json_folder):
+@pytest.mark.parametrize(("config", "P", "Q", "expected"), generate_test_cases("test_addition_unknown_points"))
+def test_addition_unknown_points(config, P, Q, expected, save_to_json_folder):  # noqa: N803
     unlock = nums_to_script([config.modulus])
 
     # if config.point_at_infinity not in {P, Q, expected}:
     #     lam = P.get_lambda(Q)
     #     unlock += nums_to_script(lam.to_list())
 
-    unlock += generate_unlock(point_p, degree=config.degree)
-    unlock += generate_unlock(point_q, degree=config.degree)
+    unlock += generate_unlock(P, degree=config.degree)
+    unlock += generate_unlock(Q, degree=config.degree)
 
     lock = config.test_script.point_addition_with_unknown_points(
         take_modulo=True, check_constant=True, clean_constant=True
     )
-    lock += generate_verify(expected, degree=config.degree)
+    lock += generate_verify_point(expected, degree=config.degree)
 
     context = Context(script=unlock + lock)
     assert context.evaluate()
@@ -353,14 +374,14 @@ def test_addition_unknown_points(config, point_p, point_q, expected, save_to_jso
         save_scripts(str(lock), str(unlock), save_to_json_folder, config.filename, "point addition with unknown points")
 
 
-@pytest.mark.parametrize(("config", "point_p", "a", "expected"), generate_test_cases("test_multiplication_unrolled"))
-def test_multiplication_unrolled(config, point_p, a, expected, save_to_json_folder):
+@pytest.mark.parametrize(("config", "P", "a", "expected"), generate_test_cases("test_multiplication_unrolled"))
+def test_multiplication_unrolled(config, P, a, expected, save_to_json_folder):  # noqa: N803
     exp_a = [int(bin(a)[j]) for j in range(2, len(bin(a)))][::-1]
 
     unlock = config.test_script_unrolled.unrolled_multiplication_input(
-        point_p=point_p.to_list(),
+        P=P.to_list(),
         a=a,
-        lambdas=[[s.to_list() for s in el] for el in point_p.get_lambdas(exp_a)] if a else [],
+        lambdas=[[s.to_list() for s in el] for el in P.get_lambdas(exp_a)] if a else [],
         max_multiplier=config.order,
         load_modulus=True,
     )
@@ -368,8 +389,8 @@ def test_multiplication_unrolled(config, point_p, a, expected, save_to_json_fold
     lock = config.test_script_unrolled.unrolled_multiplication(
         max_multiplier=config.order, modulo_threshold=1, check_constant=True, clean_constant=True
     )
-    lock += generate_verify(expected, degree=config.degree) + Script.parse_string("OP_VERIFY")
-    lock += generate_verify(point_p, degree=config.degree)
+    lock += generate_verify_point(expected, degree=config.degree) + Script.parse_string("OP_VERIFY")
+    lock += generate_verify_point(P, degree=config.degree)
 
     context = Context(script=unlock + lock)
     assert context.evaluate()
@@ -380,13 +401,13 @@ def test_multiplication_unrolled(config, point_p, a, expected, save_to_json_fold
         save_scripts(str(lock), str(unlock), save_to_json_folder, config.filename, "unrolled multiplication")
 
 
-@pytest.mark.parametrize(("config", "point_p", "expected"), generate_test_cases("test_negation"))
-def test_negation(config, point_p, expected, save_to_json_folder):
+@pytest.mark.parametrize(("config", "P", "expected"), generate_test_cases("test_negation"))
+def test_negation(config, P, expected, save_to_json_folder):  # noqa: N803
     unlock = nums_to_script([config.modulus])
-    unlock += generate_unlock(point_p, degree=config.degree)
+    unlock += generate_unlock(P, degree=config.degree)
 
     lock = config.test_script.point_negation(take_modulo=True, check_constant=True, is_constant_reused=False)
-    lock += generate_verify(expected, degree=config.degree)
+    lock += generate_verify_point(expected, degree=config.degree)
 
     context = Context(script=unlock + lock)
     assert context.evaluate()
