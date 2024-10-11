@@ -49,7 +49,6 @@ class Fq2Over2ResidueEqualU(Fq4):
         Raises:
             AssertionError: If `clean_constant` or `check_constant` are not provided when take_modulo is `True`.
         """
-
         # Check the modulo constant
         if check_constant:
             out = Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
@@ -168,7 +167,6 @@ class Fq2Over2ResidueEqualU(Fq4):
         Raises:
             AssertionError: If `clean_constant` or `check_constant` are not provided when take_modulo is `True`.
         """
-
         # Check the modulo constant
         if check_constant:
             out = Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
