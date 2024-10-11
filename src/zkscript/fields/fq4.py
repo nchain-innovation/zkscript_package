@@ -53,7 +53,8 @@ class Fq4:
         """Addition in F_q^4.
 
         Stack input:
-            - stack:    [q, ..., x := (x0, x1, x2, x3), y := (y0, y1, y2, y3)]
+            - stack:    [q, ..., x := (x0, x1, x2, x3), y := (y0, y1, y2, y3)], `x`, `y` are couples of elements of
+            F_q^2
             - altstack: []
 
         Stack output:
@@ -117,7 +118,8 @@ class Fq4:
         """Multiplication in F_q^4 by a scalar in F_q.
 
         Stack input:
-            - stack:    [q, ..., x := (x0, x1, x2, x3), lambda]
+            - stack:    [q, ..., x := (x0, x1, x2, x3), lambda], `x` is a couple of elements of F_q^2, `lambda` is an
+            element of F_q
             - altstack: []
 
         Stack output:
@@ -180,7 +182,8 @@ class Fq4:
         """Scalar multiplication in F_q^4.
 
         Stack input:
-            - stack:    [q, ..., x := (x0, x1, x2, x3), lambda := (l0, l1)]
+            - stack:    [q, ..., x := (x0, x1, x2, x3), lambda := (l0, l1)], `x` is a couple of elements of F_q^2,
+            `lambda` is an element of F_q^2
             - altstack: []
 
         Stack output:
@@ -248,7 +251,8 @@ class Fq4:
         """Multiplication in F_q^4.
 
         Stack input:
-            - stack:    [q, ..., x := (x0, x1, x2, x3), y := (y0, y1, y2, y3)]
+            - stack:    [q, ..., x := (x0, x1, x2, x3), y := (y0, y1, y2, y3)], `x`, `y` are couples of elements of
+            F_q^2
             - altstack: []
 
         Stack output:
@@ -324,7 +328,7 @@ class Fq4:
         """Squaring in F_q^4.
 
         Stack input:
-            - stack:    [q, ..., x := (x0, x1, x2, x3)]
+            - stack:    [q, ..., x := (x0, x1, x2, x3)], `x` is a couple of elements of F_q^2
             - altstack: []
 
         Stack output:
@@ -411,7 +415,8 @@ class Fq4:
         """Addition of three elements in F_q^4.
 
         Stack input:
-            - stack:    [q, ..., x := (x0, x1, x2, x3), y := (y0, y1, y2, y3), z := (z0, z1, z2, z3)]
+            - stack:    [q, ..., x := (x0, x1, x2, x3), y := (y0, y1, y2, y3), z := (z0, z1, z2, z3)], `x`, `y`, `z` are
+            couples of elements of F_q^2
             - altstack: []
 
         Stack output:
@@ -478,7 +483,7 @@ class Fq4:
         """Frobenius for odd powers n = 2k + 1 in F_q^4.
 
         Stack input:
-            - stack:    [q, ..., x := (x0, x1, x2, x3)]
+            - stack:    [q, ..., x := (x0, x1, x2, x3)], `x` is a couple of elements of F_q^2
             - altstack: []
 
         Stack output:
@@ -547,7 +552,7 @@ class Fq4:
         """Frobenius for even powers n = 2k in F_q^4.
 
         Stack input:
-            - stack:    [q, ..., x := (x0, x1, x2, x3)]
+            - stack:    [q, ..., x := (x0, x1, x2, x3)], `x` is a couple of elements of F_q^2
             - altstack: []
 
         Stack output:
@@ -629,7 +634,7 @@ class Fq4:
         """Multiplication by u in F_q^4 = F_q^2[u] / (u^2 - non_residue_over_fq2).
 
         Stack input:
-            - stack:    [q, ..., x := (x0, x1, x2, x3)]
+            - stack:    [q, ..., x := (x0, x1, x2, x3)], `x` is a couple of elements of F_q^2
             - altstack: []
 
         Stack output:
@@ -693,7 +698,7 @@ class Fq4:
         """Conjugation in F_q^4.
 
         Stack input:
-            - stack:    [q, ..., x := (x0, x1, x2, x3)]
+            - stack:    [q, ..., x := (x0, x1, x2, x3)], `x` is a couple of elements of F_q^2
             - altstack: []
 
         Stack output:
