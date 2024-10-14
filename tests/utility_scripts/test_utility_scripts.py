@@ -31,6 +31,9 @@ def generate_verify(z) -> Script:
             list(range(20)),
             [0, 1, 2, 3, 4, 5, 6, 7, 8, 12, 13, 14, 15, 16, 17, 18, 19, 9, 10, 11],
         ),
+        (4, 5, list(range(10)), list(range(10))),
+        (9, 10, list(range(20)), list(range(20))),
+        (1, 2, list(range(10)), list(range(10)))
     ],
 )
 def test_roll(position, n_elements, stack, expected):
