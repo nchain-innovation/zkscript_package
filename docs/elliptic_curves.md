@@ -2,20 +2,31 @@
 
 The zk Script Library contains the implementation of arithmetic for elliptic curves. More precisely, it contains scripts for:
 - EC arithmetic over a prime field `Fq`:
-    - `point_addition`: a script to sum two points that we know are not equal, nor the inverse of one another
-    - `point_doubling`: a script to double a point
+    - `point_algebraic_addition`: a script to perform algebraic point addition (i.e., `P + Q`, `P - Q`, `- P + Q`, `- P - Q`) of two points that we know are not equal, nor the inverse of one another
+    - `point_algebraic_doubling`: a script to perfom algebraic doubling of a point (i.e., `2P` or `-2P`)
     - `point_addition_with_unknown_points`: a script to sum two points which we do not know whether they are equal, different, or the inverse of one another
 - Unrolled EC arithmetic over a prime field `Fq`: `unrolled_multiplication` returns a script to compute the scalar point multiplication `a * P` for any point `P` and any `a` which is smaller that the `max_multiplier` parameter supplied to the `unrolled_multiplication` function when the script was constructed
 - EC arithmetic over a quadratic extension field `Fq2`:
-    - `point_addition`
-    - `point_doubling`
+    - `point_algebraic_addition`
+    - `point_algebraic_doubling`
     - `point_negation`
 
  In all the implementations, the point at infinity is modelled as a sequence of `0x00`, as many as the number of elements required to specify a point on the curve. E.g, `0x00 0x00` is the point at infinity in a curve over `Fq`, `0x00 0x00 0x00 0x00` is the point at infinity in a curve over `Fq2`.
 
- Below are some examples of how to use the above scripts.
+## Function arguments for `EllipticCurveFq`, `EllipticCurveFq2`
 
- # EC arithmetic over Fq
+The scripts `point_algebraic_addition` and `point_algebraic_doubling` in the classes `EllipticCurveFq` and `EllipticCurveFq2` have the following arguments:
+- `take_modulo (bool | None)`: whether or not to return the coordinates of the output modulo `q`
+- `check_constant (bool | None)`: whether or not to check the constant supplied for modulo operations is the correct one
+- `clean_constant (bool | None)`: wheter or not to clean the constant supplied for modulo operations
+- `verify_gradient (bool)`: whether to check the validity of the gradient provided
+- `stack_elements (StackElements)`:<sup>[1](#ref_stack_elements)</sup> A dictionary pointing to where the script should fetch the elements from. For example, `point_algebraic_addition` expects the stack to look like:
+```q .. <lambda> .. P .. Q ..```
+The dictionary `stack_elements` states where `lambda`, `P` and `Q` are to be found in the stack, and whether `P` and/or `Q` should be negated, i.e., whether the script should compute `P + Q`, `P - Q`, `- P + Q`, or `- P - Q`.
+
+[<a id="ref_stack_elements">1</a>]: For the definition of the `StackElements` type, see [StackElements](../docs/stack_elements.md).
+
+ # Examples: EC arithmetic over Fq
 
  ```python
 # For testing
@@ -33,7 +44,7 @@ secp256k1_double_generator = [0xc6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7
 secp256k1_generator_plus_double_generator = [0xf9308a019258c31049344f85f89d5229b531c845836f99b08601f113bce036f9, 0x388f7b0f632de8140fe337e62a37f3566500a99934c2231b6cb9fd7584b8e672]
 
 # Let's sum two points on secp256k1: generator + 2*generator
-lock = secp256k1_script.point_addition(take_modulo=True,check_constant=True,clean_constant=True)
+lock = secp256k1_script.point_algebraic_addition(take_modulo=True,check_constant=True,clean_constant=True)
 lock += nums_to_script([secp256k1_generator_plus_double_generator[1]]) + Script.parse_string('OP_EQUALVERIFY')
 lock += nums_to_script([secp256k1_generator_plus_double_generator[0]]) + Script.parse_string('OP_EQUAL')
 
@@ -50,7 +61,7 @@ context = Context(script = unlock + lock)
 assert(context.evaluate())
 
 # Let's double a point: 2*generator
-lock = secp256k1_script.point_doubling(take_modulo=True,check_constant=True,clean_constant=True)
+lock = secp256k1_script.point_algebraic_doubling(take_modulo=True,check_constant=True,clean_constant=True)
 lock += nums_to_script([secp256k1_double_generator[1]]) + Script.parse_string('OP_EQUALVERIFY')
 lock += nums_to_script([secp256k1_double_generator[0]]) + Script.parse_string('OP_EQUAL')
 
@@ -66,11 +77,11 @@ context = Context(script = unlock + lock)
 assert(context.evaluate())
 ```
 
-# EC arithmetic over Fq2
+# Examples: EC arithmetic over Fq2
 
 `ec_operations_fq2` work in the same way as per `ec_operations_fq`, with the difference that when we instantiate an object of the class `ElliptiCurveFq2` we need to supply the instantiation of the Bitcoin Script arithmetic in `Fq2`.
 
-The other difference between `ElliptiCurveFq`and `ElliptiCurveFq2`is that the methods `point_addition` and `point_doubling` of the latter take a few additional arguments. Namely:
+The other difference between `ElliptiCurveFq`and `ElliptiCurveFq2`is that the methods `point_algebraic_doubling` and `point_doubling` of the latter take a few additional arguments. Namely:
 - `point_addition` takes the arguments: `position_lambda`, `position_P` and `position_Q`, which are the positions in the stack of the elements `P` and `Q` that are being summed, and the position of the gradient between them. Thanks to these arguments, the script is able to pick `P`, `Q` and the gradient without the user preparing the stack beforehand.
 - `point_doubling` takes the arguments: `position_lambda` and `position_P`, which are the positions in the stack of the element `P` that is being doubled, and the position of the gradient of the line tangent to the curve at `P`. Thanks to these arguments, the script is able to pick `P` and the gradient without the user preparing the stack beforehand.
 
