@@ -39,6 +39,14 @@ class StackNumber:
             raise ValueError(msg)
         return self.position > other.position
 
+    def shift(self, n: int):
+        """Shift self by n in the stack."""
+        return StackNumber(self.position + n, self.length, self.negate, self.move)
+
+    def set_move(self, move: MovingFunction):
+        """Set self.move to move."""
+        return StackNumber(self.position, self.length, self.negate, move)
+
 
 @dataclass(init=False)
 class StackString:
@@ -71,6 +79,14 @@ class StackString:
             raise ValueError(msg)
         return self.position > other.position
 
+    def shift(self, n: int):
+        """Shift self by n in the stack."""
+        return StackString(self.position + n, self.length, self.move)
+
+    def set_move(self, move: MovingFunction):
+        """Set self.move to move."""
+        return StackNumber(self.position, self.length, move)
+
 
 @dataclass(init=False)
 class StackEllipticCurvePoint:
@@ -99,6 +115,20 @@ class StackEllipticCurvePoint:
         if type(other) is StackEllipticCurvePoint:
             other = other.x
         return self.y < other
+
+    def shift(self, n: int):
+        """Shift self by n in the stack."""
+        return StackEllipticCurvePoint(
+            StackNumber(self.x.position + n, self.x.length, self.x.negate, self.x.move),
+            StackNumber(self.y.position + n, self.y.length, self.y.negate, self.y.move),
+        )
+
+    def set_move(self, move: MovingFunction):
+        """Set self.move to move."""
+        return StackEllipticCurvePoint(
+            StackNumber(self.x.position, self.x.length, self.x.negate, move),
+            StackNumber(self.y.position, self.y.length, self.y.negate, move),
+        )
 
 
 type StackElements = Dict[str, Union[StackNumber, StackString, StackEllipticCurvePoint]]
