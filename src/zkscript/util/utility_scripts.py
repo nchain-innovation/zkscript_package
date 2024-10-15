@@ -27,7 +27,6 @@ from tx_engine.engine.op_codes import (
     OP_DEPTH,
     OP_DUP,
     OP_EQUALVERIFY,
-    OP_FROMALTSTACK,
     OP_MOD,
     OP_OVER,
     OP_PICK,
@@ -140,7 +139,10 @@ def nums_to_script(nums: list[int]) -> Script:
 
 
 def mod(
-    stack_preparation: str = "OP_FROMALTSTACK OP_ROT", is_mod_on_top: bool = True, is_positive: bool = True, is_constant_reused: bool = True
+    stack_preparation: str = "OP_FROMALTSTACK OP_ROT",
+    is_mod_on_top: bool = True,
+    is_positive: bool = True,
+    is_constant_reused: bool = True,
 ) -> Script:
     """Perform modulo operation in Bitcoin Script.
 
@@ -173,7 +175,7 @@ def mod(
           positive representative for the modulo.
             Let `stack_in = [-5, 3]`, and `is_mod_on_top = True`, then
             `stack_out = [(3 if is_constant_reused = True), 2]`.
-            Let `stack_in = [2, 7]`, and `is_mod_on_top = False`, then 
+            Let `stack_in = [2, 7]`, and `is_mod_on_top = False`, then
             `stack_out = [(2 if is constant reused = True), 1]`.
         - If `stack_preparation = True`, before starting the modulo operation, a new element is loaded from the alt stack.
           The two opcodes added to the script if `stack_preparation = True`, modify the stack as follows:

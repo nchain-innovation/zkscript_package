@@ -100,7 +100,7 @@ def test_pick(position, n_elements, stack, expected):
 def test_mod(stack_preparation, is_mod_on_top, is_positive, is_constant_reused, stack, altstack, expected):
     unlock = nums_to_script(stack)
     lock = nums_to_script(altstack)
-    lock += Script.parse_string("OP_TOALTSTACK"*len(altstack))
+    lock += Script.parse_string("OP_TOALTSTACK" * len(altstack))
 
     lock += mod(
         stack_preparation=stack_preparation,
@@ -135,6 +135,7 @@ def test_verify_bottom_constant(n, stack):
 
     assert context.evaluate()
     assert len(context.get_altstack()) == 0
+
 
 @pytest.mark.parametrize(
     ("n", "stack"),
