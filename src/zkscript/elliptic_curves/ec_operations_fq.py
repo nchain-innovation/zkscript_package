@@ -1,39 +1,58 @@
+"""ec_operations_fq module.
+
+This module enables constructing Bitcoin scripts that perform elliptic curve arithmetic in E(F_q).
+"""
+
 from tx_engine import Script
 
-# Utility scripts
 from src.zkscript.util.utility_scripts import nums_to_script, pick, roll
 
 
 class EllipticCurveFq:
-    """Elliptic curve arithmetic over Fq."""
+    """Construct Bitcoin scripts that perform elliptic curve arithmetic in E(F_q).
+
+    Attributes:
+        MODULUS: The characteristic of the field F_q.
+        CURVE_A: The `a` coefficient in the Short-Weierstrass equation of the curve (an element in F_q).
+    """
 
     def __init__(self, q: int, curve_a: int):
-        # Characteristic of the field over which the curve is defined
+        """Initialise the elliptic curve group E(F_q).
+
+        Args:
+            q: The characteristic of the field F_q.
+            curve_a: The `a` coefficient in the Short-Weierstrass equation of the curve (an element in F_q).
+        """
         self.MODULUS = q
-        # A coefficient of the curve over which we are performing the operations
         self.CURVE_A = curve_a
 
     def point_addition(
         self, take_modulo: bool, check_constant: bool | None = None, clean_constant: bool | None = None
     ) -> Script:
-        """Sum two points that we know are not equal, nor the inverse of one another.
+        """Point addition in E(F_q) for points that are not equal, nor their inverse, not the point at infinity.
 
-        NOTE: When using this function, we need to be sure that P != Q.
-        If P = Q, any lambda will pass the validity check, but the point computed is not necessarily going to be 2P.
+        Stack input:
+            - stack:    [q, ..., lambda, P := (xP, yP), Q := (xQ, yQ)], `P` and `Q` are points on E(F_q)
+            - altstack: []
 
-        Input Parameters:
-            - Stack: q .. <lambda> P Q
-            - Altstack: []
-        Output:
-            - P + Q
-        Assumption on parameters:
-            - P and Q are points on E(F_q), passed as couple of integers (minimally encoded, little endian)
-            - lambda is the gradient of the line through P and Q, passed as an integers (minimally encoded, little
-            endian)
-            - P != Q
-            - P != -Q
-        If take_modulo = True, the coordinates of P + Q are in F_q
+        Stack output:
+            - stack:    [q, ..., P + Q]
+            - altstack: []
 
+        Args:
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
+
+        Returns:
+            Script to add two points on E(F_q).
+
+        Preconditions:
+            - P != Q (otherwise any `lambda` will pass the validity check, but the point returned is not necessarily
+            2P).
+            - P != -Q.
+            - P and Q are not the point at infinity.
+            - `lambda` is the gradient of the line through `P` and `Q`.
         """
         if check_constant:
             out = (
@@ -103,16 +122,26 @@ class EllipticCurveFq:
     def point_doubling(
         self, take_modulo: bool, check_constant: bool | None = None, clean_constant: bool | None = None
     ) -> Script:
-        """Double a point.
+        """Point doubling in E(F_q).
 
-        Input Parameters:
-            - Stack: q .. <lambda> P
-        Output:
-            - 2P
-        Assumption on parameters:
-            - P is a point on E(F_q), passed as couple of integers (minimally encoded, little endian)
-            - lambda is the gradient of the line tangent at P, passed as an integers (minimally encoded, little endian)
-        If take_modulo = True, the coordinates of 2P are in F_q
+        Stack input:
+            - stack:    [q, ..., lambda, P := (xP, yP)], `P` is a point on E(F_q)
+            - altstack: []
+
+        Stack output:
+            - stack:    [q, ..., 2P]
+            - altstack: []
+
+        Args:
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
+
+        Returns:
+            Script to double a point on E(F_q).
+
+        Preconditions:
+            - `lambda` is the gradient of the line tangent at `P`.
         """
         if check_constant:
             out = (
@@ -185,25 +214,33 @@ class EllipticCurveFq:
     def point_addition_with_unknown_points(
         self, take_modulo: bool, check_constant: bool | None = None, clean_constant: bool | None = None
     ) -> Script:
-        """Sum two points which we do not know whether they are equal, different, or the inverse of one another.
+        """Point addition in E(F_q) for points that may be equal, or their inverse, or the point at infinity.
 
-        Input Parameters:
-            - Stack: q .. <lambda> P Q
-            - Altstack: []
-        Output:
-            - P + Q
-        Assumption on parameters:
-            - P and Q are points on E(F_q), passed as couple of integers (minimally encoded, little endian), with
-            coordinates in F_q
-            - If P != -Q, then lambda is the gradient of the line through P and Q, passed as an integers (minimally
-            encoded, little endian)
-            - If P = -Q or P is the point at infinity, or Q is the point at infinity, then do not put lambda
+        Stack input:
+            - stack:    [q, ..., lambda, P := (xP, yP), Q := (xQ, yQ)], `P` and `Q` are points on E(F_q), `lambda` is an
+                optional integer
+            - altstack: []
 
-        REMARKS:
-            - If take_modulo = True, the coordinates of P + Q are in F_q
-            - If P = -Q, then we return 0x00 0x00, i.e., we encode the point at infinity as (0x00,0x00) (notice that
-            these are data payloads, they are not numbers - points are assumed to be passed as numbers, which means that
-            (0,0) would have to be passed as OP_0 OP_0)
+        Stack output:
+            - stack:    [q, ..., P + Q]
+            - altstack: []
+
+        Args:
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
+
+        Returns:
+            Script to add two points on E(F_q). If P = -Q, the point at infinity (0x00, 0x00) is returned.
+
+        Preconditions:
+            - If P != -Q, then `lambda` is the gradient of the line through `P` and `Q`.
+            - If P = -Q, or `P` is the point at infinity, or `Q` is the point at infinity, then `lambda` should not
+            be on the stack.
+
+        Notes:
+            The point at infinity (0x00, 0x00) is a data payload, not a couple of integers. Points are assumed to be
+            passed as a couple of integers. E.g. (0, 0) would have to be passed as OP_0 OP_0.
         """
         if check_constant:
             out = (

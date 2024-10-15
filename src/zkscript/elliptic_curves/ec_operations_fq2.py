@@ -1,17 +1,32 @@
+"""ec_operations_fq2 module.
+
+This module enables constructing Bitcoin scripts that perform elliptic curve arithmetic in E(F_q^2).
+"""
+
 from tx_engine import Script
 
 from src.zkscript.util.utility_scripts import nums_to_script, roll
 
 
 class EllipticCurveFq2:
-    """Elliptic curve arithmetic over Fq2."""
+    """Construct Bitcoin scripts that perform elliptic curve arithmetic in E(F_q^2).
+
+    Attributes:
+        MODULUS: The characteristic of the field F_q.
+        CURVE_A: The `a` coefficient in the Short-Weierstrass equation of the curve (an element in F_q^2).
+        FQ2: The script implementation of the field F_q^2.
+    """
 
     def __init__(self, q: int, curve_a: list[int], fq2):
-        # Characteristic of the field over which the curve is defined
+        """Initialise the elliptic curve group E(F_q^2).
+
+        Args:
+            q: The characteristic of the field F_q.
+            curve_a: The `a` coefficient in the Short-Weierstrass equation of the curve (an element in F_q^2).
+            fq2: The script implementation for the field F_q^2.
+        """
         self.MODULUS = q
-        # A coefficient of the curve over which we carry out the operations, as a list of integers
         self.CURVE_A = curve_a
-        # Fq2 implementation in script
         self.FQ2 = fq2
 
     def point_addition(
@@ -23,32 +38,35 @@ class EllipticCurveFq2:
         position_p: int = 7,
         position_q: int = 3,
     ) -> Script:
-        """Point addition.
+        """Point addition in E(F_q^2) for points that are not equal, nor their inverse, not the point at infinity.
 
-        Input Parameters:
-            - Stack: q .. <lambda> .. P .. Q ..
-            - Altstack: []
-        Output:
-            - P + Q
-        Assumption on parameters:
-            - P and Q are points on E(F_q^2), passed as couple of elements of Fq2
-            - lambda is the gradient of the line through P and Q, passed as an element in Fq2
-            - P != Q --> It is very important that this assumption is satisfied, otherwise any lambda will pass the test
-            if P == Q
-            - P != -Q --> It is very important that this assumption is satisfied, otherwise lambda = 0 will pass the
-            test
-            - P and Q are not the point at infinity --> This function is not able to handle such case
-            - position_lambda, position_p and position_q denote the positions in the stack (top of stack is position 1)
-            of the first element of lambda, P, and Q respectively
-        Assumption on arguments:
-            - position_lambda, position_p, position_q > 0
-            - position_lambda > position_p + 1, position_p > position_q + 3
+        Stack input:
+            - stack:    [q, ..., lambda := (l0, l1), ..., P := (x0P, x1P, y0P, y1P), ..., Q := (x0Q, x1Q, y0Q, y1Q),...]
+                `P` and `Q` are points on E(F_q^2), `lambda` is an element in F_q^2
+            - altstack: []
 
-        If take_modulo = True, the coordinates of P + Q are in Fq2.
+        Stack output:
+            - stack:    [q, ..., P + Q]
+            - altstack: []
 
-        By default position_lambda = 9, position_p = 7, positon_Q = 3, which means we assume the stack looks as follows:
-        .. <lambda> P Q
-        namely, we assume the stack has been prepared in advance.
+        Args:
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
+            position_lambda (int): The position of `lambda` in the stack. Defaults to 9.
+            position_p (int): The position of `p` in the stack. Defaults to 7.
+            position_q (int): The position of `q` in the stack. Defaults to 3.
+
+        Returns:
+            Script to add two points on E(F_q^2).
+
+        Preconditions:
+            - P != Q (otherwise any `lambda` will pass the validity check).
+            - P != -Q (otherwise lambda = 0 will pass the validity check).
+            - P and Q are not the point at infinity.
+            - `lambda` is the gradient of the line through `P` and `Q`.
+            - `position_lambda`, `position_p`, and `position_q` > 0.
+            - position_lambda > position_p + 1, and position_p > position_q + 3.
         """
         assert position_lambda > 0, f"Position lambda {position_lambda} must be bigger than 0"
         assert position_p > 0, f"Position P {position_p} must be bigger than 0"
@@ -157,31 +175,33 @@ class EllipticCurveFq2:
         position_lambda: int = 5,
         position_p: int = 3,
     ) -> Script:
-        """Point doubling.
+        """Point doubling in E(F_q^2).
 
-        Input Parameters:
-            - Stack: q .. <lambda> .. P ..
-            - Altstack: []
-        Output:
-            - 2P
-        Assumption on parameters:
-            - P is a point on E(F_q^2), passed as an element in Fq2
-            - lambda is the gradient of the line tangent at P, passed as an element in Fq2
-            - P is not the point at infinity --> This function is not able to handle such case
-            - position_lambda, position_p denote the positions in the stack (top of stack is position 0)
-            of the first element of lambda, P
-        Assumption on variables:
-            - a is the a coefficient in the Short-Weierstrass equation of the curve (an element in Fq2)
-        Assumption on arguments:
-            - position_lambda > 0
-            - position_p > 0
-            - position_lambda > position_p + 1
+        Stack input:
+            - stack:    [q, ..., lambda := (l0, l1), ..., P := (x0P, x1P, y0P, y1P), ...], `P` is a point on E(F_q^2),
+                `lambda` is an element in F_q^2
+            - altstack: []
 
-        If take_modulo = True, the coordinates of 2P are in F_q
+        Stack output:
+            - stack:    [q, ..., 2P]
+            - altstack: []
 
-        By default, position_lambda = 5 and position_p = 3, which means we assume the stack looks as follows:
-        .. <lambda> P
-        namely, we assume the stack has been prepared in advance.
+        Args:
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
+            position_lambda (int): The position of `lambda` in the stack. Defaults to 5.
+            position_p (int): The position of `p` in the stack. Defaults to 3.
+
+        Returns:
+            Script to double a point on E(F_q^2).
+
+        Preconditions:
+            - `P` is not the point at infinity.
+            - `lambda` is the gradient of the line tangent at `P`.
+            - position_lambda > 0.
+            - position_p > 0.
+            - position_lambda > position_p + 1.
         """
         assert position_lambda > 0, f"Position lambda {position_lambda} must be bigger than 0"
         assert position_p > 0, f"Position Q {position_p} must be bigger than 0"
@@ -281,18 +301,31 @@ class EllipticCurveFq2:
         clean_constant: bool | None = None,
         is_constant_reused: bool | None = None,
     ) -> Script:
-        """Point negation.
+        """Point negation in E(F_q^2).
 
-        Input Parameters:
-            - Stack: q .. <lambda> P
-            - Altstack: []
-        Output:
-            - -P
-        Assumption on parameters:
-            - P is a point on E(F_q^2), passed as an element in Fq2
-        If take_modulo = True, the coordinates of -P are in F_q
+        Stack input:
+            - stack:    [q, ..., P := (x0P, x1P, y0P, y1P)], `P` is a point on E(F_q^2)
+            - altstack: []
 
-        NOTE: The constant cannot be cleaned from inside this function
+        Stack output:
+            - stack:    [q, ..., -P]
+            - altstack: []
+
+        Args:
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
+            is_constant_reused (bool | None, optional): If `True`, at the end of the execution, q is left as the ???
+                element at the top of the stack.
+
+        Returns:
+            Script to negate a point on E(F_q^2).
+
+        Preconditions:
+            - `P` is not the point at infinity.
+
+        Notes:
+            The constant `q` cannot be cleaned in this function.
         """
         assert (not clean_constant) or (
             clean_constant is None

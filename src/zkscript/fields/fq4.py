@@ -28,16 +28,22 @@ class Fq4:
     the non-residue over F_q^2, and the arithmetic operations `+` and `*` are derived from the operations in F_q^2.
 
     The non-residue over F_q^2 is specified by defining the method self.BASE_FIELD.mul_by_non_residue.
+
+    Attributes:
+        MODULUS: The characteristic of the field F_q.
+        BASE_FIELD: The script implementation of the field F_q^2.
+        GAMMAS_FROBENIUS: The list of [gamma1,gamma2,...,gamma3] for the Frobenius where gammai = [gammai1],
+            with gammai1 = non_residue_over_fq2.power((q**i-1)//2).
     """
 
     def __init__(self, q: int, base_field, gammas_frobenius: list[list[int]] | None = None):
-        """Initialise the quadratic extension of F_q^2.
+        """Initialise F_q^4, the quadratic extension of F_q^2.
 
         Args:
             q: The characteristic of the field F_q.
             base_field: The script implementation of the field F_q^2.
             gammas_frobenius: The list of [gamma1,gamma2,...,gamma3] for the Frobenius where gammai = [gammai1],
-            with gammai1 = non_residue_over_fq2.power((q**i-1)//2)
+                with gammai1 = non_residue_over_fq2.power((q**i-1)//2).
         """
         self.MODULUS = q
         self.BASE_FIELD = base_field
@@ -54,7 +60,7 @@ class Fq4:
 
         Stack input:
             - stack:    [q, ..., x := (x0, x1, x2, x3), y := (y0, y1, y2, y3)], `x`, `y` are couples of elements of
-            F_q^2
+                F_q^2
             - altstack: []
 
         Stack output:
@@ -62,9 +68,9 @@ class Fq4:
             - altstack: []
 
         Args:
-            take_modulo (bool): If `True`, the result is reduced modulo q.
-            check_constant (bool | None): If `True`, check if q is valid before proceeding.
-            clean_constant (bool | None): If `True`, remove q from the bottom of the stack.
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             is_constant_reused (bool | None, optional): If `True`, at the end of the execution, q is left as the ???
                 element at the top of the stack.
 
@@ -119,7 +125,7 @@ class Fq4:
 
         Stack input:
             - stack:    [q, ..., x := (x0, x1, x2, x3), lambda], `x` is a couple of elements of F_q^2, `lambda` is an
-            element of F_q
+                element of F_q
             - altstack: []
 
         Stack output:
@@ -127,9 +133,9 @@ class Fq4:
             - altstack: []
 
         Args:
-            take_modulo (bool): If `True`, the result is reduced modulo q.
-            check_constant (bool | None): If `True`, check if q is valid before proceeding.
-            clean_constant (bool | None): If `True`, remove q from the bottom of the stack.
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             is_constant_reused (bool | None, optional): If `True`, at the end of the execution, q is left as the ???
                 element at the top of the stack.
 
@@ -183,7 +189,7 @@ class Fq4:
 
         Stack input:
             - stack:    [q, ..., x := (x0, x1, x2, x3), lambda := (l0, l1)], `x` is a couple of elements of F_q^2,
-            `lambda` is an element of F_q^2
+                `lambda` is an element of F_q^2
             - altstack: []
 
         Stack output:
@@ -191,9 +197,9 @@ class Fq4:
             - altstack: []
 
         Args:
-            take_modulo (bool): If `True`, the result is reduced modulo q.
-            check_constant (bool | None): If `True`, check if q is valid before proceeding.
-            clean_constant (bool | None): If `True`, remove q from the bottom of the stack.
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             is_constant_reused (bool | None, optional): If `True`, at the end of the execution, q is left as the ???
                 element at the top of the stack.
 
@@ -252,7 +258,7 @@ class Fq4:
 
         Stack input:
             - stack:    [q, ..., x := (x0, x1, x2, x3), y := (y0, y1, y2, y3)], `x`, `y` are couples of elements of
-            F_q^2
+                F_q^2
             - altstack: []
 
         Stack output:
@@ -260,9 +266,9 @@ class Fq4:
             - altstack: []
 
         Args:
-            take_modulo (bool): If `True`, the result is reduced modulo q.
-            check_constant (bool | None): If `True`, check if q is valid before proceeding.
-            clean_constant (bool | None): If `True`, remove q from the bottom of the stack.
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             is_constant_reused (bool | None, optional): If `True`, at the end of the execution, q is left as the ???
                 element at the top of the stack.
 
@@ -336,9 +342,9 @@ class Fq4:
             - altstack: []
 
         Args:
-            take_modulo (bool): If `True`, the result is reduced modulo q.
-            check_constant (bool | None): If `True`, check if q is valid before proceeding.
-            clean_constant (bool | None): If `True`, remove q from the bottom of the stack.
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             is_constant_reused (bool | None, optional): If `True`, at the end of the execution, q is left as the ???
                 element at the top of the stack.
 
@@ -416,7 +422,7 @@ class Fq4:
 
         Stack input:
             - stack:    [q, ..., x := (x0, x1, x2, x3), y := (y0, y1, y2, y3), z := (z0, z1, z2, z3)], `x`, `y`, `z` are
-            couples of elements of F_q^2
+                couples of elements of F_q^2
             - altstack: []
 
         Stack output:
@@ -424,9 +430,9 @@ class Fq4:
             - altstack: []
 
         Args:
-            take_modulo (bool): If `True`, the result is reduced modulo q.
-            check_constant (bool | None): If `True`, check if q is valid before proceeding.
-            clean_constant (bool | None): If `True`, remove q from the bottom of the stack.
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             is_constant_reused (bool | None, optional): If `True`, at the end of the execution, q is left as the ???
                 element at the top of the stack.
 
@@ -492,9 +498,9 @@ class Fq4:
 
         Args:
             n (int): Frobenius odd power.
-            take_modulo (bool): If `True`, the result is reduced modulo q.
-            check_constant (bool | None): If `True`, check if q is valid before proceeding.
-            clean_constant (bool | None): If `True`, remove q from the bottom of the stack.
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             is_constant_reused (bool | None, optional): If `True`, at the end of the execution, q is left as the ???
                 element at the top of the stack.
 
@@ -561,9 +567,9 @@ class Fq4:
 
         Args:
             n (int): Frobenius even power.
-            take_modulo (bool): If `True`, the result is reduced modulo q.
-            check_constant (bool | None): If `True`, check if q is valid before proceeding.
-            clean_constant (bool | None): If `True`, remove q from the bottom of the stack.
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             is_constant_reused (bool | None, optional): If `True`, at the end of the execution, q is left as the ???
                 element at the top of the stack.
 
@@ -642,9 +648,9 @@ class Fq4:
             - altstack: []
 
         Args:
-            take_modulo (bool): If `True`, the result is reduced modulo q.
-            check_constant (bool | None): If `True`, check if q is valid before proceeding.
-            clean_constant (bool | None): If `True`, remove q from the bottom of the stack.
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             is_constant_reused (bool | None, optional): If `True`, at the end of the execution, q is left as the ???
                 element at the top of the stack.
 
@@ -706,9 +712,9 @@ class Fq4:
             - altstack: []
 
         Args:
-            take_modulo (bool): If `True`, the result is reduced modulo q.
-            check_constant (bool | None): If `True`, check if q is valid before proceeding.
-            clean_constant (bool | None): If `True`, remove q from the bottom of the stack.
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             is_constant_reused (bool | None, optional): If `True`, at the end of the execution, q is left as the second
                 element at the top of the stack.
 
