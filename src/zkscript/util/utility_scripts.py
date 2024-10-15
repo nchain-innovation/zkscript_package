@@ -140,76 +140,87 @@ def nums_to_script(nums: list[int]) -> Script:
 
 
 def mod(
-    is_from_alt: bool = True, is_mod_on_top: bool = True, is_positive: bool = True, is_constant_reused: bool = True
+    stack_preparation: str = "OP_FROMALTSTACK OP_ROT", is_mod_on_top: bool = True, is_positive: bool = True, is_constant_reused: bool = True
 ) -> Script:
     """Perform modulo operation in Bitcoin Script.
 
     This function generates a Bitcoin Script that performs a modulo operation. The behavior of the
-    operation can be customized using the provided parameters.
+    operation can be customised using the provided parameters.
 
     Args:
-        is_from_alt (bool, optional): If True, a value is loaded from the altstack and the stack is rotated.
-            Defaults to True.
-        is_mod_on_top (bool, optional): If True, the modulo constant is the one at the top of the stack after the
-            stack manipulation operation, otherwise it is the second one from the top. Defaults to True.
-        is_positive (bool, optional): If True, adds operations to ensure the modulo value is positive.
-            Defaults to True.
-        is_constant_reused (bool, optional): If True, modifies the script to leave the modulo constant in the stack.
-            Defaults to True.
+        stack_preparation (`str`, optional): Prepare the stack before performing the modulo operation. Defaults to
+        `OP_FROMALTSTACK OP_ROT`.
+        is_mod_on_top (`bool`, optional): If `True`, the modulo constant is the one at the top of the stack after the
+            stack preparation, else the modulo constant is the second one from the top of the stack. Defaults to `True`.
+        is_positive (`bool`, optional): If `True`, adds operations to ensure the modulo value is positive.
+            Defaults to `True`.
+        is_constant_reused (`bool`, optional): If `True`, modifies the script to leave the modulo constant on the stack.
+            Defaults to `True`.
 
     Returns:
-        Script: A Bitcoin Script that performs the modulo operation based on the specified parameters.
+        A Bitcoin Script that performs the modulo operation based on the specified parameters.
 
     Examples:
-        -   The simpler situation is when is_positive = False, is_from_alt = False, and is_constant_reused = False. In
-            this situation, the script only performs a modulo operation.
-                Let stack_in = [-5, 3], and is_mod_on_top = True, then stack_out = [-5%3 = -2].
-                Let stack_in = [2, 7], and is_mod_on_top = False, then stack_out = [7%2 = 1].
-        -   If we have is_positive = False, is_from_alt = False, and is_constant_resued = True, after the modulo
-            operation the modulo constant is still present in the stack.
-                Let stack_in = [-5, 3], and is_mod_on_top = True, then stack_out = [3, -2]
-                Let stack_in = [2, 7], and is_mod_on_top = False, then stack_out = [2, 1].
-        -   If we have is_positive = True, is_from_alt = False, after taking the modulo the first time we pick a
-            positive representative for the modulo.
-                Let stack_in = [-5, 3], and is_mod_on_top = True, then stack_out = [(3 if is_constant_reused = True), 2].
-                Let stack_in = [2, 7], and is_mod_on_top = False, then stack_out = [(2 if is constant reused = True), 1].
-        -   If is_from_alt = True, before starting the modulo operation, a new element is loaded from the alt stack.
-            The two opcodes added to the script if is_from_alt = True, modify the stack as follows:
-                Let stack_in = [1, 2], alt_stack_in = [3], after OP_FROMALTSTACK OP_ROT, we get:
-                stack_out = [2, 3, 1], alt_stack_out = [].
+        - The simpler situation is when `is_positive = False`, `stack_preparation = False`, and `is_constant_reused = False`.
+          In this situation, the script only performs a modulo operation.
+            Let `stack_in = [-5, 3]`, and `is_mod_on_top = True`, then `stack_out = [-5%3 = -2]`.
+            Let `stack_in = [2, 7]`, and `is_mod_on_top = False`, then `stack_out = [7%2 = 1]`.
+        - If we have `is_positive = False`, `stack_preparation = False`, and `is_constant_resued = True`, after the modulo
+          operation the modulo constant is still present in the stack.
+            Let `stack_in = [-5, 3]`, and `is_mod_on_top = True`, then `stack_out = [3, -2]`.
+            Let `stack_in = [2, 7]`, and `is_mod_on_top = False`, then `stack_out = [2, 1]`.
+        - If we have `is_positive = True`, `stack_preparation = False`, after taking the modulo the first time we pick a
+          positive representative for the modulo.
+            Let `stack_in = [-5, 3]`, and `is_mod_on_top = True`, then
+            `stack_out = [(3 if is_constant_reused = True), 2]`.
+            Let `stack_in = [2, 7]`, and `is_mod_on_top = False`, then 
+            `stack_out = [(2 if is constant reused = True), 1]`.
+        - If `stack_preparation = True`, before starting the modulo operation, a new element is loaded from the alt stack.
+          The two opcodes added to the script if `stack_preparation = True`, modify the stack as follows:
+            Let `stack_in = [1, 2], alt_stack_in = [3]`, after `OP_FROMALTSTACK OP_ROT`, we get:
+            `stack_out = [2, 3, 1], alt_stack_out = []`.
 
     """
-    out = Script()
-    if is_from_alt:
-        out += Script([OP_FROMALTSTACK, OP_ROT])
-    pick_mod_opcode = OP_TUCK if is_mod_on_top else OP_OVER
-    reuse_mod_opcode = OP_OVER if is_constant_reused else OP_SWAP
+
+    out = Script.parse_string(stack_preparation)
+
     if is_positive:
-        out += Script([pick_mod_opcode, OP_MOD, OP_OVER, OP_ADD, reuse_mod_opcode, OP_MOD])
-    elif is_constant_reused:
-        out += Script([pick_mod_opcode, OP_MOD])
-    elif is_mod_on_top:
-        out += Script([OP_MOD])
-    else:
-        out += Script([OP_SWAP, OP_MOD])
+        if is_constant_reused:
+            if is_mod_on_top:
+                out += Script([OP_TUCK, OP_MOD, OP_OVER, OP_ADD, OP_OVER, OP_MOD])
+            else:
+                out += Script([OP_OVER, OP_MOD, OP_OVER, OP_ADD, OP_OVER, OP_MOD])
+        else:  # noqa: PLR5501
+            if is_mod_on_top:
+                out += Script([OP_TUCK, OP_MOD, OP_OVER, OP_ADD, OP_SWAP, OP_MOD])
+            else:
+                out += Script([OP_OVER, OP_MOD, OP_OVER, OP_ADD, OP_SWAP, OP_MOD])
+    else:  # noqa: PLR5501
+        if is_constant_reused:
+            if is_mod_on_top:
+                out += Script([OP_TUCK, OP_MOD])
+            else:
+                out += Script([OP_OVER, OP_MOD])
+        else:  # noqa: PLR5501
+            if is_mod_on_top:
+                out += Script([OP_MOD])
+            else:
+                out += Script([OP_SWAP, OP_MOD])
+
     return out
 
 
-def verify_constant(n: int, check_constant: bool) -> Script:
+def verify_bottom_constant(n: int) -> Script:
     """Verify a constant against a provided value in Bitcoin Script.
 
     This function generates a Bitcoin Script that checks if a specific constant value is equal to the value present at
     the top of the stack. If the check passes, the script continues; otherwise, it terminates the transaction.
 
     Args:
-        n (int): The constant value to check against.
-        check_constant (bool): If True, performs the constant verification; otherwise, no check is performed.
+        n (`int`): The constant value to check against.
 
     Returns:
-        Script: A Bitcoin Script that verifies the constant against the value at the top of the stack.
-                Returns an empty script if no check is performed.
+        A Bitcoin Script that verifies the constant against the value at the bottom of the stack.
 
     """
-    if check_constant:
-        return Script([OP_DEPTH, OP_1SUB, OP_PICK]) + nums_to_script([n]) + Script([OP_EQUALVERIFY])
-    return Script()
+    return Script([OP_DEPTH, OP_1SUB, OP_PICK]) + nums_to_script([n]) + Script([OP_EQUALVERIFY])
