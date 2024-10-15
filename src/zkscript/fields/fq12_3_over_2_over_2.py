@@ -1,6 +1,6 @@
 from tx_engine import Script
 
-from src.zkscript.util.utility_scripts import mod, pick, roll, verify_constant
+from src.zkscript.util.utility_scripts import mod, pick, roll, verify_bottom_constant
 
 
 class Fq12Cubic:
@@ -42,7 +42,7 @@ class Fq12Cubic:
         # Fq4 implementation
         fq4 = self.FQ4
 
-        out = verify_constant(self.MODULUS, check_constant=check_constant)
+        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
         # Computation of third component ---------------------------------------------------------
 
@@ -150,7 +150,7 @@ class Fq12Cubic:
         # Fq2 implementation
         fq4 = self.FQ4
 
-        out = verify_constant(self.MODULUS, check_constant=check_constant)
+        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
         # Computation third component ------------------------------------------------------------
 

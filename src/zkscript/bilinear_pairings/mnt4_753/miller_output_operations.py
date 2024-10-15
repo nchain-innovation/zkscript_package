@@ -6,7 +6,7 @@ from src.zkscript.bilinear_pairings.mnt4_753.fields import fq4_script
 
 # Fq2 Script implementation
 from src.zkscript.fields.fq4 import Fq4 as Fq4ScriptModel
-from src.zkscript.util.utility_scripts import mod, pick, roll, verify_constant
+from src.zkscript.util.utility_scripts import mod, pick, roll, verify_bottom_constant
 
 
 class MillerOutputOperations(Fq4ScriptModel):
@@ -36,7 +36,7 @@ class MillerOutputOperations(Fq4ScriptModel):
             - If take_modulo is set to True, then the coordinates of the result are in Z_q; otherwise, the coordinates
             are not taken modulo q.
         """
-        out = verify_constant(self.MODULUS, check_constant=check_constant)
+        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
         # Computation of fourth component --------------------------------------------------------
 
@@ -102,7 +102,7 @@ class MillerOutputOperations(Fq4ScriptModel):
                 fetch_q = Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
 
             # Batched modulo operations: pull from altstack, rotate, mod out, repeat
-            batched_modulo = mod(is_from_alt=False)
+            batched_modulo = mod(stack_preparation="")
             batched_modulo += mod()
             batched_modulo += mod()
             batched_modulo += mod(is_constant_reused=is_constant_reused)
@@ -136,7 +136,7 @@ class MillerOutputOperations(Fq4ScriptModel):
         # Fq2 implementation
         fq2 = self.BASE_FIELD
 
-        out = verify_constant(self.MODULUS, check_constant=check_constant)
+        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
         # The stack at the beginning is: a1 b1 a2 b2 with:
         # 	- a1,b1,a2 in Fq2
@@ -228,7 +228,7 @@ class MillerOutputOperations(Fq4ScriptModel):
         # Fq2 implementation
         fq2 = self.BASE_FIELD
 
-        out = verify_constant(self.MODULUS, check_constant=check_constant)
+        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
         # The stack at the beginning is: a1 b1 a2 b2 with:
         # 	- a1,a2,b2 in Fq2

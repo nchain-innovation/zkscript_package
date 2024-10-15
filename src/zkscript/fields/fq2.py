@@ -1,6 +1,6 @@
 from tx_engine import Script
 
-from src.zkscript.util.utility_scripts import mod, nums_to_script, verify_constant
+from src.zkscript.util.utility_scripts import mod, nums_to_script, verify_bottom_constant
 
 
 def fq2_for_towering(mul_by_non_residue):
@@ -73,7 +73,7 @@ class Fq2:
                 x_0 x_1 y_0 y_1 [add] --> [(x_0 + y_0) % q] [(x_1 + y_1) % q]	where X = x_0 + x_1 u, Y = y_0 + y_1 u
 
         """
-        out = verify_constant(self.MODULUS, check_constant=check_constant)
+        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
         # After this, base stack is: x_0 y_0, altstack = (x_1 + y_1)
         sumX1Y1 = Script.parse_string("OP_ROT OP_ADD")  # Compute (x_1 + y_1)
@@ -95,7 +95,7 @@ class Fq2:
                 fetch_q = Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
 
             # After this, the stack is: q [(x_0 + y_0) % q], altstack = (x_1 + y_1)
-            batched_modulo += mod(is_from_alt=False)
+            batched_modulo += mod(stack_preparation="")
             batched_modulo += mod(is_constant_reused=is_constant_reused)
 
             out += fetch_q + batched_modulo
@@ -132,7 +132,7 @@ class Fq2:
                 x_0 x_1 y_0 y_1 [sub] --> [(x_0 - y_0) % q] [(x_1 - y_1) % q]	where X = x_0 + x_1 u, Y = y_0 + y_1 u
 
         """
-        out = verify_constant(self.MODULUS, check_constant=check_constant)
+        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
         # After this, base stack is: x_0 y_0, altstack = [(x_1 - y_1)]
         subX1Y1 = Script.parse_string("OP_ROT OP_SWAP OP_SUB")  # Compute (x_1 - y_1)
@@ -154,7 +154,7 @@ class Fq2:
                 fetch_q = Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
 
             # After this, the stack is: q [(x_0 - y_0) % q], altstack = (x_1 - y_1)
-            batched_modulo += mod(is_from_alt=False)
+            batched_modulo += mod(stack_preparation="")
             batched_modulo += mod(is_constant_reused=is_constant_reused)
             out += fetch_q + batched_modulo
         else:
@@ -191,7 +191,7 @@ class Fq2:
         REMARK: OP_0 OP_NEGATE returns OP_0
 
         """
-        out = verify_constant(self.MODULUS, check_constant=check_constant)
+        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
         flipX1 = Script.parse_string("OP_NEGATE")  # Negate x_1
         flipX1 += Script.parse_string("OP_TOALTSTACK")
@@ -211,7 +211,7 @@ class Fq2:
                 fetch_q = Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
 
             # After this, the stack is: q [-x0 % q], altstack = (x_1 + y_1)
-            batched_modulo += mod(is_from_alt=False)
+            batched_modulo += mod(stack_preparation="")
             batched_modulo += mod(is_constant_reused=is_constant_reused)
 
             out += fetch_q + batched_modulo
@@ -249,7 +249,7 @@ class Fq2:
                 x_0 x_1 lambda [scalarMul] --> [(lambda * x_0) % q] [(lambda * x_1) % q]	where X = x_0 + x_1 u
 
         """
-        out = verify_constant(self.MODULUS, check_constant=check_constant)
+        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
         # After this, the base stack is x_0 lambda, altstack = [(x_1 * lambda)]
         X1Lambda = Script.parse_string("OP_TUCK OP_MUL")  # Compute x_0 * lambda and put it on top of the stack
@@ -271,7 +271,7 @@ class Fq2:
                 fetch_q = Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
 
             # After this, the stack is: q [(x_0 * lambda) % q], altstack = (x_1 * lambda)
-            batched_modulo += mod(is_from_alt=False)
+            batched_modulo += mod(stack_preparation="")
             batched_modulo += mod(is_constant_reused=is_constant_reused)
 
             out += fetch_q + batched_modulo
@@ -310,7 +310,7 @@ class Fq2:
                 where X = x_0 + x_1 u, Y = y_0 + y_1 u
 
         """
-        out = verify_constant(self.MODULUS, check_constant=check_constant)
+        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
         # After this, the base stack is: x_0 x_1 y_0 y_1 [(x_0 * y_0) - (x_1 * y_1)]
         firstComponent = Script.parse_string("OP_2OVER OP_2OVER")  # Duplicate X Y
@@ -346,7 +346,7 @@ class Fq2:
             else:
                 fetch_q = Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
 
-            batched_modulo += mod(is_from_alt=False)
+            batched_modulo += mod(stack_preparation="")
             batched_modulo += mod(is_constant_reused=is_constant_reused)
 
             out += fetch_q + batched_modulo
@@ -383,7 +383,7 @@ class Fq2:
                 where X = x_0 + x_1 u, Y = y_0 + y_1 u
 
         """
-        out = verify_constant(self.MODULUS, check_constant=check_constant)
+        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
         if self.NON_RESIDUE == -1:
             # After this, the stack is x0 x1 (x0^2 - x1^2)
@@ -401,12 +401,12 @@ class Fq2:
                     fetch_q = Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
 
                 # After this, the stack is: x0 x1 q [(x0^2 - x1^2) % q]
-                out += fetch_q + mod(is_from_alt=False)
+                out += fetch_q + mod(stack_preparation="")
                 # Compute (x_0^2 - x_1^2) % q
                 # After this, the stack is: [(x0^2 - x1^2) % q] (2x0x1) q
                 out += Script.parse_string("OP_2SWAP OP_MUL OP_2 OP_MUL OP_ROT")
 
-                out += mod(is_from_alt=False, is_constant_reused=is_constant_reused)
+                out += mod(stack_preparation="", is_constant_reused=is_constant_reused)
 
             else:
                 out += Script.parse_string(
@@ -436,7 +436,7 @@ class Fq2:
                     fetch_q = Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
 
                 # After this, the stack is: q [firstComponent % q], altstack = secondComponent
-                batched_modulo += mod(is_from_alt=False)
+                batched_modulo += mod(stack_preparation="")
                 batched_modulo += mod(is_constant_reused=is_constant_reused)
 
                 out += fetch_q + batched_modulo
@@ -476,7 +476,7 @@ class Fq2:
                 where X = x_0 + x_1 u, Y = y_0 + y_1 u, Z = z_0 + z_1 u
 
         """
-        out = verify_constant(self.MODULUS, check_constant=check_constant)
+        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
         # After this, the stack is: x0 x1 y0 z0, altstack = [y1 + z1]
         out += Script.parse_string("OP_ROT OP_ADD OP_TOALTSTACK")
@@ -492,12 +492,12 @@ class Fq2:
                 fetch_q = Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
 
             # After this, the stack is: x1 q [(x0 + y0 + z0) % q]
-            out += fetch_q + mod(is_from_alt=False)
+            out += fetch_q + mod(stack_preparation="")
             # After this, the stack is: [(x0 + y0 + z0) % q] q x1
             out += Script.parse_string("OP_SWAP OP_ROT")
             # After this, the stack is: [(x0 + y0 + z0) % q] q (x1+y1+z1)
             out += Script.parse_string("OP_FROMALTSTACK OP_ADD")
-            out += mod(is_from_alt=False, is_mod_on_top=False, is_constant_reused=is_constant_reused)
+            out += mod(stack_preparation="", is_mod_on_top=False, is_constant_reused=is_constant_reused)
         else:
             out += Script.parse_string("OP_SWAP")
             # After this, the stack is: (x0 + y0 + z0) (x1 + y1 + z1)
@@ -525,7 +525,7 @@ class Fq2:
             - If take_modulo is set to True, then the coordinates of the result are in Z_q; otherwise, the coordinates
             are not taken modulo q.
         """
-        out = verify_constant(self.MODULUS, check_constant=check_constant)
+        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
         # After this, the stack is: x0 -x1
         out += Script.parse_string("OP_NEGATE")
@@ -543,7 +543,7 @@ class Fq2:
 
             # Mod, pull from altstack, rotate, repeat
             batched_modulo = Script()
-            batched_modulo += mod(is_from_alt=False)
+            batched_modulo += mod(stack_preparation="")
             batched_modulo += mod(is_constant_reused=is_constant_reused)
 
             out += fetch_q + batched_modulo
@@ -570,7 +570,7 @@ class Fq2:
             - If take_modulo is set to True, then the coordinates of the result are in Z_q; otherwise, the coordinates
             are not taken modulo q.
         """
-        out = verify_constant(self.MODULUS, check_constant=check_constant)
+        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
         if self.NON_RESIDUE != -1:
             out += nums_to_script([self.NON_RESIDUE]) + Script.parse_string("OP_MUL")
@@ -588,9 +588,9 @@ class Fq2:
                 fetch_q = Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
 
             # After this, the stack is: [x1*NON_RESIDUE % q] x0 q
-            batched_modulo += mod(is_from_alt=False)
+            batched_modulo += mod(stack_preparation="")
             batched_modulo += Script.parse_string("OP_ROT OP_ROT")
-            batched_modulo += mod(is_from_alt=False, is_constant_reused=is_constant_reused)
+            batched_modulo += mod(stack_preparation="", is_constant_reused=is_constant_reused)
 
             out += fetch_q + batched_modulo
         else:
@@ -619,7 +619,7 @@ class Fq2:
             - If take_modulo is set to True, then the coordinates of the result are in Z_q; otherwise, the coordinates
             are not taken modulo q.
         """
-        out = verify_constant(self.MODULUS, check_constant=check_constant)
+        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
         # After this, the stack is: x0 x1, altstack = [x0 + x1]
         out += Script.parse_string("OP_2DUP OP_ADD")  # Compute (x_0 + x_1)
@@ -648,7 +648,7 @@ class Fq2:
                 fetch_q = Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
 
             # After this, the stack is: q [(x0 - x1) % q], altstack = [x0 + x1]
-            batched_modulo += mod(is_from_alt=False)
+            batched_modulo += mod(stack_preparation="")
             # After this, the stack is: [(x0 - x1) % q] (x0 + x1) q
             batched_modulo += mod(is_constant_reused=is_constant_reused)
 

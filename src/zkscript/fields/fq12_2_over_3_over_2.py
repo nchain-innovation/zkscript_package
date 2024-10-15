@@ -1,6 +1,6 @@
 from tx_engine import Script
 
-from src.zkscript.util.utility_scripts import mod, nums_to_script, pick, roll, verify_constant
+from src.zkscript.util.utility_scripts import mod, nums_to_script, pick, roll, verify_bottom_constant
 
 
 class Fq12:
@@ -43,7 +43,7 @@ class Fq12:
         # Fq6 implementation
         fq6 = self.FQ6
 
-        out = verify_constant(self.MODULUS, check_constant=check_constant)
+        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
         # Computation of second component ---------------------------------------------------------
 
@@ -126,7 +126,7 @@ class Fq12:
         # Fq6 implementation
         fq2 = self.FQ2
 
-        out = verify_constant(self.MODULUS, check_constant=check_constant)
+        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
         # Computation of sixth component ---------------------------------------------------------
 
@@ -304,10 +304,10 @@ class Fq12:
                 out += mod()
             for _ in range(5):
                 out += Script.parse_string("OP_FROMALTSTACK OP_2 OP_MUL OP_ROT")
-                out += mod(is_from_alt=False)
+                out += mod(stack_preparation="")
 
             out += Script.parse_string("OP_FROMALTSTACK OP_2 OP_MUL OP_ROT")
-            out += mod(is_from_alt=False, is_constant_reused=is_constant_reused)
+            out += mod(stack_preparation="", is_constant_reused=is_constant_reused)
         else:
             out += Script.parse_string(" ".join(["OP_FROMALTSTACK"] * 4))
             out += Script.parse_string(
@@ -342,7 +342,7 @@ class Fq12:
         # Fq6 implementation
         fq6 = self.FQ6
 
-        out = verify_constant(self.MODULUS, check_constant=check_constant)
+        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
         out += fq6.negate(take_modulo=False, check_constant=False, clean_constant=False)
 
@@ -359,7 +359,7 @@ class Fq12:
 
             # Mod out x00
             out += fetch_q
-            out += mod(is_from_alt=False)
+            out += mod(stack_preparation="")
 
             # Batched modulo operations: pull from altstack, rotate, mod out, repeat
             for _ in range(10):
@@ -397,7 +397,7 @@ class Fq12:
         # Gammas
         gammas = self.GAMMAS_FROBENIUS[n % 12 - 1]
 
-        out = verify_constant(self.MODULUS, check_constant=check_constant)
+        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
         # After this, the stack is: b c d Conjugate(a) e f
         a_conjugate = roll(position=11, n_elements=2)  # Bring a on top of the stack
@@ -505,16 +505,16 @@ class Fq12:
         # Gammas
         gammas = self.GAMMAS_FROBENIUS[n % 12 - 1]
 
-        out = verify_constant(self.MODULUS, check_constant=check_constant)
+        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
         # After this, the stack is: b c d a e f
         a = roll(position=11, n_elements=2)  # Bring a on top of the stack
         if take_modulo:
             a += Script.parse_string("OP_SWAP")
             a += Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
-            a += mod(is_from_alt=False)
+            a += mod(stack_preparation="")
             a += Script.parse_string("OP_SWAP OP_ROT")
-            a += mod(is_from_alt=False, is_mod_on_top=False, is_constant_reused=False)
+            a += mod(stack_preparation="", is_mod_on_top=False, is_constant_reused=False)
         a += Script.parse_string("OP_2ROT OP_2ROT")  # Bring e and f on top of the stack
 
         # After this, the stack is: c d a [b * gamma22] e f

@@ -2,7 +2,7 @@ from tx_engine import Script
 
 # Fq2 Script implementation
 from src.zkscript.bilinear_pairings.bls12_381.fields import fq2_script
-from src.zkscript.util.utility_scripts import mod, pick, verify_constant
+from src.zkscript.util.utility_scripts import mod, pick, verify_bottom_constant
 
 
 class LineFunctions:
@@ -41,7 +41,7 @@ class LineFunctions:
         # Fq2 implementation
         fq2 = self.FQ2
 
-        out = verify_constant(self.MODULUS, check_constant=check_constant)
+        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
         # Compute third component -----------------------------------------------------
 

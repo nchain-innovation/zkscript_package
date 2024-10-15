@@ -1,6 +1,6 @@
 from tx_engine import Script
 
-from src.zkscript.util.utility_scripts import mod, nums_to_script, roll, verify_constant
+from src.zkscript.util.utility_scripts import mod, nums_to_script, roll, verify_bottom_constant
 
 
 class EllipticCurveFq2:
@@ -60,7 +60,7 @@ class EllipticCurveFq2:
             position_p - position_q > 3  # noqa: PLR2004
         ), f"Position P {position_lambda} must be bigger than position Q {position_p} plus three"
 
-        out = verify_constant(self.MODULUS, check_constant=check_constant)
+        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
         # Fq2 implementation
         fq2 = self.FQ2
@@ -189,7 +189,7 @@ class EllipticCurveFq2:
         # A coefficient
         curve_a = self.CURVE_A
 
-        out = verify_constant(self.MODULUS, check_constant=check_constant)
+        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
         # P \neq Q, then check that 2 lambda y_P = 3 x_P^2 + a
         # At the end of this part, the stack is: lambda yP xP
@@ -290,7 +290,7 @@ class EllipticCurveFq2:
         # Fq2 implementation
         fq2 = self.FQ2
 
-        out = verify_constant(self.MODULUS, check_constant=check_constant)
+        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
         # Check if P is point at infinity
         out += Script.parse_string("OP_2OVER OP_2OVER")
@@ -306,7 +306,7 @@ class EllipticCurveFq2:
 
             fetch_q = Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
 
-            batched_modulo = mod(is_from_alt=False)
+            batched_modulo = mod(stack_preparation="")
             batched_modulo += mod()
             batched_modulo += mod()
             batched_modulo += mod(is_constant_reused=is_constant_reused)

@@ -1,7 +1,7 @@
 from tx_engine import Script
 
 from src.zkscript.fields.fq4 import Fq4
-from src.zkscript.util.utility_scripts import mod, nums_to_script, pick, verify_constant
+from src.zkscript.util.utility_scripts import mod, nums_to_script, pick, verify_bottom_constant
 
 
 class Fq2Over2ResidueEqualU(Fq4):
@@ -48,7 +48,7 @@ class Fq2Over2ResidueEqualU(Fq4):
         """
 
         # Check the modulo constant
-        out = verify_constant(self.MODULUS, check_constant=check_constant)
+        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
         # Compute the coefficient of uv in (x0 + x1*u + x2*v + x3*uv)^2
         # stack out:    [..., x0, x1, x2, x3]
@@ -114,7 +114,7 @@ class Fq2Over2ResidueEqualU(Fq4):
             else:
                 fetch_q = Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
 
-            batched_modulo += mod(is_from_alt=False)
+            batched_modulo += mod(stack_preparation="")
             batched_modulo += mod()
             batched_modulo += mod()
             batched_modulo += mod(is_constant_reused=is_constant_reused)
@@ -158,7 +158,7 @@ class Fq2Over2ResidueEqualU(Fq4):
         """
 
         # Check the modulo constant
-        out = verify_constant(self.MODULUS, check_constant=check_constant)
+        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
         # Compute the coefficient of uv in (x0 + x1*u + x2*v + x3*uv)*(y0 + y1*u + y2*v + y3*uv)
         # stack out:    [..., x0, x1, x2, x3, y0, y1, y2, y3]
@@ -229,7 +229,7 @@ class Fq2Over2ResidueEqualU(Fq4):
             else:
                 fetch_q = Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
 
-            batched_modulo += mod(is_from_alt=False)
+            batched_modulo += mod(stack_preparation="")
             batched_modulo += mod()
             batched_modulo += mod()
             batched_modulo += mod(is_constant_reused=is_constant_reused)

@@ -6,7 +6,7 @@ from src.zkscript.bilinear_pairings.bls12_381.fields import fq2_script, fq4_scri
 
 # Fq2 Script implementation
 from src.zkscript.fields.fq12_3_over_2_over_2 import Fq12Cubic as Fq12CubicScriptModel
-from src.zkscript.util.utility_scripts import mod, pick, roll, verify_constant
+from src.zkscript.util.utility_scripts import mod, pick, roll, verify_bottom_constant
 
 
 class MillerOutputOperations(Fq12CubicScriptModel):
@@ -41,7 +41,7 @@ class MillerOutputOperations(Fq12CubicScriptModel):
         # Fq2 implementation
         fq2 = self.FQ2
 
-        out = verify_constant(self.MODULUS, check_constant=check_constant)
+        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
         # Computation of fifth component ---------------------------------------------------------
 
@@ -122,7 +122,7 @@ class MillerOutputOperations(Fq12CubicScriptModel):
                 fetch_q = Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
 
             compute_first_component += fetch_q
-            compute_first_component += mod(is_from_alt=False)
+            compute_first_component += mod(stack_preparation="")
             compute_first_component += mod()
         else:
             compute_first_component += Script.parse_string("OP_FROMALTSTACK")
@@ -173,7 +173,7 @@ class MillerOutputOperations(Fq12CubicScriptModel):
         # Fq2 implementation
         fq2 = self.FQ2
 
-        out = verify_constant(self.MODULUS, check_constant=check_constant)
+        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
         # Computation of sixth component --------------------------------------------------------
 
@@ -366,7 +366,7 @@ class MillerOutputOperations(Fq12CubicScriptModel):
         # Fq2 implementation
         fq2 = self.FQ2
 
-        out = verify_constant(self.MODULUS, check_constant=check_constant)
+        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
         # Computation of sixth component --------------------------------------------------------
 
@@ -535,7 +535,7 @@ class MillerOutputOperations(Fq12CubicScriptModel):
         # Fq2 implementation
         fq2 = self.FQ2
 
-        out = verify_constant(self.MODULUS, check_constant=check_constant)
+        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
         # Computation sixth component --------------------------------------------------------
 
@@ -794,7 +794,7 @@ class MillerOutputOperations(Fq12CubicScriptModel):
         # Fq2 implementation
         fq2 = self.FQ2
 
-        out = verify_constant(self.MODULUS, check_constant=check_constant)
+        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
         # Computation sixth component --------------------------------------------------------
 

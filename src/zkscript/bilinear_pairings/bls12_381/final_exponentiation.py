@@ -5,7 +5,7 @@ from tx_engine import Script
 from src.zkscript.bilinear_pairings.bls12_381.fields import fq12_script, fq12cubic_script
 from src.zkscript.bilinear_pairings.bls12_381.parameters import exp_miller_loop
 from src.zkscript.bilinear_pairings.model.cyclotomic_exponentiation import CyclotomicExponentiation
-from src.zkscript.util.utility_scripts import pick, roll, verify_constant
+from src.zkscript.util.utility_scripts import pick, roll, verify_bottom_constant
 
 
 class FinalExponentiation(CyclotomicExponentiation):
@@ -37,7 +37,7 @@ class FinalExponentiation(CyclotomicExponentiation):
         # Fq12 implementation
         fq12 = self.FQ12
 
-        out = verify_constant(self.MODULUS, check_constant=check_constant)
+        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
         # After this, the stack is: Inverse(f_quadratic) f_quadratic
         check_f_inverse = pick(position=23, n_elements=12)  # Bring Inverse(f_quadratic) on top of the stack
@@ -91,7 +91,7 @@ class FinalExponentiation(CyclotomicExponentiation):
         # Fq12 implementation
         fq12 = self.FQ12
 
-        out = verify_constant(self.MODULUS, check_constant=check_constant)
+        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
         # Step 1
         # After this, the stack is g t0

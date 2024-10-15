@@ -1,7 +1,7 @@
 from tx_engine import Script
 
 # Utility scripts
-from src.zkscript.util.utility_scripts import mod, nums_to_script, pick, roll, verify_constant
+from src.zkscript.util.utility_scripts import mod, nums_to_script, pick, roll, verify_bottom_constant
 
 
 class EllipticCurveFq:
@@ -35,7 +35,7 @@ class EllipticCurveFq:
         If take_modulo = True, the coordinates of P + Q are in F_q
 
         """
-        out = verify_constant(self.MODULUS, check_constant=check_constant)
+        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
         # P \neq Q, then check that lambda (x_Q - x_P) = (y_Q - y_P)
         # After this, the stack is: x_P y_P x_Q lambda, altstack = [(lambda *(xP - xQ) - (yP - yQ) == 0)]
@@ -71,9 +71,9 @@ class EllipticCurveFq:
         # After this, the stack is: x_(P+Q) y_(P+Q) q, altstack = [(lambda *(xP - xQ) - (yP - yQ) == 0)]
         out += lambda_different_points + compute_coordinates + fetch_q
 
-        batched_modulo = mod(is_from_alt=False)  # Mod out y
+        batched_modulo = mod(stack_preparation="")  # Mod out y
         batched_modulo += Script.parse_string("OP_TOALTSTACK")
-        batched_modulo += mod(is_from_alt=False)  # Mod out x
+        batched_modulo += mod(stack_preparation="")  # Mod out x
         batched_modulo += Script.parse_string("OP_FROMALTSTACK OP_ROT")
 
         # If needed, mod out
@@ -83,7 +83,7 @@ class EllipticCurveFq:
             out += batched_modulo
 
         check_lambda = Script.parse_string("OP_FROMALTSTACK")
-        check_lambda += mod(is_from_alt=False, is_mod_on_top=False, is_constant_reused=False)  # take the mod
+        check_lambda += mod(stack_preparation="", is_mod_on_top=False, is_constant_reused=False)  # take the mod
         check_lambda += Script.parse_string("OP_0 OP_EQUALVERIFY")
 
         # Check lambda was correct
@@ -105,7 +105,7 @@ class EllipticCurveFq:
             - lambda is the gradient of the line tangent at P, passed as an integers (minimally encoded, little endian)
         If take_modulo = True, the coordinates of 2P are in F_q
         """
-        out = verify_constant(self.MODULUS, check_constant=check_constant)
+        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
         curve_a = self.CURVE_A
 
@@ -144,9 +144,9 @@ class EllipticCurveFq:
         # After this, the stack is: x_(P+Q) y_(P+Q) q, altstack = [lambda * 2yP == 3xP^2]
         out += lambda_equal_points + compute_coordinates + fetch_q
 
-        batched_modulo = mod(is_from_alt=False)  # Mod out y
+        batched_modulo = mod(stack_preparation="")  # Mod out y
         batched_modulo += Script.parse_string("OP_TOALTSTACK")
-        batched_modulo += mod(is_from_alt=False)  # Mod out x
+        batched_modulo += mod(stack_preparation="")  # Mod out x
         batched_modulo += Script.parse_string("OP_FROMALTSTACK OP_ROT")
 
         # If needed, mod out
@@ -156,7 +156,7 @@ class EllipticCurveFq:
             out += batched_modulo
 
         check_lambda = Script.parse_string("OP_FROMALTSTACK")
-        check_lambda += mod(is_from_alt=False, is_mod_on_top=False, is_constant_reused=False)  # take the mod
+        check_lambda += mod(stack_preparation="", is_mod_on_top=False, is_constant_reused=False)  # take the mod
         check_lambda += Script.parse_string("OP_0 OP_EQUALVERIFY")
 
         # Check lambda was correct
@@ -187,7 +187,7 @@ class EllipticCurveFq:
             these are data payloads, they are not numbers - points are assumed to be passed as numbers, which means that
             (0,0) would have to be passed as OP_0 OP_0)
         """
-        out = verify_constant(self.MODULUS, check_constant=check_constant)
+        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
         curve_a = self.CURVE_A
 
@@ -273,9 +273,9 @@ class EllipticCurveFq:
         # After this, the stack is: (P+Q) q, altstack = [Verify(lambda)]
         out += compute_x_coordinate + compute_y_coordinate + fetch_q
 
-        batched_modulo = mod(is_from_alt=False)  # Mod y
+        batched_modulo = mod(stack_preparation="")  # Mod y
         batched_modulo += Script.parse_string("OP_TOALTSTACK")
-        batched_modulo += mod(is_from_alt=False)  # Mod x
+        batched_modulo += mod(stack_preparation="")  # Mod x
         batched_modulo += Script.parse_string("OP_FROMALTSTACK OP_ROT")
 
         # If needed, mod out
@@ -284,7 +284,7 @@ class EllipticCurveFq:
             out += batched_modulo
 
         check_lambda = Script.parse_string("OP_FROMALTSTACK")
-        check_lambda += mod(is_from_alt=False, is_mod_on_top=False, is_constant_reused=False)  # take the mod
+        check_lambda += mod(stack_preparation="", is_mod_on_top=False, is_constant_reused=False)
         check_lambda += Script.parse_string("OP_0 OP_EQUALVERIFY")
 
         # Check lambda was correct

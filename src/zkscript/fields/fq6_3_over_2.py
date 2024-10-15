@@ -1,6 +1,6 @@
 from tx_engine import Script
 
-from src.zkscript.util.utility_scripts import mod, pick, roll, verify_constant
+from src.zkscript.util.utility_scripts import mod, pick, roll, verify_bottom_constant
 
 
 def fq6_for_towering(mul_by_non_residue):
@@ -57,7 +57,7 @@ class Fq6:
         # Fq2 implementation
         fq2 = self.BASE_FIELD
 
-        out = verify_constant(self.MODULUS, check_constant=check_constant)
+        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
         # After this, the stack is x0 x1 y0 y1 altstack = [x2 + y2]
         out += roll(position=7, n_elements=2)  # Roll x2
@@ -111,7 +111,7 @@ class Fq6:
         # Fq2 implementation
         fq2 = self.BASE_FIELD
 
-        out = verify_constant(self.MODULUS, check_constant=check_constant)
+        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
         # After this, the stack is: x0 x1 y0 y1, altstack = [x2 - y2]
         out += roll(position=7, n_elements=2)  # Roll x2
@@ -166,7 +166,7 @@ class Fq6:
         # Fq2 implementation
         fq2 = self.BASE_FIELD
 
-        out = verify_constant(self.MODULUS, check_constant=check_constant)
+        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
         # After this, the stack is: x0 x1 lambda, altstack = [x2*lambda]
         out += Script.parse_string("OP_TUCK OP_MUL OP_TOALTSTACK")
@@ -216,7 +216,7 @@ class Fq6:
         # Fq2 implementation
         fq2 = self.BASE_FIELD
 
-        out = verify_constant(self.MODULUS, check_constant=check_constant)
+        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
         # After this, the stack is: x0 x1 lambda, altstack = [x2 * lambda]
         out += Script.parse_string("OP_2SWAP OP_2OVER")
@@ -268,7 +268,7 @@ class Fq6:
         # Fq2 implementation
         fq2 = self.BASE_FIELD
 
-        out = verify_constant(self.MODULUS, check_constant=check_constant)
+        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
         if take_modulo:
             # After this, stack is: x0 x1, altstack = [-x2]
@@ -324,7 +324,7 @@ class Fq6:
         # Fq2 implementation
         fq2 = self.BASE_FIELD
 
-        out = verify_constant(self.MODULUS, check_constant=check_constant)
+        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
         # Computation of third component ---------------------------------------------------------
 
@@ -430,7 +430,7 @@ class Fq6:
         # Fq2 implementation
         fq2 = self.BASE_FIELD
 
-        out = verify_constant(self.MODULUS, check_constant=check_constant)
+        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
         # Computation third component ------------------------------------------------------------
 
@@ -528,7 +528,7 @@ class Fq6:
         # Fq2 implementation
         fq2 = self.BASE_FIELD
 
-        out = verify_constant(self.MODULUS, check_constant=check_constant)
+        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
         if take_modulo:
             # After this, the stack is: x0 x1 x2*NON_RESIDUE
@@ -539,9 +539,9 @@ class Fq6:
             out += Script.parse_string("OP_2ROT OP_SWAP")
             out += Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
             # Mod out twice - after this the stack is: x1 (x2*NON_RESIDUE) x0
-            out += mod(is_from_alt=False)
+            out += mod(stack_preparation="")
             out += Script.parse_string("OP_SWAP OP_ROT")
-            out += mod(is_from_alt=False, is_mod_on_top=False, is_constant_reused=False)
+            out += mod(stack_preparation="", is_mod_on_top=False, is_constant_reused=False)
 
             if clean_constant:
                 fetch_q = Script.parse_string("OP_DEPTH OP_1SUB OP_ROLL")
@@ -551,9 +551,9 @@ class Fq6:
             # Mod out twice - after this the stack is: (x2*NON_RESIDUE) x0 x1
             out += Script.parse_string("OP_2ROT OP_SWAP")
             out += fetch_q
-            out += mod(is_from_alt=False)
+            out += mod(stack_preparation="")
             out += Script.parse_string("OP_SWAP OP_ROT")
-            out += mod(is_from_alt=False, is_mod_on_top=False, is_constant_reused=is_constant_reused)
+            out += mod(stack_preparation="", is_mod_on_top=False, is_constant_reused=is_constant_reused)
         else:
             out += fq2.mul_by_non_residue(take_modulo=False, check_constant=False, clean_constant=False)
             out += Script.parse_string("OP_2ROT OP_2ROT")

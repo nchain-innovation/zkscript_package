@@ -2,7 +2,7 @@
 from tx_engine import Script
 
 from src.zkscript.util.utility_functions import optimise_script
-from src.zkscript.util.utility_scripts import nums_to_script, pick, roll, verify_constant
+from src.zkscript.util.utility_scripts import nums_to_script, pick, roll, verify_bottom_constant
 
 
 class Pairing:
@@ -34,7 +34,7 @@ class Pairing:
         N_POINTS_TWIST = self.N_POINTS_TWIST
         N_ELEMENTS_MILLER_OUTPUT = self.N_ELEMENTS_MILLER_OUTPUT
 
-        out = verify_constant(q, check_constant=check_constant)
+        out = verify_bottom_constant(q) if check_constant else Script()
 
         # Check if Q is point at infinity, in this case, return identity
         out += pick(position=N_POINTS_TWIST - 1, n_elements=N_POINTS_TWIST)
@@ -111,7 +111,7 @@ class Pairing:
         easy_exponentiation_with_inverse_check = self.easy_exponentiation_with_inverse_check
         hard_exponentiation = self.hard_exponentiation
 
-        out = verify_constant(q, check_constant=check_constant)
+        out = verify_bottom_constant(q) if check_constant else Script()
 
         # After this, the stack is:
         # quadratic([miller(P1,Q1) * miller(P2,Q2) * miller(P3,Q3)])^-1

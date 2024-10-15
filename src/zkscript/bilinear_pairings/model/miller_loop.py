@@ -4,7 +4,7 @@ from math import ceil, log2
 from tx_engine import Script
 
 from src.zkscript.util.utility_functions import optimise_script
-from src.zkscript.util.utility_scripts import nums_to_script, pick, roll, verify_constant
+from src.zkscript.util.utility_scripts import nums_to_script, pick, roll, verify_bottom_constant
 
 
 class MillerLoop:
@@ -78,7 +78,7 @@ class MillerLoop:
         is the gradient of the line through 2T and pm Q.
         """
 
-        out = verify_constant(q, check_constant=check_constant)
+        out = verify_bottom_constant(q) if check_constant else Script()
 
         # After this, the stack is: xP yP xQ yQ xQ -yQ xT yT
         set_T = Script()

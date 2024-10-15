@@ -1,6 +1,6 @@
 from tx_engine import Script
 
-from src.zkscript.util.utility_scripts import mod, nums_to_script, pick, roll, verify_constant
+from src.zkscript.util.utility_scripts import mod, nums_to_script, pick, roll, verify_bottom_constant
 
 
 def fq4_for_towering(mul_by_non_residue):
@@ -62,7 +62,7 @@ class Fq4:
         # Fq2 implementation
         fq2 = self.BASE_FIELD
 
-        out = verify_constant(self.MODULUS, check_constant=check_constant)
+        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
         # After this, base stack is: x_0 y_0, altstack = (x_1 + y_1)
         out += Script.parse_string("OP_2ROT")
@@ -115,7 +115,7 @@ class Fq4:
         # Fq2 implementation
         fq2 = self.BASE_FIELD
 
-        out = verify_constant(self.MODULUS, check_constant=check_constant)
+        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
         # After this, the base stack is x_0 lambda, altstack = (x_1 * lambda)
         out += Script.parse_string("OP_TUCK OP_MUL OP_TOALTSTACK")
@@ -167,7 +167,7 @@ class Fq4:
         # Fq2 implementation
         fq2 = self.BASE_FIELD
 
-        out = verify_constant(self.MODULUS, check_constant=check_constant)
+        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
         if take_modulo:
             # After this, the base stack is x_0 lambda lambda x1
@@ -223,7 +223,7 @@ class Fq4:
         # Fq2 implementation
         fq2 = self.BASE_FIELD
 
-        out = verify_constant(self.MODULUS, check_constant=check_constant)
+        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
         # After this, the stack is: x0 x1 y0 y1 y0 y1
         out += Script.parse_string("OP_2OVER OP_2OVER")
@@ -287,7 +287,7 @@ class Fq4:
         # Fq2 implementation
         fq2 = self.BASE_FIELD
 
-        out = verify_constant(self.MODULUS, check_constant=check_constant)
+        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
         if take_modulo:
             # After this, the stack is: x0 x1, altstack = 2x0*x1
@@ -355,7 +355,7 @@ class Fq4:
         # Fq2 implementation
         fq2 = self.BASE_FIELD
 
-        out = verify_constant(self.MODULUS, check_constant=check_constant)
+        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
         # After this, the stack is: x0 y0 z0, altstack = [ x1 + y1 + z1]
         out += Script.parse_string("OP_2ROT")  # Roll y1
@@ -405,7 +405,7 @@ class Fq4:
         # Gammas
         gammas = self.GAMMAS_FROBENIUS[n % 4 - 1]
 
-        out = verify_constant(self.MODULUS, check_constant=check_constant)
+        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
         # After this, the stack is: a, altstack = [Conjugate(b)*gamma]
         out += fq2.conjugate(take_modulo=False, check_constant=False, clean_constant=False, is_constant_reused=False)
@@ -456,7 +456,7 @@ class Fq4:
         # Gammas
         gammas = self.GAMMAS_FROBENIUS[n % 4 - 1]
 
-        out = verify_constant(self.MODULUS, check_constant=check_constant)
+        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
         # After this, the stack is: a, altstack = [b*gamma]
         out += nums_to_script(gammas)
@@ -472,9 +472,9 @@ class Fq4:
 
             batched_modulo = Script()
             # After this, the stack is [a0, q],  altstack = [b*gamma, a1 % q]
-            batched_modulo += mod(is_from_alt=False)
+            batched_modulo += mod(stack_preparation="")
             batched_modulo += Script.parse_string("OP_TOALTSTACK")
-            batched_modulo += mod(is_from_alt=False, is_constant_reused=is_constant_reused)
+            batched_modulo += mod(stack_preparation="", is_constant_reused=is_constant_reused)
             batched_modulo += Script.parse_string(" ".join(["OP_FROMALTSTACK"] * 3))
             if is_constant_reused:
                 # After this, the stack is: [a, (b*gamma)_0, q, (b*gamma)_1]
@@ -510,7 +510,7 @@ class Fq4:
         # Fq2 implementation
         fq2 = self.BASE_FIELD
 
-        out = verify_constant(self.MODULUS, check_constant=check_constant)
+        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
         if take_modulo:
             if clean_constant:
@@ -524,9 +524,9 @@ class Fq4:
             )
             out += Script.parse_string("OP_2SWAP OP_SWAP")
             # After this, the stack is: (x_1 * NON_RESIDUE_OVER_FQ2) x_01 q (x00 % q)
-            out += fetch_q + mod(is_from_alt=False)
+            out += fetch_q + mod(stack_preparation="")
             out += Script.parse_string("OP_SWAP OP_ROT")
-            out += mod(is_from_alt=False, is_mod_on_top=False, is_constant_reused=is_constant_reused)
+            out += mod(stack_preparation="", is_mod_on_top=False, is_constant_reused=is_constant_reused)
         else:
             # After this, the stack is: x_0 (x_1 * NON_RESIDUE_OVER_FQ2)
             out += fq2.mul_by_non_residue(take_modulo=False, check_constant=False, clean_constant=False)
@@ -554,7 +554,7 @@ class Fq4:
             - If take_modulo is set to True, then the coordinates of the result are in Z_q; otherwise, the coordinates
             are not taken modulo q.
         """
-        out = verify_constant(self.MODULUS, check_constant=check_constant)
+        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
         # Fq2 implementation
         fq2 = self.BASE_FIELD
@@ -575,7 +575,7 @@ class Fq4:
 
             # Mod, pull from altstack, rotate, repeat
             batched_modulo = Script()
-            batched_modulo += mod(is_from_alt=False)
+            batched_modulo += mod(stack_preparation="")
             batched_modulo += mod()
             batched_modulo += mod()
             batched_modulo += mod(is_constant_reused=is_constant_reused)

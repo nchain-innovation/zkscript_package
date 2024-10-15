@@ -2,7 +2,7 @@ from tx_engine import Script
 
 # Fq2 Script implementation
 from src.zkscript.bilinear_pairings.mnt4_753.fields import fq2_script
-from src.zkscript.util.utility_scripts import mod, verify_constant
+from src.zkscript.util.utility_scripts import mod, verify_bottom_constant
 
 
 class LineFunctions:
@@ -41,7 +41,7 @@ class LineFunctions:
         # Fq2 implementation
         fq2 = self.FQ2
 
-        out = verify_constant(self.MODULUS, check_constant=check_constant)
+        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
         # Line evaluation for MNT4 returns: (lambda, Q, P) --> (-yQ + lambda * (xQ - xP*u), yP) as a point in Fq4
 
@@ -82,7 +82,7 @@ class LineFunctions:
             else:
                 fetch_q = Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
 
-            batched_modulo += mod(is_from_alt=False)
+            batched_modulo += mod(stack_preparation="")
             batched_modulo += mod()
             batched_modulo += mod(is_constant_reused=is_constant_reused)
 
