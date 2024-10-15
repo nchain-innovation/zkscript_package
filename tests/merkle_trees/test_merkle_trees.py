@@ -125,7 +125,106 @@ class MerkleTree:
                 "expected": "05",
             },
         ],
-        # "test_merkle_proof_any_path": [{"root": a, "hash_function": a, "depth": a, "left_path": a, "right_path": a}],
+        "test_merkle_proof_any_path": [
+            {
+                "root": "DF2B71F6EB25B9768FF32A8105911D193A350EB8",
+                "hash_function": "OP_SHA1",
+                "depth": 1,
+                "expected": {"left": ["01"], "right": ["03"]},
+            },
+            {
+                "root": "F2E62A6673C82C23F28E53DEF8BE321601ECA0CE",
+                "hash_function": "OP_RIPEMD160",
+                "depth": 1,
+                "expected": {"left": ["01"], "right": ["03"]},
+            },
+            {
+                "root": "C79B932E1E1DA3C0E098E5AD2C422937EB904A76CF61D83975A74A68FBB04B99",
+                "hash_function": "OP_SHA256",
+                "depth": 1,
+                "expected": {"left": ["01"], "right": ["03"]},
+            },
+            {
+                "root": "E1E6277712F9ED0E1FBD550923F2F65B7F27C1BA",
+                "hash_function": "OP_HASH160",
+                "depth": 1,
+                "expected": {"left": ["01"], "right": ["03"]},
+            },
+            {
+                "root": "6F7AE8621A432300884F6F8042FDDFF01FC887B045D314E6C5932D7DD3A01C56",
+                "hash_function": "OP_HASH256",
+                "depth": 1,
+                "expected": {"left": ["01"], "right": ["03"]},
+            },
+            {
+                "root": "5FC030E11BE8E1685B845A2D1357FE8F63B88FF3",
+                "hash_function": "OP_HASH256 OP_HASH160",
+                "depth": 1,
+                "expected": {"left": ["01"], "right": ["03"]},
+            },
+            {
+                "root": "5FC030E11BE8E1685B845A2D1357FE8F63B88FF3",
+                "hash_function": "OP_HASH256 OP_HASH160",
+                "depth": 1,
+                "expected": {"left": ["01"], "right": ["03"]},
+            },
+            {
+                "root": "65998769A2DF355E9D0C55BDB7794C5ECA8F53D4",
+                "hash_function": "OP_HASH160",
+                "depth": 2,
+                "expected": {"left": ["", "01"], "right": ["0DA2D4860836BC7D2B446AE90DC158735C3666A2", "03"]},
+            },
+            {
+                "root": "65998769A2DF355E9D0C55BDB7794C5ECA8F53D4",
+                "hash_function": "OP_HASH160",
+                "depth": 2,
+                "expected": {"left": ["E1E6277712F9ED0E1FBD550923F2F65B7F27C1BA", "05"], "right": ["", "07"]},
+            },
+            {
+                "root": "0452132A8FE79F1E29D8D6AD822D6DDCB72B86F7",
+                "hash_function": "OP_HASH160",
+                "depth": 3,
+                "expected": {
+                    "left": ["", "", "01"],
+                    "right": [
+                        "1E3BBCA9723AF7210220D6B50BC60981BD5EC285",
+                        "0DA2D4860836BC7D2B446AE90DC158735C3666A2",
+                        "03",
+                    ],
+                },
+            },
+            {
+                "root": "0452132A8FE79F1E29D8D6AD822D6DDCB72B86F7",
+                "hash_function": "OP_HASH160",
+                "depth": 3,
+                "expected": {
+                    "left": ["", "E1E6277712F9ED0E1FBD550923F2F65B7F27C1BA", "05"],
+                    "right": ["1E3BBCA9723AF7210220D6B50BC60981BD5EC285", "", "07"],
+                },
+            },
+            {
+                "root": "0452132A8FE79F1E29D8D6AD822D6DDCB72B86F7",
+                "hash_function": "OP_HASH160",
+                "depth": 3,
+                "expected": {
+                    "left": ["65998769A2DF355E9D0C55BDB7794C5ECA8F53D4", "", "09"],
+                    "right": ["", "71B8B73589F750408366F30C2B992EF05222E1CE", "0b"],
+                },
+            },
+            {
+                "root": "0452132A8FE79F1E29D8D6AD822D6DDCB72B86F7",
+                "hash_function": "OP_HASH160",
+                "depth": 3,
+                "expected": {
+                    "left": [
+                        "65998769A2DF355E9D0C55BDB7794C5ECA8F53D4",
+                        "B0C5B6D46A2E23FC135A7B90FC395ECCF05A0391",
+                        "0d",
+                    ],
+                    "right": ["", "", "0f"],
+                },
+            },
+        ],
     }
 
 
@@ -178,7 +277,7 @@ def test_merkle_proof_one_path(config, root, hash_function, nodes, is_nodes_left
 def test_merkle_proof_any_path(config, root, hash_function, depth, expected, save_to_json_folder):
     merkle_tree = MerkleTreeScript(root=root, hash_function=hash_function)
     lock = merkle_tree.locking_merkle_proof_any_path(depth=depth)
-    unlock = merkle_tree.unlocking_merkle_proof_any_path(node=expected)
+    unlock = merkle_tree.unlocking_merkle_proof_any_path(left_nodes=expected["left"], right_nodes=expected["right"])
     context = Context(script=unlock + lock)
     assert context.evaluate()
 
