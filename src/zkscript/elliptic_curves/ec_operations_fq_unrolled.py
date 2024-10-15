@@ -8,7 +8,7 @@ from tx_engine import Script
 from src.zkscript.elliptic_curves.ec_operations_fq import EllipticCurveFq
 
 # Utility scripts
-from src.zkscript.util.utility_scripts import nums_to_script, pick, roll
+from src.zkscript.util.utility_scripts import nums_to_script, pick, roll, verify_bottom_constant
 
 
 class EllipticCurveFqUnrolled:
@@ -119,14 +119,7 @@ class EllipticCurveFqUnrolled:
 			- is OP_1 => then auxiliary_data_addition is assumed to be: lambda_(2T+P)
         """
 
-        if check_constant:
-            out = (
-                Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
-                + nums_to_script([self.MODULUS])
-                + Script.parse_string("OP_EQUALVERIFY")
-            )
-        else:
-            out = Script()
+        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
         # After this, the stack is: marker_a_is_zero [lambdas,a] P T
         set_T = Script.parse_string("OP_2DUP")
