@@ -1,3 +1,8 @@
+"""ec_operations_fq2 module.
+
+This module enables constructing Bitcoin scripts that perform elliptic curve arithmetic in E(F_q^2).
+"""
+
 from tx_engine import Script
 
 from src.zkscript.types.stack_elements import StackEllipticCurvePoint, StackFiniteFieldElement
@@ -6,14 +11,24 @@ from src.zkscript.util.utility_scripts import mod, move, nums_to_script, pick, r
 
 
 class EllipticCurveFq2:
-    """Elliptic curve arithmetic over Fq2."""
+    """Construct Bitcoin scripts that perform elliptic curve arithmetic in E(F_q^2).
+
+    Attributes:
+        MODULUS: The characteristic of the field F_q.
+        CURVE_A: The `a` coefficient in the Short-Weierstrass equation of the curve (an element in F_q^2).
+        FQ2: The script implementation of the field F_q^2.
+    """
 
     def __init__(self, q: int, curve_a: list[int], fq2):
-        # Characteristic of the field over which the curve is defined
+        """Initialise the elliptic curve group E(F_q^2).
+
+        Args:
+            q: The characteristic of the field F_q.
+            curve_a: The `a` coefficient in the Short-Weierstrass equation of the curve (an element in F_q^2).
+            fq2: The script implementation for the field F_q^2.
+        """
         self.MODULUS = q
-        # A coefficient of the curve over which we carry out the operations, as a list of integers
         self.CURVE_A = curve_a
-        # Fq2 implementation in script
         self.FQ2 = fq2
 
     def point_algebraic_addition(

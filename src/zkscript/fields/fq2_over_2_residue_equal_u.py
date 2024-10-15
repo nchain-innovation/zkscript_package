@@ -37,9 +37,9 @@ class Fq2Over2ResidueEqualU(Fq4):
             - altstack = []
 
         Args:
-            take_modulo (bool): If `True`, the result is reduced modulo q.
-            check_constant (bool | None): If `True`, check if q is valid before proceeding.
-            clean_constant (bool | None): If `True`, remove q from the bottom of the stack.
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             is_constant_reused (bool | None, optional): If `True`, at the end of the execution, q is left as the ???
                 element at the top of the stack.
 
@@ -135,7 +135,7 @@ class Fq2Over2ResidueEqualU(Fq4):
 
         Stack input:
             - stack    = [q, ..., x := (x0, x1, x2, x3), y := (y0, y1, y2, y3)], `x`, `y` are couples of elements of
-            F_q^2
+                F_q^2
             - altstack = []
 
         Stack output:
@@ -143,9 +143,9 @@ class Fq2Over2ResidueEqualU(Fq4):
             - altstack = []
 
         Args:
-            take_modulo (bool): If `True`, the result is reduced modulo q.
-            check_constant (bool | None): If `True`, check if q is valid before proceeding.
-            clean_constant (bool | None): If `True`, remove q from the bottom of the stack.
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             is_constant_reused (bool | None, optional): If `True`, at the end of the execution, q is left as the ???
                 element at the top of the stack.
 

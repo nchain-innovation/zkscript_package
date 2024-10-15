@@ -1,23 +1,33 @@
-# Math modules
+"""ec_operations_fq_unrolled module.
+
+This module enables constructing Bitcoin scripts that perform elliptic curve arithmetic in E(F_q).
+"""
+
 from math import ceil, log2
 
-# from src.tx_engine.engine.script import Script
 from tx_engine import Script
 
-# EC arithmetic
 from src.zkscript.elliptic_curves.ec_operations_fq import EllipticCurveFq
 from src.zkscript.types.stack_elements import StackEllipticCurvePoint, StackFiniteFieldElement
 from src.zkscript.util.utility_functions import boolean_list_to_bitmask
-
-# Utility scripts
 from src.zkscript.util.utility_scripts import nums_to_script, roll, verify_bottom_constant
 
 
 class EllipticCurveFqUnrolled:
+    """Construct Bitcoin scripts that perform elliptic curve arithmetic in E(F_q).
+
+    Attributes:
+        MODULUS: The characteristic of the field F_q.
+        EC_OVER_FQ: The script implementation for the elliptic curve E(F_q).
+    """
     def __init__(self, q: int, ec_over_fq: EllipticCurveFq):
-        # Characteristic of the field over which the curve is defined
+        """Initialise the elliptic curve group E(F_q).
+
+        Args:
+            q: The characteristic of the field F_q.
+            ec_over_fq: The script implementation for the elliptic curve E(F_q).
+        """
         self.MODULUS = q
-        # Implementation of EC operations over Fq
         self.EC_OVER_FQ = ec_over_fq
 
     def unrolled_multiplication(
@@ -27,99 +37,41 @@ class EllipticCurveFqUnrolled:
         check_constant: bool | None = None,
         clean_constant: bool | None = None,
     ) -> Script:
-        """Unrolled double-and-add multiplication loop for a point in E(F_q).
+        """Unrolled double-and-add scalar multiplication loop in E(F_q).
 
-        Notice that modulo_threshold is given as bit length.
-        Input parameters:
-            - Stack: [q, .., marker_a_is_zero, [lambdas,a], P]
-            - Altstack: []
-        Output:
-            - P aP
-        Assumption on data:
-            - P is passed as a couple of integers (minimally encoded, in little endian)
-            - [lambdas,a] is a list, see below for its construction
-            - marker_a_is_zero: a == 0
+        Stack input:
+            - stack:    [q, ..., marker_a_is_zero, gradient_operations, P := (xP, yP)], `marker_a_is_zero` is `OP_1`
+                if a == 0, `gradient_operations` contains the list of gradients and operational steps obtained from the
+                self.unrolled_multiplication_input method, `P` is a point on E(F_q)
+            - altstack: []
 
-        [lambdas,a] is the list constructed starting from:
-            - exp_a, which is the binary expansion of a
-            - lambdas, which is the list where:
-                - lambdas[i] = the gradient needed to compute point doubling if exp_a[len(exp_a)-2-i] = 0
-                - lambdas[i] = [gradient needed to compute 2T, gradient needed to compute T + P] if exp_a[i] = 1, where
-                T is the intermediate value of the computation
-        The list [lambdas,a] is constructed as follows: set a = (a0,a1,...,a_N), where a = sum_i 2^i ai and
-        M = log_2(max_multiplier).
-        Then, starting from M-1 to 0, do:
-            - if N <= i <= M-1, the append at the beginning of the list: 0x00
-            - if 0 <= i <= N-1:
-                - if exp_a[i] == 0, then append at the beginning of the list: 0x00 lambda[i] 0x01
-                - if exp_a[i] == 1, then append at the beginning of the list: lambdas[i][0] 0x01 lambdas[i][1] 0x01
+        Stack output:
+            - stack:    [q, ..., P, aP]
+            - altstack: []
 
-        Example:
-            - max_multiplier = 8
-            - a = 3
-        Then:
-            - exp_a = (1,1)
-            - lambdas = [lambda_(2T+P),lambda_2T]
-            - M = log(8) = 3
-            - N = log(a) = 1
-        Thus:
-            - [lambdas,a] = lambda_(2T+P) OP_1 lambda_2T OP_1 OP_0 OP_0 OP_0 OP_0
+        Args:
+            max_multiplier (int): The maximum value of the scalar `a`.
+            modulo_threshold (int): The threshold after which we reduce the result with the modulo. Given as bit length.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
 
-        Example:
-            - max_multiplier = 8
-            - a = 8
-        Then:
-            - exp_a = (0,0,0,1)
-            - lambdas = [lambda_2T,lambda_2T,lambda_2T]
-            - M = log(8) = 3
-            - N = log(a) = 3
-        Thus:
-            - [lambdas,a] = OP_0 OP_0 lambda_2T OP_1 OP_0 OP_0 lambda_2T OP_1 OP_0 OP_0 lambda_2T OP_1
+        Returns:
+            Script to multiply a point on E(F_q) using double-and-add scalar multiplication.
 
-        The meaning of the list is the following:
-            - if it starts with OP_0, then do not execute the loop
-            - if it starts with OP_1:
-                - execute the doubling (always needed)
-                - if after the doubling there is OP_1, then execute the addition, otherwise go to the next iteration of
-                the loop.
+        Notes:
+            The formula for EC point doubling/addition is:
+            `x_(P+Q) = lambda^2 - x_P - x_Q`
+            `y_(P+Q) = -y_P + (x_(P+Q) - x_P) * lambda`
+            where lambda is the gradient of the line through P and Q. Then, we have (with q exchanged for current_size
+            in future steps)
 
-        MODULO OPERATIONS:
+            log_2(abs(x_(P+Q)) <= log_2(q^2 + 2q) = log_2(q) + log_2(q+2) <= 2 log_2(q+2)
+            log_2(abs(y_(P+Q)) <= log_2(q + (q^2 + 3q) * q) = log_2(q + q^3 + 3q^2) <= log_2(q) + log_2(1 + q^2 + 3q)
 
-        As we are carrying out EC operation over the base field, each element is a single number. The formula for EC
-        point doubling/addition is:
-
-        x_(P+Q) = lambda^2 - x_P - x_Q
-        y_(P+Q) = -y_P + (x_(P+Q) - x_P) * lambda
-
-        where lambda is the gradient of the line through P and Q. Then, we have (with q exchanged for current_size in
-        future steps)
-
-        log_2(abs(x_(P+Q)) <= log_2(q^2 + 2q) = log_2(q) + log_2(q+2) <= 2 log_2(q+2)
-        log_2(abs(y_(P+Q)) <= log_2(q + (q^2 + 3q) * q) = log_2(q + q^3 + 3q^2) <= log_2(q) + log_2(q^2 + 3q + 1)
-
-        Hence, we at every step we check that the next operation doesn't make
-        log_2(q) + log_2(q^2 + 3q + 1) > modulo_threshold.
-
+            At every step we check that the next operation doesn't make log_2(q) + log_2(1 + q^2 + 3q) >
+            modulo_threshold.
         """
-        # Elliptic curve arithmetic
         ec_over_fq = self.EC_OVER_FQ
-
-        """
-        Set a = (a0,a1,...,aN) where a = sum_i 2^i ai.
-
-        At the beginning of every iteration of the loop the stack is assumed to be:
-			auxiliary_data marker_doubling P T
-		where:
-			- T is the i-th step of the calculation of aP
-			- marker_doubling is the marker that tells us if we need to double T
-		If marker_doubling:
-			- is OP_0 => auxiliary_data = "", move to next iteration
-			- is OP_1 => the auxiliary_data is assumed to be:
-				auxiliary_data_addition marker_addition lambda_(2T)
-		If marker_addition:
-			- is OP_0 => auxiliary_data_addition = "", after the doubling, move to next iteration
-			- is OP_1 => then auxiliary_data_addition is assumed to be: lambda_(2T+P)
-        """
 
         out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
@@ -215,21 +167,73 @@ class EllipticCurveFqUnrolled:
         max_multiplier: int,
         load_modulus=True,
     ) -> Script:
-        """Return the input script needed to execute the unrolled multiplication script above.
+        """Gradients and operational steps related to the point doubling and addition.
 
-        lambdas is the sequence of lambdas as they are computed by executing the multiplication.
-        If exp_a is the binary representation of a, then len(lambdas) = len(exp_a)-1, because the last element of exp_a
-        (the most significant bit) is not used.
+        This method returns a script that can be used as the gradient_operations script used by the
+        `self.unrolled_multiplication` method.
 
-        The list lamdbas is computed as:
-            lambdas = []
-            for i in range(len(exp_a)-2,-1,-1):
-                to_add = []
-                to_add.append(T.get_lambda(T).to_list())
-                T = T + T
-                if exp_a[i] == 1:
-                    to_add.append(T.get_lambda(P).to_list())
-                lambdas.append(to_add)
+        Args:
+            P (list[int]): The elliptic curve point multiplied.
+            a (int): The scalar `a` used to multiply `P`.
+            lambdas (list[list[list[int]]]): The sequence of gradients as required to execute the double-and-add scalar
+                multiplication.
+            max_multiplier (int): The maximum value of `a`.
+            load_modulus (bool): If `True`, load the modulus `self.MODULUS` on the stack. Defaults to True.
+
+        Preconditions:
+            The list lamdbas is computed as follows. We denote `exp_a = (a0, a1, ..., aN)` the binary expansion of `a`.
+            The function `get_lambda` is assumed to return the gradient of the line through two points.
+                lambdas = []
+                for i in reversed(range(len(exp_a) - 1)):
+                    to_add = []
+                    to_add.append(T.get_lambda(T).to_list())
+                    T = T + T  # For point doubling
+                    if exp_a[i] == 1:
+                        to_add.append(T.get_lambda(P).to_list())  # For point addition
+                    lambdas.append(to_add)
+            We ignore the last element of `exp_a`, therefore `len(lambdas) = len(exp_a)-1`.
+
+        Returns:
+            Script containing the gradients and operational steps to execute double-and-add scalar multiplication. The
+            script is based on the binary expansion of `a` (denoted `exp_a`) and the list of gradients `lambdas`.
+            Here's how it is built:
+            - Let `exp_a = (a0, a1, ..., aN)` where `a = sum_i 2^i * ai`, and let `M = log2(max_multiplier)`.
+            - Start with the point [xP yP].
+            - Iterate from `M-1` to 0:
+                - If `N <= i < M`: Prepend `OP_0 OP_0` to the script.
+                - If `0 <= i < N`:
+                    - If `exp_a[i] == 0`: Prepend `OP_0 OP_0 lambda_2T OP_1`.
+                    - If `exp_a[i] == 1`: Prepend `lambda_(2T+P) OP_1 lambda_2T OP_1`.
+            - Prepend the modulus `q`.
+
+            Note that we ignore the last element of exp_a (the most significant bit).
+
+            Example 1 (a = 3, max_multiplier = 8, N = 1, M = 3):
+                - `exp_a = (1,1)`, `lambdas = [[[lambda_(2T+P)], [lambda_2T]]]`
+                - Resulting script: [q lambda_(2T+P) OP_1 lambda_2T OP_1 OP_0 OP_0 OP_0 OP_0 xP yP].
+
+            Example 2 (a = 8, max_multiplier = 8, N = 3, M = 3):
+                - `exp_a = (0,0,0,1)`, `lambdas = [[[lambda_2T]], [[lambda_2T]], [[lambda_2T]]]`
+                - Resulting script: [q OP_0 OP_0 lambda_2T OP_1 OP_0 OP_0 lambda_2T OP_1 OP_0 OP_0 lambda_2T OP_1 xP yP]
+
+            The list indicates execution steps:
+                - `OP_0`: Skip loop execution and ignore following `OP_0`.
+                - `OP_1`: Perform point doubling using the provided lambda_2T. If followed by another `OP_1`, perform
+                point addition using the provided lambda_(2T+P), otherwise ignore following `OP_0` and continue.
+
+        Example:
+            >>> from src.zkscript.elliptic_curves.ec_operations_fq import EllipticCurveFq
+            >>>
+            >>> P = [6, 11]
+            >>> ec_curve = EllipticCurveFq(q=17, curve_a=0)
+            >>> ec_curve_unrolled = EllipticCurveFqUnrolled(q=17, ec_over_fq=ec_curve)
+            >>> a = 3
+            >>> lambdas = [[[8], [10]]]
+            >>> ec_curve_unrolled.unrolled_multiplication_input(P, a, lambdas, max_multiplier=8)
+            0x11 OP_0 OP_10 OP_1 OP_8 OP_1 OP_0 OP_0 OP_0 OP_0 OP_6 OP_11
+
+             ^     ^          ^         ^         ^         ^     ^    ^
+             q   marker     adding   doubling    pass      pass   xP   yP
         """
         M = int(log2(max_multiplier))
 

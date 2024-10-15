@@ -88,7 +88,7 @@ def pick(position: int, n_elements: int) -> Script:
     """Pick the elements x_{position}, ..., x_{position-n_elements}.
 
     Args:
-        position (int): The index of the rightmost element to pick.
+        position (int): The index of the leftmost element to pick.
         n_elements (int): The number of elements to pick.
 
     Returns:
@@ -143,7 +143,7 @@ def roll(position: int, n_elements: int) -> Script:
     """Roll the elements x_{position}, .., x_{position-n_elements}.
 
     Args:
-        position (int): The index of the rightmost element to roll.
+        position (int): The index of the leftmost element to roll.
         n_elements (int): The number of elements to roll.
 
     Returns:

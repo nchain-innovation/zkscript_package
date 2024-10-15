@@ -15,10 +15,18 @@ class Fq12:
 
     Elements in F_q^12 are of the form `a + b * u`, where `a`, `b` are elements of F_q^6, `u^2` is equal
     to `v`, and the arithmetic operations `+` and `*` are derived from the operations in F_q^6.
+
+    Attributes:
+        MODULUS: The characteristic of the field F_q.
+        FQ2: The script implementation of the field F_q^2.
+        FQ6: The script implementation of the field F_q^6.
+        GAMMAS_FROBENIUS: The list of [gamma1,gamma2,...,gamma11] for the Frobenius where
+            gammai = [gammai1, .., gammai6] with gammaij = list of coefficients of
+            NON_RESIDUE_OVER_FQ2.power(j * (q**i-1)//6)
     """
 
     def __init__(self, q: int, fq2, fq6, gammas_frobenius: list[list[int]] | None = None):
-        """Initialise the quadratic extension of F_q^6.
+        """Initialise F_q^12, the quadratic extension of F_q^6.
 
         Args:
             q: The characteristic of the field F_q.
@@ -44,7 +52,7 @@ class Fq12:
 
         Stack input:
             - stack:    [q, ..., x := (x0, x1, ..., x11), y := (y0, y1, ..., y11)], `x`, `y` are couples of elements of
-            F_q^6
+                F_q^6
             - altstack: []
 
         Stack output:
@@ -52,9 +60,9 @@ class Fq12:
             - altstack: []
 
         Args:
-            take_modulo (bool): If `True`, the result is reduced modulo q.
-            check_constant (bool | None): If `True`, check if q is valid before proceeding.
-            clean_constant (bool | None): If `True`, remove q from the bottom of the stack.
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             is_constant_reused (bool | None, optional): If `True`, at the end of the execution, q is left as the ???
                 element at the top of the stack.
 
@@ -142,9 +150,9 @@ class Fq12:
             - altstack: []
 
         Args:
-            take_modulo (bool): If `True`, the result is reduced modulo q.
-            check_constant (bool | None): If `True`, check if q is valid before proceeding.
-            clean_constant (bool | None): If `True`, remove q from the bottom of the stack.
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             is_constant_reused (bool | None, optional): If `True`, at the end of the execution, q is left as the ???
                 element at the top of the stack.
 
@@ -365,9 +373,9 @@ class Fq12:
             - altstack: []
 
         Args:
-            take_modulo (bool): If `True`, the result is reduced modulo q.
-            check_constant (bool | None): If `True`, check if q is valid before proceeding.
-            clean_constant (bool | None): If `True`, remove q from the bottom of the stack.
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             is_constant_reused (bool | None, optional): If `True`, at the end of the execution, q is left as the second
                 element at the top of the stack.
 
@@ -427,9 +435,9 @@ class Fq12:
 
         Args:
             n (int): Frobenius odd power.
-            take_modulo (bool): If `True`, the result is reduced modulo q.
-            check_constant (bool | None): If `True`, check if q is valid before proceeding.
-            clean_constant (bool | None): If `True`, remove q from the bottom of the stack.
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             is_constant_reused (bool | None, optional): If `True`, at the end of the execution, q is left as the ???
                 element at the top of the stack.
 
@@ -547,9 +555,9 @@ class Fq12:
 
         Args:
             n (int): Frobenius even power.
-            take_modulo (bool): If `True`, the result is reduced modulo q.
-            check_constant (bool | None): If `True`, check if q is valid before proceeding.
-            clean_constant (bool | None): If `True`, remove q from the bottom of the stack.
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             is_constant_reused (bool | None, optional): If `True`, at the end of the execution, q is left as the ???
                 element at the top of the stack.
 

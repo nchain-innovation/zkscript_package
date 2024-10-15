@@ -29,10 +29,14 @@ class Fq6:
     F_q^2.
 
     The cubic non_residue_over_fq2 is specified by defining the method self.BASE_FIELD.mul_by_non_residue.
+
+    Attributes:
+        MODULUS: The characteristic of the field F_q.
+        BASE_FIELD: The script implementation of the field F_q^2.
     """
 
     def __init__(self, q: int, base_field):
-        """Initialise the quadratic extension of F_q^2.
+        """Initialise F_q^6, the cubic extension of F_q^2.
 
         Args:
             q: The characteristic of the field F_q.
@@ -52,7 +56,7 @@ class Fq6:
 
         Stack input:
             - stack:    [q, ..., x := (x0, x1, x2, x3, x4, x5), y := (y0, y1, y2, y3, y4, y5)], `x`, `y` are triplets of
-            elements of F_q^2
+                elements of F_q^2
             - altstack: []
 
         Stack output:
@@ -60,9 +64,9 @@ class Fq6:
             - altstack: []
 
         Args:
-            take_modulo (bool): If `True`, the result is reduced modulo q.
-            check_constant (bool | None): If `True`, check if q is valid before proceeding.
-            clean_constant (bool | None): If `True`, remove q from the bottom of the stack.
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             is_constant_reused (bool | None, optional): If `True`, at the end of the execution, q is left as the ???
                 element at the top of the stack.
 
@@ -114,7 +118,7 @@ class Fq6:
 
         Stack input:
             - stack:    [q, ..., x := (x0, x1, x2, x3, x4, x5), y := (y0, y1, y2, y3, y4, y5)], `x`, `y` are triplets of
-            elements of F_q^2
+                elements of F_q^2
             - altstack: []
 
         Stack output:
@@ -122,9 +126,9 @@ class Fq6:
             - altstack: []
 
         Args:
-            take_modulo (bool): If `True`, the result is reduced modulo q.
-            check_constant (bool | None): If `True`, check if q is valid before proceeding.
-            clean_constant (bool | None): If `True`, remove q from the bottom of the stack.
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             is_constant_reused (bool | None, optional): If `True`, at the end of the execution, q is left as the ???
                 element at the top of the stack.
 
@@ -176,7 +180,7 @@ class Fq6:
 
         Stack input:
             - stack:    [q, ..., x := (x0, x1, x2, x3, x4, x5), lambda], `x` is a triplet of elements of F_q^2,
-            `lambda` is an element of F_q
+                `lambda` is an element of F_q
             - altstack: []
 
         Stack output:
@@ -184,9 +188,9 @@ class Fq6:
             - altstack: []
 
         Args:
-            take_modulo (bool): If `True`, the result is reduced modulo q.
-            check_constant (bool | None): If `True`, check if q is valid before proceeding.
-            clean_constant (bool | None): If `True`, remove q from the bottom of the stack.
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             is_constant_reused (bool | None, optional): If `True`, at the end of the execution, q is left as the ???
                 element at the top of the stack.
 
@@ -233,7 +237,7 @@ class Fq6:
 
         Stack input:
             - stack:    [q, ..., x := (x0, x1, x2, x3, x4, x5), lambda := (l0, l1)], `x` is a triplet of elements of
-            F_q^2, `lambda` is an element of F_q^2
+                F_q^2, `lambda` is an element of F_q^2
             - altstack: []
 
         Stack output:
@@ -241,9 +245,9 @@ class Fq6:
             - altstack: []
 
         Args:
-            take_modulo (bool): If `True`, the result is reduced modulo q.
-            check_constant (bool | None): If `True`, check if q is valid before proceeding.
-            clean_constant (bool | None): If `True`, remove q from the bottom of the stack.
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             is_constant_reused (bool | None, optional): If `True`, at the end of the execution, q is left as the ???
                 element at the top of the stack.
 
@@ -299,9 +303,9 @@ class Fq6:
             - altstack: []
 
         Args:
-            take_modulo (bool): If `True`, the result is reduced modulo q.
-            check_constant (bool | None): If `True`, check if q is valid before proceeding.
-            clean_constant (bool | None): If `True`, remove q from the bottom of the stack.
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             is_constant_reused (bool | None, optional): If `True`, at the end of the execution, q is left as the ???
                 element at the top of the stack.
 
@@ -354,7 +358,7 @@ class Fq6:
 
         Stack input:
             - stack:    [q, ..., x := (x0, x1, x2, x3, x4, x5), y := (y0, y1, y2, y3, y4, y5)], `x`, `y` are triplets of
-            elements of F_q^2
+                elements of F_q^2
             - altstack: []
 
         Stack output:
@@ -362,9 +366,9 @@ class Fq6:
             - altstack: []
 
         Args:
-            take_modulo (bool): If `True`, the result is reduced modulo q.
-            check_constant (bool | None): If `True`, check if q is valid before proceeding.
-            clean_constant (bool | None): If `True`, remove q from the bottom of the stack.
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             is_constant_reused (bool | None, optional): If `True`, at the end of the execution, q is left as the ???
                 element at the top of the stack.
 
@@ -475,9 +479,9 @@ class Fq6:
             - altstack: []
 
         Args:
-            take_modulo (bool): If `True`, the result is reduced modulo q.
-            check_constant (bool | None): If `True`, check if q is valid before proceeding.
-            clean_constant (bool | None): If `True`, remove q from the bottom of the stack.
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             is_constant_reused (bool | None, optional): If `True`, at the end of the execution, q is left as the ???
                 element at the top of the stack.
 
@@ -580,9 +584,9 @@ class Fq6:
             - altstack: []
 
         Args:
-            take_modulo (bool): If `True`, the result is reduced modulo q.
-            check_constant (bool | None): If `True`, check if q is valid before proceeding.
-            clean_constant (bool | None): If `True`, remove q from the bottom of the stack.
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             is_constant_reused (bool | None, optional): If `True`, at the end of the execution, q is left as the ???
                 element at the top of the stack.
 

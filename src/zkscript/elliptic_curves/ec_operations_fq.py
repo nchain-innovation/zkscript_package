@@ -1,3 +1,8 @@
+"""ec_operations_fq module.
+
+This module enables constructing Bitcoin scripts that perform elliptic curve arithmetic in E(F_q).
+"""
+
 from tx_engine import Script
 
 from src.zkscript.types.stack_elements import StackEllipticCurvePoint, StackFiniteFieldElement
@@ -6,12 +11,21 @@ from src.zkscript.util.utility_scripts import mod, move, nums_to_script, pick, r
 
 
 class EllipticCurveFq:
-    """Elliptic curve arithmetic over Fq."""
+    """Construct Bitcoin scripts that perform elliptic curve arithmetic in E(F_q).
+
+    Attributes:
+        MODULUS: The characteristic of the field F_q.
+        CURVE_A: The `a` coefficient in the Short-Weierstrass equation of the curve (an element in F_q).
+    """
 
     def __init__(self, q: int, curve_a: int):
-        # Characteristic of the field over which the curve is defined
+        """Initialise the elliptic curve group E(F_q).
+
+        Args:
+            q: The characteristic of the field F_q.
+            curve_a: The `a` coefficient in the Short-Weierstrass equation of the curve (an element in F_q).
+        """
         self.MODULUS = q
-        # A coefficient of the curve over which we are performing the operations
         self.CURVE_A = curve_a
 
     def point_algebraic_addition(
