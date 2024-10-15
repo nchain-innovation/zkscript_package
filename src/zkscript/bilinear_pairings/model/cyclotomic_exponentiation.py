@@ -26,7 +26,7 @@ class CyclotomicExponentiation:
         check_constant: bool | None = None,
         clean_constant: bool | None = None,
     ) -> Script:
-        """Compute exponetiation f^e for f in the cyclotomic subgroup.
+        """Compute exponentiation f^e for f in the cyclotomic subgroup.
 
         exp_e = [e_0, ..., e_(l-1)] such that:
             - e := sum_(i=1)^(l-1) e_i 2^i
