@@ -1,7 +1,7 @@
 import pytest
 from tx_engine import Context, Script
 
-from src.zkscript.util.utility_scripts import mod, nums_to_script, pick, roll, verify_constant
+from src.zkscript.util.utility_scripts import mod, nums_to_script, pick, roll, verify_bottom_constant
 
 
 def generate_verify(z) -> Script:
@@ -69,42 +69,41 @@ def test_pick(position, n_elements, stack, expected):
 
 
 @pytest.mark.parametrize(
-    ("is_from_alt", "is_mod_on_top", "is_constant_reused", "is_positive", "stack", "expected"),
+    ("stack_preparation", "is_mod_on_top", "is_constant_reused", "is_positive", "stack", "altstack", "expected"),
     [
-        (False, False, False, False, [5, -7], [-2]),
-        (False, False, False, True, [5, -7], [3]),
-        (False, False, True, False, [5, -7], [5, -2]),
-        (False, False, True, True, [5, -7], [5, 3]),
-        (False, True, False, False, [-7, 5], [-2]),
-        (False, True, False, True, [-7, 5], [3]),
-        (False, True, True, False, [-7, 5], [5, -2]),
-        (False, True, True, True, [-7, 5], [5, 3]),
-        (True, False, False, False, [-7, 3, 5], [3, -2]),
-        (True, False, False, True, [-7, 3, 5], [3, 3]),
-        (True, False, True, False, [-7, 3, 5], [3, 5, -2]),
-        (True, False, True, True, [-7, 3, 5], [3, 5, 3]),
-        (True, True, False, False, [5, 3, -7], [3, -2]),
-        (True, True, False, True, [5, 3, -7], [3, 3]),
-        (True, True, True, False, [5, 3, -7], [3, 5, -2]),
-        (True, True, True, True, [5, 3, -7], [3, 5, 3]),
-        (False, False, False, False, [13, -17], [-4]),
-        (False, False, False, True, [13, -17], [9]),
-        (False, False, True, False, [13, -17], [13, -4]),
-        (False, False, True, True, [13, -17], [13, 9]),
-        (False, True, False, False, [-17, 13], [-4]),
-        (False, True, False, True, [-17, 13], [9]),
-        (False, True, True, False, [-17, 13], [13, -4]),
-        (False, True, True, True, [-17, 13], [13, 9]),
+        ("", False, False, False, [5, -7], [], [-2]),
+        ("", False, False, True, [5, -7], [], [3]),
+        ("", False, True, False, [5, -7], [], [5, -2]),
+        ("", False, True, True, [5, -7], [], [5, 3]),
+        ("", True, False, False, [-7, 5], [], [-2]),
+        ("", True, False, True, [-7, 5], [], [3]),
+        ("", True, True, False, [-7, 5], [], [5, -2]),
+        ("", True, True, True, [-7, 5], [], [5, 3]),
+        ("OP_FROMALTSTACK OP_ROT", False, False, False, [-7, 3], [5], [3, -2]),
+        ("OP_FROMALTSTACK OP_ROT", False, False, True, [-7, 3], [5], [3, 3]),
+        ("OP_FROMALTSTACK OP_ROT", False, True, False, [-7, 3], [5], [3, 5, -2]),
+        ("OP_FROMALTSTACK OP_ROT", False, True, True, [-7, 3], [5], [3, 5, 3]),
+        ("OP_FROMALTSTACK OP_ROT", True, False, False, [5, 3], [-7], [3, -2]),
+        ("OP_FROMALTSTACK OP_ROT", True, False, True, [5, 3], [-7], [3, 3]),
+        ("OP_FROMALTSTACK OP_ROT", True, True, False, [5, 3], [-7], [3, 5, -2]),
+        ("OP_FROMALTSTACK OP_ROT", True, True, True, [5, 3], [-7], [3, 5, 3]),
+        ("", False, False, False, [13, -17], [], [-4]),
+        ("", False, False, True, [13, -17], [], [9]),
+        ("", False, True, False, [13, -17], [], [13, -4]),
+        ("", False, True, True, [13, -17], [], [13, 9]),
+        ("", True, False, False, [-17, 13], [], [-4]),
+        ("", True, False, True, [-17, 13], [], [9]),
+        ("", True, True, False, [-17, 13], [], [13, -4]),
+        ("", True, True, True, [-17, 13], [], [13, 9]),
     ],
 )
-def test_mod(is_from_alt, is_mod_on_top, is_positive, is_constant_reused, stack, expected):
+def test_mod(stack_preparation, is_mod_on_top, is_positive, is_constant_reused, stack, altstack, expected):
     unlock = nums_to_script(stack)
-    lock = Script()
-    if is_from_alt:
-        lock += Script.parse_string("OP_TOALTSTACK")
+    lock = nums_to_script(altstack)
+    lock += Script.parse_string("OP_TOALTSTACK"*len(altstack))
 
     lock += mod(
-        is_from_alt=is_from_alt,
+        stack_preparation=stack_preparation,
         is_mod_on_top=is_mod_on_top,
         is_positive=is_positive,
         is_constant_reused=is_constant_reused,
@@ -118,21 +117,36 @@ def test_mod(is_from_alt, is_mod_on_top, is_positive, is_constant_reused, stack,
 
 
 @pytest.mark.parametrize(
-    ("n", "check_constant", "stack", "expected"),
+    ("n", "stack"),
     [
-        (1, True, [1, 0, 0], [1, 0, 0]),
-        (10, False, [1, 0, 0], [1, 0, 0]),
-        (100, True, [100, 0, 0], [100, 0, 0]),
-        (1000, True, [1000] + [0] * 1000, [1000] + [0] * 1000),
+        (0, [0, 1]),
+        (1, [1, 0, 0]),
+        (-10, [-10, 0, 0]),
+        (100, [100] + [0] * 100),
     ],
 )
-def test_verify_constant(n, check_constant, stack, expected):
+def test_verify_bottom_constant(n, stack):
     unlock = nums_to_script(stack)
 
-    lock = verify_constant(n=n, check_constant=check_constant)
-    lock += generate_verify(expected)
+    lock = verify_bottom_constant(n=n)
+    lock += generate_verify(stack)
 
     context = Context(script=unlock + lock)
 
     assert context.evaluate()
     assert len(context.get_altstack()) == 0
+
+@pytest.mark.parametrize(
+    ("n", "stack"),
+    [
+        (0, []),
+        (1, [2, 0]),
+    ],
+)
+def test_fail_verify_bottom_constant(n, stack):
+    unlock = nums_to_script(stack)
+
+    lock = verify_bottom_constant(n=n)
+    context = Context(script=unlock + lock)
+
+    assert not context.evaluate()
