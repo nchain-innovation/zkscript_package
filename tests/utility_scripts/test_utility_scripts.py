@@ -33,7 +33,10 @@ def generate_verify(z) -> Script:
         ),
         (4, 5, list(range(10)), list(range(10))),
         (9, 10, list(range(20)), list(range(20))),
-        (1, 2, list(range(10)), list(range(10)))
+        (1, 2, list(range(10)), list(range(10))),
+        (-1, 1, list(range(10)), [1, 2, 3, 4, 5, 6, 7, 8, 9, 0]),
+        (-1, 2, list(range(10)), [2, 3, 4, 5, 6, 7, 8, 9, 0, 1]),
+        (-2, 2, list(range(10)), [0, 3, 4, 5, 6, 7, 8, 9, 1, 2]),
     ],
 )
 def test_roll(position, n_elements, stack, expected):
@@ -57,6 +60,9 @@ def test_roll(position, n_elements, stack, expected):
         (3, 2, list(range(10)), [*list(range(10)), 6, 7]),
         (3, 4, list(range(10)), [*list(range(10)), 6, 7, 8, 9]),
         (10, 3, list(range(20)), [*list(range(20)), 9, 10, 11]),
+        (-1, 1, list(range(10)), [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0]),
+        (-1, 2, list(range(10)), [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1]),
+        (-2, 2, list(range(10)), [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 1, 2]),
     ],
 )
 def test_pick(position, n_elements, stack, expected):

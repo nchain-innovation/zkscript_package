@@ -3,7 +3,7 @@ from pathlib import Path
 
 from tx_engine import Script
 
-from src.zkscript.util.utility_classes import StackEllipticCurvePoint, StackNumber
+from src.zkscript.types.stack_elements import StackEllipticCurvePoint, StackNumber
 from src.zkscript.util.utility_scripts import nums_to_script, pick, roll
 
 
