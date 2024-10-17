@@ -6,7 +6,7 @@ from tx_engine import Script
 
 # EC arithmetic
 from src.zkscript.elliptic_curves.ec_operations_fq import EllipticCurveFq
-from src.zkscript.util.utility_classes import StackEllipticCurvePoint, StackNumber
+from src.zkscript.types.stack_elements import StackEllipticCurvePoint, StackNumber
 
 # Utility scripts
 from src.zkscript.util.utility_scripts import nums_to_script, pick, roll, verify_bottom_constant
@@ -208,7 +208,12 @@ class EllipticCurveFqUnrolled:
         return out
 
     def unrolled_multiplication_input(
-        self, P: list[int], a: int, lambdas: list[list[list[int]]], max_multiplier: int, load_modulus=True
+        self,
+        P: list[int],
+        a: int,
+        lambdas: list[list[list[int]]],
+        max_multiplier: int,
+        load_modulus=True,
     ) -> Script:
         """Return the input script needed to execute the unrolled multiplication script above.
 

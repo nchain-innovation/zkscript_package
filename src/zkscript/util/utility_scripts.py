@@ -77,20 +77,38 @@ op_range_to_opccode = {
 def pick(position: int, n_elements: int) -> Script:
     """Pick the elements x_{position}, .., x_{position-n_elements}.
 
-    {position} is the stack position, so we start counting from 0.
+    `position` is the stack position, so we start counting from 0. If `position < 0`, then we pick
+    from the bottom of the stack, which we consider at position -1.
 
     Example:
-        n_elements = 2, position = 2 --> OP_2 OP_PICK OP_2 OP_PICK
-        n_elements = 2, position = 8 --> OP_8 OP_PICK OP_8 OP_PICK
-        n_elements = 2, position = 1 --> OP_2DUP
+        `n_elements` = 2, `position` = 2 --> OP_2 OP_PICK OP_2 OP_PICK
+        `n_elements` = 2, `position` = 8 --> OP_8 OP_PICK OP_8 OP_PICK
+        `n_elements` = 2, `position` = 1 --> OP_2DUP
+        `n_elements` = 1, `position` = -1 --> OP_DEPTH OP_1SUB OP_PICK
 
     """
+    if position >= 0 and position < n_elements - 1:
+        msg = f"When positive, position must be at least equal to n_elements - 1:\
+            position {position}, n_elements: {n_elements}"
+        raise ValueError(msg)
+
     out = Script()
 
     if (position, n_elements) in patterns_to_pick:
         out += Script(patterns_to_pick[(position, n_elements)])
-    elif position in op_range:
+    elif position in op_range[1:]:
         out += Script([op_range_to_opccode[position], OP_PICK] * n_elements)
+    elif position < 0:
+        ix_to_pick = position
+        for _ in range(n_elements):
+            out += Script.parse_string("OP_DEPTH")
+            out += (
+                Script.parse_string("OP_1SUB")
+                if ix_to_pick == -1
+                else nums_to_script([-ix_to_pick]) + Script.parse_string("OP_SUB")
+            )
+            out += Script.parse_string("OP_PICK")
+            ix_to_pick -= 1
     else:
         num_encoded = encode_num(position)
         for _ in range(n_elements):
@@ -101,24 +119,41 @@ def pick(position: int, n_elements: int) -> Script:
 
 
 def roll(position: int, n_elements: int) -> Script:
-    """Pick the elements x_{position}, .., x_{position-n_elements}.
+    """Roll the elements x_{position}, .., x_{position-n_elements}.
 
-    Position is the stack position, so we start counting from 0.
+    `position` is the stack position, so we start counting from 0. If `position` < 0, then we roll
+    from the bottom of the stack, which we consider at position -1.
 
     Example:
-        n_elements = 2, position = 2 --> OP_2 OP_PICK OP_2 OP_PICK
-        n_elements = 2, position = 8 --> OP_8 OP_PICK OP_8 OP_PICK
-        n_elements = 1, position = 1 --> OP_SWAP
+        `n_elements` = 2, `position` = 2 --> OP_2 OP_PICK OP_2 OP_PICK
+        `n_elements` = 2, `position` = 8 --> OP_8 OP_PICK OP_8 OP_PICK
+        `n_elements` = 1, `position` = 1 --> OP_SWAP
+        `n_elements` = 1, `position` = -1 --> OP_DEPTH OP_1SUB OP_ROLL
 
     """
+    if position >= 0 and position < n_elements - 1:
+        msg = f"When positive, position must be at least equal to n_elements - 1:\
+            position {position}, n_elements: {n_elements}"
+        raise ValueError(msg)
+
+    if position == n_elements - 1:
+        return Script()
+
     out = Script()
 
     if (position, n_elements) in patterns_to_roll:
         out += Script(patterns_to_roll[(position, n_elements)])
-    elif position == n_elements - 1:
-        pass
-    elif position in op_range:
+    elif position in op_range[2:]:
         out += Script([op_range_to_opccode[position], OP_ROLL] * n_elements)
+    elif position < 0:
+        for _ in range(n_elements):
+            out += Script.parse_string("OP_DEPTH")
+            out += (
+                Script.parse_string("OP_1SUB")
+                if position == -1
+                else nums_to_script([-position]) + Script.parse_string("OP_SUB")
+            )
+            out += Script.parse_string("OP_ROLL")
     else:
         num_encoded = encode_num(position)
         for _ in range(n_elements):

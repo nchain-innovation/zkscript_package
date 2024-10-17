@@ -238,14 +238,14 @@ class EllipticCurveFq:
             msg = f"The stack_elements dictionary must have the following keys:\
                 'lambda', 'P', 'Q': stack_elements.keys: { stack_elements.keys()}"
             raise ValueError(msg)
-        if not stack_elements["lambda"] < stack_elements["P"]:
+        if not stack_elements["lambda"].is_before(stack_elements["P"].x):
             msg = "P must come after lambda in the stack"
             raise ValueError(msg)
-        if not stack_elements["P"] < stack_elements["Q"]:
+        if not stack_elements["P"].is_before(stack_elements["Q"]):
             msg = "Q must come after P in the stack"
             raise ValueError(msg)
-        is_q_rolled = stack_elements["Q"].x.move == roll
-        is_p_rolled = stack_elements["P"].x.move == roll
+        is_q_rolled = stack_elements["Q"].x.is_rolled()
+        is_p_rolled = stack_elements["P"].x.is_rolled()
 
         if check_constant:
             out = (
@@ -264,12 +264,8 @@ class EllipticCurveFq:
         # Stack in: q .. lambda .. P .. Q ..
         # Stack out: q .. lambda .. P .. Q .. yP xQ xP lambda, or fail
         # Altstack out: [q if take_modulo]
-        verify_gradient = stack_elements["Q"].x.move(
-            position=stack_elements["Q"].x.position, n_elements=2
-        )  # Move xQ, yQ
-        verify_gradient += stack_elements["P"].y.move(
-            position=stack_elements["P"].y.position + 2 - 2 * is_q_rolled, n_elements=1
-        )  # Move yP
+        verify_gradient = stack_elements["Q"].moving_script()  # Move xQ, yQ
+        verify_gradient += stack_elements["P"].y.shift(2 - 2 * is_q_rolled).moving_script()  # Move yP
         verify_gradient += Script.parse_string("OP_TUCK")
         if (stack_elements["P"].y.negate and not stack_elements["Q"].y.negate) or (
             not stack_elements["P"].y.negate and stack_elements["Q"].y.negate
@@ -278,12 +274,10 @@ class EllipticCurveFq:
         else:
             verify_gradient += Script.parse_string("OP_SUB")  # Compute yQ - yP
         verify_gradient += roll(position=2, n_elements=1)  # Bring xQ on top
-        verify_gradient += stack_elements["P"].x.move(
-            position=stack_elements["P"].x.position + 3 - 2 * is_q_rolled - 1 * is_p_rolled, n_elements=1
-        )  # Move xP
+        verify_gradient += stack_elements["P"].x.shift(3 - 2 * is_q_rolled - 1 * is_p_rolled).moving_script()  # Move xP
         verify_gradient += Script.parse_string("OP_2DUP OP_SUB")  # Duplicate xP, xQ, compute xQ - xP
-        verify_gradient += stack_elements["lambda"].move(
-            position=stack_elements["lambda"].position + 5 - 2 * is_p_rolled - 2 * is_q_rolled, n_elements=1
+        verify_gradient += (
+            stack_elements["lambda"].shift(5 - 2 * is_p_rolled - 2 * is_q_rolled).moving_script()
         )  # Move lambda
         verify_gradient += Script.parse_string("OP_TUCK OP_MUL")  # Compute lambda *(xP - xQ)
         verify_gradient += roll(position=4, n_elements=1)  # Bring yQ + yP or yQ - yP on top
@@ -413,14 +407,14 @@ class EllipticCurveFq:
             msg = f"The stack_elements dictionary must have the following keys:\
                 'lambda', 'P', 'Q': stack_elements.keys: { stack_elements.keys()}"
             raise ValueError(msg)
-        if not stack_elements["lambda"] < stack_elements["P"]:
+        if not stack_elements["lambda"].is_before(stack_elements["P"].x):
             msg = "P must come after lambda in the stack"
             raise ValueError(msg)
-        if not stack_elements["P"] < stack_elements["Q"]:
+        if not stack_elements["P"].is_before(stack_elements["Q"]):
             msg = "Q must come after P in the stack"
             raise ValueError(msg)
-        is_q_rolled = stack_elements["Q"].x.move == roll
-        is_p_rolled = stack_elements["P"].x.move == roll
+        is_q_rolled = stack_elements["Q"].x.is_rolled()
+        is_p_rolled = stack_elements["P"].x.is_rolled()
 
         if check_constant:
             out = (
@@ -435,7 +429,7 @@ class EllipticCurveFq:
         #   P_ = P if not P.y.negate else -P
         #   Q_ = Q if not Q.y.negate else -Q
 
-        drop_yq = stack_elements["Q"].y.move(position=stack_elements["Q"].y.position, n_elements=1)  # Move yQ
+        drop_yq = stack_elements["Q"].y.moving_script()  # Move yQ
         drop_yq += Script.parse_string("OP_DROP")
         if is_q_rolled:
             out += drop_yq
@@ -443,15 +437,11 @@ class EllipticCurveFq:
         # Compute x(P_+Q_) = lambda^2 - x_P - x_Q
         # Stack in: q .. lambda .. P .. Q ..
         # Stack out: q .. lambda .. P .. Q ..  xP lambda x(P_+Q_)
-        x_coordinate = stack_elements["Q"].x.move(
-            position=stack_elements["Q"].x.position - 1 * is_q_rolled, n_elements=1
-        )  # Move xQ
-        x_coordinate += stack_elements["P"].x.move(
-            position=stack_elements["P"].x.position + 1 - 2 * is_q_rolled, n_elements=1
-        )  # Move xP
+        x_coordinate = stack_elements["Q"].x.shift(-1 * is_q_rolled).moving_script()  # Move xQ
+        x_coordinate += stack_elements["P"].x.shift(1 - 2 * is_q_rolled).moving_script()  # Move xP
         x_coordinate += Script.parse_string("OP_TUCK OP_ADD")  # Duplicate xP, compute xP + xQ
-        x_coordinate += stack_elements["lambda"].move(
-            position=stack_elements["lambda"].position + 2 - 2 * is_q_rolled - 1 * is_p_rolled, n_elements=1
+        x_coordinate += (
+            stack_elements["lambda"].shift(2 - 2 * is_q_rolled - 1 * is_p_rolled).moving_script()
         )  # Move lambda
         x_coordinate += Script.parse_string("OP_DUP OP_DUP OP_MUL")  # Duplicate almbda, compute lambda^2
         x_coordinate += roll(position=2, n_elements=1)  # Bring xP + xQ on top
@@ -465,9 +455,7 @@ class EllipticCurveFq:
         y_coordinate += Script.parse_string("OP_SUB")  # Compute xP - x(P_+Q_)
         y_coordinate += roll(position=2, n_elements=1)  # Bring lambda on top
         y_coordinate += Script.parse_string("OP_MUL")  # Compute lambda * (xP - x(P_+Q_))
-        y_coordinate += stack_elements["P"].y.move(
-            position=stack_elements["P"].y.position + 2 - 2 * is_q_rolled, n_elements=1
-        )  # Move yP
+        y_coordinate += stack_elements["P"].y.shift(2 - 2 * is_q_rolled).moving_script()  # Move yP
         y_coordinate += Script.parse_string("OP_ADD" if stack_elements["P"].y.negate else "OP_SUB")
         if take_modulo:
             y_coordinate += Script.parse_string("OP_TOALTSTACK")
@@ -553,10 +541,10 @@ class EllipticCurveFq:
             msg = f"The stack_elements dictionary must have the following keys:\
                 'lambda', 'P': stack_elements.keys: { stack_elements.keys()}"
             raise ValueError(msg)
-        if not stack_elements["lambda"] < stack_elements["P"]:
+        if not stack_elements["lambda"].is_before(stack_elements["P"].x):
             msg = "P must come after lambda in the stack"
             raise ValueError(msg)
-        is_p_rolled = stack_elements["P"].x.move == roll
+        is_p_rolled = stack_elements["P"].is_rolled()
 
         if check_constant:
             out = (
@@ -573,14 +561,10 @@ class EllipticCurveFq:
         # Stack in: q .. lambda .. P ..
         # Stack out: q .. lambda .. P .. xP yP lambda, or fail
         # Altstack out: [q if take_modulo]
-        verify_gradient = stack_elements["P"].x.move(
-            position=stack_elements["P"].x.position, n_elements=2
-        )  # Move xP, yP
+        verify_gradient = stack_elements["P"].moving_script()  # Move xP, yP
         verify_gradient += pick(position=1, n_elements=2)  # Duplicate xP, yP
         verify_gradient += Script.parse_string("OP_2 OP_MUL")  # Compute 2yP
-        verify_gradient += stack_elements["lambda"].move(
-            position=stack_elements["lambda"].position + 4 - 2 * is_p_rolled, n_elements=1
-        )  # Move lambda
+        verify_gradient += stack_elements["lambda"].shift(4 - 2 * is_p_rolled).moving_script()  # Move lambda
         verify_gradient += Script.parse_string("OP_TUCK")  # Duplicate lambda
         verify_gradient += Script.parse_string("OP_MUL")  # Compute 2yP * lambda
         verify_gradient += roll(position=2, n_elements=1)  # Bring xP on top
@@ -702,10 +686,10 @@ class EllipticCurveFq:
             msg = f"The stack_elements dictionary must have the following keys:\
                 'lambda', 'P': stack_elements.keys: { stack_elements.keys()}"
             raise ValueError(msg)
-        if not stack_elements["lambda"] < stack_elements["P"]:
+        if not stack_elements["lambda"].is_before(stack_elements["P"].x):
             msg = "P must come after lambda in the stack"
             raise ValueError(msg)
-        is_p_rolled = stack_elements["P"].x.move == roll
+        is_p_rolled = stack_elements["P"].is_rolled()
 
         if check_constant:
             out = (
@@ -719,11 +703,9 @@ class EllipticCurveFq:
         # Compute x(P_+Q_) = lambda^2 - 2*x_P
         # Stack in: q .. lambda .. P ..
         # Stack out: q .. lambda .. P ..  xP yP lambda x(2P_)
-        x_coordinate = stack_elements["P"].x.move(position=stack_elements["P"].x.position, n_elements=2)  # Move xP, yP
+        x_coordinate = stack_elements["P"].moving_script()  # Move xP, yP
         x_coordinate += Script.parse_string("OP_OVER OP_2 OP_MUL")  # Duplicate xP, compute 2xP
-        x_coordinate += stack_elements["lambda"].move(
-            position=stack_elements["lambda"].position + 3 - 2 * is_p_rolled, n_elements=1
-        )  # Move lambda
+        x_coordinate += stack_elements["lambda"].shift(3 - 2 * is_p_rolled).moving_script()  # Move lambda
         x_coordinate += Script.parse_string("OP_TUCK OP_DUP OP_MUL")  # Duplicate lambda, compute lamdba^2
         x_coordinate += Script.parse_string("OP_SWAP OP_SUB")  # Compute lambda^2 - 2*x_P
 
