@@ -127,9 +127,7 @@ class StackEllipticCurvePoint:
         (other[0], .., other[other.length-1]) in the stack. If other is StackEllipticCurvePoint, then the function
         subtitutes other with other.x.
         """
-        if type(other) is StackEllipticCurvePoint:
-            other = other.x
-        return self.y.is_before(other)
+        return self.y.is_before(other if not isinstance(other, StackEllipticCurvePoint) else other.x)
 
     def is_rolled(self):
         """Return True if self.x.move == roll, else False."""

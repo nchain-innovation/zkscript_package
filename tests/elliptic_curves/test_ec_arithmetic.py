@@ -30,6 +30,7 @@ class Secp256k1:
     )
     test_script = EllipticCurveFq(q=modulus, curve_a=0)
     test_script_unrolled = EllipticCurveFqUnrolled(q=modulus, ec_over_fq=test_script)
+    # All possible combinations: \pm P \pm Q are tested. Refer to ./util.py
     positions_addition = [
         {"modulus": 5, "lambda": 4, "P": 3, "Q": 1},
         {"modulus": 8, "lambda": 6, "P": 3, "Q": 1},
@@ -37,6 +38,7 @@ class Secp256k1:
         {"modulus": 20, "lambda": 15, "P": 10, "Q": 6},
         {"modulus": 25, "lambda": 20, "P": 14, "Q": 5},
     ]
+    # All possible combinations: \pm 2P are tested. Refer to ./util.py
     positions_doubling = [
         {"modulus": 3, "lambda": 2, "P": 1},
         {"modulus": 8, "lambda": 6, "P": 3},
@@ -92,6 +94,7 @@ class Secp256r1:
     )
     test_script = EllipticCurveFq(q=modulus, curve_a=0xFFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFC)
     test_script_unrolled = EllipticCurveFqUnrolled(q=modulus, ec_over_fq=test_script)
+    # All possible combinations: \pm P \pm Q are tested. Refer to ./util.py
     positions_addition = [
         {"modulus": 5, "lambda": 4, "P": 3, "Q": 1},
         {"modulus": 8, "lambda": 6, "P": 3, "Q": 1},
@@ -99,6 +102,7 @@ class Secp256r1:
         {"modulus": 20, "lambda": 15, "P": 10, "Q": 6},
         {"modulus": 25, "lambda": 20, "P": 14, "Q": 5},
     ]
+    # All possible combinations: \pm 2P are tested. Refer to ./util.py
     positions_doubling = [
         {"modulus": 3, "lambda": 2, "P": 1},
         {"modulus": 8, "lambda": 6, "P": 3},
@@ -152,6 +156,7 @@ class Secp256k1Extension:
     test_script = EllipticCurveFq2(
         q=modulus, curve_a=[0, 0], fq2=Fq2ScriptModel(q=modulus, non_residue=NON_RESIDUE_K1.to_list()[0])
     )
+    # All possible combinations: \pm P \pm Q are tested. Refer to ./util.py
     positions_addition = [
         {"modulus": 10, "lambda": 9, "P": 7, "Q": 3},
         {"modulus": 12, "lambda": 11, "P": 7, "Q": 3},
@@ -159,6 +164,7 @@ class Secp256k1Extension:
         {"modulus": 20, "lambda": 15, "P": 10, "Q": 6},
         {"modulus": 25, "lambda": 20, "P": 14, "Q": 5},
     ]
+    # All possible combinations: \pm 2P are tested. Refer to ./util.py
     positions_doubling = [
         {"modulus": 6, "lambda": 5, "P": 3},
         {"modulus": 12, "lambda": 11, "P": 7},
@@ -224,6 +230,7 @@ class Secp256r1Extension:
         curve_a=[0xFFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFC, 0],
         fq2=Fq2ScriptModel(q=modulus, non_residue=NON_RESIDUE_R1.to_list()[0]),
     )
+    # All possible combinations: \pm P \pm Q are tested. Refer to ./util.py
     positions_addition = [
         {"modulus": 10, "lambda": 9, "P": 7, "Q": 3},
         {"modulus": 12, "lambda": 11, "P": 7, "Q": 3},
@@ -231,6 +238,7 @@ class Secp256r1Extension:
         {"modulus": 20, "lambda": 15, "P": 10, "Q": 6},
         {"modulus": 25, "lambda": 20, "P": 14, "Q": 5},
     ]
+    # All possible combinations: \pm 2P are tested. Refer to ./util.py
     positions_doubling = [
         {"modulus": 6, "lambda": 5, "P": 3},
         {"modulus": 12, "lambda": 11, "P": 7},

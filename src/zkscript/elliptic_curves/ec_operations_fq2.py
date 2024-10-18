@@ -1,7 +1,7 @@
 from tx_engine import Script
 
-from src.zkscript.util.utility_classes import StackElements, StackEllipticCurvePoint, StackNumber
-from src.zkscript.util.utility_scripts import nums_to_script, pick, roll, verify_bottom_constant, mod
+from src.zkscript.types.stack_elements import StackElements, StackEllipticCurvePoint, StackNumber
+from src.zkscript.util.utility_scripts import mod, nums_to_script, pick, roll, verify_bottom_constant
 
 
 class EllipticCurveFq2:
@@ -27,7 +27,7 @@ class EllipticCurveFq2:
 
         This function computes the algebraic addition of P and Q for elliptic curve points `P` and `Q`.
         The function branches according to the value of verify_gradient.
-        If `take_modulo` is set to `True`, the result is reduced modulo `q`.
+        If `take_modulo` is `True`, the result is reduced modulo `q`.
         It also handles optional checks on the curve constant and whether the constant should be cleaned or reused.
 
         Stack input:
@@ -38,9 +38,9 @@ class EllipticCurveFq2:
         - stack    = [q .. {<lambda>} .. {P} .. {Q} .. (P_+ Q_)]
         - altstack = []
 
-        where {-} means that the element is there if it is picked, it is not there if it is rolled.
-        P_ = P if not P.y.negate else -P
-        Q_ = Q if not Q.y.negate else -Q
+        where {P} means that the element is there if it is picked, it is not there if it is rolled.
+        P_ = -P if P.y.negate else P
+        Q_ = -Q if Q.y.negate else Q
 
         Args:
             take_modulo (bool): If `True`, the result is reduced modulo q.
@@ -75,7 +75,7 @@ class EllipticCurveFq2:
         Preconditions:
             - The input points `P` and `Q` must be on the elliptic curve.
             - The modulo q must be a prime number.
-            - `P_` != `Q_` and `P_ != -Q_` and `P_`, `Q_` not the point at infinity
+            - `P_` and `Q_` are not equal, nor inverse, nor the point at infinity
 
         Notes:
             This function assumes the input points are represented as minimally encoded, little-endian integers.
@@ -103,7 +103,7 @@ class EllipticCurveFq2:
 
         This function computes the algebraic doubling of P for the elliptic curve points `P`.
         The function branches according to the value of verify_gradient.
-        If `take_modulo` is set to `True`, the result is reduced modulo `q`.
+        If `take_modulo` is `True`, the result is reduced modulo `q`.
         It also handles optional checks on the curve constant and whether the constant should be cleaned or reused.
 
         Stack input:
@@ -114,8 +114,8 @@ class EllipticCurveFq2:
         - stack    = [q .. {<lambda>} .. {P} .. 2P_]
         - altstack = []
 
-        where {-} means that the element is there if it is picked, it is not there if it is rolled.
-        P_ = P if not P.y.negate else -P
+        where {P} means that the element is there if it is picked, it is not there if it is rolled.
+        P_ = -P if P.y.negate else P
 
         Args:
             take_modulo (bool): If `True`, the result is reduced modulo q.
@@ -226,7 +226,7 @@ class EllipticCurveFq2:
         """Perform algebraic addition of points on an elliptic curve defined over Fq2.
 
         This function computes the algebraic addition of P and Q for elliptic curve points `P` and `Q`.
-        If `take_modulo` is set to `True`, the result is reduced modulo `q`.
+        If `take_modulo` is `True`, the result is reduced modulo `q`.
         It also handles optional checks on the curve constant and whether the constant should be cleaned or reused.
 
         Stack input:
@@ -237,9 +237,9 @@ class EllipticCurveFq2:
         - stack    = [q .. {<lambda>} .. {P} .. {Q} .. (P_+ Q_)]
         - altstack = []
 
-        where {-} means that the element is there if it is picked, it is not there if it is rolled.
-        P_ = P if not P.y.negate else -P
-        Q_ = Q if not Q.y.negate else -Q
+        where {P} means that the element is there if it is picked, it is not there if it is rolled.
+        P_ = -P if P.y.negate else P
+        Q_ = -Q if Q.y.negate else Q
 
         Args:
             take_modulo (bool): If `True`, the result is reduced modulo q.
@@ -273,7 +273,7 @@ class EllipticCurveFq2:
         Preconditions:
             - The input points `P` and `Q` must be on the elliptic curve.
             - The modulo q must be a prime number.
-            - `P_` != `Q_` and `P_ != -Q_` and `P_`, `Q_` not the point at infinity
+            - `P_` and `Q_` are not equal, nor inverse, nor the point at infinity
 
         Notes:
             This function assumes the input points are represented as minimally encoded, little-endian integers.
@@ -303,19 +303,14 @@ class EllipticCurveFq2:
         is_q_rolled = stack_elements["Q"].is_rolled()
         is_p_rolled = stack_elements["P"].is_rolled()
 
-        if check_constant:
-            out = Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
-            out += nums_to_script([self.MODULUS])
-            out += Script.parse_string("OP_EQUALVERIFY")
-        else:
-            out = Script()
+        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
         # Fq2 implementation
         fq2 = self.FQ2
 
         # Write:
-        #   P_ = P if not P.y.negate else -P
-        #   Q_ = Q if not Q.y.negate else -Q
+        #   P_ = -P if P.y.negate else P
+        #   Q_ = -Q if Q.y.negate else Q
 
         # Verify that lambda is the gradient between P_ and Q_
         # Stack in: q .. lambda .. P .. Q ..
@@ -392,17 +387,14 @@ class EllipticCurveFq2:
         )  # Compute lambda * (xP - x(P_+Q_))
         y_coordinate += Script.parse_string("OP_FROMALTSTACK OP_SUB")  # Compute [lambda * (xP - x(P_+Q_))]_1 - (yP_)_1
         if take_modulo:
-            y_coordinate += Script.parse_string("OP_DEPTH OP_1SUB")
-            y_coordinate += Script.parse_string("OP_ROLL") if clean_constant else Script.parse_string("OP_PICK")
-            y_coordinate += Script.parse_string(
-                "OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD"
-            )  # Compute {[lambda * (xP - x(P_+Q_))]_1 - (yP_)_1} % q
+            y_coordinate += roll(position=-1, n_elements=1) if clean_constant else pick(position=-1, n_elements=1)
+            y_coordinate += mod(stack_preparation="")  # Compute {[lambda * (xP - x(P_+Q_))]_1 - (yP_)_1} % q
             y_coordinate += roll(position=2, n_elements=1)  # Bring [lambda * (xP - x(P_+Q_))]_0 on top
             y_coordinate += Script.parse_string(
                 "OP_FROMALTSTACK OP_SUB"
             )  # Compute [lambda * (xP - x(P_+Q_))]_0 - (yP_)_0
-            y_coordinate += Script.parse_string(
-                "OP_ROT OP_TUCK OP_MOD OP_OVER OP_ADD OP_SWAP OP_MOD"
+            y_coordinate += roll(position=2, n_elements=1) + mod(
+                stack_preparation="", is_constant_reused=False
             )  # Compute {[lambda * (xP - x(P_+Q_))]_0 - (yP_)_0} % q
         else:
             y_coordinate += roll(position=1, n_elements=1)  # Bring lambda * (xP - x(P_+Q_))]_0 on top
@@ -427,7 +419,7 @@ class EllipticCurveFq2:
 
         This function computes the algebraic addition of P and Q for elliptic curve points `P` and `Q` without
         verifying the gradient provided.
-        If `take_modulo` is set to `True`, the result is reduced modulo `q`.
+        If `take_modulo` is `True`, the result is reduced modulo `q`.
         It also handles optional checks on the curve constant and whether the constant should be cleaned or reused.
 
         Stack input:
@@ -438,9 +430,9 @@ class EllipticCurveFq2:
         - stack    = [q .. {<lambda>} .. {P} .. {Q} .. (P_+ Q_)]
         - altstack = []
 
-        where {-} means that the element is there if it is picked, it is not there if it is rolled.
-        P_ = P if not P.y.negate else -P
-        Q_ = Q if not Q.y.negate else -Q
+        where {P} means that the element is there if it is picked, it is not there if it is rolled.
+        P_ = -P if P.y.negate else P
+        Q_ = -Q if Q.y.negate else Q
 
         Args:
             take_modulo (bool): If `True`, the result is reduced modulo q.
@@ -474,7 +466,7 @@ class EllipticCurveFq2:
         Preconditions:
             - The input points `P` and `Q` must be on the elliptic curve.
             - The modulo q must be a prime number.
-            - `P_` != `Q_` and `P_ != -Q_` and `P_`, `Q_` not the point at infinity
+            - `P_` and `Q_` are not equal, nor inverse, nor the point at infinity
 
         Notes:
             This function assumes the input points are represented as minimally encoded, little-endian integers.
@@ -502,19 +494,14 @@ class EllipticCurveFq2:
             raise ValueError(msg)
         is_q_rolled = stack_elements["Q"].is_rolled()
 
-        if check_constant:
-            out = Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
-            out += nums_to_script([self.MODULUS])
-            out += Script.parse_string("OP_EQUALVERIFY")
-        else:
-            out = Script()
+        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
         # Fq2 implementation
         fq2 = self.FQ2
 
         # Write:
-        #   P_ = P if not P.y.negate else -P
-        #   Q_ = Q if not Q.y.negate else -Q
+        #   P_ = -P if P.y.negate else P
+        #   Q_ = -Q if Q.y.negate else Q
 
         # Compute x-coordinate of P_ + Q_
         # Stack in: q .. lambda .. P .. Q ..
@@ -551,18 +538,15 @@ class EllipticCurveFq2:
         )  # Move yP_0
         y_coordinate += Script.parse_string("OP_ADD" if stack_elements["P"].y.negate else "OP_SUB")
         if take_modulo:
-            if clean_constant:
-                y_coordinate += Script.parse_string("OP_DEPTH OP_1SUB OP_ROLL")
-            else:
-                y_coordinate += Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
-            y_coordinate += Script.parse_string("OP_TUCK OP_MOD OP_OVER OP_ADD OP_OVER OP_MOD")
+            y_coordinate += roll(position=-1, n_elements=1) if clean_constant else pick(position=-1, n_elements=1)
+            y_coordinate += mod(stack_preparation="")
         y_coordinate += Script.parse_string("OP_FROMALTSTACK")
         y_coordinate += (
             stack_elements["P"].y.shift(4 - 2 * is_q_rolled + 1 * take_modulo).moving_script(start_index=1, end_index=2)
         )  # Move yP_1
         y_coordinate += Script.parse_string("OP_ADD" if stack_elements["P"].y.negate else "OP_SUB")
         if take_modulo:
-            y_coordinate += Script.parse_string("OP_ROT OP_TUCK OP_MOD OP_OVER OP_ADD OP_SWAP OP_MOD")
+            y_coordinate += roll(position=2, n_elements=1) + mod(stack_preparation="", is_constant_reused=False)
 
         drop_yq = stack_elements["Q"].y.shift(4).moving_script()  # Move yQ
         drop_yq += Script.parse_string("OP_2DROP")
@@ -571,7 +555,7 @@ class EllipticCurveFq2:
         if is_q_rolled:
             out += drop_yq  # Drop yQ
         if clean_constant and not take_modulo:
-            out += Script.parse_string("OP_DEPTH OP_1SUB OP_ROLL OP_DROP")
+            out += roll(position=-1, n_elements=1) + Script.parse_string("OP_DROP")
 
         return out
 
@@ -585,7 +569,7 @@ class EllipticCurveFq2:
         """Perform algebraic point doubling of points on an elliptic curve defined over Fq2.
 
         This function computes the algebraic doubling of P for the elliptic curve points `P`.
-        If `take_modulo` is set to `True`, the result is reduced modulo `q`.
+        If `take_modulo` is `True`, the result is reduced modulo `q`.
         It also handles optional checks on the curve constant and whether the constant should be cleaned or reused.
 
         Stack input:
@@ -596,8 +580,8 @@ class EllipticCurveFq2:
         - stack    = [q .. {<lambda>} .. {P} .. 2P_]
         - altstack = []
 
-        where {-} means that the element is there if it is picked, it is not there if it is rolled.
-        P_ = P if not P.y.negate else -P
+        where {P} means that the element is there if it is picked, it is not there if it is rolled.
+        P_ = -P if P.y.negate else P
 
         Args:
             take_modulo (bool): If `True`, the result is reduced modulo q.
@@ -655,15 +639,10 @@ class EllipticCurveFq2:
         # A coefficient
         curve_a = self.CURVE_A
 
-        if check_constant:
-            out = Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
-            out += nums_to_script([self.MODULUS])
-            out += Script.parse_string("OP_EQUALVERIFY")
-        else:
-            out = Script()
+        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
         # Write:
-        #   P_ = P if not P.y.negate else -P
+        #   P_ = -P if P.y.negate else P
 
         # Verify that lambda is the gradient of the line tangent at P_
         # Stack in: q .. lambda .. P ..
@@ -752,7 +731,7 @@ class EllipticCurveFq2:
 
         This function computes the algebraic doubling of P for the elliptic curve point `P` without
         verifying the gradient provided.
-        If `take_modulo` is set to `True`, the result is reduced modulo `q`.
+        If `take_modulo` is `True`, the result is reduced modulo `q`.
         It also handles optional checks on the curve constant and whether the constant should be cleaned or reused.
 
         Stack input:
@@ -763,8 +742,8 @@ class EllipticCurveFq2:
         - stack    = [q .. {<lambda>} .. {P} .. 2P_]
         - altstack = []
 
-        where {-} means that the element is there if it is picked, it is not there if it is rolled.
-        P_ = P if not P.y.negate else -P
+        where {P} means that the element is there if it is picked, it is not there if it is rolled.
+        P_ = -P if P.y.negate else P
 
         Args:
             take_modulo (bool): If `True`, the result is reduced modulo q.
@@ -820,15 +799,10 @@ class EllipticCurveFq2:
         # Fq2 implementation
         fq2 = self.FQ2
 
-        if check_constant:
-            out = Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
-            out += nums_to_script([self.MODULUS])
-            out += Script.parse_string("OP_EQUALVERIFY")
-        else:
-            out = Script()
+        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
         # Write:
-        #   P_ = P if not P.y.negate else -P
+        #   P_ = -P if P.y.negate else P
 
         # Compute x-coordinate of 2P_
         # Stack in: q .. lambda .. P ..

@@ -48,8 +48,8 @@ The script sizes for Groth16 are:
 
 | Curve | # public statements | Unlocking script size | Locking script size | Modulo threshold | Total |
 | ----- | ------------------- | --------------------- | ------------------- | ---------------- | ----- |
-| `BLS12-381` | 2 | ~ 60 KB | ~ 472 KB | 200B | ~ 532 KB |
-| `MNT4-753` | 1 | ~ 400 KB | ~ 655 KB | 200B | ~ 1.05 MB |
+| `BLS12-381` | 2 | ~ 59 KB | ~ 472 KB | 200B | ~ 532 KB |
+| `MNT4-753` | 1 | ~ 402 KB | ~ 647 KB | 200B | ~ 1.05 MB |
 
 Note: the unlocking script is dependent on the public statements. 
 

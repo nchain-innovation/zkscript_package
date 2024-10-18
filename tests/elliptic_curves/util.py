@@ -1,4 +1,5 @@
 import json
+from itertools import product
 from pathlib import Path
 
 from tx_engine import Script
@@ -30,7 +31,14 @@ def generate_verify_point(P, degree) -> Script:  # noqa: N803
 
 
 def generate_extended_list(elements: list[list[int]], positions_elements: list[int], filler: int = 1):
-    """Take a list of element a fills it with the filler element."""
+    """Take a list of element a fills it with the filler element.
+
+    Args:
+        - elements (list[list[int]]): the list of elements (each being a list itself) to be extended.
+        - positions_elements (list[int]): the positions that the elements should take in the extended list.
+        - filler (int = 1): the filler element.
+
+    """
     if type(positions_elements) is dict:
         positions_elements = positions_elements.values()
     extended_list = []
@@ -170,23 +178,17 @@ def generate_tests(modulus, P, Q, positions: list[dict[str, int]]):  # noqa: N80
     test_cases = []
 
     if P != Q:
-        for is_p_negated in [True, False]:
-            for is_q_negated in [True, False]:
-                for is_p_rolled in [True, False]:
-                    for is_q_rolled in [True, False]:
-                        for is_lambda_rolled in [True, False]:
-                            for position in positions:
-                                negations = {"P": is_p_negated, "Q": is_q_negated}
-                                rolls = {"lambda": is_lambda_rolled, "P": is_p_rolled, "Q": is_q_rolled}
-                                test_cases.append(generate_test(modulus, P, Q, position, negations, rolls))
+        for is_p_negated, is_q_negated, is_p_rolled, is_q_rolled, is_lambda_rolled in product([True, False], repeat=5):
+            for position in positions:
+                negations = {"P": is_p_negated, "Q": is_q_negated}
+                rolls = {"lambda": is_lambda_rolled, "P": is_p_rolled, "Q": is_q_rolled}
+                test_cases.append(generate_test(modulus, P, Q, position, negations, rolls))
     else:
-        for is_p_negated in [True, False]:
-            for is_p_rolled in [True, False]:
-                for is_lambda_rolled in [True, False]:
-                    for position in positions:
-                        negations = {"P": is_p_negated}
-                        rolls = {"lambda": is_lambda_rolled, "P": is_p_rolled}
-                        test_cases.append(generate_test(modulus, P, Q, position, negations, rolls))
+        for is_p_negated, is_p_rolled, is_lambda_rolled in product([True, False], repeat=3):
+            for position in positions:
+                negations = {"P": is_p_negated}
+                rolls = {"lambda": is_lambda_rolled, "P": is_p_rolled}
+                test_cases.append(generate_test(modulus, P, Q, position, negations, rolls))
 
     return test_cases
 

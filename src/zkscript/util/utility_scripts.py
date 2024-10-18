@@ -200,12 +200,13 @@ def mod(
         A Bitcoin Script that performs the modulo operation based on the specified parameters.
 
     Examples:
-        - The simpler situation is when `is_positive = False`, `stack_preparation = False`, and `is_constant_reused = False`.
+        - The simpler situation is when `is_positive = False`, `stack_preparation = False`,
+          and `is_constant_reused = False`.
           In this situation, the script only performs a modulo operation.
             Let `stack_in = [-5, 3]`, and `is_mod_on_top = True`, then `stack_out = [-5%3 = -2]`.
             Let `stack_in = [2, 7]`, and `is_mod_on_top = False`, then `stack_out = [7%2 = 1]`.
-        - If we have `is_positive = False`, `stack_preparation = False`, and `is_constant_resued = True`, after the modulo
-          operation the modulo constant is still present in the stack.
+        - If we have `is_positive = False`, `stack_preparation = False`, and `is_constant_resued = True`,
+          after the modulo operation the modulo constant is still present in the stack.
             Let `stack_in = [-5, 3]`, and `is_mod_on_top = True`, then `stack_out = [3, -2]`.
             Let `stack_in = [2, 7]`, and `is_mod_on_top = False`, then `stack_out = [2, 1]`.
         - If we have `is_positive = True`, `stack_preparation = False`, after taking the modulo the first time we pick a
@@ -214,8 +215,8 @@ def mod(
             `stack_out = [(3 if is_constant_reused = True), 2]`.
             Let `stack_in = [2, 7]`, and `is_mod_on_top = False`, then
             `stack_out = [(2 if is constant reused = True), 1]`.
-        - If `stack_preparation = True`, before starting the modulo operation, a new element is loaded from the alt stack.
-          The two opcodes added to the script if `stack_preparation = True`, modify the stack as follows:
+        - If `stack_preparation = True`, before starting the modulo operation, a new element is loaded from the
+          altstack.The two opcodes added to the script if `stack_preparation = True`, modify the stack as follows:
             Let `stack_in = [1, 2], alt_stack_in = [3]`, after `OP_FROMALTSTACK OP_ROT`, we get:
             `stack_out = [2, 3, 1], alt_stack_out = []`.
 
