@@ -1,7 +1,5 @@
-# Math
 from math import ceil, log2
 
-# from src.tx_engine.engine.script import Script
 from tx_engine import Script
 
 from src.zkscript.util.utility_functions import optimise_script

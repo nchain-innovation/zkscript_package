@@ -1,4 +1,4 @@
-# Export finite field arithmetic for BLS12_381
+"""Export finite field arithmetic for BLS12-381."""
 from types import MethodType
 
 from tx_engine import Script
@@ -30,23 +30,29 @@ fq6_script = Fq6Script(q=q, base_field=fq2_script)
 fq12_script = Fq12ScriptModel(q=q, fq2=fq2_script, fq6=fq6_script, gammas_frobenius=GAMMAS)
 
 
-def to_quadratic(self) -> Script:
-    """Move from Fq12Cubic (3 over 2 over 2) to Fq12 (2 over 3 over 2).
+def to_quadratic() -> Script:
+    """Convert an element of Fq12Cubic (cubic extension of F_q^4) to Fq12 (quadratic extension of F_q^6).
 
-    The isomorphism is:
-        Fq12Cubic = F_q^4[w] / (w^3 - xi)
-            = F_q^2[u,r,w] / (u^2 + 1, r^2 - xi, w^3 - r)
-            = F_q^2[t] / (t^6 - xi)
-            = F_q^2[u,v,w] / (u^2 + 1, v^3 - xi, w^2 - v)
-            = F_q^6[w] / (w^2 - v)
-            = Fq12
-    Hence, we send:
-        ((a,b),(c,d),(e,f)) --> ((a,e,d),(c,b,f))
-    Input parameters:
-        - Stack: f as an element of Fq12Cubic
-        - Altstack: []
-    Output:
-        - f as an element of Fq12
+    Stack input:
+        - stack:    [q, ..., x := ((a,b),(c,d),(e,f))], `x` is a triplet of elements of F_q^4
+        - altstack: []
+
+    Stack output:
+        - stack:    [q, ..., x := ((a,e,d),(c,b,f))], `x` is a couple of elements of F_q^6
+        - altstack: []
+
+    Returns:
+        Script to convert an element of Fq12Cubic to Fq12.
+
+    Notes:
+        The isomorphism is:
+            Fq12Cubic = F_q^4[w] / (w^3 - xi)
+                = F_q^2[u,r,w] / (u^2 + 1, r^2 - xi, w^3 - r)
+                = F_q^2[t] / (t^6 - xi)
+                = F_q^2[u,v,w] / (u^2 + 1, v^3 - xi, w^2 - v)
+                = F_q^6[w] / (w^2 - v)
+                = Fq12
+        Hence, we convert as follows: ((a,b),(c,d),(e,f)) --> ((a,e,d),(c,b,f))
     """
     out = Script()
 

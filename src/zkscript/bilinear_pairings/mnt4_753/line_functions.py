@@ -1,14 +1,22 @@
+"""line_functions module.
+
+This module enables constructing Bitcoin scripts that perform line evaluation for MNT4-753.
+"""
 from tx_engine import Script
 
-# Fq2 Script implementation
 from src.zkscript.bilinear_pairings.mnt4_753.fields import fq2_script
 from src.zkscript.util.utility_scripts import mod, verify_bottom_constant
 
 
 class LineFunctions:
-    """Line evaluation for MNT4_753."""
+    """Line evaluation for MNT4-753."""
 
     def __init__(self, fq2):
+        """Initialise line evaluation for MNT4-753.
+
+        Args:
+            fq2: The script implementation of the field F_q^2.
+        """
         self.MODULUS = fq2.MODULUS
         self.FQ2 = fq2
 
@@ -21,22 +29,33 @@ class LineFunctions:
     ) -> Script:
         """Evaluate line through T and Q at P.
 
-        If T = Q, then the line is the one tangent at T.
-        Inputs:
-            - Stack: q .. lambda Q P
-            - Altstack: []
-        Output:
-            - ev_(l_(T,Q)(P))
-        Assumption on data:
-            - lambda is the gradient through T and Q
-            - Q = (x2,y2) is passed as an affine point in E'(F_q^2), the sextic twist
-            - P = (xP,yP) is passed as an affine point in E(F_q)
-        Variables:
-            - If take_modulo is set to True, the outputs are returned as constants in Z_q.
-        REMARK:
-            - lambda is NOT checked in this function, it is assumed to be the gradient.
-            - the point ev_(l_(T,Q)(P)) does NOT include the zero in the second component, this is to optimise the
-            script size
+        Stack input:
+            - stack:    [q, ..., lambda, Q, P], `P` is in ???, `Q` is in ???, `lambda` is in ???
+            - altstack: []
+
+        Stack output:
+            - stack:    [q, ..., ev_(l_(T,Q)(P))], `ev_(l_(T,Q))(P)` is an element in Fq4
+            - altstack: []
+
+        Args:
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
+            is_constant_reused (bool | None, optional): If `True`, at the end of the execution, q is left as the ???
+                element at the top of the stack.
+
+        Preconditions:
+            - `lambda` is the gradient through `T` and `Q`.
+            - If `T = Q`, then the `lambda` is the gradient of the tangent at `T`.
+            - `Q = (x2,y2)` is passed as an affine point in `E'(F_q^2)`, the sextic twist. ???
+            - `P = (xP,yP)` is passed as an affine point in `E(F_q)`. ???
+
+        Returns:
+            Script to evaluate a line through `T` and `Q` at `P`.
+
+        Notes:
+            - `lambda` is NOT checked in this function, it is assumed to be the gradient.
+            - `ev_(l_(T,Q)(P))` does NOT include the zero in the second component, this is to optimise the script size.
         """
         # Fq2 implementation
         fq2 = self.FQ2
@@ -45,13 +64,11 @@ class LineFunctions:
 
         # Line evaluation for MNT4 returns: (lambda, Q, P) --> (-yQ + lambda * (xQ - xP*u), yP) as a point in Fq4
 
-        # Second component ---------
-
+        # Second component
         # After this, the stack is: lambda Q xP, altstack = [yP]
         second_component = Script.parse_string("OP_TOALTSTACK")
 
-        # First component ----------
-
+        # First component
         # After this, the stack is: lambda yQ (xQ - xP*u)
         first_component = Script.parse_string("OP_TOALTSTACK")
         first_component += Script.parse_string("OP_2SWAP OP_FROMALTSTACK OP_SUB")
@@ -63,8 +80,6 @@ class LineFunctions:
         # After this, the stack is: (-yQ + lambda * (xQ - xP*u))_0, altstack = [yP, (-yQ + lambda * (xQ - xP*u))_1]
         first_component += Script.parse_string("OP_ROT OP_SUB OP_TOALTSTACK")
         first_component += Script.parse_string("OP_SWAP OP_SUB")
-
-        # --------------------------
 
         out += second_component + first_component
 

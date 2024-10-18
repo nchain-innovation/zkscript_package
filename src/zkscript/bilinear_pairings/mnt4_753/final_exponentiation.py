@@ -1,5 +1,7 @@
-# Final exponentiation for MNT4_753
+"""final_exponentiation module.
 
+This module enables constructing Bitcoin scripts that perform the final exponentiation in the Ate pairing for MNT4-753.
+"""
 from tx_engine import Script
 
 from src.zkscript.bilinear_pairings.mnt4_753.fields import fq2_script, fq4_script
@@ -9,7 +11,14 @@ from src.zkscript.util.utility_scripts import pick, verify_bottom_constant
 
 
 class FinalExponentiation(CyclotomicExponentiation):
+    """Final exponentiation in the Ate pairing for MNT4-753."""
     def __init__(self, fq2, fq4):
+        """Initialise the final exponentiation for MNT4-753.
+
+        Args:
+            fq2: The script implementation of the field F_q^2, the quadratic extension of F_q.
+            fq4: The script implementation of the field F_q^4, the quadratic extension of F_q^2.
+        """
         self.MODULUS = fq4.MODULUS
         self.FQ4 = fq4
         self.cyclotomic_inverse = fq2.negate
@@ -24,16 +33,29 @@ class FinalExponentiation(CyclotomicExponentiation):
         clean_constant: bool | None = None,
         is_constant_reused: bool | None = None,
     ) -> Script:
-        """Easy part of the exponentiation with inverse calculated off-chain and verified during the script execution.
+        """Easy part of the final exponentiation.
 
-        Input:
-            - Inverse(f) f
-        Output:
-            - f^[(q^2-1]
-        Assumption of data:
-            - f and Inverse(f) are passed as couples of elements in Fq2
+        Stack input:
+            - stack:    [q, ..., inverse(f), f], `f` and `inverse(f)` are elements in F_q^4
+            - altstack: []
+
+        Stack output:
+            - stack:    [q, ..., f^(q^2-1)],
+            - altstack: []
+
+        Args:
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
+            is_constant_reused (bool | None, optional): If `True`, at the end of the execution, q is left as the ???
+                element at the top of the stack.
+
+        Returns:
+            Script to perform the easy part of the exponentiation in the Ate pairing for MNT4-753.
+
+        Notes:
+            The inverse of `f` is passed as input value on the stack and verified during script execution.
         """
-        # Fq4 implementation
         fq4 = self.FQ4
 
         out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
@@ -69,16 +91,28 @@ class FinalExponentiation(CyclotomicExponentiation):
         check_constant: bool | None = None,
         clean_constant: bool | None = None,
     ) -> Script:
-        """Hard part of the exponentation.
+        """Hard part of the final exponentiation.
 
-        Input:
-            - g (output of the easy part)
-        Output:
-            - g^[q + u + 1]
-        Assumption on data:
-            - g is passed as a couple of elements in Fq2
+        Stack input:
+            - stack:    [q, ..., g], `g` is an element in F_q^4, the quadratic extension of F_q^2
+            - altstack: []
+
+        Stack output:
+            - stack:    [q, ..., g^(q + u + 1)],
+            - altstack: []
+
+        Args:
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            modulo_threshold (int): The threshold after which we reduce the result with the modulo. Given as bit length.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
+
+        Returns:
+            Script to perform the hard part of the exponentiation in the Ate pairing for MNT4-753.
+
+        Notes:
+            `g` is the output of the easy part of the exponentiation.
         """
-        # Fq4 implementation
         fq4 = self.FQ4
 
         out = verify_bottom_constant(self.MODULUS) if check_constant else Script()

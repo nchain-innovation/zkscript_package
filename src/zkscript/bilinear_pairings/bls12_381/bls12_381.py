@@ -1,4 +1,4 @@
-# Build pairing model for BLS12_381
+"""Build the pairing model for BLS12-381."""
 
 from tx_engine import Script
 

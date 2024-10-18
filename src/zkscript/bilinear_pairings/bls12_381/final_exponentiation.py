@@ -1,5 +1,7 @@
-# Final exponentiation for MNT4_753
+"""final_exponentiation module.
 
+This module enables constructing Bitcoin scripts that perform the final exponentiation in the Ate pairing for BLS12-381.
+"""
 from tx_engine import Script
 
 from src.zkscript.bilinear_pairings.bls12_381.fields import fq12_script, fq12cubic_script
@@ -9,7 +11,13 @@ from src.zkscript.util.utility_scripts import pick, roll, verify_bottom_constant
 
 
 class FinalExponentiation(CyclotomicExponentiation):
+    """Final exponentiation in the Ate pairing for BLS12-381."""
     def __init__(self, fq12):
+        """Initialise the final exponentiation for BLS12-381.
+
+        Args:
+            fq12: The script implementation of the field F_q^12, the quadratic extension of F_q^6.
+        """
         self.MODULUS = fq12.MODULUS
         self.FQ12 = fq12
         self.cyclotomic_inverse = fq12.conjugate
@@ -24,15 +32,30 @@ class FinalExponentiation(CyclotomicExponentiation):
         clean_constant: bool | None = None,
         is_constant_reused: bool | None = None,
     ) -> Script:
-        """Easy part of the exponentiation: f --> f^{(q^6-1)(q^2+1)}.
+        """Easy part of the final exponentiation.
 
-        Input:
-            - Inverse(f_quadratic) f
-        Output:
-            - f^[(q^6-1)(q^2+1)]
-        Assumption of data:
-            - Inverse(f_quadratic) is passed as couples of elements in Fq6
-            - f is passed as an element of Fq12Cubic and f_quadratic is its Fq12 version
+        Stack input:
+            - stack:    [q, ..., inverse(f_quadratic), f], `f` is an element in F_q^12, the cubic extension of F_q^4,
+                `f_quadratic` is the same element in the quadratic extension of F_q^6, and its inverse is also an
+                element in the quadratic extension of F_q^6
+            - altstack: []
+
+        Stack output:
+            - stack:    [q, ..., f^[(q^6-1)(q^2+1)]],
+            - altstack: []
+
+        Args:
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
+            is_constant_reused (bool | None, optional): If `True`, at the end of the execution, q is left as the ???
+                element at the top of the stack.
+
+        Returns:
+            Script to perform the easy part of the exponentiation in the Ate pairing for BLS12-381.
+
+        Notes:
+            The inverse of `f` is passed as input value on the stack and verified during script execution.
         """
         # Fq12 implementation
         fq12 = self.FQ12
@@ -78,15 +101,28 @@ class FinalExponentiation(CyclotomicExponentiation):
         check_constant: bool | None = None,
         clean_constant: bool | None = None,
     ) -> Script:
-        """Hard part of the exponentation.
+        """Hard part of the final exponentiation.
 
-        gammas is a dictionary where gammas['i'] are the gammas required for Frobenius applied i times.
-        Input:
-            - g in Fq12 = Fq6[w] / (w^2 - v) unitary (output of the easy part)
-        Output:
-            - g^[(q^4 - q^2 + 1)/r]
-        Assumption on data:
-            - g is passed as a couple of elements in Fq6
+        Stack input:
+            - stack:    [q, ..., g], `g` is an element in F_q^12, the quadratic extension of F_q^6
+            - altstack: []
+
+        Stack output:
+            - stack:    [q, ..., g^[(q^4 - q^2 + 1)/r]],
+            - altstack: []
+
+        Args:
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            modulo_threshold (int): The threshold after which we reduce the result with the modulo. Given as bit length.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
+
+        Returns:
+            Script to perform the hard part of the exponentiation in the Ate pairing for BLS12-381.
+
+        Notes:
+            - `g` is the output of the easy part of the exponentiation.
+            - `gammas` is a dictionary where `gammas['i']` are the gammas required for Frobenius applied `i` times.
         """
         # Fq12 implementation
         fq12 = self.FQ12
