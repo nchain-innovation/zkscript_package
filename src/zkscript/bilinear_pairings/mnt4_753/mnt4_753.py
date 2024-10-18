@@ -1,4 +1,4 @@
-# Build pairing model for MNT4_753
+"""Build the pairing model for MNT4-753."""
 
 from tx_engine import Script
 
