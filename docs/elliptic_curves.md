@@ -77,13 +77,7 @@ context = Context(script = unlock + lock)
 assert(context.evaluate())
 ```
 
-# Examples: EC arithmetic over Fq2
-
-`ec_operations_fq2` work in the same way as per `ec_operations_fq`, with the difference that when we instantiate an object of the class `ElliptiCurveFq2` we need to supply the instantiation of the Bitcoin Script arithmetic in `Fq2`.
-
-The other difference between `ElliptiCurveFq`and `ElliptiCurveFq2`is that the methods `point_algebraic_doubling` and `point_doubling` of the latter take a few additional arguments. Namely:
-- `point_addition` takes the arguments: `position_lambda`, `position_P` and `position_Q`, which are the positions in the stack of the elements `P` and `Q` that are being summed, and the position of the gradient between them. Thanks to these arguments, the script is able to pick `P`, `Q` and the gradient without the user preparing the stack beforehand.
-- `point_doubling` takes the arguments: `position_lambda` and `position_P`, which are the positions in the stack of the element `P` that is being doubled, and the position of the gradient of the line tangent to the curve at `P`. Thanks to these arguments, the script is able to pick `P` and the gradient without the user preparing the stack beforehand.
+**Note:** `ec_operations_fq2` work in the same way as per `ec_operations_fq`, with the difference that when we instantiate an object of the class `ElliptiCurveFq2` we need to supply the instantiation of the Bitcoin Script arithmetic in `Fq2`.
 
 # Unrolled EC arithmetic
 
