@@ -1,4 +1,9 @@
+from typing import List, Union
+
 from tx_engine import Script
+
+from src.zkscript.types.stack_elements import StackElements
+from src.zkscript.util.utility_scripts import pick, roll
 
 
 def optimise_script(script: Script) -> Script:
@@ -39,3 +44,49 @@ def optimise_script(script: Script) -> Script:
                     break
 
     return Script.parse_string(" ".join(stack))
+
+
+def check_order(stack_elements: list[StackElements]) -> ValueError | None:
+    """Check that the elements in `stack_elements` do not overlap and are in the right order.
+
+    The function returns `True` if:
+        - stack_elements[i].overlaps_on_the_right(stack_elements[i+1]) is `False` for every i
+        - stack_elements[i].is_before(stack_elements[i+1]) is `True` for every i
+
+    Args:
+        stack_elements (list[StackElements]): The list of stack elements to be checked
+
+    """
+    for i in range(len(stack_elements) - 1):
+        overlaps, msg = stack_elements[i].overlaps_on_the_right(stack_elements[i + 1])
+        if overlaps:
+            msg = f"{msg}\nIndex of self: {i}, index of other: {i+1}"
+            raise ValueError(msg)
+    for i in range(len(stack_elements) - 1):
+        if not stack_elements[i].is_before(stack_elements[i + 1]):
+            msg = f"Elements {i}: {stack_elements[i]} is not before element {i+1}: {stack_elements[i+1]}"
+            raise ValueError(msg)
+
+    return
+
+
+def boolean_list_to_bitmask(boolean_list: List[bool]) -> int:
+    """Convert a list of True, False into a bitmask."""
+    bitmask = 0
+    for ix, option in enumerate(boolean_list):
+        bitmask |= 1 << ix if option else 0
+    return bitmask
+
+
+def bitmask_to_boolean_list(bitmask: int, list_length: int) -> List[bool]:
+    """Convert a bitmask to a list of True, False of length list_length."""
+    out = []
+    while bitmask > 0:
+        out.append(bool(bitmask & 1))
+        bitmask = bitmask >> 1
+    return [*out, *[False] * (list_length - len(out))]
+
+
+def bool_to_moving_function(is_rolled: bool) -> Union[pick, roll]:
+    """Map rolling option (bool) to correspoding moving function."""
+    return roll if is_rolled else pick

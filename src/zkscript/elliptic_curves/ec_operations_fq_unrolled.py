@@ -6,9 +6,11 @@ from tx_engine import Script
 
 # EC arithmetic
 from src.zkscript.elliptic_curves.ec_operations_fq import EllipticCurveFq
+from src.zkscript.types.stack_elements import StackEllipticCurvePoint, StackFiniteFieldElement
+from src.zkscript.util.utility_functions import boolean_list_to_bitmask
 
 # Utility scripts
-from src.zkscript.util.utility_scripts import nums_to_script, pick, roll, verify_bottom_constant
+from src.zkscript.util.utility_scripts import nums_to_script, roll, verify_bottom_constant
 
 
 class EllipticCurveFqUnrolled:
@@ -29,7 +31,7 @@ class EllipticCurveFqUnrolled:
 
         Notice that modulo_threshold is given as bit length.
         Input parameters:
-            - Stack: q .. marker_a_is_zero [lambdas,a] P
+            - Stack: [q, .., marker_a_is_zero, [lambdas,a], P]
             - Altstack: []
         Output:
             - P aP
@@ -111,24 +113,27 @@ class EllipticCurveFqUnrolled:
 			- T is the i-th step of the calculation of aP
 			- marker_doubling is the marker that tells us if we need to double T
 		If marker_doubling:
-			- is OP_0 => remove auxiliary_data and move to next iteration
+			- is OP_0 => auxiliary_data = "", move to next iteration
 			- is OP_1 => the auxiliary_data is assumed to be:
 				auxiliary_data_addition marker_addition lambda_(2T)
 		If marker_addition:
-			- is OP_0 => after the doubling, remove auxiliary_data_addition
+			- is OP_0 => auxiliary_data_addition = "", after the doubling, move to next iteration
 			- is OP_1 => then auxiliary_data_addition is assumed to be: lambda_(2T+P)
         """
 
         out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
-        # After this, the stack is: marker_a_is_zero [lambdas,a] P T
+        # stack in:  [marker_a_is_zero, [lambdas,a], P]
+        # stack out: [marker_a_is_zero, [lambdas,a], P, T]
         set_T = Script.parse_string("OP_2DUP")
         out += set_T
 
         size_q = ceil(log2(self.MODULUS))
         current_size = size_q
 
-        # After this, the stack is: marker_a_is_zero P aP
+        # Compute aP
+        # stack in:  [marker_a_is_zero,, [lambdas, a], P, T]
+        # stack out: [marker_a_s_zero, P, aP]
         for i in range(int(log2(max_multiplier)) - 1, -1, -1):
             # This is an approximation, but I'm quite sure it works.
             # We always have to take into account both operations
@@ -141,32 +146,57 @@ class EllipticCurveFqUnrolled:
                 take_modulo = False
                 current_size = size_after_operations
 
-            # After this, the stack is: P T auxiliary_data marker_doubling
-            out += Script.parse_string(
-                "OP_2ROT"
-            )  # Roll marker to decide whether to excute the loop and the auxiliary data
-            out += Script.parse_string(
-                "OP_IF"
-            )  # Check marker for executing iteration; if we enter here, the stack is: P T lambda_2T
-            out += Script.parse_string("OP_ROT OP_ROT")  # Roll T
-            out += ec_over_fq.point_doubling(
-                take_modulo=take_modulo, check_constant=False, clean_constant=False
-            )  # Compute 2T
-            out += Script.parse_string("OP_2ROT")  # Roll marker for addition and auxiliary data addition
-            out += Script.parse_string(
-                "OP_IF"
-            )  # Check marker for +P; if we enter here, the stack is: P 2T lambda_(2T+P)
-            out += Script.parse_string("OP_ROT OP_ROT")  # Roll 2T
-            out += pick(position=4, n_elements=2)  # Pick P
-            out += ec_over_fq.point_addition(
-                take_modulo=take_modulo, check_constant=False, clean_constant=False
-            )  # Compute 2T + P
-            out += Script.parse_string("OP_0")  # Add data to be dropped
-            out += Script.parse_string("OP_ENDIF OP_ENDIF")  # Conclude the conditional branches
-            out += Script.parse_string("OP_DROP")  # Drop useless data (if marker_doubling = False => auxiliary_data,
-            # if marker_addition = False => auxiliary_data_addition)
+            # Roll marker to decide whether to excute the loop and the auxiliary data
+            # stack in:  [auxiliary_data, marker_doubling, P, T]
+            # stack out: [auxiliary_data, P, T, marker_doubling]
+            out += roll(position=4, n_elements=1)
 
-        # Check if a == 0, in which case return 0x00 0x00
+            # stack in:  [auxiliary_data, P, T, marker_doubling]
+            # stack out: [P, T] if marker_doubling = 0, else [P, 2T]
+            out += Script.parse_string("OP_IF")  # Check marker for executing iteration
+            out += ec_over_fq.point_algebraic_doubling(
+                take_modulo=take_modulo,
+                check_constant=False,
+                clean_constant=False,
+                verify_gradient=True,
+                gradient=StackFiniteFieldElement(4, False, 1),
+                P=StackEllipticCurvePoint(
+                    StackFiniteFieldElement(1, False, 1),
+                    StackFiniteFieldElement(0, False, 1),
+                ),
+                rolling_options=boolean_list_to_bitmask([True, True]),
+            )  # Compute 2T
+
+            # Roll marker for addition and auxiliary data addition
+            # stack in:  [auxiliary_data_addition, marker_addition, P, 2T]
+            # stack out: [auxiliary_data_addition, P, 2T, marker_addition]
+            out += roll(position=4, n_elements=1)
+
+            # Check marker for +P and compute 2T + P if marker is 1
+            # stack in:  [auxiliary_data_addition, P, 2T, marker_addition]
+            # stack out: [P, 2T, if marker_addition = 0, else P, (2T+P)]
+            out += Script.parse_string("OP_IF")
+            out += ec_over_fq.point_algebraic_addition(
+                take_modulo=take_modulo,
+                check_constant=False,
+                clean_constant=False,
+                verify_gradient=True,
+                gradient=StackFiniteFieldElement(4, False, 1),
+                P=StackEllipticCurvePoint(
+                    StackFiniteFieldElement(3, False, 1),
+                    StackFiniteFieldElement(2, False, 1),
+                ),
+                Q=StackEllipticCurvePoint(
+                    StackFiniteFieldElement(1, False, 1),
+                    StackFiniteFieldElement(0, False, 1),
+                ),
+                rolling_options=boolean_list_to_bitmask([True, False, True]),
+            )  # Compute 2T + P
+            out += Script.parse_string("OP_ENDIF OP_ENDIF")  # Conclude the conditional branches
+
+        # Check if a == 0
+        # stack in:  [marker_a_is_zero, P, aP]
+        # stack out: [P, 0x00, 0x00 if a == 0, else P aP]
         out += roll(position=4, n_elements=1)
         out += Script.parse_string("OP_IF")
         out += Script.parse_string("OP_2DROP 0x00 0x00")
@@ -178,7 +208,12 @@ class EllipticCurveFqUnrolled:
         return out
 
     def unrolled_multiplication_input(
-        self, point_p: list[int], a: int, lambdas: list[list[list[int]]], max_multiplier: int, load_modulus=True
+        self,
+        P: list[int],  # noqa: N803
+        a: int,
+        lambdas: list[list[list[int]]],
+        max_multiplier: int,
+        load_modulus=True,
     ) -> Script:
         """Return the input script needed to execute the unrolled multiplication script above.
 
@@ -202,7 +237,7 @@ class EllipticCurveFqUnrolled:
 
         # Add the lambdas
         if a == 0:
-            out += Script.parse_string("OP_1") + Script.parse_string(" ".join(["OP_0", "OP_0"] * M))
+            out += Script.parse_string("OP_1") + Script.parse_string(" ".join(["OP_0"] * M))
         else:
             exp_a = [int(bin(a)[j]) for j in range(2, len(bin(a)))][::-1]
 
@@ -217,12 +252,12 @@ class EllipticCurveFqUnrolled:
                     out += nums_to_script(lambdas[j][1]) + Script.parse_string("OP_1")
                     out += nums_to_script(lambdas[j][0]) + Script.parse_string("OP_1")
                 else:
-                    out += Script.parse_string("OP_0 OP_0")
+                    out += Script.parse_string("OP_0")
                     out += nums_to_script(lambdas[j][0])
                     out += Script.parse_string("OP_1")
-            out += Script.parse_string(" ".join(["OP_0", "OP_0"] * (M - N)))
+            out += Script.parse_string(" ".join(["OP_0"] * (M - N)))
 
         # Load P
-        out += nums_to_script(point_p)
+        out += nums_to_script(P)
 
         return out
