@@ -41,7 +41,7 @@ class FinalExponentiation(CyclotomicExponentiation):
             - altstack: []
 
         Stack output:
-            - stack:    [q, ..., f^[(q^6-1)(q^2+1)]],
+            - stack:    [q, ..., g := f^[(q^6-1)(q^2+1)]], `g` is an element in F_q^12, the quadratic extension of F_q^6
             - altstack: []
 
         Args:
@@ -55,7 +55,8 @@ class FinalExponentiation(CyclotomicExponentiation):
             Script to perform the easy part of the exponentiation in the Ate pairing for BLS12-381.
 
         Notes:
-            The inverse of `f` is passed as input value on the stack and verified during script execution.
+            The inverse of `f` `inverse(f_quadratic)` is passed as input value on the stack and verified during script
+            execution.
         """
         # Fq12 implementation
         fq12 = self.FQ12
@@ -108,7 +109,7 @@ class FinalExponentiation(CyclotomicExponentiation):
             - altstack: []
 
         Stack output:
-            - stack:    [q, ..., g^[(q^4 - q^2 + 1)/r]],
+            - stack:    [q, ..., g^[(q^4 - q^2 + 1)/r]]
             - altstack: []
 
         Args:

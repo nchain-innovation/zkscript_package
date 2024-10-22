@@ -24,6 +24,7 @@ twisted_curve_operations = EllipticCurveFq2(q=q, curve_a=twisted_a, fq2=fq2_scri
 
 
 def pad_eval_times_eval_to_miller_output() -> Script:
+    """Pad a number with two zeros on the left."""
     out = Script()
     out += Script.parse_string(" ".join(["OP_TOALTSTACK"] * 6))
     out += Script.parse_string("OP_0 OP_0")

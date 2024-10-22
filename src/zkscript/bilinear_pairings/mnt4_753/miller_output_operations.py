@@ -1,4 +1,4 @@
-# Operations between Miller output (of type Fq4) and line evaluations
+"""Operations between Miller output (in F_q^4) and line evaluations for MNT4-753."""
 
 from tx_engine import Script
 
@@ -10,10 +10,11 @@ from src.zkscript.util.utility_scripts import mod, pick, roll, verify_bottom_con
 
 
 class MillerOutputOperations(Fq4ScriptModel):
-    """Implementation of arithmetic for Miller loop of MNT4_753.
+    """Arithmetic for Miller loop for MNT4-753.
 
-    Output of line evaluations are sparse elements in Fq4, i.e., they are of the form: a + bu + cus,
-    where F_q^4 = F_q^2[s] / (s^2 - u) = F_q[u,s] / (s^2 -  u, u^2 - 13)
+    Operations are performed in F_q^4 = F_q^2[s] / (s^2 - u) = F_q[u,s] / (s^2 -  u, u^2 - 13).
+
+    We call `sparse` elements of the form: a + bu + cus. Output of line evaluations are sparse elements in F_q^4.
     """
 
     def line_eval_times_eval(
@@ -23,18 +24,25 @@ class MillerOutputOperations(Fq4ScriptModel):
         clean_constant: bool | None = None,
         is_constant_reused: bool | None = None,
     ) -> Script:
-        """Multiplication of two line evaluations in Fq4.
+        """Multiplication of two sparse elements in F_q^4.
 
-        Input parameters:
-            - Stack: q .. X Y
-            - Altstack: []
-        Output:
-            - X * Y
-        Assumption on data:
-            - X and Y are passed as a sparse elements in Fq^4 (elements in Fq)
-        Variables:
-            - If take_modulo is set to True, then the coordinates of the result are in Z_q; otherwise, the coordinates
-            are not taken modulo q.
+        Stack input:
+            - stack:    [q, ..., x := (a1, b1, c1), y := (a2, b2, c2)], `x`, `y` are two sparse elements in F_q^4
+            - altstack: []
+
+        Stack output:
+            - stack:    [q, ..., z := x * y], `z` is an element in F_q^4
+            - altstack: []
+
+        Args:
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
+            is_constant_reused (bool | None, optional): If `True`, at the end of the execution, q is left as the ???
+                element at the top of the stack.
+
+        Returns:
+            Script to multiply two sparse elements in F_q^4.
         """
         out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
@@ -120,18 +128,25 @@ class MillerOutputOperations(Fq4ScriptModel):
         clean_constant: bool | None = None,
         is_constant_reused: bool | None = None,
     ) -> Script:
-        """Multiplication of element in Fq4 times a line evaluation.
+        """Multiplication of an element by a sparse element in F_q^4.
 
-        Input parameters:
-            - Stack: q .. X Y
-            - Altstack: []
-        Output:
-            - X * Y
-        Assumption on data:
-            - Y is passed as a sparse element in Fq^4
-        Variables:
-            - If take_modulo is set to True, then the coordinates of the result are in Z_q; otherwise, the coordinates
-            are not taken modulo q.
+        Stack input:
+            - stack:    [q, ..., x := (a1, b1), y := (a2, b2)], `a1`, `b1`, `a2` are in F_q^2, `b2` is in F_q
+            - altstack: []
+
+        Stack output:
+            - stack:    [q, ..., z := x * y], `z` is an element in F_q^4
+            - altstack: []
+
+        Args:
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
+            is_constant_reused (bool | None, optional): If `True`, at the end of the execution, q is left as the ???
+                element at the top of the stack.
+
+        Returns:
+            Script to multiply an element by a sparse element in F_q^4.
         """
         # Fq2 implementation
         fq2 = self.BASE_FIELD
@@ -212,18 +227,25 @@ class MillerOutputOperations(Fq4ScriptModel):
         clean_constant: bool | None = None,
         is_constant_reused: bool | None = None,
     ) -> Script:
-        """Multiplication of line evaluation with product of two line evaluations (i.e., an element of Fq4).
+        """Multiplication of a sparse element by an element in F_q^4.
 
-        Input parameters:
-            - Stack: q .. X Y
-            - Altstack: []
-        Output:
-            - X * Y
-        Assumption on data:
-            - X is passed as a sparse element in Fq^4
-        Variables:
-            - If take_modulo is set to True, then the coordinates of the result are in Z_q; otherwise, the coordinates
-            are not taken modulo q.
+        Stack input:
+            - stack:    [q, ..., x := (a1, b1), y := (a2, b2)], `a1`, `a2`, `b2` are in F_q^2, `b1` is in F_q
+            - altstack: []
+
+        Stack output:
+            - stack:    [q, ..., z := x * y], `z` is in F_q^4
+            - altstack: []
+
+        Args:
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
+            is_constant_reused (bool | None, optional): If `True`, at the end of the execution, q is left as the ???
+                element at the top of the stack.
+
+        Returns:
+            Script to multiply a sparse element by an element in F_q^4.
         """
         # Fq2 implementation
         fq2 = self.BASE_FIELD
@@ -301,6 +323,7 @@ class MillerOutputOperations(Fq4ScriptModel):
         clean_constant: bool | None = None,
         is_constant_reused: bool | None = None,
     ) -> Script:
+        """Multiplication in F_q^4."""
         return MillerOutputOperations.mul(
             self,
             take_modulo=take_modulo,
@@ -316,6 +339,7 @@ class MillerOutputOperations(Fq4ScriptModel):
         clean_constant: bool | None = None,
         is_constant_reused: bool | None = None,
     ) -> Script:
+        """Multiplication in F_q^4."""
         return MillerOutputOperations.mul(
             self,
             take_modulo=take_modulo,
@@ -331,6 +355,7 @@ class MillerOutputOperations(Fq4ScriptModel):
         clean_constant: bool | None = None,
         is_constant_reused: bool | None = None,
     ) -> Script:
+        """Multiplication in F_q^4."""
         return MillerOutputOperations.mul(
             self,
             take_modulo=take_modulo,
@@ -346,6 +371,7 @@ class MillerOutputOperations(Fq4ScriptModel):
         clean_constant: bool | None = None,
         is_constant_reused: bool | None = None,
     ) -> Script:
+        """Squaring of the Miller output in F_q^4."""
         return MillerOutputOperations.square(
             self,
             take_modulo=take_modulo,
@@ -361,6 +387,7 @@ class MillerOutputOperations(Fq4ScriptModel):
         clean_constant: bool | None = None,
         is_constant_reused: bool | None = None,
     ) -> Script:
+        """Multiplication in F_q^4."""
         return MillerOutputOperations.mul(
             self,
             take_modulo=take_modulo,
@@ -376,6 +403,7 @@ class MillerOutputOperations(Fq4ScriptModel):
         clean_constant: bool | None = None,
         is_constant_reused: bool | None = None,
     ) -> Script:
+        """Multiplication in F_q^4."""
         return MillerOutputOperations.mul(
             self,
             take_modulo=take_modulo,
@@ -391,6 +419,7 @@ class MillerOutputOperations(Fq4ScriptModel):
         clean_constant: bool | None = None,
         is_constant_reused: bool | None = None,
     ) -> Script:
+        """Multiplication in F_q^4."""
         return MillerOutputOperations.mul(
             self,
             take_modulo=take_modulo,
@@ -406,6 +435,7 @@ class MillerOutputOperations(Fq4ScriptModel):
         clean_constant: bool | None = None,
         is_constant_reused: bool | None = None,
     ) -> Script:
+        """Multiplication in F_q^4."""
         return MillerOutputOperations.mul(
             self,
             take_modulo=take_modulo,

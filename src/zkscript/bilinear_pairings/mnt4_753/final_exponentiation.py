@@ -40,7 +40,7 @@ class FinalExponentiation(CyclotomicExponentiation):
             - altstack: []
 
         Stack output:
-            - stack:    [q, ..., f^(q^2-1)],
+            - stack:    [q, ..., g := f^(q^2-1)], `g` is an element in F_q^4
             - altstack: []
 
         Args:
@@ -54,7 +54,7 @@ class FinalExponentiation(CyclotomicExponentiation):
             Script to perform the easy part of the exponentiation in the Ate pairing for MNT4-753.
 
         Notes:
-            The inverse of `f` is passed as input value on the stack and verified during script execution.
+            The inverse of `f` `inverse(f)` is passed as input value on the stack and verified during script execution.
         """
         fq4 = self.FQ4
 
@@ -98,7 +98,7 @@ class FinalExponentiation(CyclotomicExponentiation):
             - altstack: []
 
         Stack output:
-            - stack:    [q, ..., g^(q + u + 1)],
+            - stack:    [q, ..., g^(q + u + 1)]
             - altstack: []
 
         Args:

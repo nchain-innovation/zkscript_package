@@ -30,11 +30,13 @@ class LineFunctions:
         """Evaluate line through T and Q at P.
 
         Stack input:
-            - stack:    [q, ..., lambda, Q, P], `P` is in ???, `Q` is in ???, `lambda` is in ???
+            - stack:    [q, ..., lambda, Q, P], `P` is in `E(F_q)`, `Q` is in `E'(F_q^2)`, the sextic twist, `lambda` is
+                in F_q^2
             - altstack: []
 
         Stack output:
-            - stack:    [q, ..., ev_(l_(T,Q)(P))], `ev_(l_(T,Q))(P)` is an element in Fq12Cubic
+            - stack:    [q, ..., ev_(l_(T,Q)(P))], `ev_(l_(T,Q))(P)` is an element in F_q^12, the cubic extension of
+                F_q^4
             - altstack: []
 
         Args:
@@ -47,8 +49,6 @@ class LineFunctions:
         Preconditions:
             - `lambda` is the gradient through `T` and `Q`.
             - If `T = Q`, then the `lambda` is the gradient of the tangent at `T`.
-            - `Q = (x2,y2)` is passed as an affine point in `E'(F_q^2)`, the sextic twist.
-            - `P = (xP,yP)` is passed as an affine point in `E(F_q)`.
 
         Returns:
             Script to evaluate a line through `T` and `Q` at `P`.
