@@ -20,11 +20,12 @@ The scripts `point_algebraic_addition` and `point_algebraic_doubling` in the cla
 - `check_constant (bool | None)`: whether or not to check the constant supplied for modulo operations is the correct one
 - `clean_constant (bool | None)`: wheter or not to clean the constant supplied for modulo operations
 - `verify_gradient (bool)`: whether to check the validity of the gradient provided
-- `stack_elements (StackElements)`:<sup>[1](#ref_stack_elements)</sup> A dictionary pointing to where the script should fetch the elements from. For example, `point_algebraic_addition` expects the stack to look like:
-```q .. <lambda> .. P .. Q ..```
-The dictionary `stack_elements` states where `lambda`, `P` and `Q` are to be found in the stack, and whether `P` and/or `Q` should be negated, i.e., whether the script should compute `P + Q`, `P - Q`, `- P + Q`, or `- P - Q`.
+- `gradient (StackFiniteFieldElement)`: the position of `gradient` in the stack
+- `P (StackEllipticCurvePoint)`: the position of `P` in the stack (and whether it should be negated)
+- (only for `point_algebraic_addition`) `Q (StackEllipticCurvePoint)`: the position of `Q` in the stack (and whether it should be negated)
+- `rolling_options (int)`: a bitmask telling the function whether `gradient`, `P`, and `Q` should be rolled.
 
-[<a id="ref_stack_elements">1</a>]: For the definition of the `StackElements` type, see [StackElements](../docs/stack_elements.md).
+For the definition of the `StackFiniteFieldElement`, `StackEllipticCurvePoint`, see [StackElements](../docs/stack_elements.md).
 
  # Examples: EC arithmetic over Fq
 
@@ -77,7 +78,7 @@ context = Context(script = unlock + lock)
 assert(context.evaluate())
 ```
 
-**Note:** `ec_operations_fq2` work in the same way as per `ec_operations_fq`, with the difference that when we instantiate an object of the class `ElliptiCurveFq2` we need to supply the instantiation of the Bitcoin Script arithmetic in `Fq2`.
+**Note:** `ec_operations_fq2` works in the same way as per `ec_operations_fq`, with the difference that when we instantiate an object of the class `ElliptiCurveFq2` we need to supply the instantiation of the Bitcoin Script arithmetic in `Fq2`.
 
 # Unrolled EC arithmetic
 
