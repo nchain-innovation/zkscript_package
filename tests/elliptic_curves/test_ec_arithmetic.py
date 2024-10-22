@@ -12,7 +12,7 @@ from src.zkscript.elliptic_curves.ec_operations_fq2 import EllipticCurveFq2
 from src.zkscript.elliptic_curves.ec_operations_fq_unrolled import EllipticCurveFqUnrolled
 from src.zkscript.fields.fq2 import Fq2 as Fq2ScriptModel
 from src.zkscript.util.utility_scripts import nums_to_script
-from tests.elliptic_curves.util import generate_tests, generate_unlock, generate_verify_point, save_scripts
+from tests.elliptic_curves.util import generate_test_data, generate_unlock, generate_verify_point, save_scripts
 
 
 @dataclass
@@ -30,21 +30,13 @@ class Secp256k1:
     )
     test_script = EllipticCurveFq(q=modulus, curve_a=0)
     test_script_unrolled = EllipticCurveFqUnrolled(q=modulus, ec_over_fq=test_script)
-    # All possible combinations: \pm P \pm Q are tested. Refer to ./util.py
+    # All possible combinations: ± P ± Q are tested. Refer to ./util.py
     positions_addition = [
-        {"modulus": 5, "lambda": 4, "P": 3, "Q": 1},
-        {"modulus": 8, "lambda": 6, "P": 3, "Q": 1},
-        {"modulus": 11, "lambda": 9, "P": 5, "Q": 1},
-        {"modulus": 20, "lambda": 15, "P": 10, "Q": 6},
-        {"modulus": 25, "lambda": 20, "P": 14, "Q": 5},
+        {"modulus": 25, "gradient": 20, "P": 14, "Q": 5},
     ]
-    # All possible combinations: \pm 2P are tested. Refer to ./util.py
+    # All possible combinations: ± 2P are tested. Refer to ./util.py
     positions_doubling = [
-        {"modulus": 3, "lambda": 2, "P": 1},
-        {"modulus": 8, "lambda": 6, "P": 3},
-        {"modulus": 11, "lambda": 9, "P": 5},
-        {"modulus": 20, "lambda": 15, "P": 10},
-        {"modulus": 25, "lambda": 20, "P": 14},
+        {"modulus": 25, "gradient": 20, "P": 14},
     ]
     # Define filename for saving scripts
     filename = "secp256k1"
@@ -59,8 +51,8 @@ class Secp256k1:
     )
     a = 64046112301879843941239178948101222343000413030798872646069227448863068996094
     test_data = {
-        "test_addition": generate_tests(modulus, P, Q, positions_addition),
-        "test_doubling": generate_tests(modulus, P, P, positions_doubling),
+        "test_addition": generate_test_data(modulus, P, Q, positions_addition),
+        "test_doubling": generate_test_data(modulus, P, P, positions_doubling),
         "test_addition_unknown_points": [
             # {"P": P, "Q": Q, "expected": P + Q},
             {"P": P, "Q": -P, "expected": point_at_infinity},
@@ -94,21 +86,13 @@ class Secp256r1:
     )
     test_script = EllipticCurveFq(q=modulus, curve_a=0xFFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFC)
     test_script_unrolled = EllipticCurveFqUnrolled(q=modulus, ec_over_fq=test_script)
-    # All possible combinations: \pm P \pm Q are tested. Refer to ./util.py
+    # All possible combinations: ± P ± Q are tested. Refer to ./util.py
     positions_addition = [
-        {"modulus": 5, "lambda": 4, "P": 3, "Q": 1},
-        {"modulus": 8, "lambda": 6, "P": 3, "Q": 1},
-        {"modulus": 11, "lambda": 9, "P": 5, "Q": 1},
-        {"modulus": 20, "lambda": 15, "P": 10, "Q": 6},
-        {"modulus": 25, "lambda": 20, "P": 14, "Q": 5},
+        {"modulus": 25, "gradient": 20, "P": 14, "Q": 5},
     ]
-    # All possible combinations: \pm 2P are tested. Refer to ./util.py
+    # All possible combinations: ± 2P are tested. Refer to ./util.py
     positions_doubling = [
-        {"modulus": 3, "lambda": 2, "P": 1},
-        {"modulus": 8, "lambda": 6, "P": 3},
-        {"modulus": 11, "lambda": 9, "P": 5},
-        {"modulus": 20, "lambda": 15, "P": 10},
-        {"modulus": 25, "lambda": 20, "P": 14},
+        {"modulus": 25, "gradient": 20, "P": 14},
     ]
     # Define filename for saving scripts
     filename = "secp256r1"
@@ -123,8 +107,8 @@ class Secp256r1:
     )
     a = 104614095137500434070196828944928516815982260532830080798264081596642730786155
     test_data = {
-        "test_addition": generate_tests(modulus, P, Q, positions_addition),
-        "test_doubling": generate_tests(modulus, P, P, positions_doubling),
+        "test_addition": generate_test_data(modulus, P, Q, positions_addition),
+        "test_doubling": generate_test_data(modulus, P, P, positions_doubling),
         "test_addition_unknown_points": [
             # {"P": P, "Q": Q, "expected": P + Q},
             {"P": P, "Q": -P, "expected": point_at_infinity},
@@ -156,21 +140,13 @@ class Secp256k1Extension:
     test_script = EllipticCurveFq2(
         q=modulus, curve_a=[0, 0], fq2=Fq2ScriptModel(q=modulus, non_residue=NON_RESIDUE_K1.to_list()[0])
     )
-    # All possible combinations: \pm P \pm Q are tested. Refer to ./util.py
+    # All possible combinations: ± P ± Q are tested. Refer to ./util.py
     positions_addition = [
-        {"modulus": 10, "lambda": 9, "P": 7, "Q": 3},
-        {"modulus": 12, "lambda": 11, "P": 7, "Q": 3},
-        {"modulus": 18, "lambda": 13, "P": 9, "Q": 3},
-        {"modulus": 20, "lambda": 15, "P": 10, "Q": 6},
-        {"modulus": 25, "lambda": 20, "P": 14, "Q": 5},
+        {"modulus": 25, "gradient": 20, "P": 14, "Q": 5},
     ]
-    # All possible combinations: \pm 2P are tested. Refer to ./util.py
+    # All possible combinations: ± 2P are tested. Refer to ./util.py
     positions_doubling = [
-        {"modulus": 6, "lambda": 5, "P": 3},
-        {"modulus": 12, "lambda": 11, "P": 7},
-        {"modulus": 18, "lambda": 13, "P": 9},
-        {"modulus": 20, "lambda": 15, "P": 10},
-        {"modulus": 25, "lambda": 20, "P": 14},
+        {"modulus": 25, "gradient": 20, "P": 14},
     ]
     # Define filename for saving scripts
     filename = "secp256k1_extension"
@@ -196,8 +172,8 @@ class Secp256k1Extension:
         ),
     )
     test_data = {
-        "test_addition": generate_tests(modulus, P, Q, positions_addition),
-        "test_doubling": generate_tests(modulus, P, P, positions_doubling),
+        "test_addition": generate_test_data(modulus, P, Q, positions_addition),
+        "test_doubling": generate_test_data(modulus, P, P, positions_doubling),
         "test_negation": [
             {"P": P, "expected": -P},
             {"P": point_at_infinity, "expected": -point_at_infinity},
@@ -230,21 +206,13 @@ class Secp256r1Extension:
         curve_a=[0xFFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFC, 0],
         fq2=Fq2ScriptModel(q=modulus, non_residue=NON_RESIDUE_R1.to_list()[0]),
     )
-    # All possible combinations: \pm P \pm Q are tested. Refer to ./util.py
+    # All possible combinations: ± P ± Q are tested. Refer to ./util.py
     positions_addition = [
-        {"modulus": 10, "lambda": 9, "P": 7, "Q": 3},
-        {"modulus": 12, "lambda": 11, "P": 7, "Q": 3},
-        {"modulus": 18, "lambda": 13, "P": 9, "Q": 3},
-        {"modulus": 20, "lambda": 15, "P": 10, "Q": 6},
-        {"modulus": 25, "lambda": 20, "P": 14, "Q": 5},
+        {"modulus": 25, "gradient": 20, "P": 14, "Q": 5},
     ]
-    # All possible combinations: \pm 2P are tested. Refer to ./util.py
+    # All possible combinations: ± 2P are tested. Refer to ./util.py
     positions_doubling = [
-        {"modulus": 6, "lambda": 5, "P": 3},
-        {"modulus": 12, "lambda": 11, "P": 7},
-        {"modulus": 18, "lambda": 13, "P": 9},
-        {"modulus": 20, "lambda": 15, "P": 10},
-        {"modulus": 25, "lambda": 20, "P": 14},
+        {"modulus": 25, "gradient": 20, "P": 14},
     ]
     # Define filename for saving scripts
     filename = "secp256r1_extension"
@@ -270,8 +238,8 @@ class Secp256r1Extension:
         ),
     )
     test_data = {
-        "test_addition": generate_tests(modulus, P, Q, positions_addition),
-        "test_doubling": generate_tests(modulus, P, P, positions_doubling),
+        "test_addition": generate_test_data(modulus, P, Q, positions_addition),
+        "test_doubling": generate_test_data(modulus, P, P, positions_doubling),
         "test_negation": [
             {"P": P, "expected": -P},
             {"P": point_at_infinity, "expected": -point_at_infinity},
@@ -290,11 +258,23 @@ def generate_test_cases(test_name):
                 match test_name:
                     case "test_addition":
                         out.append(
-                            (config, test_data["unlocking_script"], test_data["expected"], test_data["stack_elements"])
+                            (
+                                config,
+                                test_data["unlocking_script"],
+                                test_data["expected"],
+                                test_data["stack_elements"],
+                                test_data["rolling_options"],
+                            )
                         )
                     case "test_doubling":
                         out.append(
-                            (config, test_data["unlocking_script"], test_data["expected"], test_data["stack_elements"])
+                            (
+                                config,
+                                test_data["unlocking_script"],
+                                test_data["expected"],
+                                test_data["stack_elements"],
+                                test_data["rolling_options"],
+                            )
                         )
                     case "test_addition_unknown_points":
                         out.append((config, test_data["P"], test_data["Q"], test_data["expected"]))
@@ -307,9 +287,12 @@ def generate_test_cases(test_name):
 
 @pytest.mark.parametrize("verify_gradient", [True, False])
 @pytest.mark.parametrize(
-    ("config", "unlocking_script", "expected", "stack_elements"), generate_test_cases("test_addition")
+    ("config", "unlocking_script", "expected", "stack_elements", "rolling_options"),
+    generate_test_cases("test_addition"),
 )
-def test_addition(config, unlocking_script, expected, stack_elements, verify_gradient, save_to_json_folder):
+def test_addition(
+    config, unlocking_script, expected, stack_elements, rolling_options, verify_gradient, save_to_json_folder
+):
     unlock = unlocking_script
 
     lock = config.test_script.point_algebraic_addition(
@@ -317,7 +300,10 @@ def test_addition(config, unlocking_script, expected, stack_elements, verify_gra
         check_constant=True,
         clean_constant=True,
         verify_gradient=verify_gradient,
-        stack_elements=stack_elements,
+        gradient=stack_elements["gradient"],
+        P=stack_elements["P"],
+        Q=stack_elements["Q"],
+        rolling_options=rolling_options,
     )
 
     lock += expected
@@ -333,9 +319,12 @@ def test_addition(config, unlocking_script, expected, stack_elements, verify_gra
 
 @pytest.mark.parametrize("verify_gradient", [True, False])
 @pytest.mark.parametrize(
-    ("config", "unlocking_script", "expected", "stack_elements"), generate_test_cases("test_doubling")
+    ("config", "unlocking_script", "expected", "stack_elements", "rolling_options"),
+    generate_test_cases("test_doubling"),
 )
-def test_doubling(config, unlocking_script, expected, stack_elements, verify_gradient, save_to_json_folder):
+def test_doubling(
+    config, unlocking_script, expected, stack_elements, rolling_options, verify_gradient, save_to_json_folder
+):
     unlock = unlocking_script
 
     lock = config.test_script.point_algebraic_doubling(
@@ -343,7 +332,9 @@ def test_doubling(config, unlocking_script, expected, stack_elements, verify_gra
         check_constant=True,
         clean_constant=True,
         verify_gradient=verify_gradient,
-        stack_elements=stack_elements,
+        gradient=stack_elements["gradient"],
+        P=stack_elements["P"],
+        rolling_options=rolling_options,
     )
 
     lock += expected

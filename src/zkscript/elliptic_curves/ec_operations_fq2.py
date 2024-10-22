@@ -1,7 +1,8 @@
 from tx_engine import Script
 
-from src.zkscript.types.stack_elements import StackElements, StackEllipticCurvePoint, StackNumber
-from src.zkscript.util.utility_scripts import mod, nums_to_script, pick, roll, verify_bottom_constant
+from src.zkscript.types.stack_elements import StackEllipticCurvePoint, StackFiniteFieldElement
+from src.zkscript.util.utility_functions import bitmask_to_boolean_list, bool_to_moving_function, check_order
+from src.zkscript.util.utility_scripts import mod, move, nums_to_script, pick, roll, verify_bottom_constant
 
 
 class EllipticCurveFq2:
@@ -21,7 +22,16 @@ class EllipticCurveFq2:
         check_constant: bool | None,
         clean_constant: bool | None,
         verify_gradient: bool = True,
-        stack_elements: StackElements | None = None,
+        gradient: StackFiniteFieldElement = StackFiniteFieldElement(9, False, 2),  # noqa: B008
+        P: StackEllipticCurvePoint = StackEllipticCurvePoint(  # noqa: B008, N803
+            StackFiniteFieldElement(7, False, 2),  # noqa: B008
+            StackFiniteFieldElement(5, False, 2),  # noqa: B008
+        ),
+        Q: StackEllipticCurvePoint = StackEllipticCurvePoint(  # noqa: B008, N803
+            StackFiniteFieldElement(3, False, 2),  # noqa: B008
+            StackFiniteFieldElement(1, False, 2),  # noqa: B008
+        ),
+        rolling_options: int = 7,
     ) -> Script:
         """Perform algebraic addition of points on an elliptic curve defined over Fq2.
 
@@ -31,11 +41,11 @@ class EllipticCurveFq2:
         It also handles optional checks on the curve constant and whether the constant should be cleaned or reused.
 
         Stack input:
-        - stack    = [q .. <lambda> .. P .. Q ..]
+        - stack    = [Q, .., gradient, .., P, .., Q, ..]
         - altstack = []
 
         Stack output:
-        - stack    = [q .. {<lambda>} .. {P} .. {Q} .. (P_+ Q_)]
+        - stack    = [{q}, .., {gradient}, .., {P}, .., {Q}, .., (P_+ Q_)]
         - altstack = []
 
         where {P} means that the element is there if it is picked, it is not there if it is rolled.
@@ -48,19 +58,23 @@ class EllipticCurveFq2:
             clean_constant (bool | None, optional): If `True`, clean the constant by removing it
                 from the stack after use.
             verify_gradient (bool): If `True`, the validity of the gradient provided is checked.
-            stack_elements (StackElements | None, optional): Dictionary with keys:
-                - lambda (StackNumber): The position of gradient through P_ and Q_ in the stack,
-                    its length, whether it should be negated, and whether it should be rolled or picked
-                - P (StackEllipticCurvePoint): The position of the point `P` in the stack,
-                    its length, whether it should be negated, and whether it should be rolled or picked
-                - Q (StackEllipticCurvePoint): The position of the point `Q` in the stack,
-                    its length, whether it should be negated, and whether it should be rolled or picked
-                If None, the default dictionary is:
-                    stack_elements = {
-                        "lambda" : StackNumber(9,2,False,roll),
-                        "P" : StackEllipticCurvePoint(StackNumber(7,2,False,roll),StackNumber(5,2,False,roll)),
-                        "Q" : StackEllipticCurvePoint(StackNumber(3,2,False,roll),StackNumber(1,2,False,roll)),
-                    }
+            gradient (StackFiniteFieldElement): The position of gradient through P_ and Q_ in the stack,
+                its length, whether it should be negated, and whether it should be rolled or picked.
+                Defaults to: StackFiniteFieldElement(9, False, 2)
+            P (StackEllipticCurvePoint): The position of the point `P` in the stack,
+                its length, whether it should be negated, and whether it should be rolled or picked.
+                Defaults to: StackEllipticCurvePoint(
+                    StackFiniteFieldElement(7, False, 2),StackFiniteFieldElement(5, False, 2)
+                    )
+            Q (StackEllipticCurvePoint): The position of the point `Q` in the stack,
+                its length, whether it should be negated, and whether it should be rolled or picked.
+                Defaults to: StackEllipticCurvePoint(
+                    StackFiniteFieldElement(3, False, 2),StackFiniteFieldElement(1, False, 2)
+                    )
+            rolling_options (int): A bitmask specifying which arguments should be rolled on which should
+                be picked. The bits of the bitmask correspond to whether the i-th argument should be
+                rolled or not. Defaults to 7 (all elements are rolled).
+
 
         Returns:
             A Bitcoin Script that computes P_ + Q_ for the given elliptic curve points `P` and `Q`.
@@ -68,9 +82,8 @@ class EllipticCurveFq2:
         Raises:
             ValueError: If either of the following happens:
                 - `clean_constant` or `check_constant` are not provided when required.
-                - `lambda` comes after `P` in the stack
+                - `gradient` comes after `P` in the stack
                 - `P` comes after `Q` in the stack
-                - `stack_elements` is not None, but it does not contain all the keys `lambda`, `P`, `Q`
 
         Preconditions:
             - The input points `P` and `Q` must be on the elliptic curve.
@@ -83,11 +96,11 @@ class EllipticCurveFq2:
         """
         return (
             self.point_algebraic_addition_verifying_gradient(
-                take_modulo, check_constant, clean_constant, stack_elements
+                take_modulo, check_constant, clean_constant, gradient, P, Q, rolling_options
             )
             if verify_gradient
             else self.point_algebraic_addition_without_verifying_gradient(
-                take_modulo, check_constant, clean_constant, stack_elements
+                take_modulo, check_constant, clean_constant, gradient, P, Q, rolling_options
             )
         )
 
@@ -97,7 +110,12 @@ class EllipticCurveFq2:
         check_constant: bool | None,
         clean_constant: bool | None,
         verify_gradient: bool = True,
-        stack_elements: StackElements | None = None,
+        gradient: StackFiniteFieldElement = StackFiniteFieldElement(5, False, 2),  # noqa: B008
+        P: StackEllipticCurvePoint = StackEllipticCurvePoint(  # noqa: B008, N803
+            StackFiniteFieldElement(3, False, 2),  # noqa: B008
+            StackFiniteFieldElement(1, False, 2),  # noqa: B008
+        ),
+        rolling_options: int = 3,
     ) -> Script:
         """Perform algebraic point doubling of points on an elliptic curve defined over Fq2.
 
@@ -107,11 +125,11 @@ class EllipticCurveFq2:
         It also handles optional checks on the curve constant and whether the constant should be cleaned or reused.
 
         Stack input:
-        - stack    = [q .. <lambda> .. P ..]
+        - stack    = [Q, .., gradient, .., P, ..]
         - altstack = []
 
         Stack output:
-        - stack    = [q .. {<lambda>} .. {P} .. 2P_]
+        - stack    = [{q}, .., {gradient}, .., {P}, .., 2P_]
         - altstack = []
 
         where {P} means that the element is there if it is picked, it is not there if it is rolled.
@@ -123,16 +141,17 @@ class EllipticCurveFq2:
             clean_constant (bool | None, optional): If `True`, clean the constant by removing it
                 from the stack after use.
             verify_gradient (bool): If `True`, the validity of the gradient provided is checked.
-            stack_elements (StackElements | None, optional): Dictionary with keys:
-                - lambda (StackNumber): The position of gradient of the line tangent at P_ in the stack,
-                    its length, whether it should be negated, and whether it should be rolled or picked
-                - P (StackEllipticCurvePoint): The position of the point `P` in the stack,
-                    its length, whether it should be negated, and whether it should be rolled or picked
-                If None, the default dictionary is:
-                    stack_elements = {
-                        "lambda" : StackNumber(5,2,False,roll),
-                        "P" : StackEllipticCurvePoint(StackNumber(3,2,False,roll),StackNumber(1,2,False,roll)),
-                    }
+            gradient (StackFiniteFieldElement): The position of gradient of the line tangent at P_ in the stack,
+                    its length, whether it should be negated, and whether it should be rolled or picked.
+                    Defaults to: StackFiniteFieldElement(5,False,2).
+            P (StackEllipticCurvePoint): The position of the point `P` in the stack,
+                    its length, whether it should be negated, and whether it should be rolled or picked.
+                    Defaults to: StackEllipticCurvePoint(
+                        StackFiniteFieldElement(3,False,2),StackFiniteFieldElement(1,False,2)
+                        )
+            rolling_options (int): A bitmask specifying which arguments should be rolled on which should
+                be picked. The bits of the bitmask correspond to whether the i-th argument should be
+                rolled or not. Defaults to 3 (all elements are rolled).
 
         Returns:
             A Bitcoin Script that computes 2P_ for the given elliptic curve points `P`.
@@ -140,8 +159,7 @@ class EllipticCurveFq2:
         Raises:
             ValueError: If either of the following happens:
                 - `clean_constant` or `check_constant` are not provided when required.
-                - `lambda` comes after `P` in the stack
-                - `stack_elements` is not None, but it does not contain all the keys `lambda`, `P`
+                - `gradient` comes after `P` in the stack
 
         Preconditions:
             - The input point `P` must be on the elliptic curve.
@@ -154,11 +172,11 @@ class EllipticCurveFq2:
         """
         return (
             self.point_algebraic_doubling_verifying_gradient(
-                take_modulo, check_constant, clean_constant, stack_elements
+                take_modulo, check_constant, clean_constant, gradient, P, rolling_options
             )
             if verify_gradient
             else self.point_algebraic_doubling_without_verifying_gradient(
-                take_modulo, check_constant, clean_constant, stack_elements
+                take_modulo, check_constant, clean_constant, gradient, P, rolling_options
             )
         )
 
@@ -172,7 +190,7 @@ class EllipticCurveFq2:
         """Point negation.
 
         Input Parameters:
-            - Stack: q .. <lambda> P
+            - Stack: Q, .., gradient P
             - Altstack: []
         Output:
             - -P
@@ -221,7 +239,16 @@ class EllipticCurveFq2:
         take_modulo: bool,
         check_constant: bool | None,
         clean_constant: bool | None,
-        stack_elements: StackElements | None = None,
+        gradient: StackFiniteFieldElement = StackFiniteFieldElement(9, False, 2),  # noqa: B008
+        P: StackEllipticCurvePoint = StackEllipticCurvePoint(  # noqa: B008, N803
+            StackFiniteFieldElement(7, False, 2),  # noqa: B008
+            StackFiniteFieldElement(5, False, 2),  # noqa: B008
+        ),
+        Q: StackEllipticCurvePoint = StackEllipticCurvePoint(  # noqa: B008, N803
+            StackFiniteFieldElement(3, False, 2),  # noqa: B008
+            StackFiniteFieldElement(1, False, 2),  # noqa: B008
+        ),
+        rolling_options: int = 7,
     ) -> Script:
         """Perform algebraic addition of points on an elliptic curve defined over Fq2.
 
@@ -230,11 +257,11 @@ class EllipticCurveFq2:
         It also handles optional checks on the curve constant and whether the constant should be cleaned or reused.
 
         Stack input:
-        - stack    = [q .. <lambda> .. P .. Q ..]
+        - stack    = [Q, .., gradient, .., P, .., Q, ..]
         - altstack = []
 
         Stack output:
-        - stack    = [q .. {<lambda>} .. {P} .. {Q} .. (P_+ Q_)]
+        - stack    = [{q}, .., {gradient}, .., {P}, .., {Q}, .., (P_+ Q_)]
         - altstack = []
 
         where {P} means that the element is there if it is picked, it is not there if it is rolled.
@@ -246,19 +273,22 @@ class EllipticCurveFq2:
             check_constant (bool | None, optional): If `True`, check if the constant (q) is valid before proceeding.
             clean_constant (bool | None, optional): If `True`, clean the constant by removing it
                 from the stack after use.
-            stack_elements (StackElements | None, optional): Dictionary with keys:
-                - lambda (StackNumber): The position of gradient through P_ and Q_ in the stack,
-                    its length, whether it should be negated, and whether it should be rolled or picked
-                - P (StackEllipticCurvePoint): The position of the point `P` in the stack,
-                    its length, whether it should be negated, and whether it should be rolled or picked
-                - Q (StackEllipticCurvePoint): The position of the point `Q` in the stack,
-                    its length, whether it should be negated, and whether it should be rolled or picked
-                If None, the default dictionary is:
-                    stack_elements = {
-                        "lambda" : StackNumber(9,2,False,roll),
-                        "P" : StackEllipticCurvePoint(StackNumber(7,2,False,roll),StackNumber(5,2,False,roll)),
-                        "Q" : StackEllipticCurvePoint(StackNumber(3,2,False,roll),StackNumber(1,2,False,roll)),
-                    }
+            gradient (StackFiniteFieldElement): The position of gradient through P_ and Q_ in the stack,
+                its length, whether it should be negated, and whether it should be rolled or picked.
+                Defaults to: StackFiniteFieldElement(9, False, 2)
+            P (StackEllipticCurvePoint): The position of the point `P` in the stack,
+                its length, whether it should be negated, and whether it should be rolled or picked.
+                Defaults to: StackEllipticCurvePoint(
+                    StackFiniteFieldElement(7, False, 2),StackFiniteFieldElement(5, False, 2)
+                    )
+            Q (StackEllipticCurvePoint): The position of the point `Q` in the stack,
+                its length, whether it should be negated, and whether it should be rolled or picked.
+                Defaults to: StackEllipticCurvePoint(
+                    StackFiniteFieldElement(3, False, 2),StackFiniteFieldElement(1, False, 2)
+                    )
+            rolling_options (int): A bitmask specifying which arguments should be rolled on which should
+                be picked. The bits of the bitmask correspond to whether the i-th argument should be
+                rolled or not. Defaults to 7 (all elements are rolled).
 
         Returns:
             A Bitcoin Script that computes P_ + Q_ for the given elliptic curve points `P` and `Q`.
@@ -266,9 +296,8 @@ class EllipticCurveFq2:
         Raises:
             ValueError: If either of the following happens:
                 - `clean_constant` or `check_constant` are not provided when required.
-                - `lambda` comes after `P` in the stack
+                - `gradient` comes after `P` in the stack
                 - `P` comes after `Q` in the stack
-                - `stack_elements` is not None, but it does not contain all the keys `lambda`, `P`, `Q`
 
         Preconditions:
             - The input points `P` and `Q` must be on the elliptic curve.
@@ -277,31 +306,12 @@ class EllipticCurveFq2:
 
         Notes:
             This function assumes the input points are represented as minimally encoded, little-endian integers.
-            If this function is used when `P_` != `Q_` or `P_ != -Q_`, then any lambda will pass
+            If this function is used when `P_` != `Q_` or `P_ != -Q_`, then any gradient will pass
             the gradient verification, but the point computed is not going to be `P_ + Q_`.
 
         """
-        stack_elements = (
-            {
-                "lambda": StackNumber(9, 2, False, roll),
-                "P": StackEllipticCurvePoint(StackNumber(7, 2, False, roll), StackNumber(5, 2, False, roll)),
-                "Q": StackEllipticCurvePoint(StackNumber(3, 2, False, roll), StackNumber(1, 2, False, roll)),
-            }
-            if stack_elements is None
-            else stack_elements
-        )
-        if "lambda" not in stack_elements or "P" not in stack_elements or "Q" not in stack_elements:
-            msg = f"The stack_elements dictionary must have the following keys:\
-                'lambda', 'P', 'Q': stack_elements.keys: { stack_elements.keys()}"
-            raise ValueError(msg)
-        if not stack_elements["lambda"].is_before(stack_elements["P"].x):
-            msg = "P must come after lambda in the stack"
-            raise ValueError(msg)
-        if not stack_elements["P"].is_before(stack_elements["Q"]):
-            msg = "Q must come after P in the stack"
-            raise ValueError(msg)
-        is_q_rolled = stack_elements["Q"].is_rolled()
-        is_p_rolled = stack_elements["P"].is_rolled()
+        check_order([gradient, P, Q])
+        is_gradient_rolled, is_p_rolled, is_q_rolled = bitmask_to_boolean_list(rolling_options, 3)
 
         out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
@@ -312,98 +322,106 @@ class EllipticCurveFq2:
         #   P_ = -P if P.y.negate else P
         #   Q_ = -Q if Q.y.negate else Q
 
-        # Verify that lambda is the gradient between P_ and Q_
-        # Stack in: q .. lambda .. P .. Q ..
-        # Stack out: q .. lambda .. P .. Q .. lambda xP lambda xP
-        verify_gradient = stack_elements["lambda"].moving_script()  # Move lambda
-        verify_gradient += stack_elements["P"].x.shift(2).moving_script()  # Move xP
-        verify_gradient += pick(position=3, n_elements=4)  # Duplicate lambda and xP
-        # Stack in: q .. lambda .. P .. Q .. lambda xP lambda xP
-        # Stack out: q .. lambda .. P .. Q .. lambda xP xQ [lambda * (xP - xQ)]
-        verify_gradient += stack_elements["Q"].x.shift(8).moving_script()  # Move xQ
+        # Verify that gradient is the gradient between P_ and Q_
+        # stack in:  [q, .., gradient, .., P, .., Q, ..]
+        # stack out: [q, .., gradient, .., P, .., Q, .., gradient, xP, gradient, xP]
+        verify_gradient = move(gradient, bool_to_moving_function(is_gradient_rolled))  # Move gradient
+        verify_gradient += move(P.x.shift(2), bool_to_moving_function(is_p_rolled))  # Move xP
+        verify_gradient += pick(position=3, n_elements=4)  # Duplicate gradient and xP
+        # stack in:  [q, .., gradient, .., P, .., Q, .., gradient, xP, gradient, xP]
+        # stack out: [q, .., gradient, .., P, .., Q, .., gradient, xP, xQ, [gradient * (xP - xQ)]]
+        verify_gradient += move(Q.x.shift(8), bool_to_moving_function(is_q_rolled))  # Move xQ
         verify_gradient += Script.parse_string("OP_2SWAP OP_2OVER")  # Swap xP and xQ, duplicate xQ
         verify_gradient += fq2.subtract(
             take_modulo=False, check_constant=False, clean_constant=False
         )  # Compute xP - xQ
-        verify_gradient += roll(position=5, n_elements=2)  # Bring lambda on top of the stack
+        verify_gradient += roll(position=5, n_elements=2)  # Bring gradient on top of the stack
         verify_gradient += fq2.mul(
             take_modulo=False, check_constant=False, clean_constant=False
-        )  # Compute lambda * (x_P - x_Q)
-        # Stack in: q .. lambda .. P .. Q .. lambda xP xQ [lambda * (xP - xQ)]
-        # Stack out: q .. lambda .. P .. Q .. lambda xP xQ [lambda * (xP - xQ)] (yP_)_1 [(yQ_)_1 - (yP_)_1]
-        verify_gradient += stack_elements["Q"].y.shift(8).moving_script(start_index=1, end_index=2)  # Move (yQ)_1
-        verify_gradient += Script.parse_string("OP_NEGATE") if stack_elements["Q"].y.negate else Script()
-        verify_gradient += (
-            stack_elements["P"].y.shift(9 - 3 * is_q_rolled).moving_script(start_index=1, end_index=2)
+        )  # Compute gradient * (x_P - x_Q)
+        # stack in:  [q, .., gradient, .., P, .., Q, .., gradient, xP, xQ, [gradient * (xP - xQ)]]
+        # stack out: [q, .., gradient, .., P, .., Q, .., gradient, xP, xQ,
+        #               [gradient * (xP - xQ)] (yP_)_1 [(yQ_)_1 - (yP_)_1]]
+        verify_gradient += move(
+            Q.y.shift(8), bool_to_moving_function(is_q_rolled), start_index=1, end_index=2
+        )  # Move (yQ)_1
+        verify_gradient += Script.parse_string("OP_NEGATE") if Q.negate else Script()
+        verify_gradient += move(
+            P.y.shift(9 - 3 * is_q_rolled), bool_to_moving_function(is_p_rolled), start_index=1, end_index=2
         )  # Move (yP)_1
-        verify_gradient += Script.parse_string("OP_NEGATE") if stack_elements["P"].y.negate else Script()
+        verify_gradient += Script.parse_string("OP_NEGATE") if P.negate else Script()
         verify_gradient += Script.parse_string("OP_TUCK OP_SUB")  # Duplicate (yP_)_1 and compute (yQ_)_1 - (yP_)_1
-        # Stack in: q .. lambda .. P .. Q .. lambda xP xQ [lambda * (xP - xQ)] (yP_)_1 [(yQ_)_1 - (yP_)_1]
-        # Stack out: q .. lambda .. P .. Q .. lambda xP xQ (yP_)_1 (yP_)_0, or fail
-        verify_gradient += (
-            stack_elements["Q"].y.shift(10 - 1 * is_q_rolled).moving_script(start_index=0, end_index=1)
+        # stack in:  [q, .., gradient, .., P, .., Q, .., gradient, xP, xQ,
+        #               [gradient * (xP - xQ)] (yP_)_1 [(yQ_)_1 - (yP_)_1]]
+        # stack out: [q, .., gradient, .., P, .., Q, .., gradient, xP, xQ, (yP_)_1 (yP_)_0, or fail]
+        verify_gradient += move(
+            Q.y.shift(10 - 1 * is_q_rolled), bool_to_moving_function(is_q_rolled), start_index=0, end_index=1
         )  # Move (yQ)_0
-        verify_gradient += Script.parse_string("OP_NEGATE") if stack_elements["Q"].y.negate else Script()
-        verify_gradient += (
-            stack_elements["P"]
-            .y.shift(11 - 4 * is_q_rolled - 1 * is_p_rolled)
-            .moving_script(start_index=0, end_index=1)
+        verify_gradient += Script.parse_string("OP_NEGATE") if Q.negate else Script()
+        verify_gradient += move(
+            P.y.shift(11 - 4 * is_q_rolled - 1 * is_p_rolled),
+            bool_to_moving_function(is_p_rolled),
+            start_index=0,
+            end_index=1,
         )  # Move (yP)_0
-        verify_gradient += Script.parse_string("OP_NEGATE") if stack_elements["P"].y.negate else Script()
+        verify_gradient += Script.parse_string("OP_NEGATE") if P.negate else Script()
         verify_gradient += Script.parse_string("OP_TUCK OP_SUB")  # Duplicate (yP_)_0 and compute (yQ_)_0 - (yP_)_0
         verify_gradient += roll(position=2, n_elements=1)  # Bring [(yQ_)_1 - (yP_)_1] on top
-        verify_gradient += roll(position=5, n_elements=2)  # Bring [lambda * (xP - xQ)] on top
+        verify_gradient += roll(position=5, n_elements=2)  # Bring [gradient * (xP - xQ)] on top
         verify_gradient += fq2.add(
             take_modulo=True, check_constant=False, clean_constant=False, is_constant_reused=False
-        )  # Compute lambda * (x_P - x_Q) + (yQ_ - yP_)
+        )  # Compute gradient * (x_P - x_Q) + (yQ_ - yP_)
         verify_gradient += Script.parse_string("OP_CAT OP_0 OP_EQUALVERIFY")
 
         # Compute x-coordinate of P_ + Q_
-        # Stack in: q .. lambda .. P .. Q .. lambda xP xQ (yP_)_1 (yP_)_0
-        # Stack out: q .. lambda .. P .. Q .. xP lambda x(P_ + Q_)
-        # Altstack out: [(yP_)_0, (yP_)_1]
+        # stack in:     [q, .., gradient, .., P, .., Q, .., gradient, xP, xQ, (yP_)_1, (yP_)_0]
+        # altstack in:  []
+        # stack out:    [q, .., gradient, .., P, .., Q, .., xP, gradient, x(P_ + Q_)]
+        # altstack out: [(yP_)_0, (yP_)_1]
         x_coordinate = Script.parse_string(" ".join(["OP_TOALTSTACK"] * 2))  # Put (yP_)_0, (yP_)_1 on the altstack
         x_coordinate += pick(position=3, n_elements=2)  # Duplicate xP
         x_coordinate += fq2.add(take_modulo=False, check_constant=False, clean_constant=False)  # Compute (xP + xQ)
-        x_coordinate += Script.parse_string("OP_2ROT OP_2SWAP OP_2OVER")  # Roll lambda, reorder, duplicate lambda
-        x_coordinate += fq2.square(take_modulo=False, check_constant=False, clean_constant=False)  # Compute lambda^2
-        x_coordinate += Script.parse_string("OP_2SWAP")  # Swap lambda^2 and (xP + xQ)
+        x_coordinate += Script.parse_string("OP_2ROT OP_2SWAP OP_2OVER")  # Roll gradient, reorder, duplicate gradient
+        x_coordinate += fq2.square(take_modulo=False, check_constant=False, clean_constant=False)  # Compute gradient^2
+        x_coordinate += Script.parse_string("OP_2SWAP")  # Swap gradient^2 and (xP + xQ)
         x_coordinate += fq2.subtract(
             take_modulo=take_modulo, check_constant=False, clean_constant=False, is_constant_reused=False
-        )  # Compute lambda^2 - (xP + xQ)
+        )  # Compute gradient^2 - (xP + xQ)
 
         # Compute y-coordinate of P_ + Q_
-        # Stack in: q .. lambda .. P .. Q .. xP lambda x(P_ + Q_)
-        # Altstack in: [(yP_)_0, (yP_)_1]
-        # Stack out: q .. lambda .. P .. Q .. x(P_ + Q_) y(P_ + Q_)
-        # Altstack out: []
+        # stack in:     [q, .., gradient, .., P, .., Q, .., xP, gradient, x(P_ + Q_)]
+        # altstack in:  [(yP_)_0, (yP_)_1]
+        # stack out:    [q, .., gradient, .., P, .., Q, .., x(P_ + Q_), y(P_ + Q_)]
+        # altstack out: []
         y_coordinate = Script.parse_string("OP_2ROT OP_2OVER")  # Rotate xP, duplicate x(P_ + Q_)
         y_coordinate += fq2.subtract(
             take_modulo=False, check_constant=False, clean_constant=False
         )  # Compute xP - x(P_+Q_)
-        y_coordinate += roll(position=5, n_elements=2)  # Bring lambda on top
+        y_coordinate += roll(position=5, n_elements=2)  # Bring gradient on top
         y_coordinate += fq2.mul(
             take_modulo=False, check_constant=False, clean_constant=False
-        )  # Compute lambda * (xP - x(P_+Q_))
-        y_coordinate += Script.parse_string("OP_FROMALTSTACK OP_SUB")  # Compute [lambda * (xP - x(P_+Q_))]_1 - (yP_)_1
+        )  # Compute gradient * (xP - x(P_+Q_))
+        y_coordinate += Script.parse_string(
+            "OP_FROMALTSTACK OP_SUB"
+        )  # Compute [gradient * (xP - x(P_+Q_))]_1 - (yP_)_1
         if take_modulo:
             y_coordinate += roll(position=-1, n_elements=1) if clean_constant else pick(position=-1, n_elements=1)
-            y_coordinate += mod(stack_preparation="")  # Compute {[lambda * (xP - x(P_+Q_))]_1 - (yP_)_1} % q
-            y_coordinate += roll(position=2, n_elements=1)  # Bring [lambda * (xP - x(P_+Q_))]_0 on top
+            y_coordinate += mod(stack_preparation="")  # Compute {[gradient * (xP - x(P_+Q_))]_1 - (yP_)_1} % q
+            y_coordinate += roll(position=2, n_elements=1)  # Bring [gradient * (xP - x(P_+Q_))]_0 on top
             y_coordinate += Script.parse_string(
                 "OP_FROMALTSTACK OP_SUB"
-            )  # Compute [lambda * (xP - x(P_+Q_))]_0 - (yP_)_0
+            )  # Compute [gradient * (xP - x(P_+Q_))]_0 - (yP_)_0
             y_coordinate += roll(position=2, n_elements=1) + mod(
                 stack_preparation="", is_constant_reused=False
-            )  # Compute {[lambda * (xP - x(P_+Q_))]_0 - (yP_)_0} % q
+            )  # Compute {[gradient * (xP - x(P_+Q_))]_0 - (yP_)_0} % q
         else:
-            y_coordinate += roll(position=1, n_elements=1)  # Bring lambda * (xP - x(P_+Q_))]_0 on top
+            y_coordinate += roll(position=1, n_elements=1)  # Bring gradient * (xP - x(P_+Q_))]_0 on top
             y_coordinate += Script.parse_string(
                 "OP_FROMALTSTACK OP_SUB"
-            )  # Compute [lambda * (xP - x(P_+Q_))]_0 - (yP_)_0
+            )  # Compute [gradient * (xP - x(P_+Q_))]_0 - (yP_)_0
         y_coordinate += roll(
             position=1, n_elements=1
-        )  # Swap {[lambda * (xP - x(P_+Q_))]_0 - (yP_)_0} and {[lambda * (xP - x(P_+Q_))]_1 - (yP_)_1}
+        )  # Swap {[gradient * (xP - x(P_+Q_))]_0 - (yP_)_0} and {[gradient * (xP - x(P_+Q_))]_1 - (yP_)_1}
 
         out += verify_gradient + x_coordinate + y_coordinate
         return out
@@ -413,7 +431,16 @@ class EllipticCurveFq2:
         take_modulo: bool,
         check_constant: bool | None,
         clean_constant: bool | None,
-        stack_elements: StackElements | None = None,
+        gradient: StackFiniteFieldElement = StackFiniteFieldElement(9, False, 2),  # noqa: B008
+        P: StackEllipticCurvePoint = StackEllipticCurvePoint(  # noqa: B008, N803
+            StackFiniteFieldElement(7, False, 2),  # noqa: B008
+            StackFiniteFieldElement(5, False, 2),  # noqa: B008
+        ),
+        Q: StackEllipticCurvePoint = StackEllipticCurvePoint(  # noqa: B008, N803
+            StackFiniteFieldElement(3, False, 2),  # noqa: B008
+            StackFiniteFieldElement(1, False, 2),  # noqa: B008
+        ),
+        rolling_options: int = 7,
     ) -> Script:
         """Perform algebraic addition of points on an elliptic curve defined over Fq2.
 
@@ -423,11 +450,11 @@ class EllipticCurveFq2:
         It also handles optional checks on the curve constant and whether the constant should be cleaned or reused.
 
         Stack input:
-        - stack    = [q .. <lambda> .. P .. Q ..]
+        - stack    = [Q, .., gradient, .., P, .., Q, ..]
         - altstack = []
 
         Stack output:
-        - stack    = [q .. {<lambda>} .. {P} .. {Q} .. (P_+ Q_)]
+        - stack    = [{q}, .., {gradient}, .., {P}, .., {Q}, .., (P_+ Q_)]
         - altstack = []
 
         where {P} means that the element is there if it is picked, it is not there if it is rolled.
@@ -439,19 +466,22 @@ class EllipticCurveFq2:
             check_constant (bool | None, optional): If `True`, check if the constant (q) is valid before proceeding.
             clean_constant (bool | None, optional): If `True`, clean the constant by removing it
                 from the stack after use.
-            stack_elements (StackElements | None, optional): Dictionary with keys:
-                - lambda (StackNumber): The position of gradient through P_ and Q_ in the stack,
-                    its length, whether it should be negated, and whether it should be rolled or picked
-                - P (StackEllipticCurvePoint): The position of the point `P` in the stack,
-                    its length, whether it should be negated, and whether it should be rolled or picked
-                - Q (StackEllipticCurvePoint): The position of the point `Q` in the stack,
-                    its length, whether it should be negated, and whether it should be rolled or picked
-                If None, the default dictionary is:
-                    stack_elements = {
-                        "lambda" : StackNumber(9,2,False,roll),
-                        "P" : StackEllipticCurvePoint(StackNumber(7,2,False,roll),StackNumber(5,2,False,roll)),
-                        "Q" : StackEllipticCurvePoint(StackNumber(3,2,False,roll),StackNumber(1,2,False,roll)),
-                    }
+            gradient (StackFiniteFieldElement): The position of gradient through P_ and Q_ in the stack,
+                its length, whether it should be negated, and whether it should be rolled or picked.
+                Defaults to: StackFiniteFieldElement(9, False, 2)
+            P (StackEllipticCurvePoint): The position of the point `P` in the stack,
+                its length, whether it should be negated, and whether it should be rolled or picked.
+                Defaults to: StackEllipticCurvePoint(
+                    StackFiniteFieldElement(7, False, 2),StackFiniteFieldElement(5, False, 2)
+                    )
+            Q (StackEllipticCurvePoint): The position of the point `Q` in the stack,
+                its length, whether it should be negated, and whether it should be rolled or picked.
+                Defaults to: StackEllipticCurvePoint(
+                    StackFiniteFieldElement(3, False, 2),StackFiniteFieldElement(1, False, 2)
+                    )
+            rolling_options (int): A bitmask specifying which arguments should be rolled on which should
+                be picked. The bits of the bitmask correspond to whether the i-th argument should be
+                rolled or not. Defaults to 7 (all elements are rolled).
 
         Returns:
             A Bitcoin Script that computes P_ + Q_ for the given elliptic curve points `P` and `Q`.
@@ -459,9 +489,8 @@ class EllipticCurveFq2:
         Raises:
             ValueError: If either of the following happens:
                 - `clean_constant` or `check_constant` are not provided when required.
-                - `lambda` comes after `P` in the stack
+                - `gradient` comes after `P` in the stack
                 - `P` comes after `Q` in the stack
-                - `stack_elements` is not None, but it does not contain all the keys `lambda`, `P`, `Q`
 
         Preconditions:
             - The input points `P` and `Q` must be on the elliptic curve.
@@ -473,26 +502,8 @@ class EllipticCurveFq2:
             This function does not check the validity of the gradient provided.
 
         """
-        stack_elements = (
-            {
-                "lambda": StackNumber(9, 2, False, roll),
-                "P": StackEllipticCurvePoint(StackNumber(7, 2, False, roll), StackNumber(5, 2, False, roll)),
-                "Q": StackEllipticCurvePoint(StackNumber(3, 2, False, roll), StackNumber(1, 2, False, roll)),
-            }
-            if stack_elements is None
-            else stack_elements
-        )
-        if "lambda" not in stack_elements or "P" not in stack_elements or "Q" not in stack_elements:
-            msg = f"The stack_elements dictionary must have the following keys:\
-                'lambda', 'P', 'Q': stack_elements.keys: { stack_elements.keys()}"
-            raise ValueError(msg)
-        if not stack_elements["lambda"].is_before(stack_elements["P"].x):
-            msg = "P must come after lambda in the stack"
-            raise ValueError(msg)
-        if not stack_elements["P"].is_before(stack_elements["Q"]):
-            msg = "Q must come after P in the stack"
-            raise ValueError(msg)
-        is_q_rolled = stack_elements["Q"].is_rolled()
+        check_order([gradient, P, Q])
+        is_gradient_rolled, is_p_rolled, is_q_rolled = bitmask_to_boolean_list(rolling_options, 3)
 
         out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
@@ -504,51 +515,52 @@ class EllipticCurveFq2:
         #   Q_ = -Q if Q.y.negate else Q
 
         # Compute x-coordinate of P_ + Q_
-        # Stack in: q .. lambda .. P .. Q ..
-        # Stack out: q .. lambda .. P .. Q .. lambda xP x(P_+Q_)
-        x_coordinate = stack_elements["lambda"].move(
-            position=stack_elements["lambda"].position, n_elements=2
-        )  # Move lambda
-        x_coordinate += pick(position=1, n_elements=2)  # Duplicate lambda
-        x_coordinate += fq2.square(take_modulo=False, check_constant=False, clean_constant=False)  # Compute lambda^2
-        x_coordinate += stack_elements["P"].x.shift(4).moving_script()  # Move xP
-        x_coordinate += stack_elements["Q"].x.shift(6).moving_script()  # Move xQ
+        # stack in:  [q, .., gradient, .., P, .., Q, ..]
+        # stack out: [q, .., gradient, .., P, .., Q, .., gradient, xP, x(P_+Q_)]
+        x_coordinate = move(gradient, bool_to_moving_function(is_gradient_rolled))  # Move gradient
+        x_coordinate += pick(position=1, n_elements=2)  # Duplicate gradient
+        x_coordinate += fq2.square(take_modulo=False, check_constant=False, clean_constant=False)  # Compute gradient^2
+        x_coordinate += move(P.x.shift(4), bool_to_moving_function(is_p_rolled))  # Move xP
+        x_coordinate += move(Q.x.shift(6), bool_to_moving_function(is_q_rolled))  # Move xQ
         x_coordinate += pick(position=3, n_elements=2)  # Duplicate xP
         x_coordinate += fq2.add(take_modulo=False, check_constant=False, clean_constant=False)  # Compute (xP + xQ)
-        x_coordinate += roll(position=5, n_elements=2)  # Bring lambda^2 on top
+        x_coordinate += roll(position=5, n_elements=2)  # Bring gradient^2 on top
         x_coordinate += roll(position=3, n_elements=2)  # Bring (xP + xQ) on top
         x_coordinate += fq2.subtract(
             take_modulo=take_modulo, check_constant=False, clean_constant=False, is_constant_reused=False
-        )  # Compute lambda^2 - (xP + xQ)
+        )  # Compute gradient^2 - (xP + xQ)
 
         # Compute y-coordinate of P_ + Q_
-        # Stack in: q .. lambda .. P .. Q .. lambda xP x(P_ + Q_)
-        # Stack out: q .. lambda .. P .. Q .. x(P_ + Q_) y(P_ + Q_)
+        # stack in:  [q, .., gradient, .., P, .., Q, .., gradient, xP, x(P_ + Q_)]
+        # stack out: [q, .., gradient, .., P, .., Q, .., x(P_ + Q_), y(P_ + Q_)]
         y_coordinate = Script.parse_string("OP_2SWAP OP_2OVER")  # Rotate xP, duplicate x(P_ + Q_)
         y_coordinate += fq2.subtract(
             take_modulo=False, check_constant=False, clean_constant=False
         )  # Compute xP - x(P_+Q_)
-        y_coordinate += roll(position=5, n_elements=2)  # Bring lambda on top
+        y_coordinate += roll(position=5, n_elements=2)  # Bring gradient on top
         y_coordinate += fq2.mul(
             take_modulo=False, check_constant=False, clean_constant=False
-        )  # Compute lambda * (xP - x(P_+Q_))
+        )  # Compute gradient * (xP - x(P_+Q_))
         y_coordinate += Script.parse_string("OP_TOALTSTACK")
-        y_coordinate += (
-            stack_elements["P"].y.shift(3 - 2 * is_q_rolled).moving_script(start_index=0, end_index=1)
+        y_coordinate += move(
+            P.y.shift(3 - 2 * is_q_rolled), bool_to_moving_function(is_p_rolled), start_index=0, end_index=1
         )  # Move yP_0
-        y_coordinate += Script.parse_string("OP_ADD" if stack_elements["P"].y.negate else "OP_SUB")
+        y_coordinate += Script.parse_string("OP_ADD" if P.negate else "OP_SUB")
         if take_modulo:
             y_coordinate += roll(position=-1, n_elements=1) if clean_constant else pick(position=-1, n_elements=1)
             y_coordinate += mod(stack_preparation="")
         y_coordinate += Script.parse_string("OP_FROMALTSTACK")
-        y_coordinate += (
-            stack_elements["P"].y.shift(4 - 2 * is_q_rolled + 1 * take_modulo).moving_script(start_index=1, end_index=2)
+        y_coordinate += move(
+            P.y.shift(4 - 2 * is_q_rolled + 1 * take_modulo),
+            bool_to_moving_function(is_p_rolled),
+            start_index=1,
+            end_index=2,
         )  # Move yP_1
-        y_coordinate += Script.parse_string("OP_ADD" if stack_elements["P"].y.negate else "OP_SUB")
+        y_coordinate += Script.parse_string("OP_ADD" if P.negate else "OP_SUB")
         if take_modulo:
             y_coordinate += roll(position=2, n_elements=1) + mod(stack_preparation="", is_constant_reused=False)
 
-        drop_yq = stack_elements["Q"].y.shift(4).moving_script()  # Move yQ
+        drop_yq = move(Q.y.shift(4), bool_to_moving_function(is_q_rolled))  # Move yQ
         drop_yq += Script.parse_string("OP_2DROP")
 
         out += x_coordinate + y_coordinate
@@ -564,7 +576,12 @@ class EllipticCurveFq2:
         take_modulo: bool,
         check_constant: bool | None,
         clean_constant: bool | None,
-        stack_elements: StackElements | None = None,
+        gradient: StackFiniteFieldElement = StackFiniteFieldElement(5, False, 2),  # noqa: B008
+        P: StackEllipticCurvePoint = StackEllipticCurvePoint(  # noqa: B008, N803
+            StackFiniteFieldElement(3, False, 2),  # noqa: B008
+            StackFiniteFieldElement(1, False, 2),  # noqa: B008
+        ),
+        rolling_options: int = 3,
     ) -> Script:
         """Perform algebraic point doubling of points on an elliptic curve defined over Fq2.
 
@@ -573,11 +590,11 @@ class EllipticCurveFq2:
         It also handles optional checks on the curve constant and whether the constant should be cleaned or reused.
 
         Stack input:
-        - stack    = [q .. <lambda> .. P ..]
+        - stack    = [Q, .., gradient, .., P, ..]
         - altstack = []
 
         Stack output:
-        - stack    = [q .. {<lambda>} .. {P} .. 2P_]
+        - stack    = [{q}, .., {gradient}, .., {P}, .., 2P_]
         - altstack = []
 
         where {P} means that the element is there if it is picked, it is not there if it is rolled.
@@ -588,16 +605,17 @@ class EllipticCurveFq2:
             check_constant (bool | None, optional): If `True`, check if the constant (q) is valid before proceeding.
             clean_constant (bool | None, optional): If `True`, clean the constant by removing it
                 from the stack after use.
-            stack_elements (StackElements | None, optional): Dictionary with keys:
-                - lambda (StackNumber): The position of gradient of the line tangent at P_ in the stack,
-                    its length, whether it should be negated, and whether it should be rolled or picked
-                - P (StackEllipticCurvePoint): The position of the point `P` in the stack,
-                    its length, whether it should be negated, and whether it should be rolled or picked
-                If None, the default dictionary is:
-                    stack_elements = {
-                        "lambda" : StackNumber(5,2,False,roll),
-                        "P" : StackEllipticCurvePoint(StackNumber(3,2,False,roll),StackNumber(1,2,False,roll)),
-                    }
+            gradient (StackFiniteFieldElement): The position of gradient of the line tangent at P_ in the stack,
+                    its length, whether it should be negated, and whether it should be rolled or picked.
+                    Defaults to: StackFiniteFieldElement(5,False,2).
+            P (StackEllipticCurvePoint): The position of the point `P` in the stack,
+                    its length, whether it should be negated, and whether it should be rolled or picked.
+                    Defaults to: StackEllipticCurvePoint(
+                        StackFiniteFieldElement(3,False,2),StackFiniteFieldElement(1,False,2)
+                        )
+            rolling_options (int): A bitmask specifying which arguments should be rolled on which should
+                be picked. The bits of the bitmask correspond to whether the i-th argument should be
+                rolled or not. Defaults to 3 (all elements are rolled).
 
         Returns:
             A Bitcoin Script that computes 2P_ for the given elliptic curve points `P`.
@@ -605,8 +623,7 @@ class EllipticCurveFq2:
         Raises:
             ValueError: If either of the following happens:
                 - `clean_constant` or `check_constant` are not provided when required.
-                - `lambda` comes after `P` in the stack
-                - `stack_elements` is not None, but it does not contain all the keys `lambda`, `P`
+                - `gradient` comes after `P` in the stack
 
         Preconditions:
             - The input point `P` must be on the elliptic curve.
@@ -617,22 +634,8 @@ class EllipticCurveFq2:
             This function assumes the input points are represented as minimally encoded, little-endian integers.
 
         """
-        stack_elements = (
-            {
-                "lambda": StackNumber(5, 2, False, roll),
-                "P": StackEllipticCurvePoint(StackNumber(3, 2, False, roll), StackNumber(1, 2, False, roll)),
-            }
-            if stack_elements is None
-            else stack_elements
-        )
-        if "lambda" not in stack_elements or "P" not in stack_elements:
-            msg = f"The stack_elements dictionary must have the following keys:\
-                'lambda', 'P': stack_elements.keys: { stack_elements.keys()}"
-            raise ValueError(msg)
-        if not stack_elements["lambda"].is_before(stack_elements["P"].x):
-            msg = "P must come after lambda in the stack"
-            raise ValueError(msg)
-        is_p_rolled = stack_elements["P"].is_rolled()
+        check_order([gradient, P])
+        is_gradient_rolled, is_p_rolled = bitmask_to_boolean_list(rolling_options, 2)
 
         # Fq2 implementation
         fq2 = self.FQ2
@@ -644,23 +647,22 @@ class EllipticCurveFq2:
         # Write:
         #   P_ = -P if P.y.negate else P
 
-        # Verify that lambda is the gradient of the line tangent at P_
-        # Stack in: q .. lambda .. P ..
-        # Stack out: q .. lambda .. P .. lambda yP lambda yP
-        verify_gradient = stack_elements["lambda"].moving_script()  # Move lambda
-        verify_gradient += stack_elements["P"].y.shift(2).moving_script()  # Move yP
-        verify_gradient += pick(position=3, n_elements=4)  # Duplicate lambda and xP
-        # Stack in: q .. lambda .. P .. lambda yP lambda yP
-        # Stack out: q .. lambda .. P .. lambda yP (2*lambda*yP_)
+        # Verify that gradient is the gradient of the line tangent at P_
+        # stack in:  [q, .., gradient, .., P, ..]
+        # stack out: [q, .., gradient, .., P, .., gradient, yP, gradient, yP]
+        verify_gradient = move(gradient, bool_to_moving_function(is_gradient_rolled))  # Move gradient
+        verify_gradient += move(P.y.shift(2), bool_to_moving_function(is_p_rolled))  # Move yP
+        verify_gradient += pick(position=3, n_elements=4)  # Duplicate gradient and xP
+        # stack in:  [q, .., gradient, .., P, .., gradient, yP, gradient, yP]
+        # stack out: [q, .., gradient, .., P, .., gradient, yP, (2*gradient*yP_)]
         verify_gradient += fq2.mul(take_modulo=False, check_constant=False, clean_constant=False)  # Compute lamdba * yP
         verify_gradient += Script.parse_string("OP_2")
-        if stack_elements["P"].y.negate:
-            verify_gradient += Script.parse_string("OP_NEGATE")
+        verify_gradient += Script.parse_string("OP_NEGATE") if P.negate else Script()
         verify_gradient += fq2.scalar_mul(take_modulo=False, check_constant=False, clean_constant=False)
-        # Stack in: q .. lambda .. P .. lambda yP (2*lambda*yP_)
-        # Stack out: q .. lambda .. P .. lambda yP xP, or fail
-        verify_gradient += stack_elements["P"].x.shift(6 - 2 * is_p_rolled).moving_script()  # Move xP
-        verify_gradient += roll(position=3, n_elements=2)  # Bring (2*lambda*yP_) on top
+        # stack in:  [q, .., gradient, .., P, .., gradient, yP, (2*gradient*yP_)]
+        # stack out: [q, .., gradient, .., P, .., gradient, yP, xP, or fail]
+        verify_gradient += move(P.x.shift(6 - 2 * is_p_rolled), bool_to_moving_function(is_p_rolled))  # Move xP
+        verify_gradient += roll(position=3, n_elements=2)  # Bring (2*gradient*yP_) on top
         verify_gradient += pick(position=3, n_elements=2)  # Duplicate xP
         verify_gradient += fq2.square(take_modulo=False, check_constant=False, clean_constant=False)  # Compute xP^2
         verify_gradient += Script.parse_string("OP_3 OP_TUCK")
@@ -676,42 +678,42 @@ class EllipticCurveFq2:
         verify_gradient += Script.parse_string("OP_FROMALTSTACK")
         verify_gradient += fq2.subtract(
             take_modulo=True, check_constant=False, clean_constant=False, is_constant_reused=False
-        )  # Compute 2*lambda*yP_ - (3xP^2 + a)
+        )  # Compute 2*gradient*yP_ - (3xP^2 + a)
         verify_gradient += Script.parse_string("OP_CAT OP_0 OP_EQUALVERIFY")
 
         # Compute x-coordinate of 2P_
-        # Stack in: q .. lambda .. P .. lambda yP xP
-        # Stack out: q .. lambda .. P .. yP lambda xP x(2P_)
-        x_coordinate = roll(position=5, n_elements=2)  # Bring lambda on top
-        x_coordinate += pick(position=1, n_elements=2)  # Duplicate lambda
-        x_coordinate += fq2.square(take_modulo=False, check_constant=False, clean_constant=False)  # Compute lambda^2
+        # stack in:  [q, .., gradient, .., P, .., gradient, yP, xP]
+        # stack out: [q, .., gradient, .., P, .., yP, gradient, xP, x(2P_)]
+        x_coordinate = roll(position=5, n_elements=2)  # Bring gradient on top
+        x_coordinate += pick(position=1, n_elements=2)  # Duplicate gradient
+        x_coordinate += fq2.square(take_modulo=False, check_constant=False, clean_constant=False)  # Compute gradient^2
         x_coordinate += roll(position=5, n_elements=2)  # Bring xP on top
-        x_coordinate += roll(position=3, n_elements=2)  # Bring lambda on top
+        x_coordinate += roll(position=3, n_elements=2)  # Bring gradient on top
         x_coordinate += pick(position=3, n_elements=2)  # Duplicate xP
         x_coordinate += Script.parse_string("OP_2")
         x_coordinate += fq2.scalar_mul(take_modulo=False, check_constant=False, clean_constant=False)  # Compute 2 * xP
         x_coordinate += fq2.subtract(
             take_modulo=take_modulo, check_constant=False, clean_constant=False, is_constant_reused=False
-        )  # Compute lambda^2 - 2*xP
+        )  # Compute gradient^2 - 2*xP
 
         # Compute y-coordinate of 2P_
-        # Stack in: q .. lambda .. P .. yP lambda xP x(2P_)
-        # Stack out: q .. lambda .. P .. x(2P_) y(2P_)
+        # stack in:  [q, .., gradient, .., P, .., yP, gradient, xP, x(2P_)]
+        # stack out: [q, .., gradient, .., P, .., x(2P_) y(2P_)]
         y_coordinate = roll(position=3, n_elements=2)  # Bring xP on top
         y_coordinate += pick(position=3, n_elements=2)  # Duplicate x(2P_) on top
         y_coordinate += fq2.subtract(
             take_modulo=False, check_constant=False, clean_constant=False
         )  # Compute x_P - x_(2P_)
-        y_coordinate += roll(position=5, n_elements=2)  # Bring lambda on top
+        y_coordinate += roll(position=5, n_elements=2)  # Bring gradient on top
         y_coordinate += fq2.mul(
             take_modulo=False, check_constant=False, clean_constant=False
-        )  # Compute lambda * (xP - x_(2P))
+        )  # Compute gradient * (xP - x_(2P))
         y_coordinate += roll(position=5, n_elements=2)  # Bring yP on top
         y_coordinate += (
             fq2.add(
                 take_modulo=take_modulo, check_constant=False, clean_constant=clean_constant, is_constant_reused=False
             )
-            if stack_elements["P"].y.negate
+            if P.y.negate
             else fq2.subtract(
                 take_modulo=take_modulo, check_constant=False, clean_constant=clean_constant, is_constant_reused=False
             )
@@ -725,7 +727,12 @@ class EllipticCurveFq2:
         take_modulo: bool,
         check_constant: bool | None,
         clean_constant: bool | None,
-        stack_elements: StackElements | None = None,
+        gradient: StackFiniteFieldElement = StackFiniteFieldElement(5, False, 2),  # noqa: B008
+        P: StackEllipticCurvePoint = StackEllipticCurvePoint(  # noqa: B008, N803
+            StackFiniteFieldElement(3, False, 2),  # noqa: B008
+            StackFiniteFieldElement(1, False, 2),  # noqa: B008
+        ),
+        rolling_options: int = 3,
     ) -> Script:
         """Perform algebraic point doubling of points on an elliptic curve defined over Fq2.
 
@@ -735,11 +742,11 @@ class EllipticCurveFq2:
         It also handles optional checks on the curve constant and whether the constant should be cleaned or reused.
 
         Stack input:
-        - stack    = [q .. <lambda> .. P ..]
+        - stack    = [Q, .., gradient, .., P, ..]
         - altstack = []
 
         Stack output:
-        - stack    = [q .. {<lambda>} .. {P} .. 2P_]
+        - stack    = [{q}, .., {gradient}, .., {P}, .., 2P_]
         - altstack = []
 
         where {P} means that the element is there if it is picked, it is not there if it is rolled.
@@ -750,16 +757,17 @@ class EllipticCurveFq2:
             check_constant (bool | None, optional): If `True`, check if the constant (q) is valid before proceeding.
             clean_constant (bool | None, optional): If `True`, clean the constant by removing it
                 from the stack after use.
-            stack_elements (StackElements | None, optional): Dictionary with keys:
-                - lambda (StackNumber): The position of gradient of the line tangent at P_ in the stack,
-                    its length, whether it should be negated, and whether it should be rolled or picked
-                - P (StackEllipticCurvePoint): The position of the point `P` in the stack,
-                    its length, whether it should be negated, and whether it should be rolled or picked
-                If None, the default dictionary is:
-                    stack_elements = {
-                        "lambda" : StackNumber(5,2,False,roll),
-                        "P" : StackEllipticCurvePoint(StackNumber(3,2,False,roll),StackNumber(1,2,False,roll)),
-                    }
+            gradient (StackFiniteFieldElement): The position of gradient of the line tangent at P_ in the stack,
+                    its length, whether it should be negated, and whether it should be rolled or picked.
+                    Defaults to: StackFiniteFieldElement(5,False,2).
+            P (StackEllipticCurvePoint): The position of the point `P` in the stack,
+                    its length, whether it should be negated, and whether it should be rolled or picked.
+                    Defaults to: StackEllipticCurvePoint(
+                        StackFiniteFieldElement(3,False,2),StackFiniteFieldElement(1,False,2)
+                        )
+            rolling_options (int): A bitmask specifying which arguments should be rolled on which should
+                be picked. The bits of the bitmask correspond to whether the i-th argument should be
+                rolled or not. Defaults to 3 (all elements are rolled).
 
         Returns:
             A Bitcoin Script that computes 2P_ for the given elliptic curve points `P`.
@@ -767,8 +775,7 @@ class EllipticCurveFq2:
         Raises:
             ValueError: If either of the following happens:
                 - `clean_constant` or `check_constant` are not provided when required.
-                - `lambda` comes after `P` in the stack
-                - `stack_elements` is not None, but it does not contain all the keys `lambda`, `P`
+                - `gradient` comes after `P` in the stack
 
         Preconditions:
             - The input point `P` must be on the elliptic curve.
@@ -780,21 +787,8 @@ class EllipticCurveFq2:
             This function does not check the validity of the gradient provided.
 
         """
-        stack_elements = (
-            {
-                "lambda": StackNumber(5, 2, False, roll),
-                "P": StackEllipticCurvePoint(StackNumber(3, 2, False, roll), StackNumber(1, 2, False, roll)),
-            }
-            if stack_elements is None
-            else stack_elements
-        )
-        if "lambda" not in stack_elements or "P" not in stack_elements:
-            msg = f"The stack_elements dictionary must have the following keys:\
-                'lambda', 'P': stack_elements.keys: { stack_elements.keys()}"
-            raise ValueError(msg)
-        if not stack_elements["lambda"].is_before(stack_elements["P"].x):
-            msg = "P must come after lambda in the stack"
-            raise ValueError(msg)
+        check_order([gradient, P])
+        is_gradient_rolled, is_p_rolled = bitmask_to_boolean_list(rolling_options, 2)
 
         # Fq2 implementation
         fq2 = self.FQ2
@@ -805,39 +799,39 @@ class EllipticCurveFq2:
         #   P_ = -P if P.y.negate else P
 
         # Compute x-coordinate of 2P_
-        # Stack in: q .. lambda .. P ..
-        # Stack out: q .. lambda .. P .. lambda xP x(2P_)
-        x_coordinate = stack_elements["lambda"].moving_script()  # Move lambda
-        x_coordinate += pick(position=1, n_elements=2)  # Duplicate lambda
-        x_coordinate += fq2.square(take_modulo=False, check_constant=False, clean_constant=False)  # Compute lambda^2
-        x_coordinate += stack_elements["P"].x.shift(4).moving_script()  # Bring xP on top
+        # stack in:  [q, .., gradient, .., P, ..]
+        # stack out: [q, .., gradient, .., P, .., gradient, xP, x(2P_)]
+        x_coordinate = move(gradient, bool_to_moving_function(is_gradient_rolled))  # Move gradient
+        x_coordinate += pick(position=1, n_elements=2)  # Duplicate gradient
+        x_coordinate += fq2.square(take_modulo=False, check_constant=False, clean_constant=False)  # Compute gradient^2
+        x_coordinate += move(P.x.shift(4), bool_to_moving_function(is_p_rolled))  # Bring xP on top
         x_coordinate += pick(position=1, n_elements=2)  # Duplicate xP
         x_coordinate += Script.parse_string("OP_2")
         x_coordinate += fq2.scalar_mul(take_modulo=False, check_constant=False, clean_constant=False)  # Compute 2 * xP
-        x_coordinate += roll(position=5, n_elements=2)  # Bring lambda^2 on top
-        x_coordinate += roll(position=3, n_elements=2)  # Swap 2xP and lambda^2
+        x_coordinate += roll(position=5, n_elements=2)  # Bring gradient^2 on top
+        x_coordinate += roll(position=3, n_elements=2)  # Swap 2xP and gradient^2
         x_coordinate += fq2.subtract(
             take_modulo=take_modulo, check_constant=False, clean_constant=False, is_constant_reused=False
-        )  # Compute lambda^2 - 2*xP
+        )  # Compute gradient^2 - 2*xP
 
         # Compute y-coordinate of 2P_
-        # Stack in: q .. lambda .. P .. lambda xP x(2P_)
-        # Stack out: q .. lambda .. P .. x(2P_) y(2P_)
+        # stack in:  [q, .., gradient, .., P, .., gradient, xP, x(2P_)]
+        # stack out: [q, .., gradient, .., P, .., x(2P_), y(2P_)]
         y_coordinate = roll(position=3, n_elements=2)  # Bring xP on top
         y_coordinate += pick(position=3, n_elements=2)  # Duplicate x(2P_)
         y_coordinate += fq2.subtract(
             take_modulo=False, check_constant=False, clean_constant=False
         )  # Compute x_P - x_(2P_)
-        y_coordinate += roll(position=5, n_elements=2)  # Bring lambda on top
+        y_coordinate += roll(position=5, n_elements=2)  # Bring gradient on top
         y_coordinate += fq2.mul(
             take_modulo=False, check_constant=False, clean_constant=False
-        )  # Compute lambda * (xP - x_(2P))
-        y_coordinate += stack_elements["P"].y.shift(4).moving_script()  # Bring yP on top
+        )  # Compute gradient * (xP - x_(2P))
+        y_coordinate += move(P.y.shift(4), bool_to_moving_function(is_p_rolled))  # Bring yP on top
         y_coordinate += (
             fq2.add(
                 take_modulo=take_modulo, check_constant=False, clean_constant=clean_constant, is_constant_reused=False
             )
-            if stack_elements["P"].y.negate
+            if P.negate
             else fq2.subtract(
                 take_modulo=take_modulo, check_constant=False, clean_constant=clean_constant, is_constant_reused=False
             )

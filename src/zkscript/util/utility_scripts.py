@@ -1,3 +1,5 @@
+from typing import Union
+
 from tx_engine import Script, encode_num
 from tx_engine.engine.op_codes import (
     OP_0,
@@ -34,6 +36,12 @@ from tx_engine.engine.op_codes import (
     OP_ROT,
     OP_SWAP,
     OP_TUCK,
+)
+
+from src.zkscript.types.stack_elements import (
+    StackElements,
+    StackEllipticCurvePoint,
+    StackFiniteFieldElement,
 )
 
 patterns_to_pick = {
@@ -88,8 +96,8 @@ def pick(position: int, n_elements: int) -> Script:
 
     """
     if position >= 0 and position < n_elements - 1:
-        msg = f"When positive, position must be at least equal to n_elements - 1:\
-            position {position}, n_elements: {n_elements}"
+        msg = "When positive, position must be at least equal to n_elements - 1: "
+        msg += f"position: {position}, n_elements: {n_elements}"
         raise ValueError(msg)
 
     out = Script()
@@ -132,8 +140,8 @@ def roll(position: int, n_elements: int) -> Script:
 
     """
     if position >= 0 and position < n_elements - 1:
-        msg = f"When positive, position must be at least equal to n_elements - 1:\
-            position {position}, n_elements: {n_elements}"
+        msg = "When positive, position must be at least equal to n_elements - 1: "
+        msg += f"position: {position}, n_elements: {n_elements}"
         raise ValueError(msg)
 
     if position == n_elements - 1:
@@ -205,7 +213,7 @@ def mod(
           In this situation, the script only performs a modulo operation.
             Let `stack_in = [-5, 3]`, and `is_mod_on_top = True`, then `stack_out = [-5%3 = -2]`.
             Let `stack_in = [2, 7]`, and `is_mod_on_top = False`, then `stack_out = [7%2 = 1]`.
-        - If we have `is_positive = False`, `stack_preparation = False`, and `is_constant_resued = True`,
+        - If we have `is_positive = False`, `stack_preparation = False`, and `is_constant_reused = True`,
           after the modulo operation the modulo constant is still present in the stack.
             Let `stack_in = [-5, 3]`, and `is_mod_on_top = True`, then `stack_out = [3, -2]`.
             Let `stack_in = [2, 7]`, and `is_mod_on_top = False`, then `stack_out = [2, 1]`.
@@ -216,7 +224,7 @@ def mod(
             Let `stack_in = [2, 7]`, and `is_mod_on_top = False`, then
             `stack_out = [(2 if is constant reused = True), 1]`.
         - If `stack_preparation = True`, before starting the modulo operation, a new element is loaded from the
-          altstack.The two opcodes added to the script if `stack_preparation = True`, modify the stack as follows:
+          altstack. The two opcodes added to the script if `stack_preparation = True`, modify the stack as follows:
             Let `stack_in = [1, 2], alt_stack_in = [3]`, after `OP_FROMALTSTACK OP_ROT`, we get:
             `stack_out = [2, 3, 1], alt_stack_out = []`.
 
@@ -264,3 +272,27 @@ def verify_bottom_constant(n: int) -> Script:
 
     """
     return Script([OP_DEPTH, OP_1SUB, OP_PICK]) + nums_to_script([n]) + Script([OP_EQUALVERIFY])
+
+
+def move(
+    stack_element: StackElements, moving_function: Union[roll, pick], start_index: int = 0, end_index: int | None = None
+) -> Script:
+    """Return the script that moves stack_element[start_index], .., stack_element[end_index] with moving_function."""
+    length = (
+        1
+        if not isinstance(stack_element, (StackFiniteFieldElement, StackEllipticCurvePoint))
+        else 2 * stack_element.x.extension_degree
+        if isinstance(stack_element, StackEllipticCurvePoint)
+        else stack_element.extension_degree
+    )
+    if end_index is None:
+        end_index = length
+    if length < end_index:
+        msg = "Moving more elements than self: "
+        msg += f"Self has {length} elements, end_index: {end_index}"
+        raise ValueError(msg)
+    if start_index < 0:
+        msg = "Start index must be positive: "
+        msg += f"start_index {start_index}"
+        raise ValueError(msg)
+    return moving_function(position=stack_element.position - start_index, n_elements=end_index - start_index)
