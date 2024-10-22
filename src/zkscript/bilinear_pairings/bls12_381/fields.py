@@ -1,4 +1,4 @@
-"""Export finite field arithmetic for BLS12-381."""
+"""Import finite field arithmetic for BLS12-381."""
 from types import MethodType
 
 from tx_engine import Script
