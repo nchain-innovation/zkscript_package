@@ -1,7 +1,8 @@
 import pytest
 from tx_engine import Context, Script
 
-from src.zkscript.util.utility_scripts import mod, nums_to_script, pick, roll, verify_bottom_constant
+from src.zkscript.types.stack_elements import StackNumber
+from src.zkscript.util.utility_scripts import mod, move, nums_to_script, pick, roll, verify_bottom_constant
 
 
 def generate_verify(z) -> Script:
@@ -31,6 +32,12 @@ def generate_verify(z) -> Script:
             list(range(20)),
             [0, 1, 2, 3, 4, 5, 6, 7, 8, 12, 13, 14, 15, 16, 17, 18, 19, 9, 10, 11],
         ),
+        (4, 5, list(range(10)), list(range(10))),
+        (9, 10, list(range(20)), list(range(20))),
+        (1, 2, list(range(10)), list(range(10))),
+        (-1, 1, list(range(10)), [1, 2, 3, 4, 5, 6, 7, 8, 9, 0]),
+        (-1, 2, list(range(10)), [2, 3, 4, 5, 6, 7, 8, 9, 0, 1]),
+        (-2, 2, list(range(10)), [0, 3, 4, 5, 6, 7, 8, 9, 1, 2]),
     ],
 )
 def test_roll(position, n_elements, stack, expected):
@@ -54,6 +61,9 @@ def test_roll(position, n_elements, stack, expected):
         (3, 2, list(range(10)), [*list(range(10)), 6, 7]),
         (3, 4, list(range(10)), [*list(range(10)), 6, 7, 8, 9]),
         (10, 3, list(range(20)), [*list(range(20)), 9, 10, 11]),
+        (-1, 1, list(range(10)), [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0]),
+        (-1, 2, list(range(10)), [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1]),
+        (-2, 2, list(range(10)), [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 1, 2]),
     ],
 )
 def test_pick(position, n_elements, stack, expected):
@@ -66,6 +76,15 @@ def test_pick(position, n_elements, stack, expected):
 
     assert context.evaluate()
     assert len(context.get_altstack()) == 0
+
+
+@pytest.mark.parametrize(("position", "n_elements"), [(1, 3), (10, 12), (10, 15)])
+@pytest.mark.parametrize("function", [pick, roll])
+def test_errors_pick_and_roll(position, n_elements, function):
+    msg = r"When positive, position must be at least equal to n_elements - 1: "
+    msg += r"position: \d+, n_elements: \d+"
+    with pytest.raises(ValueError, match=msg):
+        function(position, n_elements)
 
 
 @pytest.mark.parametrize(
@@ -151,3 +170,16 @@ def test_fail_verify_bottom_constant(n, stack):
     context = Context(script=unlock + lock)
 
     assert not context.evaluate()
+
+
+@pytest.mark.parametrize(
+    ("stack_element", "moving_function", "start_index", "end_index", "msg"),
+    [
+        (StackNumber(1, False), roll, 0, 2, r"Moving more elements than self: Self has \d+ elements, end_index: \d+"),
+        (StackNumber(1, False), roll, -1, 2, r"Start index must be positive: start_index -\d+"),
+        (StackNumber(1, False), roll, -1, 1, r"Start index must be positive: start_index -\d+"),
+    ],
+)
+def test_errors_move(stack_element, moving_function, start_index, end_index, msg):
+    with pytest.raises(ValueError, match=msg):
+        move(stack_element, moving_function, start_index, end_index)

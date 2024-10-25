@@ -1,7 +1,7 @@
 import pytest
 from tx_engine import Script
 
-from src.zkscript.util.utility_functions import optimise_script
+from src.zkscript.util.utility_functions import bitmask_to_boolean_list, boolean_list_to_bitmask, optimise_script
 
 
 @pytest.mark.parametrize(
@@ -27,3 +27,19 @@ def test_optimise_script(script, expected):
     optimised_script = optimise_script(Script().parse_string(" ".join(script)))
 
     assert optimised_script.to_string().split() == expected
+
+
+@pytest.mark.parametrize(
+    ("function", "inputs", "expected"),
+    [
+        (boolean_list_to_bitmask, {"boolean_list": [True, False, True]}, 5),
+        (boolean_list_to_bitmask, {"boolean_list": [False, False, True]}, 4),
+        (boolean_list_to_bitmask, {"boolean_list": [True, False, False]}, 1),
+        (bitmask_to_boolean_list, {"bitmask": 1, "list_length": 1}, [True]),
+        (bitmask_to_boolean_list, {"bitmask": 5, "list_length": 3}, [True, False, True]),
+        (bitmask_to_boolean_list, {"bitmask": 4, "list_length": 3}, [False, False, True]),
+        (bitmask_to_boolean_list, {"bitmask": 1, "list_length": 3}, [True, False, False]),
+    ],
+)
+def test_bitmask_to_boolean_list_and_reverse(function, inputs, expected):
+    assert function(**inputs) == expected

@@ -1,3 +1,5 @@
+from typing import Union
+
 from tx_engine import Script, encode_num
 from tx_engine.engine.op_codes import (
     OP_0,
@@ -34,6 +36,12 @@ from tx_engine.engine.op_codes import (
     OP_ROT,
     OP_SWAP,
     OP_TUCK,
+)
+
+from src.zkscript.types.stack_elements import (
+    StackElements,
+    StackEllipticCurvePoint,
+    StackFiniteFieldElement,
 )
 
 patterns_to_pick = {
@@ -77,20 +85,38 @@ op_range_to_opccode = {
 def pick(position: int, n_elements: int) -> Script:
     """Pick the elements x_{position}, .., x_{position-n_elements}.
 
-    {position} is the stack position, so we start counting from 0.
+    `position` is the stack position, so we start counting from 0. If `position < 0`, then we pick
+    from the bottom of the stack, which we consider at position -1.
 
     Example:
-        n_elements = 2, position = 2 --> OP_2 OP_PICK OP_2 OP_PICK
-        n_elements = 2, position = 8 --> OP_8 OP_PICK OP_8 OP_PICK
-        n_elements = 2, position = 1 --> OP_2DUP
+        `n_elements` = 2, `position` = 2 --> OP_2 OP_PICK OP_2 OP_PICK
+        `n_elements` = 2, `position` = 8 --> OP_8 OP_PICK OP_8 OP_PICK
+        `n_elements` = 2, `position` = 1 --> OP_2DUP
+        `n_elements` = 1, `position` = -1 --> OP_DEPTH OP_1SUB OP_PICK
 
     """
+    if position >= 0 and position < n_elements - 1:
+        msg = "When positive, position must be at least equal to n_elements - 1: "
+        msg += f"position: {position}, n_elements: {n_elements}"
+        raise ValueError(msg)
+
     out = Script()
 
     if (position, n_elements) in patterns_to_pick:
         out += Script(patterns_to_pick[(position, n_elements)])
-    elif position in op_range:
+    elif position in op_range[1:]:
         out += Script([op_range_to_opccode[position], OP_PICK] * n_elements)
+    elif position < 0:
+        ix_to_pick = position
+        for _ in range(n_elements):
+            out += Script.parse_string("OP_DEPTH")
+            out += (
+                Script.parse_string("OP_1SUB")
+                if ix_to_pick == -1
+                else nums_to_script([-ix_to_pick]) + Script.parse_string("OP_SUB")
+            )
+            out += Script.parse_string("OP_PICK")
+            ix_to_pick -= 1
     else:
         num_encoded = encode_num(position)
         for _ in range(n_elements):
@@ -101,22 +127,41 @@ def pick(position: int, n_elements: int) -> Script:
 
 
 def roll(position: int, n_elements: int) -> Script:
-    """Pick the elements x_{position}, .., x_{position-n_elements}.
+    """Roll the elements x_{position}, .., x_{position-n_elements}.
 
-    Position is the stack position, so we start counting from 0.
+    `position` is the stack position, so we start counting from 0. If `position` < 0, then we roll
+    from the bottom of the stack, which we consider at position -1.
 
     Example:
-        n_elements = 2, position = 2 --> OP_2 OP_PICK OP_2 OP_PICK
-        n_elements = 2, position = 8 --> OP_8 OP_PICK OP_8 OP_PICK
-        n_elements = 1, position = 1 --> OP_SWAP
+        `n_elements` = 2, `position` = 2 --> OP_2 OP_PICK OP_2 OP_PICK
+        `n_elements` = 2, `position` = 8 --> OP_8 OP_PICK OP_8 OP_PICK
+        `n_elements` = 1, `position` = 1 --> OP_SWAP
+        `n_elements` = 1, `position` = -1 --> OP_DEPTH OP_1SUB OP_ROLL
 
     """
+    if position >= 0 and position < n_elements - 1:
+        msg = "When positive, position must be at least equal to n_elements - 1: "
+        msg += f"position: {position}, n_elements: {n_elements}"
+        raise ValueError(msg)
+
+    if position == n_elements - 1:
+        return Script()
+
     out = Script()
 
     if (position, n_elements) in patterns_to_roll:
         out += Script(patterns_to_roll[(position, n_elements)])
-    elif position in op_range:
+    elif position in op_range[2:]:
         out += Script([op_range_to_opccode[position], OP_ROLL] * n_elements)
+    elif position < 0:
+        for _ in range(n_elements):
+            out += Script.parse_string("OP_DEPTH")
+            out += (
+                Script.parse_string("OP_1SUB")
+                if position == -1
+                else nums_to_script([-position]) + Script.parse_string("OP_SUB")
+            )
+            out += Script.parse_string("OP_ROLL")
     else:
         num_encoded = encode_num(position)
         for _ in range(n_elements):
@@ -163,12 +208,13 @@ def mod(
         A Bitcoin Script that performs the modulo operation based on the specified parameters.
 
     Examples:
-        - The simpler situation is when `is_positive = False`, `stack_preparation = False`, and `is_constant_reused = False`.
+        - The simpler situation is when `is_positive = False`, `stack_preparation = False`,
+          and `is_constant_reused = False`.
           In this situation, the script only performs a modulo operation.
             Let `stack_in = [-5, 3]`, and `is_mod_on_top = True`, then `stack_out = [-5%3 = -2]`.
             Let `stack_in = [2, 7]`, and `is_mod_on_top = False`, then `stack_out = [7%2 = 1]`.
-        - If we have `is_positive = False`, `stack_preparation = False`, and `is_constant_resued = True`, after the modulo
-          operation the modulo constant is still present in the stack.
+        - If we have `is_positive = False`, `stack_preparation = False`, and `is_constant_reused = True`,
+          after the modulo operation the modulo constant is still present in the stack.
             Let `stack_in = [-5, 3]`, and `is_mod_on_top = True`, then `stack_out = [3, -2]`.
             Let `stack_in = [2, 7]`, and `is_mod_on_top = False`, then `stack_out = [2, 1]`.
         - If we have `is_positive = True`, `stack_preparation = False`, after taking the modulo the first time we pick a
@@ -177,8 +223,8 @@ def mod(
             `stack_out = [(3 if is_constant_reused = True), 2]`.
             Let `stack_in = [2, 7]`, and `is_mod_on_top = False`, then
             `stack_out = [(2 if is constant reused = True), 1]`.
-        - If `stack_preparation = True`, before starting the modulo operation, a new element is loaded from the alt stack.
-          The two opcodes added to the script if `stack_preparation = True`, modify the stack as follows:
+        - If `stack_preparation = True`, before starting the modulo operation, a new element is loaded from the
+          altstack. The two opcodes added to the script if `stack_preparation = True`, modify the stack as follows:
             Let `stack_in = [1, 2], alt_stack_in = [3]`, after `OP_FROMALTSTACK OP_ROT`, we get:
             `stack_out = [2, 3, 1], alt_stack_out = []`.
 
@@ -226,3 +272,27 @@ def verify_bottom_constant(n: int) -> Script:
 
     """
     return Script([OP_DEPTH, OP_1SUB, OP_PICK]) + nums_to_script([n]) + Script([OP_EQUALVERIFY])
+
+
+def move(
+    stack_element: StackElements, moving_function: Union[roll, pick], start_index: int = 0, end_index: int | None = None
+) -> Script:
+    """Return the script that moves stack_element[start_index], .., stack_element[end_index] with moving_function."""
+    length = (
+        1
+        if not isinstance(stack_element, (StackFiniteFieldElement, StackEllipticCurvePoint))
+        else 2 * stack_element.x.extension_degree
+        if isinstance(stack_element, StackEllipticCurvePoint)
+        else stack_element.extension_degree
+    )
+    if end_index is None:
+        end_index = length
+    if start_index < 0:
+        msg = "Start index must be positive: "
+        msg += f"start_index {start_index}"
+        raise ValueError(msg)
+    if length < end_index:
+        msg = "Moving more elements than self: "
+        msg += f"Self has {length} elements, end_index: {end_index}"
+        raise ValueError(msg)
+    return moving_function(position=stack_element.position - start_index, n_elements=end_index - start_index)
