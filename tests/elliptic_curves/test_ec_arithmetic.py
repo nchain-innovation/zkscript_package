@@ -12,7 +12,13 @@ from src.zkscript.elliptic_curves.ec_operations_fq2 import EllipticCurveFq2
 from src.zkscript.elliptic_curves.ec_operations_fq_unrolled import EllipticCurveFqUnrolled
 from src.zkscript.fields.fq2 import Fq2 as Fq2ScriptModel
 from src.zkscript.util.utility_scripts import nums_to_script
-from tests.elliptic_curves.util import generate_test_data, generate_unlock, generate_verify_point, save_scripts
+from tests.elliptic_curves.util import (
+    generate_test,
+    generate_test_data,
+    generate_unlock,
+    generate_verify_point,
+    save_scripts,
+)
 
 
 @dataclass
@@ -32,10 +38,18 @@ class Secp256k1:
     test_script_unrolled = EllipticCurveFqUnrolled(q=modulus, ec_over_fq=test_script)
     # All possible combinations: ± P ± Q are tested. Refer to ./util.py
     positions_addition = [
+        {"modulus": 5, "gradient": 4, "P": 3, "Q": 1},
+        {"modulus": 8, "gradient": 6, "P": 3, "Q": 1},
+        {"modulus": 11, "gradient": 9, "P": 5, "Q": 1},
+        {"modulus": 20, "gradient": 15, "P": 10, "Q": 6},
         {"modulus": 25, "gradient": 20, "P": 14, "Q": 5},
     ]
     # All possible combinations: ± 2P are tested. Refer to ./util.py
     positions_doubling = [
+        {"modulus": 3, "gradient": 2, "P": 1},
+        {"modulus": 8, "gradient": 6, "P": 3},
+        {"modulus": 11, "gradient": 9, "P": 5},
+        {"modulus": 20, "gradient": 15, "P": 10},
         {"modulus": 25, "gradient": 20, "P": 14},
     ]
     # Define filename for saving scripts
@@ -51,8 +65,66 @@ class Secp256k1:
     )
     a = 64046112301879843941239178948101222343000413030798872646069227448863068996094
     test_data = {
-        "test_addition": generate_test_data(modulus, P, Q, positions_addition),
-        "test_doubling": generate_test_data(modulus, P, P, positions_doubling),
+        "test_addition": [
+            # Test standard configuration
+            generate_test(
+                modulus,
+                P,
+                Q,
+                {"modulus": 5, "gradient": 4, "P": 3, "Q": 1},
+                {"P": False, "Q": False},
+                {"gradient": False, "P": False, "Q": False},
+            ),
+            # Test signs
+            generate_test(
+                modulus,
+                P,
+                Q,
+                {"modulus": 5, "gradient": 4, "P": 3, "Q": 1},
+                {"P": True, "Q": True},
+                {"gradient": False, "P": False, "Q": False},
+            ),
+            # Test random positions
+            generate_test(
+                modulus,
+                P,
+                Q,
+                {"modulus": 25, "gradient": 20, "P": 14, "Q": 5},
+                {"P": False, "Q": False},
+                {"gradient": False, "P": False, "Q": False},
+            ),
+        ],
+        "test_doubling": [
+            # Test standard configuration
+            generate_test(
+                modulus,
+                P,
+                P,
+                {"modulus": 3, "gradient": 2, "P": 1},
+                {"P": False},
+                {"gradient": False, "P": False},
+            ),
+            # Test signs
+            generate_test(
+                modulus,
+                P,
+                P,
+                {"modulus": 3, "gradient": 2, "P": 1},
+                {"P": True},
+                {"gradient": False, "P": False},
+            ),
+            # Test random positions
+            generate_test(
+                modulus,
+                P,
+                P,
+                {"modulus": 25, "gradient": 20, "P": 14},
+                {"P": False},
+                {"gradient": False, "P": False},
+            ),
+        ],
+        "test_addition_slow": generate_test_data(modulus, P, Q, positions_addition),
+        "test_doubling_slow": generate_test_data(modulus, P, P, positions_doubling),
         "test_addition_unknown_points": [
             # {"P": P, "Q": Q, "expected": P + Q},
             {"P": P, "Q": -P, "expected": point_at_infinity},
@@ -88,10 +160,18 @@ class Secp256r1:
     test_script_unrolled = EllipticCurveFqUnrolled(q=modulus, ec_over_fq=test_script)
     # All possible combinations: ± P ± Q are tested. Refer to ./util.py
     positions_addition = [
+        {"modulus": 5, "gradient": 4, "P": 3, "Q": 1},
+        {"modulus": 8, "gradient": 6, "P": 3, "Q": 1},
+        {"modulus": 11, "gradient": 9, "P": 5, "Q": 1},
+        {"modulus": 20, "gradient": 15, "P": 10, "Q": 6},
         {"modulus": 25, "gradient": 20, "P": 14, "Q": 5},
     ]
     # All possible combinations: ± 2P are tested. Refer to ./util.py
     positions_doubling = [
+        {"modulus": 3, "gradient": 2, "P": 1},
+        {"modulus": 8, "gradient": 6, "P": 3},
+        {"modulus": 11, "gradient": 9, "P": 5},
+        {"modulus": 20, "gradient": 15, "P": 10},
         {"modulus": 25, "gradient": 20, "P": 14},
     ]
     # Define filename for saving scripts
@@ -107,8 +187,66 @@ class Secp256r1:
     )
     a = 104614095137500434070196828944928516815982260532830080798264081596642730786155
     test_data = {
-        "test_addition": generate_test_data(modulus, P, Q, positions_addition),
-        "test_doubling": generate_test_data(modulus, P, P, positions_doubling),
+        "test_addition": [
+            # Test standard configuration
+            generate_test(
+                modulus,
+                P,
+                Q,
+                {"modulus": 5, "gradient": 4, "P": 3, "Q": 1},
+                {"P": False, "Q": False},
+                {"gradient": False, "P": False, "Q": False},
+            ),
+            # Test signs
+            generate_test(
+                modulus,
+                P,
+                Q,
+                {"modulus": 5, "gradient": 4, "P": 3, "Q": 1},
+                {"P": True, "Q": True},
+                {"gradient": False, "P": False, "Q": False},
+            ),
+            # Test random positions
+            generate_test(
+                modulus,
+                P,
+                Q,
+                {"modulus": 25, "gradient": 20, "P": 14, "Q": 5},
+                {"P": False, "Q": False},
+                {"gradient": False, "P": False, "Q": False},
+            ),
+        ],
+        "test_doubling": [
+            # Test standard configuration
+            generate_test(
+                modulus,
+                P,
+                P,
+                {"modulus": 3, "gradient": 2, "P": 1},
+                {"P": False},
+                {"gradient": False, "P": False},
+            ),
+            # Test signs
+            generate_test(
+                modulus,
+                P,
+                P,
+                {"modulus": 3, "gradient": 2, "P": 1},
+                {"P": True},
+                {"gradient": False, "P": False},
+            ),
+            # Test random positions
+            generate_test(
+                modulus,
+                P,
+                P,
+                {"modulus": 25, "gradient": 20, "P": 14},
+                {"P": False},
+                {"gradient": False, "P": False},
+            ),
+        ],
+        "test_addition_slow": generate_test_data(modulus, P, Q, positions_addition),
+        "test_doubling_slow": generate_test_data(modulus, P, P, positions_doubling),
         "test_addition_unknown_points": [
             # {"P": P, "Q": Q, "expected": P + Q},
             {"P": P, "Q": -P, "expected": point_at_infinity},
@@ -142,10 +280,18 @@ class Secp256k1Extension:
     )
     # All possible combinations: ± P ± Q are tested. Refer to ./util.py
     positions_addition = [
+        {"modulus": 10, "gradient": 9, "P": 7, "Q": 3},
+        {"modulus": 12, "gradient": 11, "P": 7, "Q": 3},
+        {"modulus": 18, "gradient": 13, "P": 9, "Q": 3},
+        {"modulus": 20, "gradient": 15, "P": 10, "Q": 6},
         {"modulus": 25, "gradient": 20, "P": 14, "Q": 5},
     ]
     # All possible combinations: ± 2P are tested. Refer to ./util.py
     positions_doubling = [
+        {"modulus": 6, "gradient": 5, "P": 3},
+        {"modulus": 12, "gradient": 11, "P": 7},
+        {"modulus": 18, "gradient": 13, "P": 9},
+        {"modulus": 20, "gradient": 15, "P": 10},
         {"modulus": 25, "gradient": 20, "P": 14},
     ]
     # Define filename for saving scripts
@@ -172,8 +318,66 @@ class Secp256k1Extension:
         ),
     )
     test_data = {
-        "test_addition": generate_test_data(modulus, P, Q, positions_addition),
-        "test_doubling": generate_test_data(modulus, P, P, positions_doubling),
+        "test_addition": [
+            # Test standard configuration
+            generate_test(
+                modulus,
+                P,
+                Q,
+                {"modulus": 10, "gradient": 9, "P": 7, "Q": 3},
+                {"P": False, "Q": False},
+                {"gradient": False, "P": False, "Q": False},
+            ),
+            # Test signs
+            generate_test(
+                modulus,
+                P,
+                Q,
+                {"modulus": 10, "gradient": 9, "P": 7, "Q": 3},
+                {"P": True, "Q": True},
+                {"gradient": False, "P": False, "Q": False},
+            ),
+            # Test random positions
+            generate_test(
+                modulus,
+                P,
+                Q,
+                {"modulus": 25, "gradient": 20, "P": 14, "Q": 5},
+                {"P": False, "Q": False},
+                {"gradient": False, "P": False, "Q": False},
+            ),
+        ],
+        "test_doubling": [
+            # Test standard configuration
+            generate_test(
+                modulus,
+                P,
+                P,
+                {"modulus": 6, "gradient": 5, "P": 3},
+                {"P": False},
+                {"gradient": False, "P": False},
+            ),
+            # Test signs
+            generate_test(
+                modulus,
+                P,
+                P,
+                {"modulus": 6, "gradient": 5, "P": 3},
+                {"P": True},
+                {"gradient": False, "P": False},
+            ),
+            # Test random positions
+            generate_test(
+                modulus,
+                P,
+                P,
+                {"modulus": 25, "gradient": 20, "P": 14},
+                {"P": False},
+                {"gradient": False, "P": False},
+            ),
+        ],
+        "test_addition_slow": generate_test_data(modulus, P, Q, positions_addition),
+        "test_doubling_slow": generate_test_data(modulus, P, P, positions_doubling),
         "test_negation": [
             {"P": P, "expected": -P},
             {"P": point_at_infinity, "expected": -point_at_infinity},
@@ -208,10 +412,18 @@ class Secp256r1Extension:
     )
     # All possible combinations: ± P ± Q are tested. Refer to ./util.py
     positions_addition = [
+        {"modulus": 10, "gradient": 9, "P": 7, "Q": 3},
+        {"modulus": 12, "gradient": 11, "P": 7, "Q": 3},
+        {"modulus": 18, "gradient": 13, "P": 9, "Q": 3},
+        {"modulus": 20, "gradient": 15, "P": 10, "Q": 6},
         {"modulus": 25, "gradient": 20, "P": 14, "Q": 5},
     ]
     # All possible combinations: ± 2P are tested. Refer to ./util.py
     positions_doubling = [
+        {"modulus": 6, "gradient": 5, "P": 3},
+        {"modulus": 12, "gradient": 11, "P": 7},
+        {"modulus": 18, "gradient": 13, "P": 9},
+        {"modulus": 20, "gradient": 15, "P": 10},
         {"modulus": 25, "gradient": 20, "P": 14},
     ]
     # Define filename for saving scripts
@@ -238,8 +450,66 @@ class Secp256r1Extension:
         ),
     )
     test_data = {
-        "test_addition": generate_test_data(modulus, P, Q, positions_addition),
-        "test_doubling": generate_test_data(modulus, P, P, positions_doubling),
+        "test_addition": [
+            # Test standard configuration
+            generate_test(
+                modulus,
+                P,
+                Q,
+                {"modulus": 10, "gradient": 9, "P": 7, "Q": 3},
+                {"P": False, "Q": False},
+                {"gradient": False, "P": False, "Q": False},
+            ),
+            # Test signs
+            generate_test(
+                modulus,
+                P,
+                Q,
+                {"modulus": 10, "gradient": 9, "P": 7, "Q": 3},
+                {"P": True, "Q": True},
+                {"gradient": False, "P": False, "Q": False},
+            ),
+            # Test random positions
+            generate_test(
+                modulus,
+                P,
+                Q,
+                {"modulus": 25, "gradient": 20, "P": 14, "Q": 5},
+                {"P": False, "Q": False},
+                {"gradient": False, "P": False, "Q": False},
+            ),
+        ],
+        "test_doubling": [
+            # Test standard configuration
+            generate_test(
+                modulus,
+                P,
+                P,
+                {"modulus": 6, "gradient": 5, "P": 3},
+                {"P": False},
+                {"gradient": False, "P": False},
+            ),
+            # Test signs
+            generate_test(
+                modulus,
+                P,
+                P,
+                {"modulus": 6, "gradient": 5, "P": 3},
+                {"P": True},
+                {"gradient": False, "P": False},
+            ),
+            # Test random positions
+            generate_test(
+                modulus,
+                P,
+                P,
+                {"modulus": 25, "gradient": 20, "P": 14},
+                {"P": False},
+                {"gradient": False, "P": False},
+            ),
+        ],
+        "test_addition_slow": generate_test_data(modulus, P, Q, positions_addition),
+        "test_doubling_slow": generate_test_data(modulus, P, P, positions_doubling),
         "test_negation": [
             {"P": P, "expected": -P},
             {"P": point_at_infinity, "expected": -point_at_infinity},
@@ -267,6 +537,26 @@ def generate_test_cases(test_name):
                             )
                         )
                     case "test_doubling":
+                        out.append(
+                            (
+                                config,
+                                test_data["unlocking_script"],
+                                test_data["expected"],
+                                test_data["stack_elements"],
+                                test_data["rolling_options"],
+                            )
+                        )
+                    case "test_addition_slow":
+                        out.append(
+                            (
+                                config,
+                                test_data["unlocking_script"],
+                                test_data["expected"],
+                                test_data["stack_elements"],
+                                test_data["rolling_options"],
+                            )
+                        )
+                    case "test_doubling_slow":
                         out.append(
                             (
                                 config,
@@ -346,6 +636,71 @@ def test_doubling(
 
     if save_to_json_folder:
         save_scripts(str(lock), str(unlock), save_to_json_folder, config.filename, "point doubling")
+
+
+@pytest.mark.slow
+@pytest.mark.parametrize("verify_gradient", [True, False])
+@pytest.mark.parametrize(
+    ("config", "unlocking_script", "expected", "stack_elements", "rolling_options"),
+    generate_test_cases("test_addition_slow"),
+)
+def test_addition_slow(
+    config, unlocking_script, expected, stack_elements, rolling_options, verify_gradient, save_to_json_folder
+):
+    unlock = unlocking_script
+
+    lock = config.test_script.point_algebraic_addition(
+        take_modulo=True,
+        check_constant=True,
+        clean_constant=True,
+        verify_gradient=verify_gradient,
+        gradient=stack_elements["gradient"],
+        P=stack_elements["P"],
+        Q=stack_elements["Q"],
+        rolling_options=rolling_options,
+    )
+
+    lock += expected
+
+    context = Context(script=unlock + lock)
+    assert context.evaluate()
+    assert len(context.get_stack()) == 1
+    assert len(context.get_altstack()) == 0
+
+    if save_to_json_folder:
+        save_scripts(str(lock), str(unlock), save_to_json_folder, config.filename, "point addition slow")
+
+
+@pytest.mark.slow
+@pytest.mark.parametrize("verify_gradient", [True, False])
+@pytest.mark.parametrize(
+    ("config", "unlocking_script", "expected", "stack_elements", "rolling_options"),
+    generate_test_cases("test_doubling_slow"),
+)
+def test_doubling_slow(
+    config, unlocking_script, expected, stack_elements, rolling_options, verify_gradient, save_to_json_folder
+):
+    unlock = unlocking_script
+
+    lock = config.test_script.point_algebraic_doubling(
+        take_modulo=True,
+        check_constant=True,
+        clean_constant=True,
+        verify_gradient=verify_gradient,
+        gradient=stack_elements["gradient"],
+        P=stack_elements["P"],
+        rolling_options=rolling_options,
+    )
+
+    lock += expected
+
+    context = Context(script=unlock + lock)
+    assert context.evaluate()
+    assert len(context.get_stack()) == 1
+    assert len(context.get_altstack()) == 0
+
+    if save_to_json_folder:
+        save_scripts(str(lock), str(unlock), save_to_json_folder, config.filename, "point doubling slow")
 
 
 @pytest.mark.parametrize(("config", "P", "Q", "expected"), generate_test_cases("test_addition_unknown_points"))

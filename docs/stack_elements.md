@@ -1,6 +1,6 @@
 #  Stack Elements
 
-To standardise the arguments supplied to the functions generating the scripts, we have defined three classes (see [utility_classes.py](../src/zkscript/util/utility_classes.py)):
+To standardise the arguments supplied to the functions generating the scripts, we have defined three classes (see [stack_elements.py](../src/zkscript/types/stack_elements.py)):
 - `StackBaseElement`: a class representing an element on the stack. It has the following attributes:
     - `position`: the position of the element in the stack
 - `StackNumber`: a class representing an integer on the stack. It has the following attributes:

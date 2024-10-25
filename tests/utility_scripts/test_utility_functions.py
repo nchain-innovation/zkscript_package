@@ -35,6 +35,7 @@ def test_optimise_script(script, expected):
         (boolean_list_to_bitmask, {"boolean_list": [True, False, True]}, 5),
         (boolean_list_to_bitmask, {"boolean_list": [False, False, True]}, 4),
         (boolean_list_to_bitmask, {"boolean_list": [True, False, False]}, 1),
+        (bitmask_to_boolean_list, {"bitmask": 1, "list_length": 1}, [True]),
         (bitmask_to_boolean_list, {"bitmask": 5, "list_length": 3}, [True, False, True]),
         (bitmask_to_boolean_list, {"bitmask": 4, "list_length": 3}, [False, False, True]),
         (bitmask_to_boolean_list, {"bitmask": 1, "list_length": 3}, [True, False, False]),

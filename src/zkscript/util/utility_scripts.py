@@ -287,12 +287,12 @@ def move(
     )
     if end_index is None:
         end_index = length
-    if length < end_index:
-        msg = "Moving more elements than self: "
-        msg += f"Self has {length} elements, end_index: {end_index}"
-        raise ValueError(msg)
     if start_index < 0:
         msg = "Start index must be positive: "
         msg += f"start_index {start_index}"
+        raise ValueError(msg)
+    if length < end_index:
+        msg = "Moving more elements than self: "
+        msg += f"Self has {length} elements, end_index: {end_index}"
         raise ValueError(msg)
     return moving_function(position=stack_element.position - start_index, n_elements=end_index - start_index)

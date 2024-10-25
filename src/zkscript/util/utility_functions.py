@@ -71,7 +71,22 @@ def check_order(stack_elements: list[StackElements]) -> ValueError | None:
 
 
 def boolean_list_to_bitmask(boolean_list: List[bool]) -> int:
-    """Convert a list of True, False into a bitmask."""
+    """Convert a list of True, False into a bitmask.
+
+    Example:
+        >>> boolean_list_to_bitmask([True])
+        1
+
+        >>> boolean_list_to_bitmask([True,False])
+        1
+
+        >>> boolean_list_to_bitmask([False,True])
+        2
+
+        >>> boolean_list_to_bitmask([True,True])
+        3
+
+    """
     bitmask = 0
     for ix, option in enumerate(boolean_list):
         bitmask |= 1 << ix if option else 0
@@ -79,7 +94,22 @@ def boolean_list_to_bitmask(boolean_list: List[bool]) -> int:
 
 
 def bitmask_to_boolean_list(bitmask: int, list_length: int) -> List[bool]:
-    """Convert a bitmask to a list of True, False of length list_length."""
+    """Convert a bitmask to a list of True, False of length list_length.
+
+    Example:
+        >>> bitmask_to_boolean_list(1,1)
+        [True]
+
+        >>> bitmask_to_boolean_list(1,2)
+        [True, False]
+
+        >>> bitmask_to_boolean_list(2,2)
+        [False, True]
+
+        >>> bitmask_to_boolean_list(3,2)
+        [True, True]
+
+    """
     out = []
     while bitmask > 0:
         out.append(bool(bitmask & 1))
@@ -88,5 +118,5 @@ def bitmask_to_boolean_list(bitmask: int, list_length: int) -> List[bool]:
 
 
 def bool_to_moving_function(is_rolled: bool) -> Union[pick, roll]:
-    """Map rolling option (bool) to correspoding moving function."""
+    """Map is_rolled (bool) to correspoding moving function."""
     return roll if is_rolled else pick

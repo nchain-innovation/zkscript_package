@@ -14,8 +14,7 @@ def generate_verify_from_list(elements: List[int]) -> Script:
     """Generate verification script for the list `elements`.
 
     Args:
-        - `elements` (List[int]): The list of elements for which to generate the verification script.
-
+        elements (List[int]): The list of elements for which to generate the verification script.
     """
     out = Script()
     for ix, el in enumerate(elements[::-1]):
@@ -31,10 +30,9 @@ def generate_verify_point(P, degree: int) -> Script:  # noqa: N803
     """Generate verification script for P.
 
     Args:
-        - `P`: The point for which to generate the verification script.
-        - `degree` (int): The extension degree of the curve E for which P belongs to E. Each coordinate
+        P: The point for which to generate the verification script.
+        degree (int): The extension degree of the curve E for which P belongs to E. Each coordinate
         of P is made of `degree` elements.
-
     """
     out = Script()
     if not P.is_infinity():
@@ -50,31 +48,29 @@ def generate_extended_list(elements: List[List[int]], positions_elements: List[i
     """Take a list of element a fills it with the filler element.
 
     Args:
-        - elements (List[List[int]]): the list of elements (each being a list itself) to be extended.
-        - positions_elements (List[int]): the positions that the elements should take in the extended list.
-        - filler (int = 1): the filler element.
+        elements (List[List[int]]): the list of elements (each being a list itself) to be extended.
+        positions_elements (List[int]): the positions that the elements should take in the extended list.
+        filler (int = 1): the filler element.
 
     Example:
-    >>> generate_extended_list([1,2,3],[3,1,0],10)
-    [1,10,2,3]
+        >>> generate_extended_list([[1],[2],[3]],[3,1,0],10)
+        [1, 10, 2, 3]
 
-    >>> generate_extended_list([1,2,3],[3,2,0],10)
-    [1,2,10,3]
+        >>> generate_extended_list([[1],[2],[3]],[3,2,0],10)
+        [1, 2, 10, 3]
 
-    >>> generate_extended_list([1,2,3],[3,2,1],10)
-    [1,2,3,10]
+        >>> generate_extended_list([[1],[2],[3]],[3,2,1],10)
+        [1, 2, 3, 10]
 
-    >>> generate_extended_list([[1,2],3,4],[4,2,1],10)
-    [1,2,3,4,10]
+        >>> generate_extended_list([[1,2],[3],[4]],[4,2,1],10)
+        [1, 2, 3, 4, 10]
 
-    >>> generate_extended_list([[1,2],3,4],[5,2,1],10)
-    [1,2,10,3,4,10]
+        >>> generate_extended_list([[1,2],[3],[4]],[5,2,1],10)
+        [1, 2, 10, 3, 4, 10]
 
-    >>> generate_extended_list([1,2,3],[10,4,2],15)
-    [1,15,15,15,15,15,2,15,3,15,15]
+        >>> generate_extended_list([[1],[2],[3]],[10,4,2],15)
+        [1, 15, 15, 15, 15, 15, 2, 15, 3, 15, 15]
     """
-    if type(positions_elements) is dict:
-        positions_elements = positions_elements.values()
     extended_list = []
     positions_elements = [*positions_elements, -1]
 
@@ -94,8 +90,8 @@ def generate_test(
     P,  # noqa: N803
     Q,  # noqa: N803
     positions: Dict[str, int],
-    negations: Dict[str, int],
-    rolls: Dict[str, int],
+    negations: Dict[str, bool],
+    rolls: Dict[str, bool],
 ) -> Dict[str, Union[Script, StackEllipticCurvePoint, StackFiniteFieldElement]]:
     """Generate test case from modulus, P, Q, their positions and whether they should be negated and rolled.
 
@@ -108,72 +104,18 @@ def generate_test(
         P: A point P on E.
         Q: A point Q on E.
         positions (Dict[str,int]): A dictionary where each key corresponds to one of the arguments
-        of point_algebraic_addition/point_algebraic_doubling. The value corresponding to the key is
-        the position that element should occupy in the stack.
-        negations (Dict[str,int]): A dictionary where each key corresponds to one of the arguments
-        of point_algebraic_addition/point_algebraic_doubling. The value corresponding to the key decides
-        whether the script should tackle the case ±P (±Q).
-        rolls (Dict[str,int]): A dictionary where each key corresponds to one of the arguments
-        of point_algebraic_addition/point_algebraic_doubling. The value corresponding to the key decides
-        whether the script should roll P (Q).
-
-    Example:
-    >>> generate_test(
-        19,P,Q,{"modulus":5,"gradient":4,"P":3,"Q":1},{"P":False,"Q":False},{"gradient":False,"P":False,"Q":False}
-        )
-    {
-        'unlocking_script': 0x13 OP_12 OP_12 OP_5 OP_10 OP_0,
-        'expected': OP_5 OP_EQUALVERIFY OP_8 OP_EQUALVERIFY OP_0 OP_EQUALVERIFY
-                        OP_10 OP_EQUALVERIFY OP_5 OP_EQUALVERIFY OP_12 OP_EQUALVERIFY OP_12 OP_EQUAL,
-        'stack_elements':
-            {
-                'gradient': StackFiniteFieldElement(position=4, negate=False, extension_degree=1),
-                'P': StackEllipticCurvePoint(
-                        x=StackFiniteFieldElement(position=3, negate=False, extension_degree=1),
-                        y=StackFiniteFieldElement(position=2, negate=False, extension_degree=1),
-                        position=3,
-                        negate=False
-                    ),
-                'Q': StackEllipticCurvePoint(
-                        x=StackFiniteFieldElement(position=1, negate=False, extension_degree=1),
-                        y=StackFiniteFieldElement(position=0, negate=False, extension_degree=1),
-                        position=1,
-                        negate=False
-                    )
-                },
-        'rolling_options': 0
-    }
-
-    >>> generate_test(
-        19,P,Q,{"modulus":10,"gradient":6,"P":4,"Q":2},{"P":True,"Q":False},{"gradient":False,"P":True,"Q":False}
-        )
-    {
-        'unlocking_script': 0x13 OP_1 OP_1 OP_1 OP_7 OP_1 OP_12 OP_5 OP_10 OP_0 OP_1,
-        'expected': OP_14 OP_EQUALVERIFY OP_8 OP_EQUALVERIFY OP_1 OP_EQUALVERIFY OP_0 OP_EQUALVERIFY
-                        OP_10 OP_EQUALVERIFY OP_1 OP_EQUALVERIFY OP_7 OP_EQUALVERIFY OP_1 OP_EQUALVERIFY
-                            OP_1 OP_EQUALVERIFY OP_1 OP_EQUAL,
-        'stack_elements':
-            {
-                'gradient': StackFiniteFieldElement(position=6, negate=False, extension_degree=1),
-                'P': StackEllipticCurvePoint(
-                        x=StackFiniteFieldElement(position=4, negate=True, extension_degree=1),
-                        y=StackFiniteFieldElement(position=3, negate=True, extension_degree=1),
-                        position=4,
-                        negate=True
-                    ),
-                'Q': StackEllipticCurvePoint(
-                        x=StackFiniteFieldElement(position=2, negate=False, extension_degree=1),
-                        y=StackFiniteFieldElement(position=1, negate=False, extension_degree=1)
-                        position=2,
-                        negate=False
-                    )
-                },
-        'rolling_options': 2
-    }
+            of point_algebraic_addition/point_algebraic_doubling. The value corresponding to the key is
+            the position that element should occupy in the stack.
+        negations (Dict[str,bool]): A dictionary where each key corresponds to one of the arguments
+            of point_algebraic_addition/point_algebraic_doubling. The value corresponding to the key decides
+            whether the script should tackle the case ±P (±Q).
+        rolls (Dict[str,bool]): A dictionary where each key corresponds to one of the arguments
+            of point_algebraic_addition/point_algebraic_doubling. The value corresponding to the key decides
+            whether the script should roll P (Q).
     """
 
     P_ = -P if negations["P"] else P
-    Q_ = (-Q if negations["Q"] else Q) if P != Q else P_
+    Q_ = P_ if P == Q else (-Q if negations["Q"] else Q)
 
     gradient = P_.get_lambda(Q_)
 
@@ -182,7 +124,13 @@ def generate_test(
         if P != Q
         else [[modulus], gradient.to_list(), P.to_list()]
     )
-    unlocking_script = generate_extended_list(unlocking_script, positions, 1)  # Generate extended unlocking script
+    unlocking_script = generate_extended_list(
+        unlocking_script,
+        [positions["modulus"], positions["gradient"], positions["P"]]
+        if P == Q
+        else [positions["modulus"], positions["gradient"], positions["P"], positions["Q"]],
+        1,
+    )  # Generate extended unlocking script
 
     tuple_to_match = (
         (rolls["gradient"], rolls["P"], rolls["P"]) if P == Q else (rolls["gradient"], rolls["P"], rolls["Q"])
@@ -301,10 +249,10 @@ def generate_test_data(
         P: A point P on E.
         Q: A point Q on E.
         positions (List[Dict[str,int]): A list of dictionaries. The function iterates over the items
-        in the list to generate different test data. Each element in the list is a dictionary, and each
-        key in the dictionary corresponds to one of the arguments of point_algebraic_addition/point_algebraic_doubling.
-        The value corresponding to the key is the position that element should occupy in the stack.
-
+            in the list to generate different test data. Each element in the list is a dictionary, and each
+            key in the dictionary corresponds to one of the arguments of point_algebraic_addition or
+            point_algebraic_doubling. The value corresponding to the key is the position that element should
+            occupy in the stack.
     """
     test_cases = []
 

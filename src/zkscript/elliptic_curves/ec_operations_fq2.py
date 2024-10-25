@@ -41,12 +41,12 @@ class EllipticCurveFq2:
         It also handles optional checks on the curve constant and whether the constant should be cleaned or reused.
 
         Stack input:
-        - stack    = [Q, .., gradient, .., P, .., Q, ..]
-        - altstack = []
+            - stack    = [Q, .., gradient, .., P, .., Q, ..]
+            - altstack = []
 
         Stack output:
-        - stack    = [{q}, .., {gradient}, .., {P}, .., {Q}, .., (P_+ Q_)]
-        - altstack = []
+            - stack    = [{q}, .., {gradient}, .., {P}, .., {Q}, .., (P_+ Q_)]
+            - altstack = []
 
         where {P} means that the element is there if it is picked, it is not there if it is rolled.
         P_ = -P if P.y.negate else P
@@ -125,12 +125,12 @@ class EllipticCurveFq2:
         It also handles optional checks on the curve constant and whether the constant should be cleaned or reused.
 
         Stack input:
-        - stack    = [Q, .., gradient, .., P, ..]
-        - altstack = []
+            - stack    = [Q, .., gradient, .., P, ..]
+            - altstack = []
 
         Stack output:
-        - stack    = [{q}, .., {gradient}, .., {P}, .., 2P_]
-        - altstack = []
+            - stack    = [{q}, .., {gradient}, .., {P}, .., 2P_]
+            - altstack = []
 
         where {P} means that the element is there if it is picked, it is not there if it is rolled.
         P_ = -P if P.y.negate else P
@@ -257,12 +257,12 @@ class EllipticCurveFq2:
         It also handles optional checks on the curve constant and whether the constant should be cleaned or reused.
 
         Stack input:
-        - stack    = [Q, .., gradient, .., P, .., Q, ..]
-        - altstack = []
+            - stack    = [Q, .., gradient, .., P, .., Q, ..]
+            - altstack = []
 
         Stack output:
-        - stack    = [{q}, .., {gradient}, .., {P}, .., {Q}, .., (P_+ Q_)]
-        - altstack = []
+            - stack    = [{q}, .., {gradient}, .., {P}, .., {Q}, .., (P_+ Q_)]
+            - altstack = []
 
         where {P} means that the element is there if it is picked, it is not there if it is rolled.
         P_ = -P if P.y.negate else P
@@ -450,12 +450,12 @@ class EllipticCurveFq2:
         It also handles optional checks on the curve constant and whether the constant should be cleaned or reused.
 
         Stack input:
-        - stack    = [Q, .., gradient, .., P, .., Q, ..]
-        - altstack = []
+            - stack    = [Q, .., gradient, .., P, .., Q, ..]
+            - altstack = []
 
         Stack output:
-        - stack    = [{q}, .., {gradient}, .., {P}, .., {Q}, .., (P_+ Q_)]
-        - altstack = []
+            - stack    = [{q}, .., {gradient}, .., {P}, .., {Q}, .., (P_+ Q_)]
+            - altstack = []
 
         where {P} means that the element is there if it is picked, it is not there if it is rolled.
         P_ = -P if P.y.negate else P
@@ -590,12 +590,12 @@ class EllipticCurveFq2:
         It also handles optional checks on the curve constant and whether the constant should be cleaned or reused.
 
         Stack input:
-        - stack    = [Q, .., gradient, .., P, ..]
-        - altstack = []
+            - stack    = [Q, .., gradient, .., P, ..]
+            - altstack = []
 
         Stack output:
-        - stack    = [{q}, .., {gradient}, .., {P}, .., 2P_]
-        - altstack = []
+            - stack    = [{q}, .., {gradient}, .., {P}, .., 2P_]
+            - altstack = []
 
         where {P} means that the element is there if it is picked, it is not there if it is rolled.
         P_ = -P if P.y.negate else P
@@ -742,12 +742,12 @@ class EllipticCurveFq2:
         It also handles optional checks on the curve constant and whether the constant should be cleaned or reused.
 
         Stack input:
-        - stack    = [Q, .., gradient, .., P, ..]
-        - altstack = []
+            - stack    = [Q, .., gradient, .., P, ..]
+            - altstack = []
 
         Stack output:
-        - stack    = [{q}, .., {gradient}, .., {P}, .., 2P_]
-        - altstack = []
+            - stack    = [{q}, .., {gradient}, .., {P}, .., 2P_]
+            - altstack = []
 
         where {P} means that the element is there if it is picked, it is not there if it is rolled.
         P_ = -P if P.y.negate else P

@@ -1,6 +1,6 @@
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import Self, Union
+from typing import Self, Tuple, Union
 
 
 @dataclass(init=False)
@@ -10,6 +10,12 @@ class StackBaseElement:
     position: int
 
     def __init__(self, position: int):
+        """Initialise StackBaseElement, representing an element on the stack.
+
+        Args:
+            position (int): the position of StackBaseElement on the stack.
+
+        """
         self.position = position
 
     def is_before(self, other) -> bool:
@@ -24,7 +30,7 @@ class StackBaseElement:
             else self.position > other.position
         )
 
-    def overlaps_on_the_right(self, other) -> bool:
+    def overlaps_on_the_right(self, other) -> Tuple[bool, str]:
         """Check whether the end of self overlaps with the beginning of other."""
         if self.position <= other.position:
             msg = "Self and other overlap: "
@@ -47,12 +53,19 @@ class StackNumber(StackBaseElement):
     negate: bool
 
     def __init__(self, position: int, negate: bool):
+        """Initiliase StackNumber, representing a number (integer) on the stack.
+
+        Args:
+            position (int): the position of StackNumber on the stack.
+            negate (bool): whether the number should be negated when used in a script.
+
+        """
         super().__init__(position)
         self.negate = negate
 
     def set_negate(self, negate: bool) -> Self:
         """Return a copy of self with negate set to negate."""
-        return StackNumber(self.position, self.length, negate, self.move)
+        return StackNumber(self.position, negate)
 
 
 @dataclass(init=False)
@@ -64,6 +77,14 @@ class StackFiniteFieldElement(StackNumber):
     extension_degree: int
 
     def __init__(self, position: int, negate: bool, extension_degree: int):
+        """Initialiase StackFiniteFieldElement, representing an element of a finite field on the stack.
+
+        Args:
+            position (int): the position of StackNumber on the stack.
+            negate (bool): whether the number should be negated when used in a script.
+            extension_degree (int): the extension degree of the finite field over Fq.
+
+        """
         if extension_degree <= 0:
             msg = "The extension_degree must be a positive integer: "
             msg += f"extension_degree: {extension_degree}"
@@ -76,12 +97,11 @@ class StackFiniteFieldElement(StackNumber):
         super().__init__(position, negate)
         self.extension_degree = extension_degree
 
-    def overlaps_on_the_right(self, other) -> bool:
+    def overlaps_on_the_right(self, other) -> Tuple[bool, str]:
         """Check whether the end of self overlaps with the beginning of other.
 
         Return True if: (self[0], .., self[self.extension_degree-1]) and (other[0], .., other[other.extension_degree-1])
         are such that self[self.extension_degree-1] comes after other[0] in the stack.
-
         """
         if self.position - self.extension_degree < other.position:
             msg = "Self and other overlap: "
@@ -100,6 +120,15 @@ class StackEllipticCurvePoint:
     negate: bool
 
     def __init__(self, x: StackFiniteFieldElement, y: StackFiniteFieldElement):
+        """Initialise StackEllipticCurvePoint, representing an elliptic curve point on the stack.
+
+        Args:
+            x (StackFiniteFieldElement): the StackFiniteFieldElement representing the x coordinate of the point.
+            y (StackFiniteFieldElement): the StackFiniteFieldElement representing the y coordinate of the point.
+            position (int): the position of the point in the stack (equal to x.position).
+            negate (bool): whether the point should be negated when used in a script (equal to y.negate).
+
+        """
         different_lengths = False
 
         overlaps, msg = x.overlaps_on_the_right(y)  # Note: if overlaps = False, then x.is_before(y) = True
@@ -117,7 +146,7 @@ class StackEllipticCurvePoint:
         self.position = self.x.position
         self.negate = y.negate
 
-    def overlaps_on_the_right(self, other) -> bool:
+    def overlaps_on_the_right(self, other) -> Tuple[bool, str]:
         """Check whether the end of self overlaps with the beginning of other.
 
         The method checks whether all the elements: (self[0], .., self[self.length-1]) are before the elements

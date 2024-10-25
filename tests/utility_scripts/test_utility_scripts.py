@@ -176,9 +176,8 @@ def test_fail_verify_bottom_constant(n, stack):
     ("stack_element", "moving_function", "start_index", "end_index", "msg"),
     [
         (StackNumber(1, False), roll, 0, 2, r"Moving more elements than self: Self has \d+ elements, end_index: \d+"),
-        (StackNumber(1, False), roll, -1, 2, r"Moving more elements than self: Self has \d+ elements, end_index: \d+"),
+        (StackNumber(1, False), roll, -1, 2, r"Start index must be positive: start_index -\d+"),
         (StackNumber(1, False), roll, -1, 1, r"Start index must be positive: start_index -\d+"),
-        (StackNumber(1, False), roll, -10, 1, r"Start index must be positive: start_index -\d+"),
     ],
 )
 def test_errors_move(stack_element, moving_function, start_index, end_index, msg):

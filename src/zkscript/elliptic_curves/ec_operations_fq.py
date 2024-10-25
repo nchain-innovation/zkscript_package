@@ -39,12 +39,12 @@ class EllipticCurveFq:
         It also handles optional checks on the curve constant and whether the constant should be cleaned or reused.
 
         Stack input:
-        - stack    = [q, .., gradient, .., P, .., Q, ..]
-        - altstack = []
+            - stack    = [q, .., gradient, .., P, .., Q, ..]
+            - altstack = []
 
         Stack output:
-        - stack    = [{q}, .., {gradient}, .., {P}, .., {Q}, .., (P_+ Q_)]
-        - altstack = []
+            - stack    = [{q}, .., {gradient}, .., {P}, .., {Q}, .., (P_+ Q_)]
+            - altstack = []
 
         where {P} means that the element is there if it is picked, it is not there if it is rolled.
         P_ = -P not P.y.negate else P
@@ -93,12 +93,13 @@ class EllipticCurveFq:
             This function assumes the input points are represented as minimally encoded, little-endian integers.
 
         """
+        check_order([gradient, P, Q])
         return (
-            self.point_algebraic_addition_verifying_gradient(
+            self.__point_algebraic_addition_verifying_gradient(
                 take_modulo, check_constant, clean_constant, gradient, P, Q, rolling_options
             )
             if verify_gradient
-            else self.point_algebraic_addition_without_verifying_gradient(
+            else self.__point_algebraic_addition_without_verifying_gradient(
                 take_modulo, check_constant, clean_constant, gradient, P, Q, rolling_options
             )
         )
@@ -124,12 +125,12 @@ class EllipticCurveFq:
         It also handles optional checks on the curve constant and whether the constant should be cleaned or reused.
 
         Stack input:
-        - stack    = [q, .., gradient, .., P, ..]
-        - altstack = []
+            - stack    = [q, .., gradient, .., P, ..]
+            - altstack = []
 
         Stack output:
-        - stack    = [{q}, .., {gradient}, .., {P}, .., 2P_]
-        - altstack = []
+            - stack    = [{q}, .., {gradient}, .., {P}, .., 2P_]
+            - altstack = []
 
         where {P} means that the element is there if it is picked, it is not there if it is rolled.
         P_ = -P not P.y.negate else P
@@ -169,17 +170,18 @@ class EllipticCurveFq:
             This function assumes the input points are represented as minimally encoded, little-endian integers.
 
         """
+        check_order([gradient, P])
         return (
-            self.point_algebraic_doubling_verifying_gradient(
+            self.__point_algebraic_doubling_verifying_gradient(
                 take_modulo, check_constant, clean_constant, gradient, P, rolling_options
             )
             if verify_gradient
-            else self.point_algebraic_doubling_without_verifying_gradient(
+            else self.__point_algebraic_doubling_without_verifying_gradient(
                 take_modulo, check_constant, clean_constant, gradient, P, rolling_options
             )
         )
 
-    def point_algebraic_addition_verifying_gradient(
+    def __point_algebraic_addition_verifying_gradient(
         self,
         take_modulo: bool,
         check_constant: bool | None,
@@ -202,12 +204,12 @@ class EllipticCurveFq:
         It also handles optional checks on the curve constant and whether the constant should be cleaned or reused.
 
         Stack input:
-        - stack    = [q, .., gradient, .., P, .., Q, ..]
-        - altstack = []
+            - stack    = [q, .., gradient, .., P, .., Q, ..]
+            - altstack = []
 
         Stack output:
-        - stack    = [{q}, .., {gradient}, .., {P}, .., {Q}, .., (P_+ Q_)]
-        - altstack = []
+            - stack    = [{q}, .., {gradient}, .., {P}, .., {Q}, .., (P_+ Q_)]
+            - altstack = []
 
         where {P} means that the element is there if it is picked, it is not there if it is rolled.
         P_ = -P not P.y.negate else P
@@ -255,7 +257,6 @@ class EllipticCurveFq:
             the gradient verification, but the point computed is not going to be `P_ + Q_`.
 
         """
-        check_order([gradient, P, Q])
         is_gradient_rolled, is_p_rolled, is_q_rolled = bitmask_to_boolean_list(rolling_options, 3)
 
         out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
@@ -327,7 +328,7 @@ class EllipticCurveFq:
         out += verify_gradient + x_coordinate + y_coordinate
         return out
 
-    def point_algebraic_addition_without_verifying_gradient(
+    def __point_algebraic_addition_without_verifying_gradient(
         self,
         take_modulo: bool,
         check_constant: bool | None,
@@ -351,12 +352,12 @@ class EllipticCurveFq:
         It also handles optional checks on the curve constant and whether the constant should be cleaned or reused.
 
         Stack input:
-        - stack    = [q, .., gradient, .., P, .., Q, ..]
-        - altstack = []
+            - stack    = [q, .., gradient, .., P, .., Q, ..]
+            - altstack = []
 
         Stack output:
-        - stack    = [{q}, .., {gradient}, .., {P}, .., {Q}, .., (P_+ Q_)]
-        - altstack = []
+            - stack    = [{q}, .., {gradient}, .., {P}, .., {Q}, .., (P_+ Q_)]
+            - altstack = []
 
         where {P} means that the element is there if it is picked, it is not there if it is rolled.
         P_ = -P not P.y.negate else P
@@ -402,7 +403,6 @@ class EllipticCurveFq:
             This function assumes the input points are represented as minimally encoded, little-endian integers.
 
         """
-        check_order([gradient, P, Q])
         is_gradient_rolled, is_p_rolled, is_q_rolled = bitmask_to_boolean_list(rolling_options, 3)
 
         out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
@@ -448,7 +448,7 @@ class EllipticCurveFq:
         out += x_coordinate + y_coordinate
         return out
 
-    def point_algebraic_doubling_verifying_gradient(
+    def __point_algebraic_doubling_verifying_gradient(
         self,
         take_modulo: bool,
         check_constant: bool | None,
@@ -467,12 +467,12 @@ class EllipticCurveFq:
         It also handles optional checks on the curve constant and whether the constant should be cleaned or reused.
 
         Stack input:
-        - stack    = [q, .., gradient, .., P, ..]
-        - altstack = []
+            - stack    = [q, .., gradient, .., P, ..]
+            - altstack = []
 
         Stack output:
-        - stack    = [{q}, .., {gradient}, .., {P}, .., 2P_]
-        - altstack = []
+            - stack    = [{q}, .., {gradient}, .., {P}, .., 2P_]
+            - altstack = []
 
         where {P} means that the element is there if it is picked, it is not there if it is rolled.
         P_ = -P not P.y.negate else P
@@ -511,7 +511,6 @@ class EllipticCurveFq:
             This function assumes the input points are represented as minimally encoded, little-endian integers.
 
         """
-        check_order([gradient, P])
         is_gradient_rolled, is_p_rolled = bitmask_to_boolean_list(rolling_options, 2)
 
         out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
@@ -575,7 +574,7 @@ class EllipticCurveFq:
         out += verify_gradient + x_coordinate + y_coordinate
         return out
 
-    def point_algebraic_doubling_without_verifying_gradient(
+    def __point_algebraic_doubling_without_verifying_gradient(
         self,
         take_modulo: bool,
         check_constant: bool | None,
@@ -595,12 +594,12 @@ class EllipticCurveFq:
         It also handles optional checks on the curve constant and whether the constant should be cleaned or reused.
 
         Stack input:
-        - stack    = [q, .., gradient, .., P, ..]
-        - altstack = []
+            - stack    = [q, .., gradient, .., P, ..]
+            - altstack = []
 
         Stack output:
-        - stack    = [{q}, .., {gradient}, .., {P}, .., 2P_]
-        - altstack = []
+            - stack    = [{q}, .., {gradient}, .., {P}, .., 2P_]
+            - altstack = []
 
         where {P} means that the element is there if it is picked, it is not there if it is rolled.
         P_ = -P not P.y.negate else P
@@ -639,7 +638,6 @@ class EllipticCurveFq:
             This function assumes the input points are represented as minimally encoded, little-endian integers.
 
         """
-        check_order([gradient, P])
         is_gradient_rolled, is_p_rolled = bitmask_to_boolean_list(rolling_options, 2)
 
         out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
@@ -683,12 +681,12 @@ class EllipticCurveFq:
         It also handles optional checks on the curve constant and whether the constant should be cleaned or reused.
 
         Stack input:
-        - stack    = [q, .., gradient P Q]
-        - altstack = []
+            - stack    = [q, .., gradient P Q]
+            - altstack = []
 
         Stack output:
-        - stack    = [{q}, .., gradient (P + Q)]
-        - altstack = []
+            - stack    = [{q}, .., (P + Q)]
+            - altstack = []
 
         Args:
             take_modulo (bool): If `True`, the result is reduced modulo q.
