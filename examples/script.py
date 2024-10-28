@@ -17,17 +17,15 @@ from elliptic_curves.instantiations.mnt4_753.mnt4_753 import mnt4_753 as mnt4_75
 from elliptic_curves.models.curve import BilinearPairingCurve
 from tx_engine import SIGHASH, Context, Script, Tx, TxIn, TxOut, Wallet, address_to_public_key_hash, p2pkh_script
 from tx_engine.interface.interface_factory import InterfaceFactory
-
-#### FOR DEBUG
-from tx_engine.interface.verify_script import SCRIPT_FLAGS, verifyscript_params
+from tx_engine.interface.verify_script import ScriptFlags, verifyscript_params
 
 from src.zkscript.groth16.bls12_381.bls12_381 import bls12_381 as bls12_381_groth
 from src.zkscript.groth16.mnt4_753.mnt4_753 import mnt4_753 as mnt4_753_groth
 from src.zkscript.groth16.model.groth16 import Groth16
 
 verification_flags = 1
-for f in SCRIPT_FLAGS._member_names_[1:-2]:
-    verification_flags |= SCRIPT_FLAGS._member_map_[f]
+for f in ScriptFlags._member_names_[1:-2]:
+    verification_flags |= ScriptFlags._member_map_[f]
 
 
 def test_network():
@@ -54,10 +52,7 @@ def test_script_in_regtest(tx: Tx, index: int, lock: Script, flags, connection) 
         script_flags=flags,
     )
 
-    return connection.verifyscript(scripts=[test], stopOnFirstInvalid=False, totalTimeout=100000)[0]["result"] == "ok"
-
-
-####
+    return connection.verifyscript(scripts=[test], stop_on_first_invalid=False, timeout=100000)[0]["result"] == "ok"
 
 
 class MillerLoopType(Enum):
@@ -209,7 +204,7 @@ parser = argparse.ArgumentParser(
 parser.add_argument(
     "--dir",
     type=str,
-    choices=["square_root", "sha256"],
+    choices=["square_root", "sha256", "ai_inference"],
     help="Directory from which to get statement, proof and verifying key",
 )
 parser.add_argument(
@@ -218,6 +213,7 @@ parser.add_argument(
 parser.add_argument(
     "--config", type=str, help="JSON configuration file for transaction construction and broadcast", required=False
 )
+parser.add_argument("--regtest", type=bool, help="Test in regtest", default=False, required=False)
 
 if __name__ == "__main__":
     # Fetch cli arguments
@@ -225,6 +221,7 @@ if __name__ == "__main__":
     data_dir = Path(args.dir)
     curve = args.curve
     config_path = Path(args.config) if args.config is not None else None
+    test_in_regtest = args.regtest
 
     # Set up curve
     curve, groth16_script, field, miller_loop_type, denominator_elimination = curve_setup(args.curve)
@@ -275,10 +272,9 @@ if __name__ == "__main__":
         tx_locked_with_zkp = funding_tx_to_locked_tx(funding_tx, index, lock, fee_rate, private_key)
         spending_tx = locked_tx_to_spending_tx(tx_locked_with_zkp, 0, unlock, fee_rate, private_key)
 
-        #### DEBUG
-        bsv_regtest = test_network()
-        assert test_script_in_regtest(spending_tx, 0, lock, verification_flags, bsv_regtest)
-        #####
+        if test_in_regtest:
+            bsv_regtest = test_network()
+            assert test_script_in_regtest(spending_tx, 0, lock, verification_flags, bsv_regtest)
 
         # Save data to file
         save_data_to_file(
@@ -288,7 +284,8 @@ if __name__ == "__main__":
 
         if broadcast:
             if curve == "mnt4_753":
-                raise ValueError("Broadcast is not supported for curve MNT4_753 yet")
+                msg = "Broadcast is not supported for curve MNT4_753 yet"
+                raise ValueError(msg)
 
             connection.broadcast_tx(tx_locked_with_zkp.serialize().hex())
             connection.broadcast_tx(spending_tx.serialize().hex())
