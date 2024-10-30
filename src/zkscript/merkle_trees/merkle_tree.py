@@ -59,6 +59,7 @@ class MerkleTree:
             - `self.root` must be set to the expected Merkle root to verify against.
             - the Merkle path is assumed to be passed as unlocking script in the following way:
                 stack = [h_{self.depth-1} aux_{self.depth-1} bit_{self.depth-1} ... aux_1 bit_1 d]
+
         """
 
         out = Script()
@@ -66,9 +67,9 @@ class MerkleTree:
         # stack in: [h_{self.depth-1} aux_{self.depth-1} bit_{self.depth-1} ... h_1 aux_1 bit_1 d]
         # stack out: [<purported r>]
         out += Script.parse_string(self.hash_function)
-        out += Script.parse_string(" ".join(
-            [f"OP_SWAP OP_IF OP_SWAP OP_ENDIF OP_CAT {self.hash_function}"] * (self.depth-1)
-            ))
+        out += Script.parse_string(
+            " ".join([f"OP_SWAP OP_IF OP_SWAP OP_ENDIF OP_CAT {self.hash_function}"] * (self.depth - 1))
+        )
 
         # stack in: [<purported r>]
         # stack out: [fail if <purported r> != self.root else 1/""]
@@ -110,9 +111,7 @@ class MerkleTree:
         # stack in: [aux_{0,self.depth-1} h_{self.depth-1} aux_{1,self.depth-1} ... aux_{0,1} aux_{1,1} d]
         # stack out: <purported r>
         out += Script.parse_string(self.hash_function)
-        out += Script.parse_string(" ".join(
-            [f"OP_SWAP OP_CAT OP_CAT {self.hash_function}"] * (self.depth-1)
-            ))
+        out += Script.parse_string(" ".join([f"OP_SWAP OP_CAT OP_CAT {self.hash_function}"] * (self.depth - 1)))
 
         # stack in: [<purported r>]
         # stack out: [fail if <purported r> != self.root else 1/""]
@@ -142,10 +141,10 @@ class MerkleTree:
             - `self.root` must be set to the expected Merkle root to verify against.
 
         """
-        assert all( c in "0123456789abcdefABCDEF" for c in d)
+        assert all(c in "0123456789abcdefABCDEF" for c in d)
         assert all(
             c in "0123456789abcdefABCDEF" for aux_ in aux for c in aux_
-            ), f"{aux} is not a valid list of hexadecimal strings."
+        ), f"{aux} is not a valid list of hexadecimal strings."
 
         out = Script()
 
