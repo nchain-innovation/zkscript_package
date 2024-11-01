@@ -328,3 +328,16 @@ def move(
         msg += f"Self has {length} elements, end_index: {end_index}"
         raise ValueError(msg)
     return moving_function(position=stack_element.position - start_index, n_elements=end_index - start_index)
+
+
+def reverse_endianness(length: int) -> Script:
+    """Reverse the endianness of a bytestring of length `length`."""
+    out = Script()
+    out += Script.parse_string(" ".join(["OP_1 OP_SPLIT"] * (length - 1)))
+    out += Script.parse_string(" ".join(["OP_SWAP OP_CAT"] * (length - 1)))
+    return out
+
+
+def ensure_is_positive() -> Script:
+    """Convert an unsigned integer into a positive integer."""
+    return Script.parse_string("0x00 OP_CAT OP_BIN2NUM")
