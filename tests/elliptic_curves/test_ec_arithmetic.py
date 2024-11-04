@@ -379,10 +379,6 @@ class Secp256k1Extension:
         ],
         "test_addition_slow": generate_test_data(modulus, P, Q, positions_addition),
         "test_doubling_slow": generate_test_data(modulus, P, P, positions_doubling),
-        "test_negation": [
-            {"P": P, "expected": -P},
-            {"P": point_at_infinity, "expected": -point_at_infinity},
-        ],
     }
 
 
@@ -511,10 +507,6 @@ class Secp256r1Extension:
         ],
         "test_addition_slow": generate_test_data(modulus, P, Q, positions_addition),
         "test_doubling_slow": generate_test_data(modulus, P, P, positions_doubling),
-        "test_negation": [
-            {"P": P, "expected": -P},
-            {"P": point_at_infinity, "expected": -point_at_infinity},
-        ],
     }
 
 
@@ -571,8 +563,6 @@ def generate_test_cases(test_name):
                         out.append((config, test_data["P"], test_data["Q"], test_data["expected"]))
                     case "test_multiplication_unrolled":
                         out.append((config, test_data["P"], test_data["a"], test_data["expected"]))
-                    case "test_negation":
-                        out.append((config, test_data["P"], test_data["expected"]))
     return out
 
 

@@ -4,24 +4,474 @@ from math import ceil, log2
 
 from tx_engine import Script
 
+from src.zkscript.types.stack_elements import StackEllipticCurvePoint, StackFiniteFieldElement
 from src.zkscript.util.utility_functions import optimise_script
-from src.zkscript.util.utility_scripts import nums_to_script, pick, roll, verify_bottom_constant
+from src.zkscript.util.utility_scripts import pick, roll, verify_bottom_constant
 
 
 class TripleMillerLoop:
-    """Triple miller loop operation."""
+    def __one_step_without_addition(
+        self,
+        i: int,
+        take_modulo: list[bool],
+        positive_modulo: bool,
+        clean_constant: bool,
+        gradients_doubling: list[StackFiniteFieldElement],
+        P: list[StackEllipticCurvePoint],  # noqa: N803
+        T: list[StackEllipticCurvePoint],  # noqa: N803
+    ) -> Script:
+        """Generate the script to perfom one step in the calculation of the Miller loop.
+
+        The function generates the script to perfom one step in the calculation of the Miller loop when
+        there is no addition to be computed.
+
+        Args:
+            i (int): The step begin performed in the computation of the Miller loop.
+            take_modulo (list[bool]): list of two booleans that declare whether to take modulos after
+                calculating the evaluations and the points doubling.
+            clean_constant (bool): Whether to clean the constant at the end of the execution of the
+                Miller loop.
+            gradients_doubling (list[StackFiniteFieldElement]): list of gradients needed for doubling.
+            P (list[StackEllipticCurvePoint]): list of the points P needed for the evaluations.
+            T (list[StackEllipticCurvePoint]): list of the points T needed for the evaluations and the
+                doublings. i-th step of the calculation of w*Q
+
+        """
+        shift = 0 if i == len(self.exp_miller_loop) - 2 else self.N_ELEMENTS_MILLER_OUTPUT
+        out = Script()
+        # stack in:  [gradient_(2*T1) gradient_(2*T2) gradient_(2*T3) P1 P2 P3 Q1 Q2 Q3 T1 T2 T3 {f_i^2}]
+        # stack out: [gradient_(2*T1) gradient_(2*T2) gradient_(2*T3) P1 P2 P3 Q1 Q2 Q3 T1 T2 T3 {f_i^2}
+        #               ev_(l_(T1,T1))(P1)]
+        out += self.line_eval(
+            take_modulo=True,
+            positive_modulo=False,
+            check_constant=False,
+            clean_constant=False,
+            is_constant_reused=False,
+            gradient=gradients_doubling[0].shift(shift),
+            P=P[0].shift(shift),
+            Q=T[0].shift(shift),
+            rolling_options=0,
+        )  # Compute ev_(l_(T1,T1))(P1)
+        # stack in:  [gradient_(2*T1) gradient_(2*T2) gradient_(2*T3) P1 P2 P3 Q1 Q2 Q3 T1 T2 T3 {f_i^2}
+        #               ev_(l_(T1,T1))(P1)]
+        # stack out: [gradient_(2*T1) gradient_(2*T2) gradient_(2*T3) P1 P2 P3 Q1 Q2 Q3 T1 T2 T3 {f_i^2}
+        #               ev_(l_(T1,T1))(P1) ev_(l_(T2,T2))(P2)]
+        out += self.line_eval(
+            take_modulo=True,
+            positive_modulo=False,
+            check_constant=False,
+            clean_constant=False,
+            is_constant_reused=False,
+            gradient=gradients_doubling[1].shift(self.N_ELEMENTS_EVALUATION_OUTPUT + shift),
+            P=P[1].shift(self.N_ELEMENTS_EVALUATION_OUTPUT + shift),
+            Q=T[1].shift(self.N_ELEMENTS_EVALUATION_OUTPUT + shift),
+            rolling_options=0,
+        )  # Compute ev_(l_(T2,T2))(P2)
+        # stack in:  [gradient_(2*T1) gradient_(2*T2) gradient_(2*T3) P1 P2 P3 Q1 Q2 Q3 T1 T2 T3 {f_i^2}
+        #               ev_(l_(T1,T1))(P1) ev_(l_(T2,T2))(P2)]
+        # stack out: [gradient_(2*T1) gradient_(2*T2) gradient_(2*T3) P1 P2 P3 Q1 Q2 Q3 T1 T2 T3 {f_i^2}
+        #               ev_(l_(T1,T1))(P1) ev_(l_(T2,T2))(P2) ev_(l_(T3,T3))(P3)]
+        out += self.line_eval(
+            take_modulo=True,
+            positive_modulo=False,
+            check_constant=False,
+            clean_constant=False,
+            is_constant_reused=False,
+            gradient=gradients_doubling[2].shift(2 * self.N_ELEMENTS_EVALUATION_OUTPUT + shift),
+            P=P[2].shift(2 * self.N_ELEMENTS_EVALUATION_OUTPUT + shift),
+            Q=T[2].shift(2 * self.N_ELEMENTS_EVALUATION_OUTPUT + shift),
+            rolling_options=0,
+        )  # Compute ev_(l_(T3,T3))(P3)
+        # stack in:  [gradient_(2*T1) gradient_(2*T2) gradient_(2*T3) P1 P2 P3 Q1 Q2 Q3 T1 T2 T3 {f_i^2}
+        #               ev_(l_(T1,T1))(P1) ev_(l_(T2,T2))(P2) ev_(l_(T3,T3))(P3)]
+        # stack out: [gradient_(2*T1) gradient_(2*T2) gradient_(2*T3) P1 P2 P3 Q1 Q2 Q3 T1 T2 T3 {f_i^2}
+        #               (ev_(l_(T1,T1))(P1) * ev_(l_(T2,T2))(P2) * ev_(l_(T3,T3))(P3))]
+        out += self.line_eval_times_eval(
+            take_modulo=False, positive_modulo=False, check_constant=False, clean_constant=False
+        )  # Compute ev_(l_(T2,T2))(P2) * ev_(l_(T3,T3))(P3)
+        out += self.line_eval_times_eval_times_eval(
+            take_modulo=take_modulo[0] if i == len(self.exp_miller_loop) - 2 else False,
+            positive_modulo=False,
+            check_constant=False,
+            clean_constant=False,
+        )  # Compute ev_(l_(T1,T1))(P1) * ev_(l_(T2,T2))(P2) * ev_(l_(T3,T3))(P3)
+        if i != len(self.exp_miller_loop) - 2:
+            # stack in:  [gradient_(2*T1) gradient_(2*T2) gradient_(2*T3) P1 P2 P3 Q1 Q2 Q3 T1 T2 T3 {f_i^2}
+            #               (ev_(l_(T1,T1))(P1) * ev_(l_(T2,T2))(P2) * ev_(l_(T3,T3))(P3))]
+            # stack out: [gradient_(2*T1) gradient_(2*T2) gradient_(2*T3) P1 P2 P3 Q1 Q2 Q3 T1 T2 T3
+            #               {f_i^2} * (ev_(l_(T1,T1))(P1) * ev_(l_(T2,T2))(P2) * ev_(l_(T3,T3))(P3))]
+            out += self.miller_loop_output_times_eval_times_eval_times_eval(
+                take_modulo=take_modulo[0], positive_modulo=positive_modulo and (i==0), check_constant=False, clean_constant=False, is_constant_reused=False
+            )  # Compute f_i * (t1 * t2 * t3)
+        # stack in:     [gradient_(2*T1) gradient_(2*T2) gradient_(2*T3) P1 P2 P3 Q1 Q2 Q3 T1 T2 T3
+        #                   {f_i^2} * (ev_(l_(T1,T1))(P1) * ev_(l_(T2,T2))(P2) * ev_(l_(T3,T3))(P3))]
+        # stack out:    [gradient_(2*T1) gradient_(2*T2) gradient_(2*T3) P1 P2 P3 Q1 Q2 Q3 T1 T2 T3]
+        # altstack out: [{f_i^2} * (ev_(l_(T1,T1))(P1) * ev_(l_(T2,T2))(P2) * ev_(l_(T3,T3))(P3))]
+        out += Script.parse_string(" ".join(["OP_TOALTSTACK"] * self.N_ELEMENTS_MILLER_OUTPUT))
+        # stack in:     [gradient_(2*T1) gradient_(2*T2) gradient_(2*T3) P1 P2 P3 Q1 Q2 Q3 T1 T2 T3]
+        # altstack in:  [{f_i^2} * (ev_(l_(T1,T1))(P1) * ev_(l_(T2,T2))(P2) * ev_(l_(T3,T3))(P3))]
+        # stack out:    [gradient_(2*T2) gradient_(2*T3) P1 P2 P3 Q1 Q2 Q3 T2 T3 (2*T1)]
+        # altstack out: [{f_i^2} * (ev_(l_(T1,T1))(P1) * ev_(l_(T2,T2))(P2) * ev_(l_(T3,T3))(P3))]
+        out += self.point_doubling_twisted_curve(
+            take_modulo=take_modulo[1],
+            positive_modulo=positive_modulo and (i==0),
+            check_constant=False,
+            clean_constant=False,
+            verify_gradient=True,
+            gradient=gradients_doubling[0],
+            P=T[0],
+            rolling_options=3,
+        )  # Compute 2*T1
+        # stack in:     [gradient_(2*T2) gradient_(2*T3) P1 P2 P3 Q1 Q2 Q3 T2 T3 (2*T1)]
+        # altstack in:  [{f_i^2} * (ev_(l_(T1,T1))(P1) * ev_(l_(T2,T2))(P2) * ev_(l_(T3,T3))(P3))]
+        # stack out:    [gradient_(2*T3) P1 P2 P3 Q1 Q2 Q3 T3 (2*T1) (2*T2)]
+        # altstack out: [{f_i^2} * (ev_(l_(T1,T1))(P1) * ev_(l_(T2,T2))(P2) * ev_(l_(T3,T3))(P3))]
+        out += self.point_doubling_twisted_curve(
+            take_modulo=take_modulo[1],
+            positive_modulo=positive_modulo and (i==0),
+            check_constant=False,
+            clean_constant=False,
+            verify_gradient=True,
+            gradient=gradients_doubling[1],
+            P=T[1].shift(self.N_POINTS_TWIST),
+            rolling_options=3,
+        )  # Compute 2*T2
+        # stack in:     [gradient_(2*T3) P1 P2 P3 Q1 Q2 Q3 T3 (2*T1) (2*T2)]
+        # altstack in:  [{f_i^2} * (ev_(l_(T1,T1))(P1) * ev_(l_(T2,T2))(P2) * ev_(l_(T3,T3))(P3))]
+        # stack out:    [P1 P2 P3 Q1 Q2 Q3 T3 (2*T1) (2*T2) (2*T3)]
+        # altstack out: [{f_i^2} * (ev_(l_(T1,T1))(P1) * ev_(l_(T2,T2))(P2) * ev_(l_(T3,T3))(P3))]
+        out += self.point_doubling_twisted_curve(
+            take_modulo=take_modulo[1],
+            positive_modulo=positive_modulo and (i==0),
+            check_constant=False,
+            clean_constant=(i == 0) and clean_constant,
+            verify_gradient=True,
+            gradient=gradients_doubling[2],
+            P=T[2].shift(2 * self.N_POINTS_TWIST),
+            rolling_options=3,
+        )  # Compute 2*T3
+        # stack in:     [P1 P2 P3 Q1 Q2 Q3 T3 (2*T1) (2*T2) (2*T3)]
+        # altstack in:  [{f_i^2} * (ev_(l_(T1,T1))(P1) * ev_(l_(T2,T2))(P2) * ev_(l_(T3,T3))(P3))]
+        # stack out:    [P1 P2 P3 Q1 Q2 Q3 T3 (2*T1) (2*T2) (2*T3)
+        #                   {f_i^2} * (ev_(l_(T1,T1))(P1) * ev_(l_(T2,T2))(P2) * ev_(l_(T3,T3))(P3)]
+        out += Script.parse_string(" ".join(["OP_FROMALTSTACK"] * self.N_ELEMENTS_MILLER_OUTPUT))
+
+        return out
+
+    def __one_step_with_addition(
+        self,
+        i: int,
+        take_modulo: list[bool],
+        positive_modulo: bool,
+        clean_constant: bool,
+        gradients_doubling: list[StackFiniteFieldElement],
+        gradients_addition: list[StackFiniteFieldElement],
+        P: list[StackEllipticCurvePoint],  # noqa: N803
+        Q: list[StackEllipticCurvePoint],  # noqa: N803
+        T: list[StackEllipticCurvePoint],  # noqa: N803
+    ) -> Script:
+        """Generate the script to perfom one step in the calculation of the Miller loop.
+
+        The function generates the script to perfom one step in the calculation of the Miller loop when
+        there is addition to be computed.
+
+        Args:
+            i (int): The step begin performedin the computation of the Miller loop.
+            take_modulo (list[bool]): list of two booleans that declare whether to take modulos after
+                calculating the evaluations and the points doubling.
+            clean_constant (bool): Whether to clean the constant at the end of the execution of the
+                Miller loop.
+            gradients_doubling (list[StackFiniteFieldElement]): list of gradients needed for doubling.
+            gradients_addition (list[StackFiniteFieldElement]): list of gradients needed for addition.
+            P (list[StackEllipticCurvePoint]): list of the points P needed for the evaluations.
+            Q (list[StackEllipticCurvePoint]): list of the points Q needed for the evaluations and the
+                additions.
+            T (list[StackEllipticCurvePoint]): list of the points T needed for the evaluations and the
+                doublings. i-th step of the calculation of w*Q
+
+        """
+        shift = 0 if i == len(self.exp_miller_loop) - 2 else self.N_ELEMENTS_MILLER_OUTPUT
+        out = Script()
+        # stack in:  [gradient_(2* T1 ± Q1) gradient_(2* T2 ± Q2) gradient_(2* T3 ± Q3) gradient_(2*T1)
+        #               gradient_(2*T2) gradient_(2*T3) P1 P2 P3 Q1 Q2 Q3 T1 T2 T3 {f_i^2}]
+        # stack out: [gradient_(2* T1 ± Q1) gradient_(2* T2 ± Q2) gradient_(2* T3 ± Q3) gradient_(2*T1)
+        #               gradient_(2*T2) gradient_(2*T3) P1 P2 P3 Q1 Q2 Q3 T1 T2 T3 {f_i^2} ev_(l_(T1,T1))(P1)]
+        out += self.line_eval(
+            take_modulo=True,
+            positive_modulo=False,
+            check_constant=False,
+            clean_constant=False,
+            is_constant_reused=False,
+            gradient=gradients_doubling[0].shift(shift),
+            P=P[0].shift(shift),
+            Q=T[0].shift(shift),
+            rolling_options=0,
+        )  # Compute ev_(l_(T1,T1))(P1)
+        # stack in:  [gradient_(2* T1 ± Q1) gradient_(2* T2 ± Q2) gradient_(2* T3 ± Q3) gradient_(2*T1)
+        #               gradient_(2*T2) gradient_(2*T3) P1 P2 P3 Q1 Q2 Q3 T1 T2 T3 {f_i^2} ev_(l_(T1,T1))(P1)]
+        # stack out: [gradient_(2* T1 ± Q1) gradient_(2* T2 ± Q2) gradient_(2* T3 ± Q3) gradient_(2*T1)
+        #               gradient_(2*T2) gradient_(2*T3) P1 P2 P3 Q1 Q2 Q3 T1 T2 T3 {f_i^2}
+        #                   ev_(l_(T1,T1))(P1) ev_(l_(T2,T2))(P2)]
+        out += self.line_eval(
+            take_modulo=True,
+            positive_modulo=False,
+            check_constant=False,
+            clean_constant=False,
+            is_constant_reused=False,
+            gradient=gradients_doubling[1].shift(self.N_ELEMENTS_EVALUATION_OUTPUT + shift),
+            P=P[1].shift(self.N_ELEMENTS_EVALUATION_OUTPUT + shift),
+            Q=T[1].shift(self.N_ELEMENTS_EVALUATION_OUTPUT + shift),
+            rolling_options=0,
+        )  # Compute ev_(l_(T2,T2))(P2)
+        # stack in:  [gradient_(2* T1 ± Q1) gradient_(2* T2 ± Q2) gradient_(2* T3 ± Q3) gradient_(2*T1)
+        #               gradient_(2*T2) gradient_(2*T3) P1 P2 P3 Q1 Q2 Q3 T1 T2 T3 {f_i^2}
+        #                   ev_(l_(T1,T1))(P1) ev_(l_(T2,T2))(P2)]
+        # stack out: [gradient_(2* T1 ± Q1) gradient_(2* T2 ± Q2) gradient_(2* T3 ± Q3) gradient_(2*T1)
+        #               gradient_(2*T2) gradient_(2*T3) P1 P2 P3 Q1 Q2 Q3 T1 T2 T3 {f_i^2}
+        #                   (ev_(l_(T1,T1))(P1)*ev_(l_(T2,T2))(P2))]
+        out += self.line_eval_times_eval(take_modulo=False, positive_modulo=False, check_constant=False, clean_constant=False)
+        # stack in:  [gradient_(2* T1 ± Q1) gradient_(2* T2 ± Q2) gradient_(2* T3 ± Q3) gradient_(2*T1)
+        #               gradient_(2*T2) gradient_(2*T3) P1 P2 P3 Q1 Q2 Q3 T1 T2 T3 {f_i^2}
+        #                   (ev_(l_(T1,T1))(P1)*ev_(l_(T2,T2))(P2))]
+        # stack out: [gradient_(2* T1 ± Q1) gradient_(2* T2 ± Q2) gradient_(2* T3 ± Q3) gradient_(2*T1)
+        #               gradient_(2*T2) gradient_(2*T3) P1 P2 P3 Q1 Q2 Q3 T1 T2 T3 {f_i^2}
+        #                   (ev_(l_(T1,T1))(P1)*ev_(l_(T2,T2))(P2)) ev_(l_(T3,T3))(P3)]
+        out += self.line_eval(
+            take_modulo=True,
+            positive_modulo=False,
+            check_constant=False,
+            clean_constant=False,
+            is_constant_reused=False,
+            gradient=gradients_doubling[2].shift(self.N_ELEMENTS_EVALUATION_TIMES_EVALUATION + shift),
+            P=P[2].shift(self.N_ELEMENTS_EVALUATION_TIMES_EVALUATION + shift),
+            Q=T[2].shift(self.N_ELEMENTS_EVALUATION_TIMES_EVALUATION + shift),
+            rolling_options=0,
+        )  # Compute ev_(l_(T3,T3))(P3)
+        # stack in:  [gradient_(2* T1 ± Q1) gradient_(2* T2 ± Q2) gradient_(2* T3 ± Q3) gradient_(2*T1)
+        #               gradient_(2*T2) gradient_(2*T3) P1 P2 P3 Q1 Q2 Q3 T1 T2 T3 {f_i^2}
+        #                   (ev_(l_(T1,T1))(P1)*ev_(l_(T2,T2))(P2)) ev_(l_(T3,T3))(P3)]
+        # stack out: [gradient_(2* T1 ± Q1) gradient_(2* T2 ± Q2) gradient_(2* T3 ± Q3) gradient_(2*T1)
+        #               gradient_(2*T2) gradient_(2*T3) P1 P2 P3 Q1 Q2 Q3 T1 T2 T3 {f_i^2}
+        #                   (ev_(l_(T1,T1))(P1)*ev_(l_(T2,T2))(P2))
+        #                       ev_(l_(T3,T3))(P3) ev_(l_(2*T1,± Q1))(P1)]
+        out += self.line_eval(
+            take_modulo=True,
+            positive_modulo=False,
+            check_constant=False,
+            clean_constant=False,
+            is_constant_reused=False,
+            gradient=gradients_addition[0].shift(
+                self.N_ELEMENTS_EVALUATION_TIMES_EVALUATION + self.N_ELEMENTS_EVALUATION_OUTPUT + shift
+            ),
+            P=P[0].shift(self.N_ELEMENTS_EVALUATION_TIMES_EVALUATION + self.N_ELEMENTS_EVALUATION_OUTPUT + shift),
+            Q=Q[0]
+            .shift(self.N_ELEMENTS_EVALUATION_TIMES_EVALUATION + self.N_ELEMENTS_EVALUATION_OUTPUT + shift)
+            .set_negate(self.exp_miller_loop[i] == -1),
+            rolling_options=0,
+        )  # Compute ev_(l_(2*T1,± Q1))(P1)
+        # stack in:  [gradient_(2* T1 ± Q1) gradient_(2* T2 ± Q2) gradient_(2* T3 ± Q3) gradient_(2*T1)
+        #               gradient_(2*T2) gradient_(2*T3) P1 P2 P3 Q1 Q2 Q3 T1 T2 T3 {f_i^2}
+        #                   (ev_(l_(T1,T1))(P1)*ev_(l_(T2,T2))(P2))
+        #                       ev_(l_(T3,T3))(P3) ev_(l_(2*T1,± Q1))(P1)]
+        # stack out: [gradient_(2* T1 ± Q1) gradient_(2* T2 ± Q2) gradient_(2* T3 ± Q3) gradient_(2*T1)
+        #               gradient_(2*T2) gradient_(2*T3) P1 P2 P3 Q1 Q2 Q3 T1 T2 T3 {f_i^2}
+        #                   (ev_(l_(T1,T1))(P1)*ev_(l_(T2,T2))(P2))
+        #                       (ev_(l_(T3,T3))(P3)*ev_(l_(2*T1,± Q1))(P1))]
+        out += self.line_eval_times_eval(take_modulo=False, positive_modulo=False, check_constant=False, clean_constant=False)
+        # stack in:  [gradient_(2* T1 ± Q1) gradient_(2* T2 ± Q2) gradient_(2* T3 ± Q3) gradient_(2*T1)
+        #               gradient_(2*T2) gradient_(2*T3) P1 P2 P3 Q1 Q2 Q3 T1 T2 T3 {f_i^2}
+        #                   (ev_(l_(T1,T1))(P1)*ev_(l_(T2,T2))(P2))
+        #                       (ev_(l_(T3,T3))(P3)*ev_(l_(2*T1,± Q1))(P1))]
+        # stack out: [gradient_(2* T1 ± Q1) gradient_(2* T2 ± Q2) gradient_(2* T3 ± Q3) gradient_(2*T1)
+        #               gradient_(2*T2) gradient_(2*T3) P1 P2 P3 Q1 Q2 Q3 T1 T2 T3 {f_i^2}
+        #                   (ev_(l_(T1,T1))(P1)*ev_(l_(T2,T2))(P2))
+        #                       (ev_(l_(T3,T3))(P3)*ev_(l_(2*T1,± Q1))(P1))
+        #                           ev_(l_(2*T2,± Q2))(P2)]
+        out += self.line_eval(
+            take_modulo=True,
+            positive_modulo=False,
+            check_constant=False,
+            clean_constant=False,
+            is_constant_reused=False,
+            gradient=gradients_addition[1].shift(2 * self.N_ELEMENTS_EVALUATION_TIMES_EVALUATION + shift),
+            P=P[1].shift(2 * self.N_ELEMENTS_EVALUATION_TIMES_EVALUATION + shift),
+            Q=Q[1]
+            .shift(2 * self.N_ELEMENTS_EVALUATION_TIMES_EVALUATION + shift)
+            .set_negate(self.exp_miller_loop[i] == -1),
+            rolling_options=0,
+        )
+        # stack in:  [gradient_(2* T1 ± Q1) gradient_(2* T2 ± Q2) gradient_(2* T3 ± Q3) gradient_(2*T1)
+        #               gradient_(2*T2) gradient_(2*T3) P1 P2 P3 Q1 Q2 Q3 T1 T2 T3 {f_i^2}
+        #                   (ev_(l_(T1,T1))(P1)*ev_(l_(T2,T2))(P2))
+        #                       (ev_(l_(T3,T3))(P3)*ev_(l_(2*T1,± Q1))(P1))
+        #                           ev_(l_(2*T2,± Q2))(P2)]
+        # stack out: [gradient_(2* T1 ± Q1) gradient_(2* T2 ± Q2) gradient_(2* T3 ± Q3) gradient_(2*T1)
+        #               gradient_(2*T2) gradient_(2*T3) P1 P2 P3 Q1 Q2 Q3 T1 T2 T3 {f_i^2}
+        #                   (ev_(l_(T1,T1))(P1)*ev_(l_(T2,T2))(P2))
+        #                       (ev_(l_(T3,T3))(P3)*ev_(l_(2*T1,± Q1))(P1))
+        #                           ev_(l_(2*T2,± Q2))(P2) ev_(l_(2*T3,± Q3))(P3)]
+        out += self.line_eval(
+            take_modulo=True,
+            positive_modulo=False,
+            check_constant=False,
+            clean_constant=False,
+            is_constant_reused=False,
+            gradient=gradients_addition[2].shift(
+                2 * self.N_ELEMENTS_EVALUATION_TIMES_EVALUATION + self.N_ELEMENTS_EVALUATION_OUTPUT + shift
+            ),
+            P=P[2].shift(2 * self.N_ELEMENTS_EVALUATION_TIMES_EVALUATION + self.N_ELEMENTS_EVALUATION_OUTPUT + shift),
+            Q=Q[2]
+            .shift(2 * self.N_ELEMENTS_EVALUATION_TIMES_EVALUATION + self.N_ELEMENTS_EVALUATION_OUTPUT + shift)
+            .set_negate(self.exp_miller_loop[i] == -1),
+            rolling_options=0,
+        )
+        # stack in:  [gradient_(2* T1 ± Q1) gradient_(2* T2 ± Q2) gradient_(2* T3 ± Q3) gradient_(2*T1)
+        #               gradient_(2*T2) gradient_(2*T3) P1 P2 P3 Q1 Q2 Q3 T1 T2 T3 {f_i^2}
+        #                   (ev_(l_(T1,T1))(P1)*ev_(l_(T2,T2))(P2))
+        #                       (ev_(l_(T3,T3))(P3)*ev_(l_(2*T1,± Q1))(P1))
+        #                           ev_(l_(2*T2,± Q2))(P2) ev_(l_(2*T3,± Q3))(P3)]
+        # stack out: [gradient_(2* T1 ± Q1) gradient_(2* T2 ± Q2) gradient_(2* T3 ± Q3) gradient_(2*T1)
+        #               gradient_(2*T2) gradient_(2*T3) P1 P2 P3 Q1 Q2 Q3 T1 T2 T3 {f_i^2}
+        #                   (ev_(l_(T1,T1))(P1)*ev_(l_(T2,T2))(P2))
+        #                       (ev_(l_(T3,T3))(P3)*ev_(l_(2*T1,± Q1))(P1))
+        #                           (ev_(l_(2*T2,± Q2))(P2)*ev_(l_(2*T3,± Q3))(P3))]
+        out += self.line_eval_times_eval(take_modulo=False, check_constant=False, clean_constant=False)
+        # stack in:    [gradient_(2* T1 ± Q1) gradient_(2* T2 ± Q2) gradient_(2* T3 ± Q3) gradient_(2*T1)
+        #                   gradient_(2*T2) gradient_(2*T3) P1 P2 P3 Q1 Q2 Q3 T1 T2 T3 {f_i^2}
+        #                       (ev_(l_(T1,T1))(P1)*ev_(l_(T2,T2))(P2))
+        #                           (ev_(l_(T3,T3))(P3)*ev_(l_(2*T1,± Q1))(P1))
+        #                               (ev_(l_(2*T2,± Q2))(P2)*ev_(l_(2*T3,± Q3))(P3))]
+        # stack out:    [gradient_(2* T1 ± Q1) gradient_(2* T2 ± Q2) gradient_(2* T3 ± Q3) gradient_(2*T1)
+        #                   gradient_(2*T2) gradient_(2*T3) P1 P2 P3 Q1 Q2 Q3 T1 T2 T3]
+        # altstack out: [{f_i^2}*(ev_(l_(T1,T1))(P1)*ev_(l_(T2,T2))(P2)) *(ev_(l_(T3,T3))(P3)*ev_(l_(2*T1,± Q1))(P1)) * (ev_(l_(2*T2,± Q2))(P2)*ev_(l_(2*T3,± Q3))(P3))]  # noqa: E501
+        out += self.line_eval_times_eval_times_eval_times_eval(
+            take_modulo=False, positive_modulo=False, check_constant=False, clean_constant=False
+        )
+        out += self.line_eval_times_eval_times_eval_times_eval_times_eval_times_eval(
+            take_modulo=take_modulo[0] if i == len(self.exp_miller_loop) - 2 else False,
+            positive_modulo=False,
+            check_constant=False,
+            clean_constant=False,
+        )
+        if i != len(self.exp_miller_loop) - 2:
+            out += self.miller_loop_output_times_eval_times_eval_times_eval_times_eval_times_eval_times_eval(
+                take_modulo=take_modulo[0], positive_modulo=positive_modulo and (i==0), check_constant=False, clean_constant=False, is_constant_reused=False
+            )
+        out += Script.parse_string(" ".join(["OP_TOALTSTACK"] * self.N_ELEMENTS_MILLER_OUTPUT))
+        # stack in:     [gradient_(2* T1 ± Q1) gradient_(2* T2 ± Q2) gradient_(2* T3 ± Q3) gradient_(2*T1)
+        #                   gradient_(2*T2) gradient_(2*T3) P1 P2 P3 Q1 Q2 Q3 T1 T2 T3]
+        # altstack in:  [{f_i^2}*(ev_(l_(T1,T1))(P1)*ev_(l_(T2,T2))(P2)) *(ev_(l_(T3,T3))(P3)*ev_(l_(2*T1,± Q1))(P1)) * (ev_(l_(2*T2,± Q2))(P2)*ev_(l_(2*T3,± Q3))(P3))]  # noqa: E501
+        # stack out:    [gradient_(2* T1 ± Q1) gradient_(2* T2 ± Q2) gradient_(2* T3 ± Q3)
+        #                   gradient_(2*T2) gradient_(2*T3) P1 P2 P3 Q1 Q2 Q3 T2 T3 (2*T1)]
+        # altstack out: [{f_i^2}*(ev_(l_(T1,T1))(P1)*ev_(l_(T2,T2))(P2)) *(ev_(l_(T3,T3))(P3)*ev_(l_(2*T1,± Q1))(P1)) * (ev_(l_(2*T2,± Q2))(P2)*ev_(l_(2*T3,± Q3))(P3))]  # noqa: E501
+        out += self.point_doubling_twisted_curve(
+            take_modulo=take_modulo[1],
+            positive_modulo=False,
+            check_constant=False,
+            clean_constant=False,
+            verify_gradient=True,
+            gradient=gradients_doubling[0],
+            P=T[0],
+            rolling_options=3,
+        )  # Compute 2 * T1
+        # stack in:     [gradient_(2* T1 ± Q1) gradient_(2* T2 ± Q2) gradient_(2* T3 ± Q3)
+        #                   gradient_(2*T2) gradient_(2*T3) P1 P2 P3 Q1 Q2 Q3 T2 T3 2*T1]
+        # altstack in:  [{f_i^2}*(ev_(l_(T1,T1))(P1)*ev_(l_(T2,T2))(P2)) *(ev_(l_(T3,T3))(P3)*ev_(l_(2*T1,± Q1))(P1)) * (ev_(l_(2*T2,± Q2))(P2)*ev_(l_(2*T3,± Q3))(P3))]  # noqa: E501
+        # stack out:    [gradient_(2* T2 ± Q2) gradient_(2* T3 ± Q3)
+        #                   gradient_(2*T2) gradient_(2*T3) P1 P2 P3 Q1 Q2 Q3 T2 T3 (2*T1 ± Q1)]
+        # altstack out: [{f_i^2}*(ev_(l_(T1,T1))(P1)*ev_(l_(T2,T2))(P2)) *(ev_(l_(T3,T3))(P3)*ev_(l_(2*T1,± Q1))(P1)) * (ev_(l_(2*T2,± Q2))(P2)*ev_(l_(2*T3,± Q3))(P3))]  # noqa: E501
+        out += self.point_addition_twisted_curve(
+            take_modulo=take_modulo[1],
+            positive_modulo=positive_modulo and (i==0),
+            check_constant=False,
+            clean_constant=False,
+            verify_gradient=True,
+            gradient=gradients_addition[0].shift(-self.EXTENSION_DEGREE),
+            P=Q[0].set_negate(self.exp_miller_loop[i] == -1),
+            Q=T[0].shift(-2 * self.N_POINTS_TWIST),
+            rolling_options=5,
+        )
+        # stack in:     [gradient_(2* T2 ± Q2) gradient_(2* T3 ± Q3)
+        #                   gradient_(2*T2) gradient_(2*T3) P1 P2 P3 Q1 Q2 Q3 T2 T3 (2*T1 ± Q1)]
+        # altstack in:  [{f_i^2}*(ev_(l_(T1,T1))(P1)*ev_(l_(T2,T2))(P2)) *(ev_(l_(T3,T3))(P3)*ev_(l_(2*T1,± Q1))(P1)) * (ev_(l_(2*T2,± Q2))(P2)*ev_(l_(2*T3,± Q3))(P3))]  # noqa: E501
+        # stack out:    [gradient_(2* T2 ± Q2) gradient_(2* T3 ± Q3)
+        #                   gradient_(2*T3) P1 P2 P3 Q1 Q2 Q3 T3 (2*T1 ± Q1) (2*T2)]
+        # altstack out: [{f_i^2}*(ev_(l_(T1,T1))(P1)*ev_(l_(T2,T2))(P2)) *(ev_(l_(T3,T3))(P3)*ev_(l_(2*T1,± Q1))(P1)) * (ev_(l_(2*T2,± Q2))(P2)*ev_(l_(2*T3,± Q3))(P3))]  # noqa: E501
+        out += self.point_doubling_twisted_curve(
+            take_modulo=take_modulo[1],
+            positive_modulo=False,
+            check_constant=False,
+            clean_constant=False,
+            verify_gradient=True,
+            gradient=gradients_doubling[1],
+            P=T[1].shift(self.N_POINTS_TWIST),
+            rolling_options=3,
+        )  # Compute 2 * T2
+        # stack in:     [gradient_(2* T2 ± Q2) gradient_(2* T3 ± Q3)
+        #                   gradient_(2*T3) P1 P2 P3 Q1 Q2 Q3 T3 (2*T1 ± Q1) (2*T2)]
+        # altstack in:  [{f_i^2}*(ev_(l_(T1,T1))(P1)*ev_(l_(T2,T2))(P2)) *(ev_(l_(T3,T3))(P3)*ev_(l_(2*T1,± Q1))(P1)) * (ev_(l_(2*T2,± Q2))(P2)*ev_(l_(2*T3,± Q3))(P3))]  # noqa: E501
+        # stack out:    [gradient_(2* T3 ± Q3) gradient_(2*T3) P1 P2 P3 Q1 Q2 Q3 T3 (2*T1 ± Q1) (2*T2 ± Q2)]
+        # altstack out: [{f_i^2}*(ev_(l_(T1,T1))(P1)*ev_(l_(T2,T2))(P2)) *(ev_(l_(T3,T3))(P3)*ev_(l_(2*T1,± Q1))(P1)) * (ev_(l_(2*T2,± Q2))(P2)*ev_(l_(2*T3,± Q3))(P3))]  # noqa: E501
+        out += self.point_addition_twisted_curve(
+            take_modulo=take_modulo[1],
+            positive_modulo=positive_modulo and (i==0),
+            check_constant=False,
+            clean_constant=False,
+            verify_gradient=True,
+            gradient=gradients_addition[1].shift(-2 * self.EXTENSION_DEGREE),
+            P=Q[1].set_negate(self.exp_miller_loop[i] == -1),
+            Q=T[1].shift(-self.N_POINTS_TWIST),
+            rolling_options=5,
+        )
+        # stack in:     [gradient_(2* T3 ± Q3) gradient_(2*T3) P1 P2 P3 Q1 Q2 Q3 T3 (2*T1 ± Q1) (2*T2 ± Q2)]
+        # altstack in:  [{f_i^2}*(ev_(l_(T1,T1))(P1)*ev_(l_(T2,T2))(P2)) *(ev_(l_(T3,T3))(P3)*ev_(l_(2*T1,± Q1))(P1)) * (ev_(l_(2*T2,± Q2))(P2)*ev_(l_(2*T3,± Q3))(P3))]  # noqa: E501
+        # stack out:    [gradient_(2* T3 ± Q3) P1 P2 P3 Q1 Q2 Q3 (2*T1 ± Q1) (2*T2 ± Q2) (2*T3)]
+        # altstack out: [{f_i^2}*(ev_(l_(T1,T1))(P1)*ev_(l_(T2,T2))(P2)) *(ev_(l_(T3,T3))(P3)*ev_(l_(2*T1,± Q1))(P1)) * (ev_(l_(2*T2,± Q2))(P2)*ev_(l_(2*T3,± Q3))(P3))]  # noqa: E501
+        out += self.point_doubling_twisted_curve(
+            take_modulo=take_modulo[1],
+            positive_modulo=False,
+            check_constant=False,
+            clean_constant=False,
+            verify_gradient=True,
+            gradient=gradients_doubling[2],
+            P=T[2].shift(2 * self.N_POINTS_TWIST),
+            rolling_options=3,
+        )  # Compute 2 * T3
+        # stack in:     [gradient_(2* T3 ± Q3) P1 P2 P3 Q1 Q2 Q3 (2*T1 ± Q1) (2*T2 ± Q2) (2*T3)]
+        # altstack in:  [{f_i^2}*(ev_(l_(T1,T1))(P1)*ev_(l_(T2,T2))(P2)) *(ev_(l_(T3,T3))(P3)*ev_(l_(2*T1,± Q1))(P1)) * (ev_(l_(2*T2,± Q2))(P2)*ev_(l_(2*T3,± Q3))(P3))]  # noqa: E501
+        # stack out:    [P1 P2 P3 Q1 Q2 Q3 (2*T1 ± Q1) (2*T2 ± Q2) (2*T3 ± Q3)]
+        # altstack out: [{f_i^2}*(ev_(l_(T1,T1))(P1)*ev_(l_(T2,T2))(P2)) *(ev_(l_(T3,T3))(P3)*ev_(l_(2*T1,± Q1))(P1)) * (ev_(l_(2*T2,± Q2))(P2)*ev_(l_(2*T3,± Q3))(P3))]  # noqa: E501
+        out += self.point_addition_twisted_curve(
+            take_modulo=take_modulo[1],
+            positive_modulo=positive_modulo and (i==0),
+            check_constant=False,
+            clean_constant=(i == 0) and clean_constant,
+            verify_gradient=True,
+            gradient=gradients_addition[2].shift(-3 * self.EXTENSION_DEGREE),
+            P=Q[2].set_negate(self.exp_miller_loop[i] == -1),
+            Q=T[2],
+            rolling_options=5,
+        )
+        # stack in:     [P1 P2 P3 Q1 Q2 Q3 (2*T1 ± Q1) (2*T2 ± Q2) (2*T3 ± Q3)]
+        # altstack in:  [{f_i^2}*(ev_(l_(T1,T1))(P1)*ev_(l_(T2,T2))(P2)) *(ev_(l_(T3,T3))(P3)*ev_(l_(2*T1,± Q1))(P1)) * (ev_(l_(2*T2,± Q2))(P2)*ev_(l_(2*T3,± Q3))(P3))]  # noqa: E501
+        # stack out:    [P1 P2 P3 Q1 Q2 Q3 (2*T1 ± Q1) (2*T2 ± Q2) (2*T3 ± Q3)
+        #                    {f_i^2}*(ev_(l_(T1,T1))(P1)*ev_(l_(T2,T2))(P2)) *(ev_(l_(T3,T3))(P3)*ev_(l_(2*T1,± Q1))(P1)) * (ev_(l_(2*T2,± Q2))(P2)*ev_(l_(2*T3,± Q3))(P3))]  # noqa: E501
+        out += Script.parse_string(" ".join(["OP_FROMALTSTACK"] * self.N_ELEMENTS_MILLER_OUTPUT))
+
+        return out
 
     def triple_miller_loop(
         self,
         modulo_threshold: int,
+        positive_modulo: bool = True,
         check_constant: bool | None = None,
         clean_constant: bool | None = None,
-        positive_modulo: bool = True,
     ) -> Script:
         """Evaluation of the product of three Miller loops.
 
         Stack input:
-            - stack:    [q, ..., lambdas, P1, P2, P3, Q1, Q2, Q3], `P` is a point on E(F_q), `Q` is a point on
+            - stack:    [q, ..., gradients, P1, P2, P3, Q1, Q2, Q3], `P` is a point on E(F_q), `Q` is a point on
                 E'(F_q^{k/d})
             - altstack: []
 
@@ -40,16 +490,16 @@ class TripleMillerLoop:
 
         Notes:
             At the beginning of every iteration of the loop the stack is assumed to be:
-            [... lambda_(2*T1) lambda_(2*T2) lambda_(2*T3) P1 P2 P3 Q1 Q2 Q3 -Q1 -Q2 -Q3 T1 T2 T3 f_i]
+            [... gradient_(2*T1) gradient_(2*T2) gradient_(2*T3) P1 P2 P3 Q1 Q2 Q3 -Q1 -Q2 -Q3 T1 T2 T3 f_i]
             where:
-                - lambda_(2*Tj) is the gradient of the line tangent at Tj.
+                - gradient_(2*Tj) is the gradient of the line tangent at Tj.
                 - f_i is the value of the i-th step in the computation of
                     [miller(P1,Q1) * miller(P2,Q2) * miller(P3,Q3)]
             If exp_miller_loop[i] != 0, then the stack is:
-                [... lambda_(2* T1 pm Q1) lambda_(2* T2 pm Q2) lambda_(2* T3 pm Q3) lambda_(2*T1) lambda_(2*T2) lambda_(
-                2*T3) P1 P2 P3 Q1 Q2 Q3 -Q1 -Q2 -Q3 T1 T2 T3 f_i]
+                [... gradient_(2* T1 pm Q1) gradient_(2* T2 pm Q2) gradient_(2* T3 pm Q3) gradient_(2*T1)
+                    gradient_(2*T2) gradient_(2*T3) P1 P2 P3 Q1 Q2 Q3 -Q1 -Q2 -Q3 T1 T2 T3 f_i]
             where:
-                - lambda_(2* Tj pm Qj) is the gradient of the line through 2 * Tj and (pm Qj)
+                - gradient_(2* Tj pm Qj) is the gradient of the line through 2 * Tj and (pm Qj)
 
             The computation at the i-th iteration of the loop is as follows:
                 - if exp_miller_loop[i] == 0, then:
@@ -77,1415 +527,124 @@ class TripleMillerLoop:
             - Qi are passed as couples of elements in Fq2 (see Fq2.py)
             - miller(P1,Q1) * miller(P2,Q2) * miller(P3,Q3) is in Fq4
         """
-        q = self.MODULUS
-        exp_miller_loop = self.exp_miller_loop
-        point_doubling_twisted_curve = self.point_doubling_twisted_curve
-        point_addition_twisted_curve = self.point_addition_twisted_curve
-        point_negation_twisted_curve = self.point_negation_twisted_curve
-        line_eval = self.line_eval
-        line_eval_times_eval = self.line_eval_times_eval
-        line_eval_times_eval_times_eval = self.line_eval_times_eval_times_eval
-        line_eval_times_eval_times_eval_times_eval = self.line_eval_times_eval_times_eval_times_eval
-        line_eval_times_eval_times_eval_times_eval_times_eval_times_eval = (
-            self.line_eval_times_eval_times_eval_times_eval_times_eval_times_eval
-        )
-        miller_loop_output_square = self.miller_loop_output_square
-        miller_loop_output_times_eval_times_eval_times_eval = self.miller_loop_output_times_eval_times_eval_times_eval
-        miller_loop_output_times_eval_times_eval_times_eval_times_eval_times_eval_times_eval = (
-            self.miller_loop_output_times_eval_times_eval_times_eval_times_eval_times_eval_times_eval
-        )
+        gradients_addition = [
+            StackFiniteFieldElement(
+                6 * self.N_POINTS_TWIST + 3 * self.N_POINTS_CURVE + i * self.EXTENSION_DEGREE - 1,
+                False,
+                self.EXTENSION_DEGREE,
+            )
+            for i in range(6, 3, -1)
+        ]
+        gradients_doubling = [
+            StackFiniteFieldElement(
+                6 * self.N_POINTS_TWIST + 3 * self.N_POINTS_CURVE + i * self.EXTENSION_DEGREE - 1,
+                False,
+                self.EXTENSION_DEGREE,
+            )
+            for i in range(3, 0, -1)
+        ]
+        P = [
+            StackEllipticCurvePoint(
+                StackFiniteFieldElement(
+                    6 * self.N_POINTS_TWIST + i * self.N_POINTS_CURVE - 1, False, self.N_POINTS_CURVE // 2
+                ),
+                StackFiniteFieldElement(
+                    6 * self.N_POINTS_TWIST + (i - 1) * self.N_POINTS_CURVE + self.N_POINTS_CURVE // 2 - 1,
+                    False,
+                    self.N_POINTS_CURVE // 2,
+                ),
+            )
+            for i in range(3, 0, -1)
+        ]
+        Q = [
+            StackEllipticCurvePoint(
+                StackFiniteFieldElement(i * self.N_POINTS_TWIST - 1, False, self.N_POINTS_TWIST // 2),
+                StackFiniteFieldElement(
+                    (i - 1) * self.N_POINTS_TWIST + self.N_POINTS_TWIST // 2 - 1, False, self.N_POINTS_TWIST // 2
+                ),
+            )
+            for i in range(6, 3, -1)
+        ]
+        T = [
+            StackEllipticCurvePoint(
+                StackFiniteFieldElement(i * self.N_POINTS_TWIST - 1, False, self.N_POINTS_TWIST // 2),
+                StackFiniteFieldElement(
+                    (i - 1) * self.N_POINTS_TWIST + self.N_POINTS_TWIST // 2 - 1, False, self.N_POINTS_TWIST // 2
+                ),
+            )
+            for i in range(3, 0, -1)
+        ]
 
-        EXTENSION_DEGREE = self.EXTENSION_DEGREE
-        N_POINTS_CURVE = self.N_POINTS_CURVE
-        N_POINTS_TWIST = self.N_POINTS_TWIST
-        N_ELEMENTS_MILLER_OUTPUT = self.N_ELEMENTS_MILLER_OUTPUT
-        N_ELEMENTS_EVALUATION_OUTPUT = self.N_ELEMENTS_EVALUATION_OUTPUT
-        N_ELEMENTS_EVALUATION_TIMES_EVALUATION = self.N_ELEMENTS_EVALUATION_TIMES_EVALUATION
+        BITSIZE_Q = ceil(log2(self.MODULUS))
+        current_size_T = BITSIZE_Q
+        current_size_F = BITSIZE_Q
 
-        out = verify_bottom_constant(q) if check_constant else Script()
+        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
-        # After this, the stack is: xP1 yP1 xP2 yP2 xP3 yP3 xQ1 yQ1 xQ2 yQ2 xQ3 yQ3 xQ1 -yQ1 xQ2 -yQ2 xQ3 -yQ3
-        set_Qs = pick(position=3 * N_POINTS_TWIST - 1, n_elements=N_POINTS_TWIST)
-        set_Qs += point_negation_twisted_curve(
-            take_modulo=False, positive_modulo=False, check_constant=False, clean_constant=False
-        )
-        set_Qs += pick(position=3 * N_POINTS_TWIST - 1, n_elements=N_POINTS_TWIST)
-        set_Qs += point_negation_twisted_curve(
-            take_modulo=False, positive_modulo=False, check_constant=False, clean_constant=False
-        )
-        set_Qs += pick(position=3 * N_POINTS_TWIST - 1, n_elements=N_POINTS_TWIST)
-        set_Qs += point_negation_twisted_curve(
-            take_modulo=False, positive_modulo=False, check_constant=False, clean_constant=False
-        )
+        # stack in:  [P1 P2 P3 Q1 Q2 Q3]
+        # stack out: [P1 P2 P3 Q1 Q2 Q3 T1 T2 T3]
+        for _ in range(3):
+            for j in range(self.N_POINTS_TWIST):
+                out += pick(position=3 * self.N_POINTS_TWIST - 1, n_elements=1)
+                out += Script.parse_string(
+                    "OP_NEGATE" if self.exp_miller_loop[-1] == -1 and j >= self.N_POINTS_TWIST // 2 else ""
+                )
 
-        # After this, the stack is: xP1 yP1 xP2 yP2 xP3 yP3 xQ1 yQ1 xQ2 yQ2 xQ3 yQ3 xQ1 -yQ1 xQ2 -yQ2 xQ3 -yQ3 xT1 yT1
-        # xT2 yT2 xT3 yT3
-        set_Ts = Script()
-        if exp_miller_loop[-1] == 1:
-            set_Ts += pick(position=6 * N_POINTS_TWIST - 1, n_elements=3 * N_POINTS_TWIST)  # Pick Q1, Q2, Q3
-        elif exp_miller_loop[-1] == -1:
-            set_Ts += pick(position=3 * N_POINTS_TWIST - 1, n_elements=3 * N_POINTS_TWIST)  # Pick -Q1, -Q2, -Q3
-        else:
-            raise ValueError("Last element of exp_miller_loop must be non-zero.")
-
-        out += set_Qs + set_Ts
-
-        clean_final = False
-        BIT_SIZE_Q = ceil(log2(q))
-        current_size_T = BIT_SIZE_Q
-        current_size_F = BIT_SIZE_Q
-        # After this, the stack is: P1 P2 P3 Q1 Q2 Q3 -Q1 -Q2 -Q3 uQ1 uQ2 uQ3 [miller(P1,Q1) * miller(P2,Q2) *
-        # miller(P3,Q3)]
-        for i in range(len(exp_miller_loop) - 2, -1, -1):
+        # stack in:  [P1 P2 P3 Q1 Q2 Q3 T1 T2 T3]
+        # stack out: [P1 P2 P3 Q1 Q2 Q3 w*Q1 w*Q2 w*Q3 (miller(P1,Q1) * miller(P2,Q2) * miller(P3,Q3))]
+        for i in range(len(self.exp_miller_loop) - 2, -1, -1):
             take_modulo_F = False
             take_modulo_T = False
             positive_modulo_i = False
             # Constants set up
             if i == 0:
-                clean_final = clean_constant
                 take_modulo_F = True
                 take_modulo_T = True
                 positive_modulo_i = positive_modulo
             else:
-                # Next iteration will have: f <-- f^2 * Dense and T_i <-- 2T_i or T_i <-- 2T_i pm Q_i.
-                multiplier = 3 if exp_miller_loop[i] == 0 else 6
+                # Next iteration will have: f <-- f^2 * Dense and Ti <-- 2Ti or Ti <-- 2Ti ± Qi.
+                multiplier = 3 if self.exp_miller_loop[i] == 0 else 6
                 future_size_F = (
-                    multiplier * log2(13 * 3) + multiplier * BIT_SIZE_Q + (ceil(log2(13 * 3)) + 2 * current_size_F)
+                    multiplier * log2(13 * 3) + multiplier * BITSIZE_Q + (ceil(log2(13 * 3)) + 2 * current_size_F)
                 )
                 if future_size_F > modulo_threshold:
                     take_modulo_F = True
-                    current_size_F = BIT_SIZE_Q
+                    current_size_F = BITSIZE_Q
                 else:
                     current_size_F = future_size_F
 
-                if current_size_T + BIT_SIZE_Q + log2(6) > modulo_threshold:
+                if current_size_T + BITSIZE_Q + log2(6) > modulo_threshold:
                     take_modulo_T = True
-                    current_size_T = BIT_SIZE_Q
+                    current_size_T = BITSIZE_Q
                 else:
-                    current_size_T = current_size_T + BIT_SIZE_Q + log2(6)
+                    current_size_T = current_size_T + BITSIZE_Q + log2(6)
 
-            if i == len(exp_miller_loop) - 2:
-                # In this case, f is not there, so we need to take that into account
-                if exp_miller_loop[i] == 0:
-                    # After this, the stack is: lambda_(2*T1) lambda_(2*T2) lambda_(2*T3) P1 P2 P3 Q1 Q2 Q3 -Q1 -Q2 -Q3
-                    # T1 T2 T3 t_1
-                    stack_length_added = 0
-                    out += pick(
-                        position=9 * N_POINTS_TWIST
-                        + 3 * N_POINTS_CURVE
-                        + 3 * EXTENSION_DEGREE
-                        + stack_length_added
-                        - 1,
-                        n_elements=EXTENSION_DEGREE,
-                    )  # Pick lambda_(2*T1)
-                    stack_length_added += EXTENSION_DEGREE
-                    out += pick(
-                        position=3 * N_POINTS_TWIST + stack_length_added - 1, n_elements=N_POINTS_TWIST
-                    )  # Pick T1
-                    stack_length_added += N_POINTS_TWIST
-                    out += pick(
-                        position=9 * N_POINTS_TWIST + 3 * N_POINTS_CURVE + stack_length_added - 1,
-                        n_elements=N_POINTS_CURVE,
-                    )  # Pick P1
-                    stack_length_added += N_POINTS_CURVE
-                    out += line_eval(
-                        take_modulo=True,
-                        positive_modulo=False,
-                        check_constant=False,
-                        clean_constant=False,
-                        is_constant_reused=False,
-                    )  # Compute t_1 = ev_(l_(T1,T1))(P_1)
-                    # After this, the stack is: lambda_(2*T1) lambda_(2*T2) lambda_(2*T3) P1 P2 P3 Q1 Q2 Q3 -Q1 -Q2 -Q3
-                    # T1 T2 T3 t_1 t_2
-                    stack_length_added = 0
-                    out += pick(
-                        position=9 * N_POINTS_TWIST
-                        + 3 * N_POINTS_CURVE
-                        + 2 * EXTENSION_DEGREE
-                        + N_ELEMENTS_EVALUATION_OUTPUT
-                        + stack_length_added
-                        - 1,
-                        n_elements=EXTENSION_DEGREE,
-                    )  # Pick lambda_(2*T2)
-                    stack_length_added += EXTENSION_DEGREE
-                    out += pick(
-                        position=2 * N_POINTS_TWIST + N_ELEMENTS_EVALUATION_OUTPUT + stack_length_added - 1,
-                        n_elements=N_POINTS_TWIST,
-                    )  # Pick T2
-                    stack_length_added += N_POINTS_TWIST
-                    out += pick(
-                        position=9 * N_POINTS_TWIST
-                        + 2 * N_POINTS_CURVE
-                        + N_ELEMENTS_EVALUATION_OUTPUT
-                        + stack_length_added
-                        - 1,
-                        n_elements=N_POINTS_CURVE,
-                    )  # Pick P2
-                    stack_length_added += N_POINTS_CURVE
-                    out += line_eval(
-                        take_modulo=True,
-                        positive_modulo=False,
-                        check_constant=False,
-                        clean_constant=False,
-                        is_constant_reused=False,
-                    )  # Compute t_2 = ev_(l_(T2,T2))(P_2)
-                    # After this, the stack is: lambda_(2*T1) lambda_(2*T2) lambda_(2*T3) P1 P2 P3 Q1 Q2 Q3 -Q1 -Q2 -Q3
-                    # T1 T2 T3 t_1 t_2 t_3
-                    stack_length_added = 0
-                    out += pick(
-                        position=9 * N_POINTS_TWIST
-                        + 3 * N_POINTS_CURVE
-                        + EXTENSION_DEGREE
-                        + 2 * N_ELEMENTS_EVALUATION_OUTPUT
-                        + stack_length_added
-                        - 1,
-                        n_elements=EXTENSION_DEGREE,
-                    )  # Pick lambda_(2*T3)
-                    stack_length_added += EXTENSION_DEGREE
-                    out += pick(
-                        position=N_POINTS_TWIST + 2 * N_ELEMENTS_EVALUATION_OUTPUT + stack_length_added - 1,
-                        n_elements=N_POINTS_TWIST,
-                    )  # Pick T3
-                    stack_length_added += N_POINTS_TWIST
-                    out += pick(
-                        position=9 * N_POINTS_TWIST
-                        + N_POINTS_CURVE
-                        + 2 * N_ELEMENTS_EVALUATION_OUTPUT
-                        + stack_length_added
-                        - 1,
-                        n_elements=N_POINTS_CURVE,
-                    )  # Pick P3
-                    stack_length_added += N_POINTS_CURVE
-                    out += line_eval(
-                        take_modulo=True,
-                        positive_modulo=False,
-                        check_constant=False,
-                        clean_constant=False,
-                        is_constant_reused=False,
-                    )  # Compute t_3 = ev_(l_(T3,T3))(P_3)
-                    # After this, the stack is: lambda_(2*T1) lambda_(2*T2) lambda_(2*T3) P1 P2 P3 Q1 Q2 Q3 -Q1 -Q2 -Q3
-                    # T1 T2 T3 (t_1 * t_2 * t_3)
-                    out += line_eval_times_eval(
-                        take_modulo=False, check_constant=False, clean_constant=False
-                    )  # Compute t2 * t3
-                    out += line_eval_times_eval_times_eval(
-                        take_modulo=False, check_constant=False, clean_constant=False
-                    )  # Compute t1 * (t2 * t3)
-                    # After this, the stack is: lambda_(2*T1) lambda_(2*T2) lambda_(2*T3) P1 P2 P3 Q1 Q2 Q3 -Q1 -Q2 -Q3
-                    # T1 T2 T3, altstack = [(t_1 * t_2 * t_3)]
-                    out += Script.parse_string(" ".join(["OP_TOALTSTACK"] * N_ELEMENTS_MILLER_OUTPUT))
-                    # After this, the stack is: lambda_(2*T2) lambda_(2*T3) P1 P2 P3 Q1 Q2 Q3 -Q1 -Q2 -Q3 T2 T3 (2*T1),
-                    # altstack = [(t_1 * t_2 * t_3)]
-                    stack_length_added = 0
-                    out += roll(
-                        position=9 * N_POINTS_TWIST
-                        + 3 * N_POINTS_CURVE
-                        + 3 * EXTENSION_DEGREE
-                        + stack_length_added
-                        - 1,
-                        n_elements=EXTENSION_DEGREE,
-                    )  # Roll lambda_(2*T1)
-                    stack_length_added += EXTENSION_DEGREE
-                    out += roll(
-                        position=3 * N_POINTS_TWIST + stack_length_added - 1, n_elements=N_POINTS_TWIST
-                    )  # Roll T1
-                    stack_length_added += N_POINTS_TWIST
-                    out += point_doubling_twisted_curve(
-                        take_modulo=take_modulo_T,
-                        verify_gradient=True,
-                        check_constant=False,
-                        clean_constant=False,
-                        positive_modulo=False,
-                    )  # Compute 2*T1
-                    # After this, the stack is: lambda_(2*T3) P1 P2 P3 Q1 Q2 Q3 -Q1 -Q2 -Q3 T3 (2*T1) (2*T2),
-                    # altstack = [(t_1 * t_2 * t_3)]
-                    stack_length_added = 0
-                    out += roll(
-                        position=9 * N_POINTS_TWIST
-                        + 3 * N_POINTS_CURVE
-                        + 2 * EXTENSION_DEGREE
-                        + stack_length_added
-                        - 1,
-                        n_elements=EXTENSION_DEGREE,
-                    )  # Roll lambda_(2*T2)
-                    stack_length_added += EXTENSION_DEGREE
-                    out += roll(
-                        position=3 * N_POINTS_TWIST + stack_length_added - 1, n_elements=N_POINTS_TWIST
-                    )  # Roll T2
-                    stack_length_added += N_POINTS_TWIST
-                    out += point_doubling_twisted_curve(
-                        take_modulo=take_modulo_T,
-                        verify_gradient=True,
-                        check_constant=False,
-                        clean_constant=False,
-                        positive_modulo=False,
-                    )  # Compute 2*T2
-                    # After this, the stack is: P1 P2 P3 Q1 Q2 Q3 -Q1 -Q2 -Q3 (2*T1) (2*T2) (2*T3),
-                    # altstack = [(t_1 * t_2 * t_3)]
-                    stack_length_added = 0
-                    out += roll(
-                        position=9 * N_POINTS_TWIST + 3 * N_POINTS_CURVE + EXTENSION_DEGREE + stack_length_added - 1,
-                        n_elements=EXTENSION_DEGREE,
-                    )  # Roll lambda_(2*T3)
-                    stack_length_added += EXTENSION_DEGREE
-                    out += roll(
-                        position=3 * N_POINTS_TWIST + stack_length_added - 1, n_elements=N_POINTS_TWIST
-                    )  # Roll T3
-                    stack_length_added += N_POINTS_TWIST
-                    out += point_doubling_twisted_curve(
-                        take_modulo=take_modulo_T,
-                        verify_gradient=True,
-                        check_constant=False,
-                        clean_constant=clean_final,
-                        positive_modulo=False,
-                    )  # Compute 2*T3
-                    # After this, the stack is: P1 P2 P3 Q1 Q2 Q3 -Q1 -Q2 -Q3 (2*T1) (2*T2) (2*T3) (t_1 * t_2 * t_3)
-                    out += Script.parse_string(" ".join(["OP_FROMALTSTACK"] * N_ELEMENTS_MILLER_OUTPUT))
-                else:
-                    # After this, the stack is: lambda_(2* T1 pm Q1) lambda_(2* T2 pm Q2) lambda_(2* T3 pm Q3)
-                    # lambda_(2*T1) lambda_(2*T2) lambda_(2*T3) P1 P2 P3 Q1 Q2 Q3 -Q1 -Q2 -Q3 T1 T2 T3 t_1
-                    stack_length_added = 0
-                    out += pick(
-                        position=9 * N_POINTS_TWIST
-                        + 3 * N_POINTS_CURVE
-                        + 3 * EXTENSION_DEGREE
-                        + stack_length_added
-                        - 1,
-                        n_elements=EXTENSION_DEGREE,
-                    )  # Pick lambda_(2*T1)
-                    stack_length_added += EXTENSION_DEGREE
-                    out += pick(
-                        position=3 * N_POINTS_TWIST + stack_length_added - 1, n_elements=N_POINTS_TWIST
-                    )  # Pick T1
-                    stack_length_added += N_POINTS_TWIST
-                    out += pick(
-                        position=9 * N_POINTS_TWIST + 3 * N_POINTS_CURVE + stack_length_added - 1,
-                        n_elements=N_POINTS_CURVE,
-                    )  # Pick P1
-                    stack_length_added += N_POINTS_CURVE
-                    out += line_eval(
-                        take_modulo=True,
-                        positive_modulo=False,
-                        check_constant=False,
-                        clean_constant=False,
-                        is_constant_reused=False,
-                    )  # Compute t_1 = ev_(l_(T1,T1))(P_1)
-                    # After this, the stack is: lambda_(2* T1 pm Q1) lambda_(2* T2 pm Q2) lambda_(2* T3 pm Q3)
-                    # lambda_(2*T1) lambda_(2*T2) lambda_(2*T3) P1 P2 P3 Q1 Q2 Q3 -Q1 -Q2 -Q3 T1 T2 T3 (t_1 * t_2)
-                    stack_length_added = 0
-                    out += pick(
-                        position=9 * N_POINTS_TWIST
-                        + 3 * N_POINTS_CURVE
-                        + 2 * EXTENSION_DEGREE
-                        + N_ELEMENTS_EVALUATION_OUTPUT
-                        + stack_length_added
-                        - 1,
-                        n_elements=EXTENSION_DEGREE,
-                    )  # Pick lambda_(2*T2)
-                    stack_length_added += EXTENSION_DEGREE
-                    out += pick(
-                        position=2 * N_POINTS_TWIST + N_ELEMENTS_EVALUATION_OUTPUT + stack_length_added - 1,
-                        n_elements=N_POINTS_TWIST,
-                    )  # Pick T2
-                    stack_length_added += N_POINTS_TWIST
-                    out += pick(
-                        position=9 * N_POINTS_TWIST
-                        + 2 * N_POINTS_CURVE
-                        + N_ELEMENTS_EVALUATION_OUTPUT
-                        + stack_length_added
-                        - 1,
-                        n_elements=N_POINTS_CURVE,
-                    )  # Pick P2
-                    stack_length_added += N_POINTS_CURVE
-                    out += line_eval(
-                        take_modulo=True,
-                        positive_modulo=False,
-                        check_constant=False,
-                        clean_constant=False,
-                        is_constant_reused=False,
-                    )  # Compute t_2 = ev_(l_(T2,T2))(P_2)
-                    out += line_eval_times_eval(
-                        take_modulo=False, check_constant=False, clean_constant=False
-                    )  # Compute t1 * t2
-                    # After this, the stack is: lambda_(2* T1 pm Q1) lambda_(2* T2 pm Q2) lambda_(2* T3 pm Q3)
-                    # lambda_(2*T1) lambda_(2*T2) lambda_(2*T3) P1 P2 P3 Q1 Q2 Q3 -Q1 -Q2 -Q3 T1 T2 T3 (t_1 * t_2) t_3
-                    stack_length_added = 0
-                    out += pick(
-                        position=9 * N_POINTS_TWIST
-                        + 3 * N_POINTS_CURVE
-                        + EXTENSION_DEGREE
-                        + N_ELEMENTS_EVALUATION_TIMES_EVALUATION
-                        + stack_length_added
-                        - 1,
-                        n_elements=EXTENSION_DEGREE,
-                    )  # Pick lambda_(2*T3)
-                    stack_length_added += EXTENSION_DEGREE
-                    out += pick(
-                        position=N_POINTS_TWIST + N_ELEMENTS_EVALUATION_TIMES_EVALUATION + stack_length_added - 1,
-                        n_elements=N_POINTS_TWIST,
-                    )  # Pick T3
-                    stack_length_added += N_POINTS_TWIST
-                    out += pick(
-                        position=9 * N_POINTS_TWIST
-                        + N_POINTS_CURVE
-                        + N_ELEMENTS_EVALUATION_TIMES_EVALUATION
-                        + stack_length_added
-                        - 1,
-                        n_elements=N_POINTS_CURVE,
-                    )  # Pick P3
-                    stack_length_added += N_POINTS_CURVE
-                    out += line_eval(
-                        take_modulo=True,
-                        positive_modulo=False,
-                        check_constant=False,
-                        clean_constant=False,
-                        is_constant_reused=False,
-                    )  # Compute t_3 = ev_(l_(T3,T3))(P_3)
-                    # After this, the stack is: lambda_(2* T1 pm Q1) lambda_(2* T2 pm Q2) lambda_(2* T3 pm Q3)
-                    # lambda_(2*T1) lambda_(2*T2) lambda_(2*T3) P1 P2 P3 Q1 Q2 Q3 -Q1 -Q2 -Q3 T1 T2 T3
-                    # (t_1 * t_2) (t_3 * t'_1)
-                    stack_length_added = 0
-                    out += pick(
-                        position=9 * N_POINTS_TWIST
-                        + 3 * N_POINTS_CURVE
-                        + N_ELEMENTS_EVALUATION_TIMES_EVALUATION
-                        + N_ELEMENTS_EVALUATION_OUTPUT
-                        + 6 * EXTENSION_DEGREE
-                        + stack_length_added
-                        - 1,
-                        n_elements=EXTENSION_DEGREE,
-                    )  # Pick lambda_(2*T1 pm Q)
-                    stack_length_added += EXTENSION_DEGREE
-                    if exp_miller_loop[i] == 1:
-                        out += pick(
-                            position=9 * N_POINTS_TWIST
-                            + N_ELEMENTS_EVALUATION_TIMES_EVALUATION
-                            + N_ELEMENTS_EVALUATION_OUTPUT
-                            + stack_length_added
-                            - 1,
-                            n_elements=N_POINTS_TWIST,
-                        )  # Pick Q1
-                        stack_length_added += N_POINTS_TWIST
-                    elif exp_miller_loop[i] == -1:
-                        out += pick(
-                            position=6 * N_POINTS_TWIST
-                            + N_ELEMENTS_EVALUATION_TIMES_EVALUATION
-                            + N_ELEMENTS_EVALUATION_OUTPUT
-                            + stack_length_added
-                            - 1,
-                            n_elements=N_POINTS_TWIST,
-                        )  # Pick -Q1
-                        stack_length_added += N_POINTS_TWIST
-                    else:
-                        raise ValueError
-                    out += pick(
-                        position=9 * N_POINTS_TWIST
-                        + 3 * N_POINTS_CURVE
-                        + N_ELEMENTS_EVALUATION_TIMES_EVALUATION
-                        + N_ELEMENTS_EVALUATION_OUTPUT
-                        + stack_length_added
-                        - 1,
-                        n_elements=N_POINTS_CURVE,
-                    )  # Pick P1
-                    stack_length_added += N_POINTS_CURVE
-                    out += line_eval(
-                        take_modulo=True,
-                        positive_modulo=False,
-                        check_constant=False,
-                        clean_constant=False,
-                        is_constant_reused=False,
-                    )  # Compute t'_1 = ev_(l_(2*T1,pm Q1))(P_1)
-                    out += line_eval_times_eval(
-                        take_modulo=False, check_constant=False, clean_constant=False
-                    )  # Compute t_3 * t'_1
-                    # After this, the stack is: lambda_(2* T1 pm Q1) lambda_(2* T2 pm Q2) lambda_(2* T3 pm Q3)
-                    # lambda_(2*T1) lambda_(2*T2) lambda_(2*T3) P1 P2 P3 Q1 Q2 Q3 -Q1 -Q2 -Q3 T1 T2 T3
-                    # (t_1 * t_2) (t_3 * t'_1) t'_2
-                    stack_length_added = 0
-                    out += pick(
-                        position=9 * N_POINTS_TWIST
-                        + 3 * N_POINTS_CURVE
-                        + 2 * N_ELEMENTS_EVALUATION_TIMES_EVALUATION
-                        + 5 * EXTENSION_DEGREE
-                        + stack_length_added
-                        - 1,
-                        n_elements=EXTENSION_DEGREE,
-                    )  # Pick lambda_(2*T2 pm Q)
-                    stack_length_added += EXTENSION_DEGREE
-                    if exp_miller_loop[i] == 1:
-                        out += pick(
-                            position=8 * N_POINTS_TWIST
-                            + 2 * N_ELEMENTS_EVALUATION_TIMES_EVALUATION
-                            + stack_length_added
-                            - 1,
-                            n_elements=N_POINTS_TWIST,
-                        )  # Pick Q2
-                        stack_length_added += N_POINTS_TWIST
-                    elif exp_miller_loop[i] == -1:
-                        out += pick(
-                            position=5 * N_POINTS_TWIST
-                            + 2 * N_ELEMENTS_EVALUATION_TIMES_EVALUATION
-                            + stack_length_added
-                            - 1,
-                            n_elements=N_POINTS_TWIST,
-                        )  # Pick -Q2
-                        stack_length_added += N_POINTS_TWIST
-                    else:
-                        raise ValueError
-                    out += pick(
-                        position=9 * N_POINTS_TWIST
-                        + 2 * N_POINTS_CURVE
-                        + 2 * N_ELEMENTS_EVALUATION_TIMES_EVALUATION
-                        + stack_length_added
-                        - 1,
-                        n_elements=N_POINTS_CURVE,
-                    )  # Pick P2
-                    stack_length_added += N_POINTS_CURVE
-                    out += line_eval(
-                        take_modulo=True,
-                        positive_modulo=False,
-                        check_constant=False,
-                        clean_constant=False,
-                        is_constant_reused=False,
-                    )  # Compute t'_2 = ev_(l_(2*T2,pm Q2))(P_2)
-                    # After this, the stack is: lambda_(2* T1 pm Q1) lambda_(2* T2 pm Q2) lambda_(2* T3 pm Q3)
-                    # lambda_(2*T1) lambda_(2*T2) lambda_(2*T3) P1 P2 P3 Q1 Q2 Q3 -Q1 -Q2 -Q3 T1 T2 T3
-                    # (t_1 * t_2) (t_3 * t'_1) (t'_2 * t'_3)
-                    stack_length_added = 0
-                    out += pick(
-                        position=9 * N_POINTS_TWIST
-                        + 3 * N_POINTS_CURVE
-                        + 2 * N_ELEMENTS_EVALUATION_TIMES_EVALUATION
-                        + N_ELEMENTS_EVALUATION_OUTPUT
-                        + 4 * EXTENSION_DEGREE
-                        + stack_length_added
-                        - 1,
-                        n_elements=EXTENSION_DEGREE,
-                    )  # Pick lambda_(2*T3 pm Q)
-                    stack_length_added += EXTENSION_DEGREE
-                    if exp_miller_loop[i] == 1:
-                        out += pick(
-                            position=7 * N_POINTS_TWIST
-                            + 2 * N_ELEMENTS_EVALUATION_TIMES_EVALUATION
-                            + N_ELEMENTS_EVALUATION_OUTPUT
-                            + stack_length_added
-                            - 1,
-                            n_elements=N_POINTS_TWIST,
-                        )  # Pick Q3
-                        stack_length_added += N_POINTS_TWIST
-                    elif exp_miller_loop[i] == -1:
-                        out += pick(
-                            position=4 * N_POINTS_TWIST
-                            + 2 * N_ELEMENTS_EVALUATION_TIMES_EVALUATION
-                            + N_ELEMENTS_EVALUATION_OUTPUT
-                            + stack_length_added
-                            - 1,
-                            n_elements=N_POINTS_TWIST,
-                        )  # Pick -Q3
-                        stack_length_added += N_POINTS_TWIST
-                    else:
-                        raise ValueError
-                    out += pick(
-                        position=9 * N_POINTS_TWIST
-                        + N_POINTS_CURVE
-                        + 2 * N_ELEMENTS_EVALUATION_TIMES_EVALUATION
-                        + N_ELEMENTS_EVALUATION_OUTPUT
-                        + stack_length_added
-                        - 1,
-                        n_elements=N_POINTS_CURVE,
-                    )  # Pick P3
-                    stack_length_added += N_POINTS_CURVE
-                    out += line_eval(
-                        take_modulo=True,
-                        positive_modulo=False,
-                        check_constant=False,
-                        clean_constant=False,
-                        is_constant_reused=False,
-                    )  # Compute t'_3 = ev_(l_(2*T3,pm Q3))(P_3)
-                    out += line_eval_times_eval(
-                        take_modulo=False, check_constant=False, clean_constant=False
-                    )  # Compute t'_2 * t'_3
-                    # After this, the stack is: lambda_(2* T1 pm Q1) lambda_(2* T2 pm Q2) lambda_(2* T3 pm Q3)
-                    # lambda_(2*T1) lambda_(2*T2) lambda_(2*T3) P1 P2 P3 Q1 Q2 Q3 -Q1 -Q2 -Q3 T1 T2 T3
-                    # [(t_1 * t_2) * (t_3 * t'_1) * (t'_2 * t'_3)]
-                    # Compute (t_3 * t'_1) * (t'_2 * t'_3)
-                    out += line_eval_times_eval_times_eval_times_eval(
-                        take_modulo=False, check_constant=False, clean_constant=False
-                    )
-                    # Compute (t_1 * t_2) * (t_3 * t'_1) * (t'_2 * t'_3)
-                    out += line_eval_times_eval_times_eval_times_eval_times_eval_times_eval(
-                        take_modulo=False, check_constant=False, clean_constant=False
-                    )
-                    # After this, the stack is: lambda_(2* T1 pm Q1) lambda_(2* T2 pm Q2) lambda_(2* T3 pm Q3)
-                    # lambda_(2*T1) lambda_(2*T2) lambda_(2*T3) P1 P2 P3 Q1 Q2 Q3 -Q1 -Q2 -Q3 T1 T2 T3,
-                    # altstack = [(t_1 * t_2) * (t_3 * t'_1) * (t'_2 * t'_3)]
-                    out += Script.parse_string(" ".join(["OP_TOALTSTACK"] * N_ELEMENTS_MILLER_OUTPUT))
-                    # After this, the stack is: lambda_(2* T2 pm Q2) lambda_(2* T3 pm Q3) lambda_(2*T2) lambda_(2*T3)
-                    # P1 P2 P3 Q1 Q2 Q3 -Q1 -Q2 -Q3 T2 T3 (2*T1 pm Q1),
-                    # altstack = [(t_1 * t_2) * (t_3 * t'_1) * (t'_2 * t'_3)]
-                    stack_length_added = 0
-                    out += roll(
-                        position=9 * N_POINTS_TWIST
-                        + 3 * N_POINTS_CURVE
-                        + 3 * EXTENSION_DEGREE
-                        + stack_length_added
-                        - 1,
-                        n_elements=EXTENSION_DEGREE,
-                    )  # Roll lambda_(2*T1)
-                    stack_length_added += EXTENSION_DEGREE
-                    out += roll(
-                        position=3 * N_POINTS_TWIST + stack_length_added - 1, n_elements=N_POINTS_TWIST
-                    )  # Roll T1
-                    stack_length_added += 0
-                    out += point_doubling_twisted_curve(
-                        take_modulo=take_modulo_T,
-                        verify_gradient=True,
-                        check_constant=False,
-                        clean_constant=False,
-                        positive_modulo=False,
-                    )  # Compute 2 * T1
-                    stack_length_added = 0
-                    out += roll(
-                        position=9 * N_POINTS_TWIST
-                        + 3 * N_POINTS_CURVE
-                        + 5 * EXTENSION_DEGREE
-                        + stack_length_added
-                        - 1,
-                        n_elements=EXTENSION_DEGREE,
-                    )  # Roll lambda_(2* T1 pm Q1)
-                    stack_length_added += EXTENSION_DEGREE
-                    out += roll(
-                        position=EXTENSION_DEGREE + N_POINTS_TWIST - 1, n_elements=N_POINTS_TWIST
-                    )  # Bring 2*T1 on top of the stack
-                    if exp_miller_loop[i] == 1:
-                        out += pick(
-                            position=9 * N_POINTS_TWIST + stack_length_added - 1, n_elements=N_POINTS_TWIST
-                        )  # Pick Q1
-                        stack_length_added += N_POINTS_TWIST
-                    elif exp_miller_loop[i] == -1:
-                        out += pick(
-                            position=6 * N_POINTS_TWIST + stack_length_added - 1, n_elements=N_POINTS_TWIST
-                        )  # Pick -Q1
-                        stack_length_added += N_POINTS_TWIST
-                    else:
-                        raise ValueError
-                    out += point_addition_twisted_curve(
-                        take_modulo=take_modulo_T,
-                        verify_gradient=True,
-                        check_constant=False,
-                        clean_constant=False,
-                        positive_modulo=False,
-                    )
-                    # After this, the stack is: lambda_(2* T3 pm Q3) lambda_(2*T3) P1 P2 P3 Q1 Q2 Q3 -Q1 -Q2 -Q3 T3
-                    # (2*T1 pm Q1) (2*T2 pm Q2),
-                    # altstack = [(t_1 * t_2) * (t_3 * t'_1) * (t'_2 * t'_3)]
-                    stack_length_added = 0
-                    out += roll(
-                        position=9 * N_POINTS_TWIST
-                        + 3 * N_POINTS_CURVE
-                        + 2 * EXTENSION_DEGREE
-                        + stack_length_added
-                        - 1,
-                        n_elements=EXTENSION_DEGREE,
-                    )  # Roll lambda_(2*T2)
-                    stack_length_added += EXTENSION_DEGREE
-                    out += roll(
-                        position=3 * N_POINTS_TWIST + stack_length_added - 1, n_elements=N_POINTS_TWIST
-                    )  # Roll T2
-                    stack_length_added += 0
-                    out += point_doubling_twisted_curve(
-                        take_modulo=take_modulo_T,
-                        verify_gradient=True,
-                        check_constant=False,
-                        clean_constant=False,
-                        positive_modulo=False,
-                    )  # Compute 2 * T2
-                    stack_length_added = 0
-                    out += roll(
-                        position=9 * N_POINTS_TWIST
-                        + 3 * N_POINTS_CURVE
-                        + 3 * EXTENSION_DEGREE
-                        + stack_length_added
-                        - 1,
-                        n_elements=EXTENSION_DEGREE,
-                    )  # Roll lambda_(2* T2 pm Q2)
-                    stack_length_added += EXTENSION_DEGREE
-                    out += roll(
-                        position=EXTENSION_DEGREE + N_POINTS_TWIST - 1, n_elements=N_POINTS_TWIST
-                    )  # Bring 2*T2 on top of the stack
-                    if exp_miller_loop[i] == 1:
-                        out += pick(
-                            position=8 * N_POINTS_TWIST + stack_length_added - 1, n_elements=N_POINTS_TWIST
-                        )  # Pick Q2
-                        stack_length_added += N_POINTS_TWIST
-                    elif exp_miller_loop[i] == -1:
-                        out += pick(
-                            position=5 * N_POINTS_TWIST + stack_length_added - 1, n_elements=N_POINTS_TWIST
-                        )  # Pick -Q2
-                        stack_length_added += N_POINTS_TWIST
-                    else:
-                        raise ValueError
-                    out += point_addition_twisted_curve(
-                        take_modulo=take_modulo_T,
-                        verify_gradient=True,
-                        check_constant=False,
-                        clean_constant=False,
-                        positive_modulo=False,
-                    )
-                    # After this, the stack is: P1 P2 P3 Q1 Q2 Q3 -Q1 -Q2 -Q3 (2*T1 pm Q1) (2*T2 pm Q2) (2*T3 pm Q3),
-                    # altstack = [(t_1 * t_2) * (t_3 * t'_1) * (t'_2 * t'_3)]
-                    stack_length_added = 0
-                    out += roll(
-                        position=9 * N_POINTS_TWIST + 3 * N_POINTS_CURVE + EXTENSION_DEGREE + stack_length_added - 1,
-                        n_elements=EXTENSION_DEGREE,
-                    )  # Roll lambda_(2*T3)
-                    stack_length_added += EXTENSION_DEGREE
-                    out += roll(
-                        position=3 * N_POINTS_TWIST + stack_length_added - 1, n_elements=N_POINTS_TWIST
-                    )  # Roll T3
-                    stack_length_added += 0
-                    out += point_doubling_twisted_curve(
-                        take_modulo=take_modulo_T,
-                        verify_gradient=True,
-                        check_constant=False,
-                        clean_constant=False,
-                        positive_modulo=False,
-                    )  # Compute 2 * T3
-                    stack_length_added = 0
-                    out += roll(
-                        position=9 * N_POINTS_TWIST + 3 * N_POINTS_CURVE + EXTENSION_DEGREE + stack_length_added - 1,
-                        n_elements=EXTENSION_DEGREE,
-                    )  # Roll lambda_(2* T3 pm Q3)
-                    stack_length_added += EXTENSION_DEGREE
-                    out += roll(
-                        position=EXTENSION_DEGREE + N_POINTS_TWIST - 1, n_elements=N_POINTS_TWIST
-                    )  # Bring 2*T3 on top of the stack
-                    if exp_miller_loop[i] == 1:
-                        out += pick(
-                            position=7 * N_POINTS_TWIST + stack_length_added - 1, n_elements=N_POINTS_TWIST
-                        )  # Pick Q3
-                        stack_length_added += N_POINTS_TWIST
-                    elif exp_miller_loop[i] == -1:
-                        out += pick(
-                            position=4 * N_POINTS_TWIST + stack_length_added - 1, n_elements=N_POINTS_TWIST
-                        )  # Pick -Q3
-                        stack_length_added += N_POINTS_TWIST
-                    else:
-                        raise ValueError
-                    out += point_addition_twisted_curve(
-                        take_modulo=take_modulo_T,
-                        verify_gradient=True,
-                        check_constant=False,
-                        clean_constant=False,
-                        positive_modulo=False,
-                    )
-                    # After this, the stack is: P1 P2 P3 Q1 Q2 Q3 -Q1 -Q2 -Q3 T2 T3
-                    # (2*T1 pm Q1) (2*T2 pm Q2) (2*T3 pm Q3) [(t_1 * t_2) * (t_3 * t'_1) * (t'_2 * t'_3)]
-                    out += Script.parse_string(" ".join(["OP_FROMALTSTACK"] * N_ELEMENTS_MILLER_OUTPUT))
-            elif exp_miller_loop[i] == 0:
-                # After this, the stack is: lambda_(2*T1) lambda_(2*T2) lambda_(2*T3) P1 P2 P3 Q1 Q2 Q3 -Q1 -Q2 -Q3 T1
-                # T2 T3 f_i^2
-                stack_length_added = 0
-                out += miller_loop_output_square(take_modulo=False, check_constant=False, clean_constant=False)
-                # After this, the stack is: lambda_(2*T1) lambda_(2*T2) lambda_(2*T3) P1 P2 P3 Q1 Q2 Q3 -Q1 -Q2 -Q3 T1
-                # T2 T3 f_i^2 t_1
-                stack_length_added = 0
-                out += pick(
-                    position=9 * N_POINTS_TWIST
-                    + 3 * N_POINTS_CURVE
-                    + 3 * EXTENSION_DEGREE
-                    + N_ELEMENTS_MILLER_OUTPUT
-                    + stack_length_added
-                    - 1,
-                    n_elements=EXTENSION_DEGREE,
-                )  # Pick lambda_(2*T1)
-                stack_length_added += EXTENSION_DEGREE
-                out += pick(
-                    position=3 * N_POINTS_TWIST + N_ELEMENTS_MILLER_OUTPUT + stack_length_added - 1,
-                    n_elements=N_POINTS_TWIST,
-                )  # Pick T1
-                stack_length_added += N_POINTS_TWIST
-                out += pick(
-                    position=9 * N_POINTS_TWIST
-                    + 3 * N_POINTS_CURVE
-                    + N_ELEMENTS_MILLER_OUTPUT
-                    + stack_length_added
-                    - 1,
-                    n_elements=N_POINTS_CURVE,
-                )  # Pick P1
-                stack_length_added += N_POINTS_TWIST
-                out += line_eval(
-                    take_modulo=True,
-                    positive_modulo=False,
-                    check_constant=False,
-                    clean_constant=False,
-                    is_constant_reused=False,
-                )  # Compute t_1 = ev_(l_(T1,T1))(P_1)
-                # After this, the stack is: lambda_(2*T1) lambda_(2*T2) lambda_(2*T3) P1 P2 P3 Q1 Q2 Q3 -Q1 -Q2 -Q3
-                # T1 T2 T3 f_i^2 t_1 t_2
-                stack_length_added = 0
-                out += pick(
-                    position=9 * N_POINTS_TWIST
-                    + 3 * N_POINTS_CURVE
-                    + 2 * EXTENSION_DEGREE
-                    + N_ELEMENTS_MILLER_OUTPUT
-                    + N_ELEMENTS_EVALUATION_OUTPUT
-                    + stack_length_added
-                    - 1,
-                    n_elements=EXTENSION_DEGREE,
-                )  # Pick lambda_(2*T2)
-                stack_length_added += EXTENSION_DEGREE
-                out += pick(
-                    position=2 * N_POINTS_TWIST
-                    + N_ELEMENTS_MILLER_OUTPUT
-                    + N_ELEMENTS_EVALUATION_OUTPUT
-                    + stack_length_added
-                    - 1,
-                    n_elements=N_POINTS_TWIST,
-                )  # Pick T2
-                stack_length_added += N_POINTS_TWIST
-                out += pick(
-                    position=9 * N_POINTS_TWIST
-                    + 2 * N_POINTS_CURVE
-                    + N_ELEMENTS_MILLER_OUTPUT
-                    + N_ELEMENTS_EVALUATION_OUTPUT
-                    + stack_length_added
-                    - 1,
-                    n_elements=N_POINTS_CURVE,
-                )  # Pick P2
-                stack_length_added += N_POINTS_CURVE
-                out += line_eval(
-                    take_modulo=True,
-                    positive_modulo=False,
-                    check_constant=False,
-                    clean_constant=False,
-                    is_constant_reused=False,
-                )  # Compute t_2 = ev_(l_(T2,T2))(P_2)
-                # After this, the stack is: lambda_(2*T1) lambda_(2*T2) lambda_(2*T3) P1 P2 P3 Q1 Q2 Q3 -Q1 -Q2 -Q3
-                # T1 T2 T3 f_i^2 t_1 t_2 t_3
-                stack_length_added = 0
-                out += pick(
-                    position=9 * N_POINTS_TWIST
-                    + 3 * N_POINTS_CURVE
-                    + EXTENSION_DEGREE
-                    + N_ELEMENTS_MILLER_OUTPUT
-                    + 2 * N_ELEMENTS_EVALUATION_OUTPUT
-                    + stack_length_added
-                    - 1,
-                    n_elements=EXTENSION_DEGREE,
-                )  # Pick lambda_(2*T3)
-                stack_length_added += EXTENSION_DEGREE
-                out += pick(
-                    position=N_POINTS_TWIST
-                    + N_ELEMENTS_MILLER_OUTPUT
-                    + 2 * N_ELEMENTS_EVALUATION_OUTPUT
-                    + stack_length_added
-                    - 1,
-                    n_elements=N_POINTS_TWIST,
-                )  # Pick T3
-                stack_length_added += N_POINTS_TWIST
-                out += pick(
-                    position=9 * N_POINTS_TWIST
-                    + N_POINTS_CURVE
-                    + N_ELEMENTS_MILLER_OUTPUT
-                    + 2 * N_ELEMENTS_EVALUATION_OUTPUT
-                    + stack_length_added
-                    - 1,
-                    n_elements=N_POINTS_CURVE,
-                )  # Pick P3
-                stack_length_added += N_POINTS_CURVE
-                out += line_eval(
-                    take_modulo=True,
-                    positive_modulo=False,
-                    check_constant=False,
-                    clean_constant=False,
-                    is_constant_reused=False,
-                )  # Compute t_3 = ev_(l_(T3,T3))(P_3)
-                # After this, the stack is: lambda_(2*T1) lambda_(2*T2) lambda_(2*T3) P1 P2 P3 Q1 Q2 Q3 -Q1 -Q2 -Q3
-                # T1 T2 T3 (f_i^2 * t_1 * t_2 * t_3)
-                out += line_eval_times_eval(
-                    take_modulo=False, check_constant=False, clean_constant=False, positive_modulo=False
-                )  # Compute t2 * t3
-                out += line_eval_times_eval_times_eval(
-                    take_modulo=False, check_constant=False, clean_constant=False, positive_modulo=False
-                )  # Compute t1 * (t2 * t3)
-                # Compute f_i * (t1 * t2 * t3)
-                out += miller_loop_output_times_eval_times_eval_times_eval(
-                    take_modulo=take_modulo_F,
-                    positive_modulo=False,
-                    check_constant=False,
-                    clean_constant=False,
-                    is_constant_reused=False,
+            if i != len(self.exp_miller_loop) - 2:
+                # stack in:  [P1 P2 P3 Q1 Q2 Q3 T1 T2 T3 f_i]
+                # stack out: [P1 P2 P3 Q1 Q2 Q3 T1 T2 T3 f_i^2]
+                out += self.miller_loop_output_square(take_modulo=False, positive_modulo=False, check_constant=False, clean_constant=False)
+            if self.exp_miller_loop[i] == 0:
+                # stack in:  [gradient_(2*T1) gradient_(2*T2) gradient_(2*T3) P1 P2 P3 Q1 Q2 Q3 T1 T2 T3 {f_i^2}]
+                # stack out: [P1 P2 P3 Q1 Q2 Q3 T3 (2*T1) (2*T2) (2*T3)
+                #               {f_i^2} * (ev_(l_(T1,T1))(P1) * ev_(l_(T2,T2))(P2) * ev_(l_(T3,T3))(P3)]
+                out += self.__one_step_without_addition(
+                    i, [take_modulo_F, take_modulo_T], positive_modulo_i, clean_constant, gradients_doubling, P, T
                 )
-                # After this, the stack is: lambda_(2*T1) lambda_(2*T2) lambda_(2*T3) P1 P2 P3 Q1 Q2 Q3 -Q1 -Q2 -Q3
-                # T1 T2 T3, altstack = [(f_i^2 * t_1 * t_2 * t_3)]
-                out += Script.parse_string(" ".join(["OP_TOALTSTACK"] * N_ELEMENTS_MILLER_OUTPUT))
-                # After this, the stack is: lambda_(2*T2) lambda_(2*T3) P1 P2 P3 Q1 Q2 Q3 -Q1 -Q2 -Q3 T2 T3 (2*T1),
-                # altstack = [(f_i^2 * t_1 * t_2 * t_3)]
-                stack_length_added = 0
-                out += roll(
-                    position=9 * N_POINTS_TWIST + 3 * N_POINTS_CURVE + 3 * EXTENSION_DEGREE + stack_length_added - 1,
-                    n_elements=EXTENSION_DEGREE,
-                )  # Roll lambda_(2*T1)
-                stack_length_added += EXTENSION_DEGREE
-                out += roll(position=3 * N_POINTS_TWIST + stack_length_added - 1, n_elements=N_POINTS_TWIST)  # Roll T1
-                stack_length_added += N_POINTS_TWIST
-                out += point_doubling_twisted_curve(
-                    take_modulo=take_modulo_T,
-                    verify_gradient=True,
-                    check_constant=False,
-                    clean_constant=False,
-                    positive_modulo=False,
-                )  # Compute 2*T1
-                # After this, the stack is: lambda_(2*T3) P1 P2 P3 Q1 Q2 Q3 -Q1 -Q2 -Q3 T3 (2*T1) (2*T2),
-                # altstack = [(f_i^2 * t_1 * t_2 * t_3)]
-                stack_length_added = 0
-                out += roll(
-                    position=9 * N_POINTS_TWIST + 3 * N_POINTS_CURVE + 2 * EXTENSION_DEGREE + stack_length_added - 1,
-                    n_elements=EXTENSION_DEGREE,
-                )  # Roll lambda_(2*T2)
-                stack_length_added += EXTENSION_DEGREE
-                out += roll(position=3 * N_POINTS_TWIST + stack_length_added - 1, n_elements=N_POINTS_TWIST)  # Roll T2
-                stack_length_added += N_POINTS_TWIST
-                out += point_doubling_twisted_curve(
-                    take_modulo=take_modulo_T,
-                    verify_gradient=True,
-                    check_constant=False,
-                    clean_constant=False,
-                    positive_modulo=False,
-                )  # Compute 2*T2
-                # After this, the stack is: P1 P2 P3 Q1 Q2 Q3 -Q1 -Q2 -Q3 (2*T1) (2*T2) (2*T3),
-                # altstack = [(f_i^2 * t_1 * t_2 * t_3)]
-                stack_length_added = 0
-                out += roll(
-                    position=9 * N_POINTS_TWIST + 3 * N_POINTS_CURVE + EXTENSION_DEGREE + stack_length_added - 1,
-                    n_elements=EXTENSION_DEGREE,
-                )  # Roll lambda_(2*T3)
-                stack_length_added += EXTENSION_DEGREE
-                out += roll(position=3 * N_POINTS_TWIST + stack_length_added - 1, n_elements=N_POINTS_TWIST)  # Roll T3
-                stack_length_added += N_POINTS_TWIST
-                out += point_doubling_twisted_curve(
-                    take_modulo=take_modulo_T,
-                    verify_gradient=True,
-                    check_constant=False,
-                    clean_constant=clean_final,
-                    positive_modulo=positive_modulo_i,
-                )  # Compute 2*T3
-                # After this, the stack is: P1 P2 P3 Q1 Q2 Q3 -Q1 -Q2 -Q3 (2*T1) (2*T2) (2*T3) (f_i^2 * t_1 * t_2 * t_3)
-                out += Script.parse_string(" ".join(["OP_FROMALTSTACK"] * N_ELEMENTS_MILLER_OUTPUT))
             else:
-                # After this, the stack is: lambda_(2*T1) lambda_(2*T2) lambda_(2*T3) P1 P2 P3 Q1 Q2 Q3 -Q1 -Q2 -Q3
-                # T1 T2 T3 f_i^2
-                out += miller_loop_output_square(
-                    take_modulo=False, positive_modulo=False, check_constant=False, clean_constant=False
+                # stack in:  [gradient_(2* T1 ± Q1) gradient_(2* T2 ± Q2) gradient_(2* T3 ± Q3) gradient_(2*T1)
+                #               gradient_(2*T2) gradient_(2*T3) P1 P2 P3 Q1 Q2 Q3 T1 T2 T3 {f_i^2}]
+                # stack out: [P1 P2 P3 Q1 Q2 Q3 (2*T1 ± Q1) (2*T2 ± Q2) (2*T3 ± Q3)
+                #               {f_i^2}*(ev_(l_(T1,T1))(P1)*ev_(l_(T2,T2))(P2)) *(ev_(l_(T3,T3))(P3)*ev_(l_(2*T1,± Q1))(P1)) * (ev_(l_(2*T2,± Q2))(P2)*ev_(l_(2*T3,± Q3))(P3))]  # noqa: E501
+                out += self.__one_step_with_addition(
+                    i, [take_modulo_F, take_modulo_T], positive_modulo_i, clean_constant, gradients_doubling, gradients_addition, P, Q, T
                 )
-                # After this, the stack is: lambda_(2* T1 pm Q1) lambda_(2* T2 pm Q2) lambda_(2* T3 pm Q3) lambda_(2*T1)
-                # lambda_(2*T2) lambda_(2*T3) P1 P2 P3 Q1 Q2 Q3 -Q1 -Q2 -Q3 T1 T2 T3 f_i^2 t_1
-                stack_length_added = 0
-                out += pick(
-                    position=9 * N_POINTS_TWIST
-                    + 3 * N_POINTS_CURVE
-                    + 3 * EXTENSION_DEGREE
-                    + N_ELEMENTS_MILLER_OUTPUT
-                    + stack_length_added
-                    - 1,
-                    n_elements=EXTENSION_DEGREE,
-                )  # Pick lambda_(2*T1)
-                stack_length_added += EXTENSION_DEGREE
-                out += pick(
-                    position=3 * N_POINTS_TWIST + N_ELEMENTS_MILLER_OUTPUT + stack_length_added - 1,
-                    n_elements=N_POINTS_TWIST,
-                )  # Pick T1
-                stack_length_added += N_POINTS_TWIST
-                out += pick(
-                    position=9 * N_POINTS_TWIST
-                    + 3 * N_POINTS_CURVE
-                    + N_ELEMENTS_MILLER_OUTPUT
-                    + stack_length_added
-                    - 1,
-                    n_elements=N_POINTS_CURVE,
-                )  # Pick P1
-                stack_length_added += N_POINTS_TWIST
-                out += line_eval(
-                    take_modulo=True,
-                    positive_modulo=False,
-                    check_constant=False,
-                    clean_constant=False,
-                    is_constant_reused=False,
-                )  # Compute t_1 = ev_(l_(T1,T1))(P_1)
-                # After this, the stack is: lambda_(2* T1 pm Q1) lambda_(2* T2 pm Q2) lambda_(2* T3 pm Q3) lambda_(2*T1)
-                # lambda_(2*T2) lambda_(2*T3) P1 P2 P3 Q1 Q2 Q3 -Q1 -Q2 -Q3 T1 T2 T3 f_i^2 (t_1 * t_2)
-                stack_length_added = 0
-                out += pick(
-                    position=9 * N_POINTS_TWIST
-                    + 3 * N_POINTS_CURVE
-                    + 2 * EXTENSION_DEGREE
-                    + N_ELEMENTS_MILLER_OUTPUT
-                    + N_ELEMENTS_EVALUATION_OUTPUT
-                    + stack_length_added
-                    - 1,
-                    n_elements=EXTENSION_DEGREE,
-                )  # Pick lambda_(2*T2)
-                stack_length_added += EXTENSION_DEGREE
-                out += pick(
-                    position=2 * N_POINTS_TWIST
-                    + N_ELEMENTS_MILLER_OUTPUT
-                    + N_ELEMENTS_EVALUATION_OUTPUT
-                    + stack_length_added
-                    - 1,
-                    n_elements=N_POINTS_TWIST,
-                )  # Pick T2
-                stack_length_added += N_POINTS_TWIST
-                out += pick(
-                    position=9 * N_POINTS_TWIST
-                    + 2 * N_POINTS_CURVE
-                    + N_ELEMENTS_MILLER_OUTPUT
-                    + N_ELEMENTS_EVALUATION_OUTPUT
-                    + stack_length_added
-                    - 1,
-                    n_elements=N_POINTS_CURVE,
-                )  # Pick P2
-                stack_length_added += N_POINTS_CURVE
-                out += line_eval(
-                    take_modulo=True,
-                    positive_modulo=False,
-                    check_constant=False,
-                    clean_constant=False,
-                    is_constant_reused=False,
-                )  # Compute t_2 = ev_(l_(T2,T2))(P_2)
-                out += line_eval_times_eval(
-                    take_modulo=False, check_constant=False, clean_constant=False
-                )  # Compute t1 * t2
-                # After this, the stack is: lambda_(2* T1 pm Q1) lambda_(2* T2 pm Q2) lambda_(2* T3 pm Q3) lambda_(2*T1)
-                # lambda_(2*T2) lambda_(2*T3) P1 P2 P3 Q1 Q2 Q3 -Q1 -Q2 -Q3 T1 T2 T3 f_i^2 (t_1 * t_2) t_3
-                stack_length_added = 0
-                out += pick(
-                    position=9 * N_POINTS_TWIST
-                    + 3 * N_POINTS_CURVE
-                    + EXTENSION_DEGREE
-                    + N_ELEMENTS_MILLER_OUTPUT
-                    + N_ELEMENTS_EVALUATION_TIMES_EVALUATION
-                    + stack_length_added
-                    - 1,
-                    n_elements=EXTENSION_DEGREE,
-                )  # Pick lambda_(2*T3)
-                stack_length_added += EXTENSION_DEGREE
-                out += pick(
-                    position=N_POINTS_TWIST
-                    + N_ELEMENTS_MILLER_OUTPUT
-                    + N_ELEMENTS_EVALUATION_TIMES_EVALUATION
-                    + stack_length_added
-                    - 1,
-                    n_elements=N_POINTS_TWIST,
-                )  # Pick T3
-                stack_length_added += N_POINTS_TWIST
-                out += pick(
-                    position=9 * N_POINTS_TWIST
-                    + N_POINTS_CURVE
-                    + N_ELEMENTS_MILLER_OUTPUT
-                    + N_ELEMENTS_EVALUATION_TIMES_EVALUATION
-                    + stack_length_added
-                    - 1,
-                    n_elements=N_POINTS_CURVE,
-                )  # Pick P3
-                stack_length_added += N_POINTS_CURVE
-                out += line_eval(
-                    take_modulo=True,
-                    positive_modulo=False,
-                    check_constant=False,
-                    clean_constant=False,
-                    is_constant_reused=False,
-                )  # Compute t_3 = ev_(l_(T3,T3))(P_3)
-                # After this, the stack is: lambda_(2* T1 pm Q1) lambda_(2* T2 pm Q2) lambda_(2* T3 pm Q3) lambda_(2*T1)
-                # lambda_(2*T2) lambda_(2*T3) P1 P2 P3 Q1 Q2 Q3 -Q1 -Q2 -Q3 T1 T2 T3 f_i^2 (t_1 * t_2) (t_3 * t'_1)
-                stack_length_added = 0
-                out += pick(
-                    position=9 * N_POINTS_TWIST
-                    + 3 * N_POINTS_CURVE
-                    + N_ELEMENTS_MILLER_OUTPUT
-                    + N_ELEMENTS_EVALUATION_TIMES_EVALUATION
-                    + N_ELEMENTS_EVALUATION_OUTPUT
-                    + 6 * EXTENSION_DEGREE
-                    + stack_length_added
-                    - 1,
-                    n_elements=EXTENSION_DEGREE,
-                )  # Pick lambda_(2*T1 pm Q)
-                stack_length_added += EXTENSION_DEGREE
-                if exp_miller_loop[i] == 1:
-                    out += pick(
-                        position=9 * N_POINTS_TWIST
-                        + N_ELEMENTS_MILLER_OUTPUT
-                        + N_ELEMENTS_EVALUATION_TIMES_EVALUATION
-                        + N_ELEMENTS_EVALUATION_OUTPUT
-                        + stack_length_added
-                        - 1,
-                        n_elements=N_POINTS_TWIST,
-                    )  # Pick Q1
-                    stack_length_added += N_POINTS_TWIST
-                elif exp_miller_loop[i] == -1:
-                    out += pick(
-                        position=6 * N_POINTS_TWIST
-                        + N_ELEMENTS_MILLER_OUTPUT
-                        + N_ELEMENTS_EVALUATION_TIMES_EVALUATION
-                        + N_ELEMENTS_EVALUATION_OUTPUT
-                        + stack_length_added
-                        - 1,
-                        n_elements=N_POINTS_TWIST,
-                    )  # Pick -Q1
-                    stack_length_added += N_POINTS_TWIST
-                else:
-                    raise ValueError
-                out += pick(
-                    position=9 * N_POINTS_TWIST
-                    + 3 * N_POINTS_CURVE
-                    + N_ELEMENTS_MILLER_OUTPUT
-                    + N_ELEMENTS_EVALUATION_TIMES_EVALUATION
-                    + N_ELEMENTS_EVALUATION_OUTPUT
-                    + stack_length_added
-                    - 1,
-                    n_elements=N_POINTS_CURVE,
-                )  # Pick P1
-                stack_length_added += N_POINTS_CURVE
-                out += line_eval(
-                    take_modulo=True,
-                    positive_modulo=False,
-                    check_constant=False,
-                    clean_constant=False,
-                    is_constant_reused=False,
-                )  # Compute t'_1 = ev_(l_(2*T1,pm Q1))(P_1)
-                out += line_eval_times_eval(
-                    take_modulo=False, check_constant=False, clean_constant=False
-                )  # Compute t_3 * t'_1
-                # After this, the stack is: lambda_(2* T1 pm Q1) lambda_(2* T2 pm Q2) lambda_(2* T3 pm Q3) lambda_(2*T1)
-                # lambda_(2*T2) lambda_(2*T3) P1 P2 P3 Q1 Q2 Q3 -Q1 -Q2 -Q3 T1 T2 T3 f_i^2 (t_1 * t_2) (t_3 * t'_1) t'_2
-                stack_length_added = 0
-                out += pick(
-                    position=9 * N_POINTS_TWIST
-                    + 3 * N_POINTS_CURVE
-                    + N_ELEMENTS_MILLER_OUTPUT
-                    + 2 * N_ELEMENTS_EVALUATION_TIMES_EVALUATION
-                    + 5 * EXTENSION_DEGREE
-                    + stack_length_added
-                    - 1,
-                    n_elements=EXTENSION_DEGREE,
-                )  # Pick lambda_(2*T2 pm Q)
-                stack_length_added += EXTENSION_DEGREE
-                if exp_miller_loop[i] == 1:
-                    out += pick(
-                        position=8 * N_POINTS_TWIST
-                        + N_ELEMENTS_MILLER_OUTPUT
-                        + 2 * N_ELEMENTS_EVALUATION_TIMES_EVALUATION
-                        + stack_length_added
-                        - 1,
-                        n_elements=N_POINTS_TWIST,
-                    )  # Pick Q2
-                    stack_length_added += N_POINTS_TWIST
-                elif exp_miller_loop[i] == -1:
-                    out += pick(
-                        position=5 * N_POINTS_TWIST
-                        + N_ELEMENTS_MILLER_OUTPUT
-                        + 2 * N_ELEMENTS_EVALUATION_TIMES_EVALUATION
-                        + stack_length_added
-                        - 1,
-                        n_elements=N_POINTS_TWIST,
-                    )  # Pick -Q2
-                    stack_length_added += N_POINTS_TWIST
-                else:
-                    raise ValueError
-                out += pick(
-                    position=9 * N_POINTS_TWIST
-                    + 2 * N_POINTS_CURVE
-                    + N_ELEMENTS_MILLER_OUTPUT
-                    + 2 * N_ELEMENTS_EVALUATION_TIMES_EVALUATION
-                    + stack_length_added
-                    - 1,
-                    n_elements=N_POINTS_CURVE,
-                )  # Pick P2
-                stack_length_added += N_POINTS_CURVE
-                out += line_eval(
-                    take_modulo=True,
-                    positive_modulo=False,
-                    check_constant=False,
-                    clean_constant=False,
-                    is_constant_reused=False,
-                )  # Compute t'_2 = ev_(l_(2*T2,pm Q2))(P_2)
-                # After this, the stack is: lambda_(2* T1 pm Q1) lambda_(2* T2 pm Q2) lambda_(2* T3 pm Q3) lambda_(2*T1)
-                # lambda_(2*T2) lambda_(2*T3) P1 P2 P3 Q1 Q2 Q3 -Q1 -Q2 -Q3 T1 T2 T3 f_i^2
-                # (t_1 * t_2) (t_3 * t'_1) (t'_2 * t'_3)
-                stack_length_added = 0
-                out += pick(
-                    position=9 * N_POINTS_TWIST
-                    + 3 * N_POINTS_CURVE
-                    + N_ELEMENTS_MILLER_OUTPUT
-                    + 2 * N_ELEMENTS_EVALUATION_TIMES_EVALUATION
-                    + N_ELEMENTS_EVALUATION_OUTPUT
-                    + 4 * EXTENSION_DEGREE
-                    + stack_length_added
-                    - 1,
-                    n_elements=EXTENSION_DEGREE,
-                )  # Pick lambda_(2*T3 pm Q)
-                stack_length_added += EXTENSION_DEGREE
-                if exp_miller_loop[i] == 1:
-                    out += pick(
-                        position=7 * N_POINTS_TWIST
-                        + N_ELEMENTS_MILLER_OUTPUT
-                        + 2 * N_ELEMENTS_EVALUATION_TIMES_EVALUATION
-                        + N_ELEMENTS_EVALUATION_OUTPUT
-                        + stack_length_added
-                        - 1,
-                        n_elements=N_POINTS_TWIST,
-                    )  # Pick Q3
-                    stack_length_added += N_POINTS_TWIST
-                elif exp_miller_loop[i] == -1:
-                    out += pick(
-                        position=4 * N_POINTS_TWIST
-                        + N_ELEMENTS_MILLER_OUTPUT
-                        + 2 * N_ELEMENTS_EVALUATION_TIMES_EVALUATION
-                        + N_ELEMENTS_EVALUATION_OUTPUT
-                        + stack_length_added
-                        - 1,
-                        n_elements=N_POINTS_TWIST,
-                    )  # Pick -Q3
-                    stack_length_added += N_POINTS_TWIST
-                else:
-                    raise ValueError
-                out += pick(
-                    position=9 * N_POINTS_TWIST
-                    + N_POINTS_CURVE
-                    + N_ELEMENTS_MILLER_OUTPUT
-                    + 2 * N_ELEMENTS_EVALUATION_TIMES_EVALUATION
-                    + N_ELEMENTS_EVALUATION_OUTPUT
-                    + stack_length_added
-                    - 1,
-                    n_elements=N_POINTS_CURVE,
-                )  # Pick P3
-                stack_length_added += N_POINTS_CURVE
-                out += line_eval(
-                    take_modulo=True,
-                    positive_modulo=False,
-                    check_constant=False,
-                    clean_constant=False,
-                    is_constant_reused=False,
-                )  # Compute t'_3 = ev_(l_(2*T3,pm Q3))(P_3)
-                out += line_eval_times_eval(
-                    take_modulo=False, check_constant=False, clean_constant=False
-                )  # Compute t'_2 * t'_3
-                # After this, the stack is: lambda_(2* T1 pm Q1) lambda_(2* T2 pm Q2) lambda_(2* T3 pm Q3) lambda_(2*T1)
-                # lambda_(2*T2) lambda_(2*T3) P1 P2 P3 Q1 Q2 Q3 -Q1 -Q2 -Q3 T1 T2 T3
-                # [f_i^2 * (t_1 * t_2) * (t_3 * t'_1) * (t'_2 * t'_3)]
-                # Compute (t_3 * t'_1) * (t'_2 * t'_3)
-                out += line_eval_times_eval_times_eval_times_eval(
-                    take_modulo=False, check_constant=False, clean_constant=False
-                )
-                # Compute (t_1 * t_2) * (t_3 * t'_1) * (t'_2 * t'_3)
-                out += line_eval_times_eval_times_eval_times_eval_times_eval_times_eval(
-                    take_modulo=False, check_constant=False, clean_constant=False
-                )
-                out += miller_loop_output_times_eval_times_eval_times_eval_times_eval_times_eval_times_eval(
-                    take_modulo=take_modulo_F,
-                    positive_modulo=False,
-                    check_constant=False,
-                    clean_constant=False,
-                    is_constant_reused=False,
-                )  # Compute [f_i * (t_1 * t_2) * (t_3 * t'_1) * (t'_2 * t'_3)]
-                # After this, the stack is: lambda_(2* T1 pm Q1) lambda_(2* T2 pm Q2) lambda_(2* T3 pm Q3) lambda_(2*T1)
-                # lambda_(2*T2) lambda_(2*T3) P1 P2 P3 Q1 Q2 Q3 -Q1 -Q2 -Q3 T1 T2 T3,
-                # altstack = [f_i^2 * (t_1 * t_2) * (t_3 * t'_1) * (t'_2 * t'_3)]
-                out += Script.parse_string(" ".join(["OP_TOALTSTACK"] * N_ELEMENTS_MILLER_OUTPUT))
-                # After this, the stack is: lambda_(2* T2 pm Q2) lambda_(2* T3 pm Q3) lambda_(2*T2) lambda_(2*T3)
-                # P1 P2 P3 Q1 Q2 Q3 -Q1 -Q2 -Q3 T2 T3 (2*T1 pm Q1),
-                # altstack = [f_i^2 * (t_1 * t_2) * (t_3 * t'_1) * (t'_2 * t'_3)]
-                stack_length_added = 0
-                out += roll(
-                    position=9 * N_POINTS_TWIST + 3 * N_POINTS_CURVE + 3 * EXTENSION_DEGREE + stack_length_added - 1,
-                    n_elements=EXTENSION_DEGREE,
-                )  # Roll lambda_(2*T1)
-                stack_length_added += EXTENSION_DEGREE
-                out += roll(position=3 * N_POINTS_TWIST + stack_length_added - 1, n_elements=N_POINTS_TWIST)  # Roll T1
-                stack_length_added += 0
-                out += point_doubling_twisted_curve(
-                    take_modulo=take_modulo_T,
-                    verify_gradient=True,
-                    check_constant=False,
-                    clean_constant=False,
-                    positive_modulo=False,
-                )  # Compute 2 * T1
-                stack_length_added = 0
-                out += roll(
-                    position=9 * N_POINTS_TWIST + 3 * N_POINTS_CURVE + 5 * EXTENSION_DEGREE + stack_length_added - 1,
-                    n_elements=EXTENSION_DEGREE,
-                )  # Roll lambda_(2* T1 pm Q1)
-                stack_length_added += EXTENSION_DEGREE
-                out += roll(
-                    position=EXTENSION_DEGREE + N_POINTS_TWIST - 1, n_elements=N_POINTS_TWIST
-                )  # Bring 2*T1 on top of the stack
-                if exp_miller_loop[i] == 1:
-                    out += pick(
-                        position=9 * N_POINTS_TWIST + stack_length_added - 1, n_elements=N_POINTS_TWIST
-                    )  # Pick Q1
-                    stack_length_added += N_POINTS_TWIST
-                elif exp_miller_loop[i] == -1:
-                    out += pick(
-                        position=6 * N_POINTS_TWIST + stack_length_added - 1, n_elements=N_POINTS_TWIST
-                    )  # Pick -Q1
-                    stack_length_added += N_POINTS_TWIST
-                else:
-                    raise ValueError
-                out += point_addition_twisted_curve(
-                    take_modulo=take_modulo_T,
-                    verify_gradient=True,
-                    check_constant=False,
-                    clean_constant=False,
-                    positive_modulo=False,
-                )
-                # After this, the stack is: lambda_(2* T3 pm Q3) lambda_(2*T3) P1 P2 P3 Q1 Q2 Q3 -Q1 -Q2 -Q3 T3
-                # (2*T1 pm Q1) (2*T2 pm Q2),
-                # altstack = [f_i^2 * (t_1 * t_2) * (t_3 * t'_1) * (t'_2 * t'_3)]
-                stack_length_added = 0
-                out += roll(
-                    position=9 * N_POINTS_TWIST + 3 * N_POINTS_CURVE + 2 * EXTENSION_DEGREE + stack_length_added - 1,
-                    n_elements=EXTENSION_DEGREE,
-                )  # Roll lambda_(2*T2)
-                stack_length_added += EXTENSION_DEGREE
-                out += roll(position=3 * N_POINTS_TWIST + stack_length_added - 1, n_elements=N_POINTS_TWIST)  # Roll T2
-                stack_length_added += 0
-                out += point_doubling_twisted_curve(
-                    take_modulo=take_modulo_T,
-                    verify_gradient=True,
-                    check_constant=False,
-                    clean_constant=False,
-                    positive_modulo=False,
-                )  # Compute 2 * T2
-                stack_length_added = 0
-                out += roll(
-                    position=9 * N_POINTS_TWIST + 3 * N_POINTS_CURVE + 3 * EXTENSION_DEGREE + stack_length_added - 1,
-                    n_elements=EXTENSION_DEGREE,
-                )  # Roll lambda_(2* T2 pm Q2)
-                stack_length_added += EXTENSION_DEGREE
-                out += roll(
-                    position=EXTENSION_DEGREE + N_POINTS_TWIST - 1, n_elements=N_POINTS_TWIST
-                )  # Bring 2*T2 on top of the stack
-                if exp_miller_loop[i] == 1:
-                    out += pick(
-                        position=8 * N_POINTS_TWIST + stack_length_added - 1, n_elements=N_POINTS_TWIST
-                    )  # Pick Q2
-                    stack_length_added += N_POINTS_TWIST
-                elif exp_miller_loop[i] == -1:
-                    out += pick(
-                        position=5 * N_POINTS_TWIST + stack_length_added - 1, n_elements=N_POINTS_TWIST
-                    )  # Pick -Q2
-                    stack_length_added += N_POINTS_TWIST
-                else:
-                    raise ValueError
-                out += point_addition_twisted_curve(
-                    take_modulo=take_modulo_T,
-                    verify_gradient=True,
-                    check_constant=False,
-                    clean_constant=False,
-                    positive_modulo=False,
-                )
-                # After this, the stack is: P1 P2 P3 Q1 Q2 Q3 -Q1 -Q2 -Q3 (2*T1 pm Q1) (2*T2 pm Q2) (2*T3 pm Q3),
-                # altstack = [f_i^2 * (t_1 * t_2) * (t_3 * t'_1) * (t'_2 * t'_3)]
-                stack_length_added = 0
-                out += roll(
-                    position=9 * N_POINTS_TWIST + 3 * N_POINTS_CURVE + EXTENSION_DEGREE + stack_length_added - 1,
-                    n_elements=EXTENSION_DEGREE,
-                )  # Roll lambda_(2*T3)
-                stack_length_added += EXTENSION_DEGREE
-                out += roll(position=3 * N_POINTS_TWIST + stack_length_added - 1, n_elements=N_POINTS_TWIST)  # Roll T3
-                stack_length_added += 0
-                out += point_doubling_twisted_curve(
-                    take_modulo=take_modulo_T,
-                    verify_gradient=True,
-                    check_constant=False,
-                    clean_constant=False,
-                    positive_modulo=False,
-                )  # Compute 2 * T3
-                stack_length_added = 0
-                out += roll(
-                    position=9 * N_POINTS_TWIST + 3 * N_POINTS_CURVE + EXTENSION_DEGREE + stack_length_added - 1,
-                    n_elements=EXTENSION_DEGREE,
-                )  # Roll lambda_(2* T3 pm Q3)
-                stack_length_added += EXTENSION_DEGREE
-                out += roll(
-                    position=EXTENSION_DEGREE + N_POINTS_TWIST - 1, n_elements=N_POINTS_TWIST
-                )  # Bring 2*T3 on top of the stack
-                if exp_miller_loop[i] == 1:
-                    out += pick(
-                        position=7 * N_POINTS_TWIST + stack_length_added - 1, n_elements=N_POINTS_TWIST
-                    )  # Pick Q3
-                    stack_length_added += N_POINTS_TWIST
-                elif exp_miller_loop[i] == -1:
-                    out += pick(
-                        position=4 * N_POINTS_TWIST + stack_length_added - 1, n_elements=N_POINTS_TWIST
-                    )  # Pick -Q3
-                    stack_length_added += N_POINTS_TWIST
-                else:
-                    raise ValueError
-                out += point_addition_twisted_curve(
-                    take_modulo=take_modulo_T,
-                    verify_gradient=True,
-                    check_constant=False,
-                    clean_constant=clean_final,
-                    positive_modulo=positive_modulo_i,
-                )
-                # After this, the stack is: P1 P2 P3 Q1 Q2 Q3 -Q1 -Q2 -Q3 T2 T3 (2*T1 pm Q1) (2*T2 pm Q2) (2*T3 pm Q3)
-                # [f_i^2 * (t_1 * t_2) * (t_3 * t'_1) * (t'_2 * t'_3)]
-                # Roll [f_i^2 * (t_1 * t_2) * (t_3 * t'_1) * (t'_2 * t'_3)]
-                out += Script.parse_string(" ".join(["OP_FROMALTSTACK"] * N_ELEMENTS_MILLER_OUTPUT))
 
-        # After this, the stack is: [miller(P1,Q1) * miller(P2,Q2) * miller(P3,Q3)]
+        # stack in:  [P1 P2 P3 Q1 Q2 Q3 w*Q1 w*Q2 w*Q3 (miller(P1,Q1) * miller(P2,Q2) * miller(P3,Q3))]
+        # stack out: [(miller(P1,Q1) * miller(P2,Q2) * miller(P3,Q3))]
         out += roll(
-            position=9 * N_POINTS_TWIST + 3 * N_POINTS_CURVE + N_ELEMENTS_MILLER_OUTPUT - 1,
-            n_elements=9 * N_POINTS_TWIST + 3 * N_POINTS_CURVE,
+            position=6 * self.N_POINTS_TWIST + 3 * self.N_POINTS_CURVE + self.N_ELEMENTS_MILLER_OUTPUT - 1,
+            n_elements=6 * self.N_POINTS_TWIST + 3 * self.N_POINTS_CURVE,
         )
-        out += Script.parse_string(" ".join(["OP_DROP"] * (9 * N_POINTS_TWIST + 3 * N_POINTS_CURVE)))
+        out += Script.parse_string(" ".join(["OP_DROP"] * (6 * self.N_POINTS_TWIST + 3 * self.N_POINTS_CURVE)))
 
         return optimise_script(out)
-
-    def triple_miller_loop_input(
-        self,
-        point_p1: list[int],
-        point_p2: list[int],
-        point_p3: list[int],
-        point_q1: list[int],
-        point_q2: list[int],
-        point_q3: list[int],
-        lambdas_q1_exp_miller_loop: list[list[list[int]]],
-        lambdas_q2_exp_miller_loop: list[list[list[int]]],
-        lambdas_q3_exp_miller_loop: list[list[list[int]]],
-    ) -> Script:
-        """Returns a script containing the data required to execute the `self.triple_miller_loop` method.
-
-        Args:
-            point_p1 (list[int]): Elliptic curve point on E(F_q).
-            point_p2 (list[int]): Elliptic curve point on E(F_q).
-            point_p3 (list[int]): Elliptic curve point on E(F_q).
-            point_q1 (list[int]): Elliptic curve point on E'(F_q^{k/d}).
-            point_q2 (list[int]): Elliptic curve point on E'(F_q^{k/d}).
-            point_q3 (list[int]): Elliptic curve point on E'(F_q^{k/d}).
-            lambdas_q1_exp_miller_loop (list[list[list[int]]]): The sequence of gradients to compute the miller loop.
-            lambdas_q2_exp_miller_loop (list[list[list[int]]]): The sequence of gradients to compute the miller loop.
-            lambdas_q3_exp_miller_loop (list[list[list[int]]]): The sequence of gradients to compute the miller loop.
-
-        Returns:
-            Script pushing [lambdas, P1, P2, P3, Q1, Q2, Q3] on the stack.
-        """
-        q = self.MODULUS
-        lambdas = [lambdas_q1_exp_miller_loop, lambdas_q2_exp_miller_loop, lambdas_q3_exp_miller_loop]
-
-        out = nums_to_script([q])
-        # Load lambdas
-        for i in range(len(lambdas[0]) - 1, -1, -1):
-            for j in range(len(lambdas[0][i]) - 1, -1, -1):
-                for k in range(3):
-                    out += nums_to_script(lambdas[k][i][j])
-
-        out += nums_to_script(point_p1)
-        out += nums_to_script(point_p2)
-        out += nums_to_script(point_p3)
-        out += nums_to_script(point_q1)
-        out += nums_to_script(point_q2)
-        out += nums_to_script(point_q3)
-
-        return out

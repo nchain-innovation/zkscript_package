@@ -222,6 +222,21 @@ class MillerOutputOperations(Fq4ScriptModel):
 
         return out
 
+    def miller_loop_output_times_eval_times_eval(
+        self,
+        take_modulo: bool,
+        check_constant: bool | None = None,
+        clean_constant: bool | None = None,
+        is_constant_reused: bool | None = None,
+    ) -> Script:
+        return MillerOutputOperations.mul(
+            self,
+            take_modulo=take_modulo,
+            check_constant=check_constant,
+            clean_constant=clean_constant,
+            is_constant_reused=is_constant_reused,
+        )
+
     def line_eval_times_eval_times_eval(
         self,
         take_modulo: bool,

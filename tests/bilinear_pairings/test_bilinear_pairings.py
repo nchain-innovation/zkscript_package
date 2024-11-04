@@ -37,6 +37,7 @@ from src.zkscript.bilinear_pairings.mnt4_753.miller_output_operations import (
     miller_output_ops as miller_output_ops_mnt4_753,
 )
 from src.zkscript.bilinear_pairings.mnt4_753.mnt4_753 import mnt4_753
+from src.zkscript.types.unlocking_keys import MillerLoopUnlockingKey, TripleMillerLoopUnlockingKey
 from src.zkscript.util.utility_scripts import nums_to_script
 from tests.bilinear_pairings.util import (
     check_constant,
@@ -3037,8 +3038,8 @@ def test_line_evaluation(
 ):
     unlock = nums_to_script([config.q])
     unlock += generate_unlock(lam)
-    unlock += generate_unlock(point_q)
     unlock += generate_unlock(point_p)
+    unlock += generate_unlock(point_q)
 
     # Check correct evaluation, if positive_modulo is negative, we do not clean the modulo constant q
     lock = config.test_script_line_functions.line_evaluation(
@@ -3330,11 +3331,11 @@ def test_hard_exponentiation(config, positive_modulo, f, expected, clean_constan
     ("config", "point_p", "point_q", "q_times_val_miller_loop", "expected"), generate_test_cases("test_miller_loop")
 )
 def test_miller_loop(config, point_p, point_q, q_times_val_miller_loop, expected, clean_constant, save_to_json_folder):
-    lambdas_q_exp_miller_loop = [[s.to_list() for s in el] for el in point_q.get_lambdas(config.exp_miller_loop)]
+    gradients = [[s.to_list() for s in el] for el in point_q.get_lambdas(config.exp_miller_loop)]
 
-    unlock = config.test_script_pairing.miller_loop_input_data(
-        point_p=point_p.to_list(), point_q=point_q.to_list(), lambdas_q_exp_miller_loop=lambdas_q_exp_miller_loop
-    )
+    unlocking_key = MillerLoopUnlockingKey(point_p.to_list(), point_q.to_list(), gradients)
+
+    unlock = config.test_script_pairing.miller_loop_input_data(unlocking_key)
 
     # Check correct evaluation
     lock = config.test_script_pairing.miller_loop(modulo_threshold=1, check_constant=True, clean_constant=False)
@@ -3383,19 +3384,15 @@ def test_single_pairing(config, point_p, point_q, miller_output_inverse, expecte
 @pytest.mark.parametrize("clean_constant", [True, False])
 @pytest.mark.parametrize(("config", "point_p", "point_q", "expected"), generate_test_cases("test_triple_miller_loop"))
 def test_triple_miller_loop(config, point_p, point_q, expected, clean_constant, save_to_json_folder):
-    lambdas = [[[s.to_list() for s in el] for el in point_q[i].get_lambdas(config.exp_miller_loop)] for i in range(3)]
+    gradients = [[[s.to_list() for s in el] for el in point_q[i].get_lambdas(config.exp_miller_loop)] for i in range(3)]
 
-    unlock = config.test_script_pairing.triple_miller_loop_input(
-        point_p1=point_p[0].to_list(),
-        point_p2=point_p[1].to_list(),
-        point_p3=point_p[2].to_list(),
-        point_q1=point_q[0].to_list(),
-        point_q2=point_q[1].to_list(),
-        point_q3=point_q[2].to_list(),
-        lambdas_q1_exp_miller_loop=lambdas[0],
-        lambdas_q2_exp_miller_loop=lambdas[1],
-        lambdas_q3_exp_miller_loop=lambdas[2],
+    unlocking_key = TripleMillerLoopUnlockingKey(
+        [point_p[0].to_list(), point_p[1].to_list(), point_p[2].to_list()],
+        [point_q[0].to_list(), point_q[1].to_list(), point_q[2].to_list()],
+        gradients,
     )
+
+    unlock = config.test_script_pairing.triple_miller_loop_input(unlocking_key)
 
     # Check correct evaluation
     lock = config.test_script_pairing.triple_miller_loop(modulo_threshold=1, check_constant=True, clean_constant=False)

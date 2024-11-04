@@ -20,7 +20,6 @@ class PairingModel(MillerLoop, TripleMillerLoop, Pairing):
         n_elements_evaluation_times_evaluation,
         point_doubling_twisted_curve,
         point_addition_twisted_curve,
-        point_negation_twisted_curve,
         line_eval,
         line_eval_times_eval,
         line_eval_times_eval_times_eval,
@@ -30,6 +29,7 @@ class PairingModel(MillerLoop, TripleMillerLoop, Pairing):
         miller_loop_output_square,
         miller_loop_output_mul,
         miller_loop_output_times_eval,
+        miller_loop_output_times_eval_times_eval,
         miller_loop_output_times_eval_times_eval_times_eval,
         miller_loop_output_times_eval_times_eval_times_eval_times_eval_times_eval_times_eval,
         pad_eval_times_eval_to_miller_output,
@@ -70,6 +70,9 @@ class PairingModel(MillerLoop, TripleMillerLoop, Pairing):
                 F_q^k.
             miller_loop_output_times_eval: Script to compute the multiplication of the Miller output with a line
                 evaluation.
+            miller_loop_output_times_eval_times_eval: Script to compute the multiplication of the Miller output with 
+                a product of two line evaluations: the script computes t1 * t2, where
+                t1 = miller_output, t2 = ev * ev
             miller_loop_output_times_eval_times_eval_times_eval: Script to compute the multiplication of the Miller
                 output with a product of three line evaluations: the script computes t1 * t2,
                 where t1 = miller_output, t2 = ev * ev * ev.
@@ -93,7 +96,6 @@ class PairingModel(MillerLoop, TripleMillerLoop, Pairing):
         self.N_ELEMENTS_EVALUATION_TIMES_EVALUATION = n_elements_evaluation_times_evaluation
         self.point_doubling_twisted_curve = point_doubling_twisted_curve
         self.point_addition_twisted_curve = point_addition_twisted_curve
-        self.point_negation_twisted_curve = point_negation_twisted_curve
         self.line_eval = line_eval
         self.line_eval_times_eval = line_eval_times_eval
         self.line_eval_times_eval_times_eval = line_eval_times_eval_times_eval
@@ -105,6 +107,7 @@ class PairingModel(MillerLoop, TripleMillerLoop, Pairing):
         self.miller_loop_output_square = miller_loop_output_square
         self.miller_loop_output_mul = miller_loop_output_mul
         self.miller_loop_output_times_eval = miller_loop_output_times_eval
+        self.miller_loop_output_times_eval_times_eval = miller_loop_output_times_eval_times_eval
         self.miller_loop_output_times_eval_times_eval_times_eval = miller_loop_output_times_eval_times_eval_times_eval
         self.miller_loop_output_times_eval_times_eval_times_eval_times_eval_times_eval_times_eval = (
             miller_loop_output_times_eval_times_eval_times_eval_times_eval_times_eval_times_eval

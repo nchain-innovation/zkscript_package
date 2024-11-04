@@ -3,7 +3,9 @@
 from tx_engine import Script
 
 from src.zkscript.bilinear_pairings.mnt4_753.fields import fq2_script
-from src.zkscript.util.utility_scripts import mod, verify_bottom_constant
+from src.zkscript.types.stack_elements import StackEllipticCurvePoint, StackFiniteFieldElement
+from src.zkscript.util.utility_functions import bitmask_to_boolean_list, bool_to_moving_function, check_order
+from src.zkscript.util.utility_scripts import mod, move, pick, roll, verify_bottom_constant
 
 
 class LineFunctions:
@@ -25,12 +27,22 @@ class LineFunctions:
         check_constant: bool | None = None,
         clean_constant: bool | None = None,
         is_constant_reused: bool | None = None,
+        gradient: StackFiniteFieldElement = StackFiniteFieldElement(7, False, 2),  # noqa: B008
+        P: StackEllipticCurvePoint = StackEllipticCurvePoint(  # noqa: B008, N803
+            StackFiniteFieldElement(5, False, 1),  # noqa: B008
+            StackFiniteFieldElement(4, False, 1),  # noqa: B008
+        ),
+        Q: StackEllipticCurvePoint = StackEllipticCurvePoint(  # noqa: B008, N803
+            StackFiniteFieldElement(3, False, 2),  # noqa: B008
+            StackFiniteFieldElement(1, False, 2),  # noqa: B008
+        ),
+        rolling_options: int = 7,
     ) -> Script:
-        """Evaluate line through T and Q at P.
+        r"""Evaluate line through T and Q at P.
 
         Stack input:
-            - stack:    [q, ..., lambda, Q, P], `P` is in `E(F_q)`, `Q` is in `E'(F_q^2)`, the quadratic twist,
-                `lambda` is in F_q^2
+            - stack:    [q, ..., gradient, .., P, .., Q, ..], `P` is in `E(F_q)`, `Q` is in `E'(F_q^2)`, the quadratic
+                twist, `gradient` is in F_q^2
             - altstack: []
 
         Stack output:
@@ -46,62 +58,73 @@ class LineFunctions:
                 after execution. Defaults to `None`.
 
         Preconditions:
-            - `lambda` is the gradient through `T` and `Q`.
-            - If `T = Q`, then the `lambda` is the gradient of the tangent at `T`.
+            - `gradient` is the gradient through `T` and `Q`.
+            - If `T = Q`, then the `gradient` is the gradient of the tangent at `T`.
 
         Returns:
             Script to evaluate a line through `T` and `Q` at `P`.
 
         Notes:
-            - `lambda` is NOT checked in this function, it is assumed to be the gradient.
+            - `gradient` is NOT checked in this function, it is assumed to be the gradient.
             - `ev_(l_(T,Q)(P))` does NOT include the zero in the second component, this is to optimise the script size.
         """
         # Fq2 implementation
         fq2 = self.FQ2
 
+        check_order([gradient, P, Q])
+        is_gradient_rolled, is_p_rolled, is_q_rolled = bitmask_to_boolean_list(rolling_options, 3)
+
         out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
-        # Line evaluation for MNT4 returns: (lambda, Q, P) --> (-yQ + lambda * (xQ - xP*u), yP) as a point in Fq4
+        # Line evaluation for MNT4 returns: (gradient, Q, P) --> (-yQ + gradient * (xQ - xP*u), yP) as a point in Fq4
 
-        # Second component
-        # After this, the stack is: lambda Q xP, altstack = [yP]
-        second_component = Script.parse_string("OP_TOALTSTACK")
-
-        # First component
-        # After this, the stack is: lambda yQ (xQ - xP*u)
-        first_component = Script.parse_string("OP_TOALTSTACK")
-        first_component += Script.parse_string("OP_2SWAP OP_FROMALTSTACK OP_SUB")
-        # After this, the stack is yQ lambda * (xQ - xP*u)
-        first_component += Script.parse_string("OP_2ROT")
+        # Compute -yQ + gradient * (xQ - xP*u)
+        # stack in:  [q .. gradient .. P .. Q ..]
+        # stack out: [q .. gradient ..{xP} yP .. {xQ} yQ .. (xQ - xP*u)]
+        first_component = move(Q.x, bool_to_moving_function(is_q_rolled))  # Move xQ
+        first_component += move(P.x.shift(2 - 2 * is_q_rolled), bool_to_moving_function(is_p_rolled))  # Move xP
+        first_component += Script.parse_string("OP_SUB")
+        # stack in:  [q .. gradient ..{xP} yP .. {xQ} yQ .. (xQ - xP*u)]
+        # stack out: [q .. {gradient} .. {xP} yP .. {xQ} yQ .. gradient * (xQ - xP*u)]
+        first_component += move(
+            gradient.shift(2 - 2 * is_q_rolled - 1 * is_p_rolled), bool_to_moving_function(is_gradient_rolled)
+        )  # Move gradient
         first_component += fq2.mul(
             take_modulo=False, check_constant=False, clean_constant=False, is_constant_reused=False
         )
-        # After this, the stack is: (-yQ + lambda * (xQ - xP*u))_0, altstack = [yP, (-yQ + lambda * (xQ - xP*u))_1]
-        first_component += Script.parse_string("OP_ROT OP_SUB OP_TOALTSTACK")
-        first_component += Script.parse_string("OP_SWAP OP_SUB")
+        # stack in:     [q .. {gradient} .. {xP} yP .. {xQ} yQ .. gradient * (xQ - xP*u)]
+        # stack out:    [q .. {gradient} .. {xP} yP .. {xQ} {yQ} .. (-yQ + lambda * (xQ - xP*u))_0]
+        # altstack out: [(-yQ + lambda * (xQ - xP*u))_1]
+        first_component += move(Q.y.shift(2), bool_to_moving_function(is_q_rolled), 1, 2)  # Move (yQ)_1
+        if Q.negate:
+            first_component += Script.parse_string("OP_ADD OP_TOALTSTACK")
+        else:
+            first_component += Script.parse_string("OP_SUB OP_TOALTSTACK")
+        first_component += move(
+            Q.y.shift(1 - 1 * is_q_rolled), bool_to_moving_function(is_q_rolled), 0, 1
+        )  # Move (yQ)_0
+        if Q.negate:
+            first_component += Script.parse_string("OP_ADD")
+        else:
+            first_component += Script.parse_string("OP_SUB")
 
-        out += second_component + first_component
+        out += first_component
 
         if take_modulo:
-            batched_modulo = Script()
-
             if clean_constant is None and is_constant_reused is None:
-                msg = f"If take_modulo is set, both clean_constant: {clean_constant} \
-                        and is_constant_reused: {is_constant_reused} must be set."
+                msg = f"If take_modulo is set, both clean_constant: {clean_constant}"
+                msg += f"and is_constant_reused: {is_constant_reused} must be set."
                 raise ValueError(msg)
 
-            if clean_constant:
-                fetch_q = Script.parse_string("OP_DEPTH OP_1SUB OP_ROLL")
-            else:
-                fetch_q = Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
-
-            batched_modulo += mod(stack_preparation="", is_positive=positive_modulo)
-            batched_modulo += mod(is_positive=positive_modulo)
-            batched_modulo += mod(is_constant_reused=is_constant_reused, is_positive=positive_modulo)
-
-            out += fetch_q + batched_modulo
+            out += roll(position=-1, n_elements=1) if clean_constant else pick(position=-1, n_elements=1)
+            out += mod(stack_preparation="", is_mod_on_top=True)
+            out += mod()
+            out += move(P.y.shift(3 - 4 * is_q_rolled), bool_to_moving_function(is_p_rolled))  # Move yP
+            out += Script.parse_string("OP_ROT")
+            out += mod(stack_preparation="", is_constant_reused=is_constant_reused)
         else:
-            out += Script.parse_string("OP_FROMALTSTACK OP_FROMALTSTACK")
+            out += Script.parse_string("OP_FROMALTSTACK")
+            out += move(P.y.shift(2 - 4 * is_q_rolled), bool_to_moving_function(is_p_rolled))  # Move yP
 
         return out
 

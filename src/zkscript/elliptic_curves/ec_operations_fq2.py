@@ -184,6 +184,7 @@ class EllipticCurveFq2:
             )
         )
 
+<<<<<<< HEAD
     def point_negation(
         self,
         take_modulo: bool,
@@ -250,6 +251,8 @@ class EllipticCurveFq2:
 
         return out
 
+=======
+>>>>>>> 4098788 (Rewrite line evaluations to allow refactoring of the Miller loop; refactor Miller loop; define types for  unlocking keys; remove negation method from EllipticCurveFq2; update BilinearPairingModel to support refactoring of Miller loop)
     def point_algebraic_addition_verifying_gradient(
         self,
         take_modulo: bool,

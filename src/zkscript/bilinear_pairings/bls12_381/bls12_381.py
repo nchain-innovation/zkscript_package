@@ -35,9 +35,11 @@ def pad_eval_times_eval_to_miller_output() -> Script:
         - altstack: []
     """
     out = Script()
-    out += Script.parse_string(" ".join(["OP_TOALTSTACK"] * 6))
+    out += Script.parse_string("OP_TOALTSTACK OP_TOALTSTACK OP_TOALTSTACK OP_TOALTSTACK OP_TOALTSTACK OP_TOALTSTACK")
     out += Script.parse_string("OP_0 OP_0")
-    out += Script.parse_string(" ".join(["OP_FROMALTSTACK"] * 6))
+    out += Script.parse_string(
+        "OP_FROMALTSTACK OP_FROMALTSTACK OP_FROMALTSTACK OP_FROMALTSTACK OP_FROMALTSTACK OP_FROMALTSTACK"
+    )
 
     return out
 
@@ -53,7 +55,6 @@ bls12_381 = PairingModel(
     n_elements_evaluation_times_evaluation=N_ELEMENTS_EVALUATION_TIMES_EVALUATION,
     point_doubling_twisted_curve=twisted_curve_operations.point_algebraic_doubling,
     point_addition_twisted_curve=twisted_curve_operations.point_algebraic_addition,
-    point_negation_twisted_curve=twisted_curve_operations.point_negation,
     line_eval=line_functions.line_evaluation,
     line_eval_times_eval=miller_output_ops.line_eval_times_eval,
     line_eval_times_eval_times_eval=miller_output_ops.line_eval_times_eval_times_eval,
@@ -63,6 +64,7 @@ bls12_381 = PairingModel(
     miller_loop_output_square=miller_output_ops.square,
     miller_loop_output_mul=miller_output_ops.mul,
     miller_loop_output_times_eval=miller_output_ops.miller_loop_output_times_eval,
+    miller_loop_output_times_eval_times_eval=miller_output_ops.miller_loop_output_times_eval_times_eval,
     miller_loop_output_times_eval_times_eval_times_eval=miller_output_ops.miller_loop_output_times_eval_times_eval_times_eval,
     miller_loop_output_times_eval_times_eval_times_eval_times_eval_times_eval_times_eval=miller_output_ops.miller_loop_output_times_eval_times_eval_times_eval_times_eval_times_eval_times_eval,
     pad_eval_times_eval_to_miller_output=pad_eval_times_eval_to_miller_output(),
