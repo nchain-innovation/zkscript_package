@@ -41,6 +41,7 @@ from tx_engine.engine.op_codes import (
 )
 
 from src.zkscript.types.stack_elements import (
+    StackBaseElement,
     StackElements,
     StackEllipticCurvePoint,
     StackFiniteFieldElement,
@@ -330,9 +331,21 @@ def move(
     return moving_function(position=stack_element.position - start_index, n_elements=end_index - start_index)
 
 
-def reverse_endianness(length: int) -> Script:
-    """Reverse the endianness of a bytestring of length `length`."""
-    out = Script()
+def reverse_endianness(
+    length: int,
+    stack_element: StackBaseElement = StackBaseElement(0),  # noqa: B008
+    rolling_option: bool = True,
+) -> Script:
+    """Reverse the endianness of a StackBaseElement of byte length `length`.
+
+    Args:
+        length (int): The byte length of stack_element.
+        stack_element (StackBaseElement): The stack element whose endianness should be reversed.
+            Defaults to `StackBaseElement(0)`.
+        rolling_option (bool): Whether stack_element should be rolled. Defaults to `True`.
+
+    """
+    out = move(stack_element, roll if rolling_option else pick)  # Move stack_element
     out += Script.parse_string(" ".join(["OP_1 OP_SPLIT"] * (length - 1)))
     out += Script.parse_string(" ".join(["OP_SWAP OP_CAT"] * (length - 1)))
     return out

@@ -1,8 +1,16 @@
 import pytest
 from tx_engine import Context, Script
 
-from src.zkscript.types.stack_elements import StackNumber
-from src.zkscript.util.utility_scripts import mod, move, nums_to_script, pick, roll, verify_bottom_constant
+from src.zkscript.types.stack_elements import StackBaseElement, StackNumber
+from src.zkscript.util.utility_scripts import (
+    mod,
+    move,
+    nums_to_script,
+    pick,
+    reverse_endianness,
+    roll,
+    verify_bottom_constant,
+)
 
 
 def generate_verify(z) -> Script:
@@ -183,3 +191,38 @@ def test_fail_verify_bottom_constant(n, stack):
 def test_errors_move(stack_element, moving_function, start_index, end_index, msg):
     with pytest.raises(ValueError, match=msg):
         move(stack_element, moving_function, start_index, end_index)
+
+
+@pytest.mark.parametrize(
+    ("stack", "length", "stack_element", "rolling_option", "expected"),
+    [
+        (
+            ["01", "02", "03", "04", "aabbccddeeff"],
+            6,
+            StackBaseElement(0),
+            True,
+            ["01", "02", "03", "04", "ffeeddccbbaa"],
+        ),
+        (["01", "02", "aabbccddee", "03", "04"], 5, StackBaseElement(2), True, ["01", "02", "03", "04", "eeddccbbaa"]),
+        (
+            ["aabbccdd", "01", "02", "03", "04"],
+            4,
+            StackBaseElement(-1),
+            False,
+            ["aabbccdd", "01", "02", "03", "04", "ddccbbaa"],
+        ),
+    ],
+)
+def test_reverse_endianness(stack, length, stack_element, rolling_option, expected):
+    unlock = Script()
+    for el in stack:
+        unlock.append_pushdata(bytes.fromhex(el))
+
+    lock = reverse_endianness(length, stack_element, rolling_option)
+    for ix, el in enumerate(expected[::-1]):
+        lock.append_pushdata(bytes.fromhex(el))
+        lock += Script.parse_string("OP_EQUAL" if ix == len(expected) - 1 else "OP_EQUALVERIFY")
+
+    context = Context(unlock + lock)
+    assert context.evaluate()
+    assert len(context.get_stack()) == 1
