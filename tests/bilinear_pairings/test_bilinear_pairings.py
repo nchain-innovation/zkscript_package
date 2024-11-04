@@ -37,7 +37,12 @@ from src.zkscript.bilinear_pairings.mnt4_753.miller_output_operations import (
     miller_output_ops as miller_output_ops_mnt4_753,
 )
 from src.zkscript.bilinear_pairings.mnt4_753.mnt4_753 import mnt4_753
-from src.zkscript.types.unlocking_keys import MillerLoopUnlockingKey, TripleMillerLoopUnlockingKey
+from src.zkscript.types.unlocking_keys import (
+    MillerLoopUnlockingKey,
+    SinglePairingUnlockingKey,
+    TripleMillerLoopUnlockingKey,
+    TriplePairingUnlockingKey,
+)
 from src.zkscript.util.utility_scripts import nums_to_script
 from tests.bilinear_pairings.util import (
     check_constant,
@@ -3356,20 +3361,17 @@ def test_miller_loop(config, point_p, point_q, q_times_val_miller_loop, expected
 )
 def test_single_pairing(config, point_p, point_q, miller_output_inverse, expected, clean_constant, save_to_json_folder):
     if point_q.is_infinity():
-        lambdas_q_exp_miller_loop = []
-        point_q = [None, None]
+        gradients = []
+        point_q = None
     else:
-        lambdas_q_exp_miller_loop = [[s.to_list() for s in el] for el in point_q.get_lambdas(config.exp_miller_loop)]
+        gradients = [[s.to_list() for s in el] for el in point_q.get_lambdas(config.exp_miller_loop)]
         point_q = point_q.to_list()
 
-    point_p = [None, None] if point_p.is_infinity() else point_p.to_list()
+    point_p = None if point_p.is_infinity() else point_p.to_list()
 
-    unlock = config.test_script_pairing.single_pairing_input(
-        point_p=point_p,
-        point_q=point_q,
-        lambdas_q_exp_miller_loop=lambdas_q_exp_miller_loop,
-        miller_output_inverse=miller_output_inverse,
-    )
+    unlocking_key = SinglePairingUnlockingKey(point_p, point_q, gradients, miller_output_inverse)
+
+    unlock = config.test_script_pairing.single_pairing_input(unlocking_key=unlocking_key)
 
     # Check correct evaluation
     lock = config.test_script_pairing.single_pairing(modulo_threshold=1, check_constant=True, clean_constant=False)
@@ -3409,20 +3411,16 @@ def test_triple_miller_loop(config, point_p, point_q, expected, clean_constant, 
     ("config", "point_p", "point_q", "miller_output_inverse", "expected"), generate_test_cases("test_triple_pairing")
 )
 def test_triple_pairing(config, point_p, point_q, miller_output_inverse, expected, clean_constant, save_to_json_folder):
-    lambdas = [[[s.to_list() for s in el] for el in point_q[i].get_lambdas(config.exp_miller_loop)] for i in range(3)]
+    gradients = [[[s.to_list() for s in el] for el in point_q[i].get_lambdas(config.exp_miller_loop)] for i in range(3)]
 
-    unlock = config.test_script_pairing.triple_pairing_input(
-        point_p1=point_p[0].to_list(),
-        point_p2=point_p[1].to_list(),
-        point_p3=point_p[2].to_list(),
-        point_q1=point_q[0].to_list(),
-        point_q2=point_q[1].to_list(),
-        point_q3=point_q[2].to_list(),
-        lambdas_q1_exp_miller_loop=lambdas[0],
-        lambdas_q2_exp_miller_loop=lambdas[1],
-        lambdas_q3_exp_miller_loop=lambdas[2],
-        miller_output_inverse=miller_output_inverse.to_list(),
+    unlocking_key = TriplePairingUnlockingKey(
+        [point_p[i].to_list() for i in range(3)],
+        [point_q[i].to_list() for i in range(3)],
+        gradients,
+        miller_output_inverse.to_list(),
     )
+
+    unlock = config.test_script_pairing.triple_pairing_input(unlocking_key=unlocking_key)
 
     # Check correct evaluation
     lock = config.test_script_pairing.triple_pairing(modulo_threshold=1, check_constant=True, clean_constant=False)
