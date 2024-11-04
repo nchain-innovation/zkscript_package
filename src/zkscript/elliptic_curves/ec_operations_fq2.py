@@ -180,10 +180,6 @@ class EllipticCurveFq2:
             - The input point `P` must be on the elliptic curve.
             - The modulo q must be a prime number.
             - `P` not the point at infinity
-
-        Notes:
-            This function assumes the input points are represented as minimally encoded, little-endian integers.
-
         """
         return (
             self.point_algebraic_doubling_verifying_gradient(

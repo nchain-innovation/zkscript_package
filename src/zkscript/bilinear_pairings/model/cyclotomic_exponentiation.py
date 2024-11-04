@@ -1,3 +1,8 @@
+"""cyclotomic_exponentiation module.
+
+This module enables constructing Bitcoin scripts that perform exponentiation in the cyclotomic subgroup.
+"""
+
 from math import ceil, log2
 
 from tx_engine import Script
@@ -6,16 +11,22 @@ from src.zkscript.util.utility_scripts import pick, verify_bottom_constant
 
 
 class CyclotomicExponentiation:
+    """Cyclotomic subgroup."""
     def __init__(self, q: int, cyclotomic_inverse, square, mul, extension_degree: int):
-        # Characteristic of the field
+        """Initialise the cyclotomic subgroup.
+
+        Args:
+            q: The characteristic of the base field F_q.
+            cyclotomic_inverse: Script to compute the cyclotomic inverse.
+            square: Script to compute the square in the field over which we compute the cyclotomic exponentiation.
+            mul: Script to compute the square in the field over which we compute the cyclotomic exponentiation.
+            extension_degree: Extension degree (over F_q) of the field over which we compute the cyclotomic
+                exponentiation.
+        """
         self.MODULUS = q
-        # Script to compute the cyclotomic inverse
         self.cyclotomic_inverse = cyclotomic_inverse
-        # Script to compute the square in the field over which we are compute the cyclotomic exponentiation
         self.square = square
-        # Script to compute the square in the field over which we are compute the cyclotomic exponentiation
         self.mul = mul
-        # Extension degree (over Fq) of the field  over which we are compute the cyclotomic exponentiation
         self.EXTENSION_DEGREE = extension_degree
 
     def cyclotomic_exponentiation(
@@ -26,23 +37,28 @@ class CyclotomicExponentiation:
         check_constant: bool | None = None,
         clean_constant: bool | None = None,
     ) -> Script:
-        """Compute exponentiation f^e for f in the cyclotomic subgroup.
+        """Exponentiation in the cyclotomic subgroup.
 
-        exp_e = [e_0, ..., e_(l-1)] such that:
-            - e := sum_(i=1)^(l-1) e_i 2^i
-            - e_i in {-1,0,1}
-            - e_(l-1) different from 0
+        Stack input:
+            - stack:    [q, ..., x], `x` in F_{q^k}
+            - altstack: []
 
-        Input parameters:
-            - Stack: q .. X
-            - Altstack: []
-        Output:
-            - X^e
-        Assumption on data:
-            - X is passed as an element in F_{q^k}
-        Variables:
-            - If take_modulo is set to True, then the coordinates of the result are in Z_q; otherwise, the coordinates
-            are not taken modulo q.
+        Stack output:
+            - stack:    [q, ..., x^e]
+            - altstack: []
+
+        Args:
+            exp_e (list[int]): Exponent `exp_e = [e_0, ..., e_(l-1)]` such that:
+                - `e := sum_(i=1)^(l-1) e_i 2^i`
+                - `e_i in {-1,0,1}`
+                - `e_(l-1) different from 0`
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            modulo_threshold (int): The threshold after which we reduce the result with the modulo. Given as ??? length.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
+
+        Returns:
+            Script to perform exponentiation in the cyclotomic subgroup.
         """
         # Bit size of q
         q = self.MODULUS

@@ -30,7 +30,8 @@ class LineFunctions:
         """Evaluate line through T and Q at P.
 
         Stack input:
-            - stack:    [q, ..., lambda, Q, P], `P` is in `E(F_q)`, `Q` is in `E'(F_q^2)`, `lambda` is in F_q^2
+            - stack:    [q, ..., lambda, Q, P], `P` is in `E(F_q)`, `Q` is in `E'(F_q^2)`, the quadratic twist,
+                `lambda` is in F_q^2
             - altstack: []
 
         Stack output:

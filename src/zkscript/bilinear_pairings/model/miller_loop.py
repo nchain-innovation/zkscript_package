@@ -1,4 +1,7 @@
-# Math
+"""miller_loop module.
+
+This module enables constructing Bitcoin scripts that compute the Miller loop.
+"""
 from math import ceil, log2
 
 from tx_engine import Script
@@ -8,44 +11,54 @@ from src.zkscript.util.utility_scripts import nums_to_script, pick, roll, verify
 
 
 class MillerLoop:
+    """Miller loop operation."""
     def miller_loop(
         self, modulo_threshold: int, check_constant: bool | None = None, clean_constant: bool | None = None
     ) -> Script:
-        """NOTE: In this function we assume that P and Q are not the point at infinity.
+        """Evaluation of the Miller loop at points `P` and `Q`.
 
-        Evaluation of the miller loop.
-        Input parameters:
-            - Stack: q .. lambdas P Q
-            - Altstack: []
-        Output:
-            - (t-1)Q miller(P,Q)
-        Assumption on data:
-            - P is passed as a couple of integers (minimally encoded, in little endian)
-            - Q is passed as a couple of elements in Fq2 (see Fq2.py)
-            - miller(P,Q) is in Fq4
+        Stack input:
+            - stack:    [q, ..., lambda, P, Q], `P` is a point on E(F_q), `Q` is a point on E(F_q^2)
+            - altstack: []
 
-        Modulo operations to save space: notice that point calculations (doubling and addition) and updates of f (the
-        return value of the Miller loop) come into contact
-        when we compute line evaluations. Hence, we work as follows:
-            - Carry out point evaluations
-            - Carry out updates of f
-            - Always mod out line evaluations
-            - Mod out point evaluation if next line evaluation overflows
-            - Mod out f if next multiplication with a line evaluation overflows
-        To estimate the size increases, we use:
-            - log2(f^2) <= log2(13*3) + 2*sizeF
-            - log2(f * lineEvaluation) <= log2(13*3) + sizeF + log2(q)
-            - log2(f * lineEvaluation * lineEvaluation) <= 2*log2(13*3) + sizeF + 2*log2(q)
-            - P + Q has its worst computation at lambda verification:
-            log2(lambda * (xP - xQ)) <= log2(q) + log2(2) + log2(max(xP,xQ)) (lambda is always assumed to be in Fq)
-            - P + Q has its worst coordinate at y:
-            log2(-y_P + (x_(P+Q) - x_P) * lambda) <= log2(max(2yP, 2 * lambda * x_(P+Q))
-                <= log2(max(2yP,4*x_(P+Q)))
-                <= log2(2*lambda*x_(P+Q))
-                <= log2(6) + log2(q) + log2(max(xP,xQ)),
-            where we used x_(P+Q) = lambda^2 - xP - xQ,
-            and log2(lambda^2 - xP - xQ) <= log2(3*max(xP,xQ))
-                <= log2(3) + log2(max(xP,xQ)) (lambda is always assumed to be in Fq)
+        Stack output:
+            - stack:    [q, ..., (t-1)Q, miller(P,Q)], `miller(P,Q)` is in F_q^4
+            - altstack: []
+
+        Args:
+            modulo_threshold (int): The threshold after which we reduce the result with the modulo. Given as ??? length.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
+
+        Returns:
+            Script to evaluate the Miller loop at points `P` and `Q`.
+
+        Preconditions:
+            `P` and `Q` are not the point at infinity.
+
+        Notes:
+            Modulo operations to save space: notice that point calculations (doubling and addition) and updates of f
+            (the return value of the Miller loop) come into contact when we compute line evaluations. Hence,
+            we work as follows:
+                - Carry out point evaluations
+                - Carry out updates of f
+                - Always mod out line evaluations
+                - Mod out point evaluation if next line evaluation overflows
+                - Mod out f if next multiplication with a line evaluation overflows
+            To estimate the size increases, we use:
+                - log2(f^2) <= log2(13*3) + 2*sizeF
+                - log2(f * lineEvaluation) <= log2(13*3) + sizeF + log2(q)
+                - log2(f * lineEvaluation * lineEvaluation) <= 2*log2(13*3) + sizeF + 2*log2(q)
+                - P + Q has its worst computation at lambda verification:
+                log2(lambda * (xP - xQ)) <= log2(q) + log2(2) + log2(max(xP,xQ)) (lambda is always assumed to be in Fq)
+                - P + Q has its worst coordinate at y:
+                log2(-y_P + (x_(P+Q) - x_P) * lambda) <= log2(max(2yP, 2 * lambda * x_(P+Q))
+                    <= log2(max(2yP,4*x_(P+Q)))
+                    <= log2(2*lambda*x_(P+Q))
+                    <= log2(6) + log2(q) + log2(max(xP,xQ)),
+                where we used x_(P+Q) = lambda^2 - xP - xQ,
+                and log2(lambda^2 - xP - xQ) <= log2(3*max(xP,xQ)) <= log2(3) + log2(max(xP,xQ)) (lambda is always
+                assumed to be in Fq)
         """
         q = self.MODULUS
         exp_miller_loop = self.exp_miller_loop
@@ -411,10 +424,16 @@ class MillerLoop:
     def miller_loop_input_data(
         self, point_p: list[int], point_q: list[int], lambdas_q_exp_miller_loop: list[list[list[int]]]
     ) -> Script:
-        """Return the input data required to execute the function miller_loop above.
+        """Input data required to execute the function `miller_loop`.
 
-        Take q, exp_miller_loop, P and Q, lambdas_Q as input.
-        lambdas_Q are the lambdas needed to compute the multiplication (t-1)Q. See unrolled_multiplication_input.
+        Args:
+            point_p (list[int]): Point `P` at which the Miller loop is evaluated.
+            point_q (list[int]): Point `Q` at which the Miller loop is evaluated.
+            lambdas_q_exp_miller_loop (list[list[list[int]]]): lambdas needed to compute the multiplication (t-1)Q. See
+                unrolled_multiplication_input.
+
+        Returns:
+            Script pushing the input data required to execute the function `miller_loop`.
         """
         out = nums_to_script([self.MODULUS])
         for i in range(len(lambdas_q_exp_miller_loop) - 1, -1, -1):
