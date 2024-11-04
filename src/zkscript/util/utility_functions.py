@@ -20,7 +20,6 @@ def optimise_script(script: Script) -> Script:
 
     Returns:
         The optimised script with redundant operations removed.
-
     """
     patterns = [
         ["OP_TOALTSTACK", "OP_FROMALTSTACK"],
@@ -57,7 +56,6 @@ def check_order(stack_elements: list[StackElements]) -> ValueError | None:
 
     Args:
         stack_elements (list[StackElements]): The list of stack elements to be checked
-
     """
     for i in range(len(stack_elements) - 1):
         overlaps, msg = stack_elements[i].overlaps_on_the_right(stack_elements[i + 1])
@@ -78,16 +76,12 @@ def boolean_list_to_bitmask(boolean_list: List[bool]) -> int:
     Example:
         >>> boolean_list_to_bitmask([True])
         1
-
         >>> boolean_list_to_bitmask([True,False])
         1
-
         >>> boolean_list_to_bitmask([False,True])
         2
-
         >>> boolean_list_to_bitmask([True,True])
         3
-
     """
     bitmask = 0
     for ix, option in enumerate(boolean_list):
@@ -101,16 +95,12 @@ def bitmask_to_boolean_list(bitmask: int, list_length: int) -> List[bool]:
     Example:
         >>> bitmask_to_boolean_list(1,1)
         [True]
-
         >>> bitmask_to_boolean_list(1,2)
         [True, False]
-
         >>> bitmask_to_boolean_list(2,2)
         [False, True]
-
         >>> bitmask_to_boolean_list(3,2)
         [True, True]
-
     """
     out = []
     while bitmask > 0:
@@ -120,5 +110,5 @@ def bitmask_to_boolean_list(bitmask: int, list_length: int) -> List[bool]:
 
 
 def bool_to_moving_function(is_rolled: bool) -> Union[pick, roll]:
-    """Map is_rolled (bool) to correspoding moving function."""
+    """Map is_rolled (bool) to corresponding moving function."""
     return roll if is_rolled else pick

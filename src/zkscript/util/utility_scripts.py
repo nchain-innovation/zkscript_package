@@ -262,9 +262,7 @@ def mod(
           altstack. The two opcodes added to the script if `stack_preparation = True`, modify the stack as follows:
             Let `stack_in = [1, 2], alt_stack_in = [3]`, after `OP_FROMALTSTACK OP_ROT`, we get:
             `stack_out = [2, 3, 1], alt_stack_out = []`.
-
     """
-
     out = Script.parse_string(stack_preparation)
 
     if is_positive:
@@ -304,7 +302,6 @@ def verify_bottom_constant(n: int) -> Script:
 
     Returns:
         A Bitcoin Script that verifies the constant against the value at the bottom of the stack.
-
     """
     return Script([OP_DEPTH, OP_1SUB, OP_PICK]) + nums_to_script([n]) + Script([OP_EQUALVERIFY])
 
@@ -312,7 +309,7 @@ def verify_bottom_constant(n: int) -> Script:
 def move(
     stack_element: StackElements, moving_function: Union[roll, pick], start_index: int = 0, end_index: int | None = None
 ) -> Script:
-    """Return the script that moves stack_element[start_index], .., stack_element[end_index] with moving_function."""
+    """Return the script that moves stack_element[start_index], ..., stack_element[end_index] with moving_function."""
     length = (
         1
         if not isinstance(stack_element, (StackFiniteFieldElement, StackEllipticCurvePoint))
