@@ -14,5 +14,5 @@ Usage example:
     >>> secp256k1_MODULUS = 115792089237316195423570985008687907853269984665640564039457584007908834671663
     >>> secp256k1_script = EllipticCurveFq(q=secp256k1_MODULUS,curve_a=0)
     >>>
-    >>> lock = secp256k1_script.point_addition(take_modulo=True,check_constant=True,clean_constant=True)
+    >>> lock = secp256k1_script.point_algebraic_addition(take_modulo=True,check_constant=True,clean_constant=True)
 """

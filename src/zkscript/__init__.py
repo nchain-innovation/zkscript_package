@@ -13,20 +13,20 @@ Usage example:
     >>> from src.zkscript.bilinear_pairings.bls12_381.parameters import a, r
     >>>
     >>> bls12_381 = Groth16(
-    >>>     pairing_model=bls12_381_pairing_model,
-    >>>     curve_a=a,
-    >>>     r=r
-    >>> )
+    ...     pairing_model=bls12_381_pairing_model,
+    ...     curve_a=a,
+    ...     r=r
+    ... )
     >>>
     >>> bls12_381_groth16_verifier = bls12_381.groth16_verifier(
-    >>>     modulo_threshold = 1,
-    >>>     alpha_beta = [0] * 12,                      # Dummy pairing e(alpha,beta)
-    >>>     minus_gamma = [0,0,0,0],                # Dummy element -gamma in G2
-    >>>     minus_delta = [0,0,0,0],                # Dummy element -delta in G2
-    >>>     gamma_abc = [[0,0],[0,0],[0,0],[0,0]],      # Dummy elements gamma_abc in G1
-    >>>     check_constant = True,
-    >>>     clean_constant = True,
-    >>> )
+    ...     modulo_threshold = 1,
+    ...     alpha_beta = [0] * 12,                      # Dummy pairing e(alpha,beta)
+    ...     minus_gamma = [0,0,0,0],                # Dummy element -gamma in G2
+    ...     minus_delta = [0,0,0,0],                # Dummy element -delta in G2
+    ...     gamma_abc = [[0,0],[0,0],[0,0],[0,0]],      # Dummy elements gamma_abc in G1
+    ...     check_constant = True,
+    ...     clean_constant = True,
+    ... )
 
 License:
     This package is released under the license found in `LICENSE.txt <LICENSE.txt>`_ located in the project root. If you

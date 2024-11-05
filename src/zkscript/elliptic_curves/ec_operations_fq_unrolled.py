@@ -200,9 +200,9 @@ class EllipticCurveFqUnrolled:
             - Let `exp_a = (a0, a1, ..., aN)` where `a = sum_i 2^i * ai`, and let `M = log2(max_multiplier)`.
             - Start with the point [xP yP].
             - Iterate from `M-1` to 0:
-                - If `N <= i < M`: Prepend `OP_0 OP_0` to the script.
+                - If `N <= i < M`: Prepend `OP_0` to the script.
                 - If `0 <= i < N`:
-                    - If `exp_a[i] == 0`: Prepend `OP_0 OP_0 lambda_2T OP_1`.
+                    - If `exp_a[i] == 0`: Prepend `OP_0 lambda_2T OP_1`.
                     - If `exp_a[i] == 1`: Prepend `lambda_(2T+P) OP_1 lambda_2T OP_1`.
             - Prepend the modulus `q`.
 
@@ -210,16 +210,16 @@ class EllipticCurveFqUnrolled:
 
             Example 1 (a = 3, max_multiplier = 8, N = 1, M = 3):
                 - `exp_a = (1,1)`, `lambdas = [[[lambda_(2T+P)], [lambda_2T]]]`
-                - Resulting script: [q lambda_(2T+P) OP_1 lambda_2T OP_1 OP_0 OP_0 OP_0 OP_0 xP yP].
+                - Resulting script: [q lambda_(2T+P) OP_1 lambda_2T OP_1 OP_0 OP_0 xP yP].
 
             Example 2 (a = 8, max_multiplier = 8, N = 3, M = 3):
                 - `exp_a = (0,0,0,1)`, `lambdas = [[[lambda_2T]], [[lambda_2T]], [[lambda_2T]]]`
-                - Resulting script: [q OP_0 OP_0 lambda_2T OP_1 OP_0 OP_0 lambda_2T OP_1 OP_0 OP_0 lambda_2T OP_1 xP yP]
+                - Resulting script: [q OP_0 lambda_2T OP_1 OP_0 lambda_2T OP_1 OP_0 lambda_2T OP_1 xP yP]
 
             The list indicates execution steps:
-                - `OP_0`: Skip loop execution and ignore following `OP_0`.
+                - `OP_0`: Skip loop execution.
                 - `OP_1`: Perform point doubling using the provided lambda_2T. If followed by another `OP_1`, perform
-                point addition using the provided lambda_(2T+P), otherwise ignore following `OP_0` and continue.
+                point addition using the provided lambda_(2T+P), otherwise continue.
 
         Example:
             >>> from src.zkscript.elliptic_curves.ec_operations_fq import EllipticCurveFq
@@ -230,10 +230,10 @@ class EllipticCurveFqUnrolled:
             >>> a = 3
             >>> lambdas = [[[8], [10]]]
             >>> ec_curve_unrolled.unrolled_multiplication_input(P, a, lambdas, max_multiplier=8)
-            0x11 OP_0 OP_10 OP_1 OP_8 OP_1 OP_0 OP_0 OP_0 OP_0 OP_6 OP_11
+            0x11 OP_0 OP_10 OP_1 OP_8 OP_1 OP_0 OP_0 OP_6 OP_11
 
-             ^     ^          ^         ^         ^         ^     ^    ^
-             q   marker     adding   doubling    pass      pass   xP   yP
+             ^     ^          ^         ^    ^    ^    ^    ^
+             q   marker     adding   double pass pass  xP   yP
         """
         M = int(log2(max_multiplier))
 

@@ -30,7 +30,7 @@ fq6_script = Fq6Script(q=q, base_field=fq2_script)
 fq12_script = Fq12ScriptModel(q=q, fq2=fq2_script, fq6=fq6_script, gammas_frobenius=GAMMAS)
 
 
-def to_quadratic() -> Script:
+def to_quadratic(self) -> Script:
     """Convert an element of Fq12Cubic (cubic extension of F_q^4) to Fq12 (quadratic extension of F_q^6).
 
     Stack input:

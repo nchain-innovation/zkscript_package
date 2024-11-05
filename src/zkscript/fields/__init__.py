@@ -21,9 +21,9 @@ Usage example:
     >>> from src.zkscript.fields.fq2 import Fq2
     >>> fq2_script = Fq2(q=19, non_residue=-1)
     >>> lock = fq2_script.add(
-    >>>     take_modulo = True,
-    >>>     check_constant = True,
-    >>>     clean_constant = True,
-    >>>     is_constant_reused = False
-    >>> )
+    ...     take_modulo = True,
+    ...     check_constant = True,
+    ...     clean_constant = True,
+    ...     is_constant_reused = False
+    ... )
 """
