@@ -5,7 +5,8 @@ This package provides subpackages for constructing Bitcoin scripts that perform 
 Subpackages:
     - bls12_381: Contains modules for constructing Bitcoin scripts that perform bilinear pairings over BLS12-381.
     - mnt4_753: Contains modules for constructing Bitcoin scripts that perform bilinear pairings over MNT4-753.
-    - model: Contains modules for ???
+    - model: Contains modules for constructing Bitcoin scripts that perform bilinear pairings and miller loop
+    computations.
 
 Usage example:
     >>> from src.zkscript.bilinear_pairings.bls12_381.bls12_381 import bls12_381
