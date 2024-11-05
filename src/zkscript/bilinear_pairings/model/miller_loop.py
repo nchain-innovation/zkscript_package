@@ -18,11 +18,12 @@ class MillerLoop:
         """Evaluation of the Miller loop at points `P` and `Q`.
 
         Stack input:
-            - stack:    [q, ..., lambda, P, Q], `P` is a point on E(F_q), `Q` is a point on E(F_q^2)
+            - stack:    [q, ..., lambdas, P, Q], `P` is a point on E(F_q), `Q` is a point on E'(F_q^{k/d}), `lambdas` is
+                the sequence of gradients to compute the miller loop
             - altstack: []
 
         Stack output:
-            - stack:    [q, ..., (t-1)Q, miller(P,Q)], `miller(P,Q)` is in F_q^4
+            - stack:    [q, ..., (t-1)Q, miller(P,Q)], `miller(P,Q)` is in F_q^k
             - altstack: []
 
         Args:
