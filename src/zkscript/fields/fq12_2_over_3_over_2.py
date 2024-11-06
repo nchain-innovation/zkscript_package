@@ -60,8 +60,8 @@ class Fq12:
             take_modulo (bool): If `True`, the result is reduced modulo `q`.
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
-            is_constant_reused (bool | None, optional): If `True`, at the end of the execution, q is left as the ???
-                element at the top of the stack.
+            is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
+                after execution. Defaults to `None`.
 
         Returns:
             Script to multiply two elements in F_q^12.
@@ -150,8 +150,8 @@ class Fq12:
             take_modulo (bool): If `True`, the result is reduced modulo `q`.
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
-            is_constant_reused (bool | None, optional): If `True`, at the end of the execution, q is left as the ???
-                element at the top of the stack.
+            is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
+                after execution. Defaults to `None`.
 
         Returns:
             Script to square an element in F_q^12.
@@ -373,8 +373,8 @@ class Fq12:
             take_modulo (bool): If `True`, the result is reduced modulo `q`.
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
-            is_constant_reused (bool | None, optional): If `True`, at the end of the execution, q is left as the second
-                element at the top of the stack.
+            is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
+                after execution. Defaults to `None`.
 
         Returns:
             Script to conjugate an element in F_q^12.
@@ -435,8 +435,8 @@ class Fq12:
             take_modulo (bool): If `True`, the result is reduced modulo `q`.
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
-            is_constant_reused (bool | None, optional): If `True`, at the end of the execution, q is left as the ???
-                element at the top of the stack.
+            is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
+                after execution. Defaults to `None`.
 
         Returns:
             Script to compute the Frobenius endomorphism for odd powers of an element in F_q^12.
@@ -555,8 +555,8 @@ class Fq12:
             take_modulo (bool): If `True`, the result is reduced modulo `q`.
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
-            is_constant_reused (bool | None, optional): If `True`, at the end of the execution, q is left as the ???
-                element at the top of the stack.
+            is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
+                after execution. Defaults to `None`.
 
         Returns:
             Script to compute the Frobenius endomorphism for even powers of an element in F_q^12.

@@ -52,7 +52,7 @@ class StackBaseElement:
 
 @dataclass(init=False)
 class StackNumber(StackBaseElement):
-    """Integer on the stack.
+    """Number on the stack.
 
     Attributes:
         position (int): the position of StackNumber on the stack.
