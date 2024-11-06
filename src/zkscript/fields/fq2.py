@@ -1,7 +1,4 @@
-"""fq2 module.
-
-This module enables constructing Bitcoin scripts that perform arithmetic operations in a quadratic extension of F_q.
-"""
+"""Bitcoin scripts that perform arithmetic operations in a quadratic extension of F_q."""
 
 from tx_engine import Script
 

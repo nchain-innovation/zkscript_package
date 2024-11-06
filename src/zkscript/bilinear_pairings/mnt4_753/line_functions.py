@@ -1,7 +1,4 @@
-"""line_functions module.
-
-This module enables constructing Bitcoin scripts that perform line evaluation for MNT4-753.
-"""
+"""Bitcoin scripts that perform line evaluation for MNT4-753."""
 
 from tx_engine import Script
 

@@ -1,7 +1,4 @@
-"""triple_miller_loop module.
-
-This module enables constructing Bitcoin scripts that compute the product of three Miller loops.
-"""
+"""Bitcoin scripts that compute the product of three Miller loops."""
 
 from math import ceil, log2
 

@@ -1,7 +1,4 @@
-"""ec_operations_fq_unrolled module.
-
-This module enables constructing Bitcoin scripts that perform elliptic curve arithmetic in E(F_q).
-"""
+"""Bitcoin scripts that perform elliptic curve arithmetic in E(F_q)."""
 
 from math import ceil, log2
 

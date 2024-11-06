@@ -1,7 +1,4 @@
-"""groth16 module.
-
-This module enables constructing Bitcoin scripts that perform Groth16 proof verification.
-"""
+"""Bitcoin scripts that perform Groth16 proof verification."""
 
 from math import log2
 

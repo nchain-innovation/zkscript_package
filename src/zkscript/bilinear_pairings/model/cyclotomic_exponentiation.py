@@ -1,7 +1,4 @@
-"""cyclotomic_exponentiation module.
-
-This module enables constructing Bitcoin scripts that perform exponentiation in the cyclotomic subgroup.
-"""
+"""Bitcoin scripts that perform exponentiation in the cyclotomic subgroup."""
 
 from math import ceil, log2
 

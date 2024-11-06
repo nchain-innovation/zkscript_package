@@ -1,7 +1,4 @@
-"""final_exponentiation module.
-
-This module enables constructing Bitcoin scripts that perform the final exponentiation in the Ate pairing for BLS12-381.
-"""
+"""Bitcoin scripts that perform the final exponentiation in the Ate pairing for BLS12-381."""
 
 from tx_engine import Script
 

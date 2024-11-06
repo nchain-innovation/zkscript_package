@@ -1,7 +1,4 @@
-"""miller_loop module.
-
-This module enables constructing Bitcoin scripts that compute the Miller loop.
-"""
+"""Bitcoin scripts that compute the Miller loop."""
 
 from math import ceil, log2
 

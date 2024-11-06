@@ -1,7 +1,4 @@
-"""pairing module.
-
-This module enables constructing Bitcoin scripts that compute bilinear pairing.
-"""
+"""Bitcoin scripts that compute bilinear pairing."""
 
 from tx_engine import Script
 
@@ -10,7 +7,7 @@ from src.zkscript.util.utility_scripts import nums_to_script, pick, roll, verify
 
 
 class Pairing:
-    """ "Pairing class."""
+    """Pairing class."""
 
     def single_pairing(
         self, modulo_threshold: int, check_constant: bool | None = None, clean_constant: bool | None = None

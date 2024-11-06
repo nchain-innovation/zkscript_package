@@ -1,7 +1,4 @@
-"""ec_operations_fq2 module.
-
-This module enables constructing Bitcoin scripts that perform elliptic curve arithmetic in E(F_q^2).
-"""
+"""Bitcoin scripts that perform elliptic curve arithmetic in E(F_q^2)."""
 
 from tx_engine import Script
 

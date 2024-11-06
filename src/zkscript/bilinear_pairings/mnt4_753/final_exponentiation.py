@@ -1,7 +1,4 @@
-"""final_exponentiation module.
-
-This module enables constructing Bitcoin scripts that perform the final exponentiation in the Ate pairing for MNT4-753.
-"""
+"""Bitcoin scripts that perform the final exponentiation in the Ate pairing for MNT4-753."""
 
 from tx_engine import Script
 

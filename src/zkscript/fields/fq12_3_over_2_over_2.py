@@ -1,7 +1,4 @@
-"""fq12_3_over_2_over_2 module.
-
-This module enables constructing Bitcoin scripts that perform arithmetic operations in a cubic extension of F_q^4.
-"""
+"""Bitcoin scripts that perform arithmetic operations in a cubic extension of F_q^4."""
 
 from tx_engine import Script
 

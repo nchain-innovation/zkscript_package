@@ -1,7 +1,4 @@
-"""line_functions module.
-
-This module enables constructing Bitcoin scripts that perform line evaluation for BLS12-381.
-"""
+"""Bitcoin scripts that perform line evaluation for BLS12-381."""
 
 from tx_engine import Script
 
