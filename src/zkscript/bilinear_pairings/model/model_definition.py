@@ -1,4 +1,5 @@
 """Pairing Model."""
+
 from src.zkscript.bilinear_pairings.model.miller_loop import MillerLoop
 from src.zkscript.bilinear_pairings.model.pairing import Pairing
 from src.zkscript.bilinear_pairings.model.triple_miller_loop import TripleMillerLoop
@@ -6,6 +7,7 @@ from src.zkscript.bilinear_pairings.model.triple_miller_loop import TripleMiller
 
 class PairingModel(MillerLoop, TripleMillerLoop, Pairing):
     """Pairing Model."""
+
     def __init__(
         self,
         q,

@@ -1,4 +1,5 @@
 """Import finite field arithmetic for MNT4-753."""
+
 from src.zkscript.bilinear_pairings.mnt4_753.parameters import GAMMAS, NON_RESIDUE_FQ, q
 from src.zkscript.fields.fq2 import Fq2 as Fq2ScriptModel
 from src.zkscript.fields.fq2 import fq2_for_towering

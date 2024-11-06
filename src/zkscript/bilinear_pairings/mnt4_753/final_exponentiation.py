@@ -2,6 +2,7 @@
 
 This module enables constructing Bitcoin scripts that perform the final exponentiation in the Ate pairing for MNT4-753.
 """
+
 from tx_engine import Script
 
 from src.zkscript.bilinear_pairings.mnt4_753.fields import fq2_script, fq4_script
@@ -12,6 +13,7 @@ from src.zkscript.util.utility_scripts import pick, verify_bottom_constant
 
 class FinalExponentiation(CyclotomicExponentiation):
     """Final exponentiation in the Ate pairing for MNT4-753."""
+
     def __init__(self, fq2, fq4):
         """Initialise the final exponentiation for MNT4-753.
 
@@ -103,7 +105,7 @@ class FinalExponentiation(CyclotomicExponentiation):
 
         Args:
             take_modulo (bool): If `True`, the result is reduced modulo `q`.
-            modulo_threshold (int): The threshold after which we reduce the result with the modulo. Given as bit length.
+            modulo_threshold (int): Bit-length threshold. Values whose bit-length exceeds it are reduced modulo `q`.
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
 

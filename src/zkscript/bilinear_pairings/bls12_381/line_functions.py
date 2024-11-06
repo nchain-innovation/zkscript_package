@@ -2,6 +2,7 @@
 
 This module enables constructing Bitcoin scripts that perform line evaluation for BLS12-381.
 """
+
 from tx_engine import Script
 
 from src.zkscript.bilinear_pairings.bls12_381.fields import fq2_script

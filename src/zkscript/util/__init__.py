@@ -1,1 +1,4 @@
-"""This package contains utility functions to ease script construction."""
+"""util package.
+
+This package contains utility functions to ease script construction.
+"""

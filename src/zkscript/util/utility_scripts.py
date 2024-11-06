@@ -230,13 +230,13 @@ def mod(
     operation can be customised using the provided parameters.
 
     Args:
-        stack_preparation (`str`, optional): Prepare the stack before performing the modulo operation. Defaults to
+        stack_preparation (str, optional): Prepare the stack before performing the modulo operation. Defaults to
         `OP_FROMALTSTACK OP_ROT`.
-        is_mod_on_top (`bool`, optional): If `True`, the modulo constant is the one at the top of the stack after the
+        is_mod_on_top (bool, optional): If `True`, the modulo constant is the one at the top of the stack after the
             stack preparation, else the modulo constant is the second one from the top of the stack. Defaults to `True`.
-        is_positive (`bool`, optional): If `True`, adds operations to ensure the modulo value is positive.
+        is_positive (bool, optional): If `True`, adds operations to ensure the modulo value is positive.
             Defaults to `True`.
-        is_constant_reused (`bool`, optional): If `True`, modifies the script to leave the modulo constant on the stack.
+        is_constant_reused (bool, optional): If `True`, modifies the script to leave the modulo constant on the stack.
             Defaults to `True`.
 
     Returns:
@@ -298,7 +298,7 @@ def verify_bottom_constant(n: int) -> Script:
     the top of the stack. If the check passes, the script continues; otherwise, it terminates the transaction.
 
     Args:
-        n (`int`): The constant value to check against.
+        n (int): The constant value to check against.
 
     Returns:
         A Bitcoin Script that verifies the constant against the value at the bottom of the stack.

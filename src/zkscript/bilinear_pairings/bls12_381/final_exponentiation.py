@@ -2,6 +2,7 @@
 
 This module enables constructing Bitcoin scripts that perform the final exponentiation in the Ate pairing for BLS12-381.
 """
+
 from tx_engine import Script
 
 from src.zkscript.bilinear_pairings.bls12_381.fields import fq12_script, fq12cubic_script
@@ -12,6 +13,7 @@ from src.zkscript.util.utility_scripts import pick, roll, verify_bottom_constant
 
 class FinalExponentiation(CyclotomicExponentiation):
     """Final exponentiation in the Ate pairing for BLS12-381."""
+
     def __init__(self, fq12):
         """Initialise the final exponentiation for BLS12-381.
 
@@ -114,7 +116,7 @@ class FinalExponentiation(CyclotomicExponentiation):
 
         Args:
             take_modulo (bool): If `True`, the result is reduced modulo `q`.
-            modulo_threshold (int): The threshold after which we reduce the result with the modulo. Given as bit length.
+            modulo_threshold (int): Bit-length threshold. Values whose bit-length exceeds it are reduced modulo `q`.
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
 

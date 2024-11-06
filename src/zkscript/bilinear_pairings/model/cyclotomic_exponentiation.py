@@ -12,6 +12,7 @@ from src.zkscript.util.utility_scripts import pick, verify_bottom_constant
 
 class CyclotomicExponentiation:
     """Cyclotomic subgroup."""
+
     def __init__(self, q: int, cyclotomic_inverse, square, mul, extension_degree: int):
         """Initialise the cyclotomic subgroup.
 
@@ -53,7 +54,7 @@ class CyclotomicExponentiation:
                 - `e_i in {-1,0,1}`
                 - `e_(l-1) different from 0`
             take_modulo (bool): If `True`, the result is reduced modulo `q`.
-            modulo_threshold (int): The threshold after which we reduce the result with the modulo. Given as ??? length.
+            modulo_threshold (int): Bit-length threshold. Values whose bit-length exceeds it are reduced modulo `q`.
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
 

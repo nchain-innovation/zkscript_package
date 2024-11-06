@@ -71,8 +71,7 @@ class Groth16(PairingModel):
             - altstack: []
 
         Args:
-            modulo_threshold (int): The threshold after which the result is reduced using the modulo operation.
-                Specified as a bit length.
+            modulo_threshold (int): Bit-length threshold. Values whose bit-length exceeds it are reduced modulo `q`.
             alpha_beta (list[int]): List of integers representing the alpha and beta coefficients for the computation.
             minus_gamma (list[int]): List of integers representing the negated gamma values for the computation.
             minus_delta (list[int]): List of integers representing the negated delta values for the computation

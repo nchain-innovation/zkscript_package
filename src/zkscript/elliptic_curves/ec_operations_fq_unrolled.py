@@ -20,6 +20,7 @@ class EllipticCurveFqUnrolled:
         MODULUS: The characteristic of the field F_q.
         EC_OVER_FQ: The script implementation for the elliptic curve E(F_q).
     """
+
     def __init__(self, q: int, ec_over_fq: EllipticCurveFq):
         """Initialise the elliptic curve group E(F_q).
 
@@ -51,7 +52,7 @@ class EllipticCurveFqUnrolled:
 
         Args:
             max_multiplier (int): The maximum value of the scalar `a`.
-            modulo_threshold (int): The threshold after which we reduce the result with the modulo. Given as bit length.
+            modulo_threshold (int): Bit-length threshold. Values whose bit-length exceeds it are reduced modulo `q`.
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
 

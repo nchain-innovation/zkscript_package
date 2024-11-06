@@ -2,6 +2,7 @@
 
 This module enables constructing Bitcoin scripts that compute the Miller loop.
 """
+
 from math import ceil, log2
 
 from tx_engine import Script
@@ -12,6 +13,7 @@ from src.zkscript.util.utility_scripts import nums_to_script, pick, roll, verify
 
 class MillerLoop:
     """Miller loop operation."""
+
     def miller_loop(
         self, modulo_threshold: int, check_constant: bool | None = None, clean_constant: bool | None = None
     ) -> Script:
@@ -27,7 +29,7 @@ class MillerLoop:
             - altstack: []
 
         Args:
-            modulo_threshold (int): The threshold after which we reduce the result with the modulo. Given as ??? length.
+            modulo_threshold (int): Bit-length threshold. Values whose bit-length exceeds it are reduced modulo `q`.
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
 
