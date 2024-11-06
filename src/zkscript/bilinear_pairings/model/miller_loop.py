@@ -40,8 +40,8 @@ class MillerLoop:
         """
         shift = 0 if i == len(self.exp_miller_loop) - 2 else self.N_ELEMENTS_MILLER_OUTPUT
         out = Script()
-        # stack in:  [gradient_(2T) P Q T {f_i^2}]
-        # stack out: [gradient_(2T) P Q T {f_i^2} ev_(l_(T,T))(P)]
+        # stack in:  [gradient_(2T), P, Q, T, {f_i^2}]
+        # stack out: [gradient_(2T), P, Q, T, {f_i^2}, ev_(l_(T,T))(P)]
         out += self.line_eval(
             take_modulo=take_modulo[0] if i == len(self.exp_miller_loop) - 2 else False,
             positive_modulo=False,
@@ -53,13 +53,13 @@ class MillerLoop:
             rolling_options=0,
         )  # Compute ev_(l_(T,T))(P)
         if i != len(self.exp_miller_loop) - 2:
-            # stack in:  [gradient_(2T) P Q T {f_i^2} ev_(l_(T,T))(P)]
-            # stack out: [gradient_(2T) P Q T ({f_i^2} * ev_(l_(T,T))(P))]
+            # stack in:  [gradient_(2T), P, Q, T, {f_i^2}, ev_(l_(T,T))(P)]
+            # stack out: [gradient_(2T), P, Q, T, ({f_i^2} * ev_(l_(T,T))(P))]
             out += self.miller_loop_output_times_eval(
                 take_modulo=take_modulo[0], positive_modulo=positive_modulo and (i==0), check_constant=False, clean_constant=False, is_constant_reused=False
             )
-        # stack in:  [gradient_(2T) P Q T ({f_i^2} * ev_(l_(T,T))(P))]
-        # stack out: [gradient_(2T) P Q T]
+        # stack in:  [gradient_(2T), P, Q, T, ({f_i^2} * ev_(l_(T,T))(P))]
+        # stack out: [gradient_(2T), P, Q, T]
         # altstack out: [({f_i^2} * ev_(l_(T,T))(P))]
         out += Script.parse_string(
             " ".join(
@@ -71,9 +71,9 @@ class MillerLoop:
                 )
             )
         )
-        # stack in:     [gradient_(2T) P Q T]
+        # stack in:     [gradient_(2T), P, Q, T]
         # altstack in:  [({f_i^2} * ev_(l_(T,T))(P))]
-        # stack out:    [P Q 2T]
+        # stack out:    [P, Q, 2T]
         # altstack out: [({f_i^2} * ev_(l_(T,T))(P))]
         out += self.point_doubling_twisted_curve(
             take_modulo=take_modulo[1],
@@ -85,9 +85,9 @@ class MillerLoop:
             P=T,
             rolling_options=3,
         )
-        # stack in:    [P Q 2T]
+        # stack in:    [P, Q, 2T]
         # altstack in: [({f_i^2} * ev_(l_(T,T))(P))]
-        # stack out:   [P Q 2T ({f_i^2} * ev_(l_(T,T))(P))]
+        # stack out:   [P, Q, 2T, ({f_i^2} * ev_(l_(T,T))(P))]
         out += Script.parse_string(
             " ".join(
                 ["OP_FROMALTSTACK"]
@@ -134,8 +134,8 @@ class MillerLoop:
         """
         shift = 0 if i == len(self.exp_miller_loop) - 2 else self.N_ELEMENTS_MILLER_OUTPUT
         out = Script()
-        # stack in:  [gradient_(2T ± Q) gradient_(2T) P Q T {f_i^2}]
-        # stack out: [gradient_(2T ± Q) gradient_(2T) P Q T {f_i^2} ev_(l_(T,T))(P)]
+        # stack in:  [gradient_(2T ± Q), gradient_(2T), P, Q, T, {f_i^2}]
+        # stack out: [gradient_(2T ± Q), gradient_(2T), P, Q, T, {f_i^2}, ev_(l_(T,T))(P)]
         out += self.line_eval(
             take_modulo=True,
             positive_modulo=False,
@@ -146,8 +146,8 @@ class MillerLoop:
             Q=T.shift(shift),
             rolling_options=0,
         )  # Compute ev_(l_(T,T))(P)
-        # stack in:  [gradient_(2T ± Q) gradient_(2T) P Q T {f_i^2} ev_(l_(T,T))(P)]
-        # stack out: [gradient_(2T ± Q) gradient_(2T) P Q T {f_i^2} ev_(l_(T,T))(P) ev_(l_(2T, ± Q))(P)]
+        # stack in:  [gradient_(2T ± Q), gradient_(2T), P, Q, T, {f_i^2}, ev_(l_(T,T))(P)]
+        # stack out: [gradient_(2T ± Q), gradient_(2T), P, Q, T, {f_i^2}, ev_(l_(T,T))(P), ev_(l_(2T, ± Q))(P)]
         out += self.line_eval(
             take_modulo=True,
             positive_modulo=False,
@@ -158,8 +158,8 @@ class MillerLoop:
             Q=Q.shift(self.N_ELEMENTS_EVALUATION_OUTPUT + shift).set_negate(self.exp_miller_loop[i] == -1),
             rolling_options=0,
         )  # Compute ev_(l_(2T, ±Q))(P)
-        # stack in:  [gradient_(2T ± Q) gradient_(2T) P Q T {f_i^2} ev_(l_(T,T))(P) ev_(l_(2T, ± Q))(P)]
-        # stack out: [gradient_(2T ± Q) gradient_(2T) P Q T {f_i^2} (ev_(l_(T,T))(P) * ev_(l_(2T, ± Q))(P))^2]
+        # stack in:  [gradient_(2T ± Q), gradient_(2T), P, Q, T, {f_i^2}, ev_(l_(T,T))(P), ev_(l_(2T, ± Q))(P)]
+        # stack out: [gradient_(2T ± Q), gradient_(2T), P, Q, T, {f_i^2}, (ev_(l_(T,T))(P) * ev_(l_(2T, ± Q))(P))^2]
         out += self.line_eval_times_eval(
             take_modulo=take_modulo[0] if i == len(self.exp_miller_loop) - 2 else False,
             positive_modulo=False,
@@ -167,8 +167,9 @@ class MillerLoop:
             clean_constant=False,
         )
         if i != len(self.exp_miller_loop) - 2:
-            # stack in:  [gradient_(2T ± Q) gradient_(2T) P Q T {f_i^2} (ev_(l_(T,T))(P) * ev_(l_(2T, ± Q))(P))^2]
-            # stack out: [gradient_(2T ± Q) gradient_(2T) P Q T ({f_i^2} * ev_(l_(T,T))(P) * ev_(l_(2T, ± Q))(P))^2]
+            # stack in:  [gradient_(2T ± Q), gradient_(2T), P, Q, T, {f_i^2}, (ev_(l_(T,T))(P) * ev_(l_(2T, ± Q))(P))^2]
+            # stack out: [gradient_(2T ± Q), gradient_(2T), P, Q, T,
+            #               ({f_i^2} * ev_(l_(T,T))(P) * ev_(l_(2T, ± Q))(P))^2]
             out += self.miller_loop_output_times_eval_times_eval(
                 take_modulo=take_modulo[0],
                 positive_modulo=positive_modulo and (i==0),
@@ -176,8 +177,8 @@ class MillerLoop:
                 clean_constant=False,
                 is_constant_reused=False,
             )
-        # stack in:     [gradient_(2T ± Q) gradient_(2T) P Q T ({f_i^2} * ev_(l_(T,T))(P) * ev_(l_(2T, ± Q))(P))^2]
-        # stack out:    [gradient_(2T ± Q) gradient_(2T) P Q T]
+        # stack in:     [gradient_(2T ± Q), gradient_(2T), P, Q, T, ({f_i^2} * ev_(l_(T,T))(P) * ev_(l_(2T, ± Q))(P))^2]
+        # stack out:    [gradient_(2T ± Q), gradient_(2T), P, Q, T]
         # altstack out: [({f_i^2} * ev_(l_(T,T))(P) * ev_(l_(2T, ± Q))(P))^2]
         out += Script.parse_string(
             " ".join(
@@ -189,9 +190,9 @@ class MillerLoop:
                 )
             )
         )
-        # stack in:     [gradient_(2T ± Q) gradient_(2T) P Q T]
+        # stack in:     [gradient_(2T ± Q), gradient_(2T), P, Q, T]
         # altstack in:  [({f_i^2} * ev_(l_(T,T))(P) * ev_(l_(2T, ± Q))(P))^2]
-        # stack out:    [gradient_(2T ± Q) P Q 2T]
+        # stack out:    [gradient_(2T ± Q), P, Q, 2T]
         # altstack out: [({f_i^2} * ev_(l_(T,T))(P) * ev_(l_(2T, ± Q))(P))^2]
         out += self.point_doubling_twisted_curve(
             take_modulo=False,
@@ -203,9 +204,9 @@ class MillerLoop:
             P=T,
             rolling_options=3,
         )  # Compute 2T
-        # stack in:     [gradient_(2T ± Q) P Q 2T]
+        # stack in:     [gradient_(2T ± Q), P, Q, 2T]
         # altstack in:  [({f_i^2} * ev_(l_(T,T))(P) * ev_(l_(2T, ± Q))(P))^2]
-        # stack out:    [P Q (2T ± Q)]
+        # stack out:    [P, Q, (2T ± Q)]
         # altstack out: [({f_i^2} * ev_(l_(T,T))(P) * ev_(l_(2T, ± Q))(P))^2]
         out += self.point_addition_twisted_curve(
             take_modulo=take_modulo[1],
@@ -218,9 +219,9 @@ class MillerLoop:
             Q=T,
             rolling_options=5,
         )  # Compute (2T ± Q)
-        # stack in:     [P Q (2T ± Q)]
+        # stack in:     [P, Q, (2T ± Q)]
         # altstack in:  [({f_i^2} * ev_(l_(T,T))(P) * ev_(l_(2T, ± Q))(P))^2]
-        # stack out:    [P Q (2T ± Q) ({f_i^2} * ev_(l_(T,T))(P) * ev_(l_(2T, ± Q))(P))^2]
+        # stack out:    [P, Q, (2T ± Q), ({f_i^2} * ev_(l_(T,T))(P) * ev_(l_(2T, ± Q))(P))^2]
         # altstack out: []
         out += Script.parse_string(
             " ".join(
@@ -290,8 +291,8 @@ class MillerLoop:
         """
         out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
-        # stack in:  [P Q]
-        # stack out: [P Q T]
+        # stack in:  [P, Q]
+        # stack out: [P, Q, T]
         for j in range(self.N_POINTS_TWIST):
             out += pick(position=self.N_POINTS_TWIST - 1, n_elements=1)
             if self.exp_miller_loop[-1] == -1 and j >= self.N_POINTS_TWIST // 2:
@@ -323,8 +324,8 @@ class MillerLoop:
             StackFiniteFieldElement(self.N_POINTS_TWIST - 1, False, self.N_POINTS_TWIST // 2),
             StackFiniteFieldElement(self.N_POINTS_TWIST // 2 - 1, False, self.N_POINTS_TWIST // 2),
         )
-        # stack in:  [P Q T]
-        # stack out: [w*Q miller(P,Q)]
+        # stack in:  [P, Q, T]
+        # stack out: [w*Q, miller(P,Q)]
         for i in range(len(self.exp_miller_loop) - 2, -1, -1):
             take_modulo_F = False
             take_modulo_T = False
@@ -367,8 +368,8 @@ class MillerLoop:
 
             if i == len(self.exp_miller_loop) - 3:
                 if self.exp_miller_loop[i + 1] == 0:
-                    # stack in:  [P Q T ev_(l_(T,T))(P)]
-                    # stack out: [P Q T Dense(ev_(l_(T,T))(P)^2)]
+                    # stack in:  [P, Q, T, ev_(l_(T,T))(P)]
+                    # stack out: [P, Q, T, Dense(ev_(l_(T,T))(P)^2)]
                     out += pick(
                         position=self.N_ELEMENTS_EVALUATION_OUTPUT - 1, n_elements=self.N_ELEMENTS_EVALUATION_OUTPUT
                     )  # Duplicate ev_(l_(T,T))(P)
@@ -377,8 +378,8 @@ class MillerLoop:
                     )
                     out += self.pad_eval_times_eval_to_miller_output
                 else:
-                    # stack in:  [P Q T ev_(l_(T,T))(P) ev_(l_(2T, ± Q))(P)]
-                    # stack out: [P Q T (ev_(l_(T,T))(P) * ev_(l_(2T, ± Q))(P))^2]
+                    # stack in:  [P, Q, T, ev_(l_(T,T))(P), ev_(l_(2T, ± Q))(P)]
+                    # stack out: [P, Q, T, Dense((ev_(l_(T,T))(P) * ev_(l_(2T, ± Q))(P))^2)]
                     out += pick(
                         position=self.N_ELEMENTS_EVALUATION_TIMES_EVALUATION - 1,
                         n_elements=self.N_ELEMENTS_EVALUATION_TIMES_EVALUATION,
@@ -389,25 +390,25 @@ class MillerLoop:
                     out += self.pad_eval_times_eval_times_eval_times_eval_to_miller_output
 
             if i < len(self.exp_miller_loop) - 3:
-                # stack in:  [gradient_(2T) P Q T f_i]
-                # stack out: [gradient_(2T) P Q T f_i^2]
+                # stack in:  [gradient_(2T), P, Q, T, f_i]
+                # stack out: [gradient_(2T), P, Q, T, f_i^2]
                 out += self.miller_loop_output_square(take_modulo=True, check_constant=False, clean_constant=False, positive_modulo=False)
 
             if self.exp_miller_loop[i] == 0:
-                # stack in:  [gradient_(2T) P Q T f_i^2]
-                # stack out: [P Q 2T (f_i^2 * ev_(l_(T,T))(P))]
+                # stack in:  [gradient_(2T), P, Q, T, f_i^2]
+                # stack out: [P, Q, 2T, (f_i^2 * ev_(l_(T,T))(P))]
                 out += self.__one_step_without_addition(
                     i, [take_modulo_F, take_modulo_T], clean_constant, positive_modulo_i, gradient_doubling, P, T
                 )
             else:
-                # stack in:  [gradient_(2T ± Q) gradient_(2T) P Q T f_i^2]
-                # stack out: [P Q (2T ± Q) (f_i^2 * ev_(l_(T,T))(P) * ev_(l_(2T, ± Q))(P))]
+                # stack in:  [gradient_(2T ± Q), gradient_(2T), P, Q, T, f_i^2]
+                # stack out: [P, Q, (2T ± Q), (f_i^2 * ev_(l_(T,T))(P) * ev_(l_(2T, ± Q))(P))]
                 out += self.__one_step_with_addition(
                     i, [take_modulo_F, take_modulo_T], clean_constant, positive_modulo_i, gradient_doubling, gradient_addition, P, Q, T
                 )
 
-        # stack in:  [P Q w*Q miller(P,Q)]
-        # stack out: [w*Q miller(P,Q)]
+        # stack in:  [P, Q, w*Q, miller(P,Q)]
+        # stack out: [w*Q, miller(P,Q)]
         out += move(Q.shift(self.N_ELEMENTS_MILLER_OUTPUT), roll)  # Roll Q
         out += move(P.shift(self.N_ELEMENTS_MILLER_OUTPUT), roll)  # Roll P
         out += Script.parse_string(" ".join(["OP_DROP"] * (self.N_POINTS_TWIST + self.N_POINTS_CURVE)))

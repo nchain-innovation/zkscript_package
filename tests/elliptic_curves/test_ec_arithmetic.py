@@ -11,6 +11,7 @@ from src.zkscript.elliptic_curves.ec_operations_fq import EllipticCurveFq
 from src.zkscript.elliptic_curves.ec_operations_fq2 import EllipticCurveFq2
 from src.zkscript.elliptic_curves.ec_operations_fq_unrolled import EllipticCurveFqUnrolled
 from src.zkscript.fields.fq2 import Fq2 as Fq2ScriptModel
+from src.zkscript.types.unlocking_keys.unrolled_ec_multiplication import EllipticCurveFqUnrolledUnlockingKey
 from src.zkscript.util.utility_scripts import nums_to_script
 from tests.elliptic_curves.util import (
     generate_test,
@@ -742,15 +743,13 @@ def test_addition_unknown_points(config, P, Q, positive_modulo, expected, save_t
 
 @pytest.mark.parametrize(("config", "P", "a", "expected"), generate_test_cases("test_multiplication_unrolled"))
 def test_multiplication_unrolled(config, P, a, expected, save_to_json_folder):  # noqa: N803
-    exp_a = [int(bin(a)[j]) for j in range(2, len(bin(a)))][::-1]
-
-    unlock = config.test_script_unrolled.unrolled_multiplication_input(
-        P=P.to_list(),
-        a=a,
-        lambdas=[[s.to_list() for s in el] for el in P.get_lambdas(exp_a)] if a else [],
-        max_multiplier=config.order,
-        load_modulus=True,
+    binary_expansion_a = [int(bin(a)[j]) for j in range(2, len(bin(a)))][::-1]
+    gradients = [[s.to_list() for s in el] for el in P.get_lambdas(binary_expansion_a)] if a else None
+    unlocking_key = EllipticCurveFqUnrolledUnlockingKey(
+        P=P.to_list(), a=a, gradients=gradients, max_multiplier=config.order
     )
+
+    unlock = unlocking_key.to_unlocking_script(config.test_script_unrolled, load_modulus=True)
 
     lock = config.test_script_unrolled.unrolled_multiplication(
         max_multiplier=config.order, modulo_threshold=1, check_constant=True, clean_constant=True

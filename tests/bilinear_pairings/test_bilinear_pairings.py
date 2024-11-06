@@ -37,10 +37,12 @@ from src.zkscript.bilinear_pairings.mnt4_753.miller_output_operations import (
     miller_output_ops as miller_output_ops_mnt4_753,
 )
 from src.zkscript.bilinear_pairings.mnt4_753.mnt4_753 import mnt4_753
-from src.zkscript.types.unlocking_keys import (
+from src.zkscript.types.unlocking_keys.miller_loops import (
     MillerLoopUnlockingKey,
-    SinglePairingUnlockingKey,
     TripleMillerLoopUnlockingKey,
+)
+from src.zkscript.types.unlocking_keys.pairings import (
+    SinglePairingUnlockingKey,
     TriplePairingUnlockingKey,
 )
 from src.zkscript.util.utility_scripts import nums_to_script
@@ -3340,7 +3342,7 @@ def test_miller_loop(config, point_p, point_q, q_times_val_miller_loop, expected
 
     unlocking_key = MillerLoopUnlockingKey(point_p.to_list(), point_q.to_list(), gradients)
 
-    unlock = config.test_script_pairing.miller_loop_input_data(unlocking_key)
+    unlock = unlocking_key.to_unlocking_script(config.test_script_pairing)
 
     # Check correct evaluation
     lock = config.test_script_pairing.miller_loop(modulo_threshold=1, check_constant=True, clean_constant=False)
@@ -3371,7 +3373,7 @@ def test_single_pairing(config, point_p, point_q, miller_output_inverse, expecte
 
     unlocking_key = SinglePairingUnlockingKey(point_p, point_q, gradients, miller_output_inverse)
 
-    unlock = config.test_script_pairing.single_pairing_input(unlocking_key=unlocking_key)
+    unlock = unlocking_key.to_unlocking_script(config.test_script_pairing)
 
     # Check correct evaluation
     lock = config.test_script_pairing.single_pairing(modulo_threshold=1, check_constant=True, clean_constant=False)
@@ -3394,7 +3396,7 @@ def test_triple_miller_loop(config, point_p, point_q, expected, clean_constant, 
         gradients,
     )
 
-    unlock = config.test_script_pairing.triple_miller_loop_input(unlocking_key)
+    unlock = unlocking_key.to_unlocking_script(config.test_script_pairing)
 
     # Check correct evaluation
     lock = config.test_script_pairing.triple_miller_loop(modulo_threshold=1, check_constant=True, clean_constant=False)
@@ -3420,7 +3422,7 @@ def test_triple_pairing(config, point_p, point_q, miller_output_inverse, expecte
         miller_output_inverse.to_list(),
     )
 
-    unlock = config.test_script_pairing.triple_pairing_input(unlocking_key=unlocking_key)
+    unlock = unlocking_key.to_unlocking_script(config.test_script_pairing)
 
     # Check correct evaluation
     lock = config.test_script_pairing.triple_pairing(modulo_threshold=1, check_constant=True, clean_constant=False)

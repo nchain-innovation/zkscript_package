@@ -2,9 +2,8 @@
 
 from tx_engine import Script
 
-from src.zkscript.types.unlocking_keys import SinglePairingUnlockingKey, TriplePairingUnlockingKey
 from src.zkscript.util.utility_functions import optimise_script
-from src.zkscript.util.utility_scripts import nums_to_script, pick, roll, verify_bottom_constant
+from src.zkscript.util.utility_scripts import pick, roll, verify_bottom_constant
 
 
 class Pairing:
@@ -167,4 +166,3 @@ class Pairing:
         )
 
         return optimise_script(out)
-
