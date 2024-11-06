@@ -1,6 +1,6 @@
-"""zkscript: A Python package for generating Bitcoin SV scripts for cryptographic applications.
+"""zkscript: A Python library for generating Bitcoin SV scripts for cryptographic applications.
 
-The `zkscript` package provides utilities and functions to generate Bitcoin SV scripts programmatically.
+The `zkscript` library provides utilities and functions to generate Bitcoin SV scripts programmatically.
 It supports the creation of scripts that can perform various cryptographic operations such as finite
 field arithmetic, elliptic curve arithmetic, and bilinear pairings. By leveraging these scripts, it becomes possible
 to construct advanced cryptographic applications such as zero-knowledge proof verification.
