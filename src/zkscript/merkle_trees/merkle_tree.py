@@ -42,12 +42,12 @@ class MerkleTree:
         [... aux_i bit_i ... aux_1 bit_1 d]
 
         Args:
-            d (`str`): Data for which the Merkle root is being proved, as a hexadecimal string.
-            aux (`list[str]`): List of hexadecimal strings representing auxiliary data.
-            bit (`list[bool]`): List of boolean values specifying if the current node is a left or right child.
+            d (str): Data for which the Merkle root is being proved, as a hexadecimal string.
+            aux (list[str]): List of hexadecimal strings representing auxiliary data.
+            bit (list[bool]): List of boolean values specifying if the current node is a left or right child.
 
         Returns:
-            Script: Unlocking script for use with `locking_merkle_proof_with_bit_flags`.
+            Unlocking script for use with `locking_merkle_proof_with_bit_flags`.
 
         Raises:
             AssertionError: If `d`, `aux`, or `bit` have invalid formats or incorrect lengths.
@@ -88,11 +88,11 @@ class MerkleTree:
                     else `self.hash(aux_{self.depth-1} || h_{self.depth-1})`
 
         Args:
-            is_equal_verify (`bool`): If `True`, use `OP_EQUALVERIFY` in the final verification step, otherwise
+            is_equal_verify (bool): If `True`, use `OP_EQUALVERIFY` in the final verification step, otherwise
                 `OP_EQUAL`. Default to `False`.
 
         Returns:
-            Script: Locking script for verifying a Merkle path using a bit flag to identify right and left nodes.
+            Locking script for verifying a Merkle path using a bit flag to identify right and left nodes.
 
         Notes:
             - Assumes `self.hash_function` is a valid Bitcoin Script hash function (e.g., `OP_SHA256`).
@@ -130,12 +130,12 @@ class MerkleTree:
         [... aux_{0,i} aux_{1,i} ... aux_{0,1} aux_{1,1} d]
 
         Args:
-            d (`str`): Data being verified in the Merkle root, as a hexadecimal string.
-            aux_left (`list[str]`): List of hexadecimal strings for the left-side auxiliary data per level.
-            aux_right (`list[str]`): List of hexadecimal strings for the right-side auxiliary data per level.
+            d (str): Data being verified in the Merkle root, as a hexadecimal string.
+            aux_left (list[str]): List of hexadecimal strings for the left-side auxiliary data per level.
+            aux_right (list[str]): List of hexadecimal strings for the right-side auxiliary data per level.
 
         Returns:
-            Script: Unlocking script for use with `locking_merkle_proof_with_two_aux`.
+            Unlocking script for use with `locking_merkle_proof_with_two_aux`.
 
         Raises:
             AssertionError: If `d`, `aux_left`, or `aux_right` have invalid formats or incorrect lengths.
@@ -171,17 +171,17 @@ class MerkleTree:
         Merkle path for an element `d` is defined as a sequence:
             `(d, "", "") (aux_{0,1}, h_1, aux_{1,1}) ... (aux_{0,self.depth-1}, h_{self.depth-1}, aux_{1,self.depth-1})`
         So that:
-            - `h_1 = sef.hash(d)`
-            - `aux_{0,i}` and `aux_{1,i}` are auxiliari values appended to the left and right of `h_i` so that
+            - `h_1 = self.hash(d)`
+            - `aux_{0,i}` and `aux_{1,i}` are auxiliary values appended to the left and right of `h_i` so that
                 `h_i = self.hash(aux_{0,i-1} || h_{i-1} || aux_{1,i-1})`
             - `r = self.hash(aux_{0,self.depth-1} || h_{self.depth-1} || aux_{1,self.depth-1})`
 
         Args:
-            is_equal_verify (`bool`): If `True`, use `OP_EQUALVERIFY` in the final verification step, otherwise
+            is_equal_verify (bool): If `True`, use `OP_EQUALVERIFY` in the final verification step, otherwise
                 `OP_EQUAL`.
 
         Returns:
-            Script: Locking script for verifying a Merkle path using pairs of auxiliary values.
+            Locking script for verifying a Merkle path using pairs of auxiliary values.
 
         Notes:
             - Requires `self.hash_function` to be a valid Bitcoin Script hash function (e.g., `OP_SHA256`).
