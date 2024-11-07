@@ -125,3 +125,38 @@ def test_verify_base_point_multiplication_with_negation(a, A):  # noqa: N803
     context = Context(unlock + lock, z=hash256d(dummy_h))
     assert context.evaluate()
     assert len(context.get_stack()) == 1
+
+
+@pytest.mark.parametrize(
+    ("b", "P"),
+    [
+        (3, generator.multiply(2)),
+        (56, generator.multiply(231)),
+    ],
+)
+def test_verify_point_multiplication_up_to_sign(b, P):  # noqa: N803
+    Q = P.multiply(b)
+    h = int.from_bytes(hash256d(dummy_h))
+    h_times_x_coordinate_target_inverse = Fr_k1(h) * Fr_k1(Q.x.x).invert()
+    h_times_x_coordinate_target_inverse_times_G = generator.multiply(h_times_x_coordinate_target_inverse.x)
+    gradient = P.get_lambda(-h_times_x_coordinate_target_inverse_times_G)
+    x_coordinate_times_b_inverse = Fr_k1(Q.x.x) * Fr_k1(b).invert()
+
+    lock = Secp256k1.verify_point_multiplication_up_to_sign(
+        True,
+        True,
+    )
+    lock += Script.parse_string("OP_1")
+
+    unlock = Script()
+    unlock += nums_to_script([PRIME_INT, GROUP_ORDER_INT, Gx])
+    unlock.append_pushdata(signature_prefix)
+    unlock += nums_to_script([h, b, x_coordinate_times_b_inverse.x, h_times_x_coordinate_target_inverse.x])
+    unlock += nums_to_script(gradient.to_list())
+    unlock += nums_to_script(Q.to_list())
+    unlock += nums_to_script(P.to_list())
+    unlock += nums_to_script(h_times_x_coordinate_target_inverse_times_G.to_list())
+
+    context = Context(unlock + lock, z=hash256d(dummy_h))
+    assert context.evaluate()
+    assert len(context.get_stack()) == 1
