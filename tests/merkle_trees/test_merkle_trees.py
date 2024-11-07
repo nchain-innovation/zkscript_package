@@ -11,7 +11,6 @@ from tests.fields.util import save_scripts
 class MerkleTree:
     filename = "merkle_tree"
     test_data = {
-        # The leaves are ["1","2","3","4"]
         "test_merkle_proof_with_bit_flags": [
             {
                 "root": "06e2b4a68e27b8661515e80856f646822b484031",

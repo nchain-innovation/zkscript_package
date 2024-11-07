@@ -28,7 +28,7 @@ def check_constant(q) -> Script:
 
 def save_scripts(lock, unlock, save_to_json_folder, filename, test_name):
     if save_to_json_folder:
-        output_dir = Path("data") / save_to_json_folder / "fields"
+        output_dir = Path("data") / save_to_json_folder / "merkle_trees"
         output_dir.mkdir(parents=True, exist_ok=True)
         json_file = output_dir / f"{filename}.json"
 

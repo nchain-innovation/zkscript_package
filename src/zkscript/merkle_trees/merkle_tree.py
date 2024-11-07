@@ -1,26 +1,24 @@
+import string
+
 from tx_engine import Script
 
 
 class MerkleTree:
-    """Class representing a Merkle Tree.
-
-    This class takes a root hash and a specified hash function to create the Merkle Tree
-    structure.
-
-    Attributes:
-        root (str): The root hash of the Merkle Tree. Must be a valid hexadecimal value.
-        hash_function (str): The hash function used in the Merkle Tree. This must be a valid opcode hash function or a
-            combination of valid opcode hash functions.
-        depth (int): The depth (number of levels) of the Merkle tree.
-
-    Methods:
-        __init__(root: str, hash_function: str): Initializes the Merkle Tree. An assertion is
-            performed to ensure the hash function is valid and the root is hexadecimal.
-
-    """
+    """Class implementing methods to generate locking/unlocking scripts verifying Merkle paths."""
 
     def __init__(self, root: str, hash_function: str, depth: int):
-        assert all(c in "0123456789abcdefABCDEF" for c in root), f"{root} is not a valid hexadecimal string."
+        """Initialize a MerkleTree instance.
+
+        Args:
+            root (str): The root hash of the Merkle Tree, provided as a hexadecimal string.
+            hash_function (str): Hash function used in the Merkle Tree, as a valid opcode or combination of opcodes.
+            depth (int): Number of levels in the Merkle tree.
+
+        Raises:
+            AssertionError: If `root` is not a hexadecimal or `hash_function` contains invalid opcodes.
+
+        """
+        assert all(c in string.hexdigits for c in root), f"{root} is not a valid hexadecimal string."
 
         assert set(hash_function.split(" ")).issubset(
             {"OP_RIPEMD160", "OP_SHA1", "OP_SHA256", "OP_HASH160", "OP_HASH256"}
@@ -32,119 +30,36 @@ class MerkleTree:
         self.hash_function = hash_function
         self.depth = depth
 
-    def locking_merkle_proof_with_bit_flags(
-        self,
-        is_equal_verify: bool = False,
-    ) -> Script:
-        """Generate a locking script to verify a Merkle path.
-
-        The locking script returned by this function checks the validity of a Merkle path. For a root r, the
-        Merkle path for an element d is defined as a sequence:
-            (d, "", "") (h_1, aux_1, bit_1) ... (h_{self.depth-1}, aux_{self.depth-1}, bit_{self.depth-1})
-        So that:
-            - h_1 = sef.hash(d)
-            - h_i = self.hash(h_{i-1} || aux_{i-1}) if bit_{i-1} == 0 else self.hash(aux_{i-1} || h_{i-1})
-            - r = self.hash(h_{self.depth-1} || aux_{self.depth-1}) if bit_{self.depth-1} == 0
-                    else self.hash(aux_{self.depth-1} || h_{self.depth-1})
-
-        Args:
-            is_equal_verify: a boolean variable to choose between `OP_EQUAL` or `OP_EQUALVERIFY` as final opcode in the
-                script. Default to `False`.
-
-        Returns:
-            A locking script verifying a Merkle path.
-
-        Note:
-            - `self.hash_function` must be a combination of valid Bitcoin Script hash functions (e.g., `OP_SHA256`).
-            - `self.root` must be set to the expected Merkle root to verify against.
-            - the Merkle path is assumed to be passed as unlocking script in the following way:
-                stack = [h_{self.depth-1} aux_{self.depth-1} bit_{self.depth-1} ... aux_1 bit_1 d]
-
-        """
-
-        out = Script()
-
-        # stack in: [h_{self.depth-1} aux_{self.depth-1} bit_{self.depth-1} ... h_1 aux_1 bit_1 d]
-        # stack out: [<purported r>]
-        out += Script.parse_string(self.hash_function)
-        out += Script.parse_string(
-            " ".join([f"OP_SWAP OP_IF OP_SWAP OP_ENDIF OP_CAT {self.hash_function}"] * (self.depth - 1))
-        )
-
-        # stack in: [<purported r>]
-        # stack out: [fail if <purported r> != self.root else 1/""]
-        out.append_pushdata(bytes.fromhex(self.root))
-        out += Script.parse_string("OP_EQUALVERIFY") if is_equal_verify else Script.parse_string("OP_EQUAL")
-
-        return out
-
-    def locking_merkle_proof_with_two_aux(
-        self,
-        is_equal_verify: bool = False,
-    ) -> Script:
-        """Generate a script to verify a Merkle path with two auxiliary inputs per level.
-
-        The locking script returned by this function checks the validity of a Merkle path. For a root r, the
-        Merkle path for an element d is defined as a sequence:
-            (d, "", "") (aux_{0,1}, h_1, aux_{1,1}) ... (aux_{0,self.depth-1}, h_{self.depth-1}, aux_{1,self.depth-1})
-        So that:
-            - h_1 = sef.hash(d)
-            - h_i = self.hash(aux_{0,i-1} || h_{i-1} || aux_{1,i-1})
-            - r = self.hash(aux_{0,self.depth-1} || h_{self.depth-1} || aux_{1,self.depth-1})
-
-        Args:
-            is_equal_verify: a boolean variable to choose between `OP_EQUAL` or `OP_EQUALVERIFY` as final opcode in the
-                script. Default to `False`.
-
-        Returns:
-            A locking script verifying any valid path to the Merkle root.
-
-        Note:
-            - `self.hash_function` must be a combination of valid Bitcoin Script hash functions (e.g., `OP_SHA256`).
-            - `self.root` must be set to the expected Merkle root to verify against.
-            - the Merkle path is assumed to be passed as unlocking script in the following way:
-                stack = [aux_{0,self.depth-1} h_{self.depth-1} aux_{1,self.depth-1} ... aux_{0,1} aux_{1,1} d]
-
-        """
-        out = Script()
-
-        # stack in: [aux_{0,self.depth-1} h_{self.depth-1} aux_{1,self.depth-1} ... aux_{0,1} aux_{1,1} d]
-        # stack out: <purported r>
-        out += Script.parse_string(self.hash_function)
-        out += Script.parse_string(" ".join([f"OP_SWAP OP_CAT OP_CAT {self.hash_function}"] * (self.depth - 1)))
-
-        # stack in: [<purported r>]
-        # stack out: [fail if <purported r> != self.root else 1/""]
-        out.append_pushdata(bytes.fromhex(self.root))
-        out += Script.parse_string("OP_EQUALVERIFY") if is_equal_verify else Script.parse_string("OP_EQUAL")
-
-        return out
-
     def unlocking_merkle_proof_with_bit_flags(
         self,
         d: str,
         aux: list[str],
         bit: list[bool],
     ) -> Script:
-        """Generate the unlocking script to verify a Merkle path.
+        """Generate unlocking scripts for Merkle path verification using a bit flag to identify the right and left path.
+
+        The unlocking script loads the data on the stack, sorthing them as following:
+        [... aux_i bit_i ... aux_1 bit_1 d]
 
         Args:
-            d (str): The data we are proving aggregation of in the Merkle root.
-            aux (list[str]): A list of hexadecimal strings representing the auxiliary data aux_i.
-            bit (list[bool]): A list of boolean representing the bit flags.
+            d (`str`): Data for which the Merkle root is being proved, as a hexadecimal string.
+            aux (`list[str]`): List of hexadecimal strings representing auxiliary data.
+            bit (`list[bool]`): List of boolean values specifying if the current node is a left or right child.
 
         Returns:
-            The unlocking script for the script generated by `locking_merkle_proof_with_bit_flags`.
+            Script: Unlocking script for use with `locking_merkle_proof_with_bit_flags`.
 
-        Note:
-            - `self.hash_function` must be a combination of valid Bitcoin Script hash functions (e.g., `OP_SHA256`).
-            - `self.root` must be set to the expected Merkle root to verify against.
+        Raises:
+            AssertionError: If `d`, `aux`, or `bit` have invalid formats or incorrect lengths.
 
         """
-        assert all(c in "0123456789abcdefABCDEF" for c in d)
+
+        assert all(c in string.hexdigits for c in d)
         assert all(
-            c in "0123456789abcdefABCDEF" for aux_ in aux for c in aux_
+            c in string.hexdigits for aux_ in aux for c in aux_
         ), f"{aux} is not a valid list of hexadecimal strings."
+        assert len(bit) == self.depth - 1, f"{aux} must be of lenght {self.depth - 1}."
+        assert len(aux) == self.depth - 1, f"{aux} must be of lenght {self.depth - 1}."
 
         out = Script()
 
@@ -156,36 +71,85 @@ class MerkleTree:
 
         return out
 
+    def locking_merkle_proof_with_bit_flags(
+        self,
+        is_equal_verify: bool = False,
+    ) -> Script:
+        """Generate locking scripts for Merkle path verification using a bit flag to identify right and left nodes.
+
+        The locking script returned by this function checks the validity of a Merkle path. For a root `r`, the
+        Merkle path for an element `d` is defined as a sequence:
+            `(d, "", "") (h_1, aux_1, bit_1) ... (h_{self.depth-1}, aux_{self.depth-1}, bit_{self.depth-1})`
+        So that:
+            - `h_1 = sef.hash(d)`
+            - `bit_i` are values determining if the node is a left or right node, so that
+                `h_i = self.hash(h_{i-1} || aux_{i-1})` if `bit_{i-1} == 0` else `self.hash(aux_{i-1} || h_{i-1})`
+            - `r = self.hash(h_{self.depth-1} || aux_{self.depth-1})` if `bit_{self.depth-1} == 0`
+                    else `self.hash(aux_{self.depth-1} || h_{self.depth-1})`
+
+        Args:
+            is_equal_verify (`bool`): If `True`, use `OP_EQUALVERIFY` in the final verification step, otherwise
+                `OP_EQUAL`. Default to `False`.
+
+        Returns:
+            Script: Locking script for verifying a Merkle path using a bit flag to identify right and left nodes.
+
+        Notes:
+            - Assumes `self.hash_function` is a valid Bitcoin Script hash function (e.g., `OP_SHA256`).
+            - `self.root` should be set to the expected Merkle root.
+            - The merkle path is passed as an unlocking script in the form:
+              `stack = [h_{self.depth-1}, aux_{self.depth-1}, bit_{self.depth-1}, ..., aux_1, bit_1, d]`.
+
+        """
+
+        out = Script()
+
+        # stack in: [... aux_i bit_i ... d]
+        # stack out: [<purported r>]
+        out += Script.parse_string(self.hash_function)
+        out += Script.parse_string(
+            " ".join([f"OP_SWAP OP_IF OP_SWAP OP_ENDIF OP_CAT {self.hash_function}"] * (self.depth - 1))
+        )
+
+        # stack in: [<purported r>]
+        # stack out: [fail if <purported r> != self.root else 1]
+        out.append_pushdata(bytes.fromhex(self.root))
+        out += Script.parse_string("OP_EQUALVERIFY") if is_equal_verify else Script.parse_string("OP_EQUAL")
+
+        return out
+
     def unlocking_merkle_proof_with_two_aux(
         self,
         d: str,
         aux_left: list[str],
         aux_right: list[str],
     ) -> Script:
-        """Generate the unlocking script to verify a Merkle path with two auxiliary inputs per level.
+        """Generate unlocking scripts to verify a Merkle path with two auxiliary inputs per level.
+
+        The unlocking script loads the data on the stack, sorthing them as following:
+        [... aux_{0,i} aux_{1,i} ... aux_{0,1} aux_{1,1} d]
 
         Args:
-            d (str): The data we are proving aggregation of in the Merkle root.
-            aux_left (list[str]): A list of hexidecimal strings representing the elements aux_{0,i} in the Merkle path.
-            aux_right (list[str]): A list of hexidecimal strings representing the elements aux_{1,i} in the Merkle path.
+            d (`str`): Data being verified in the Merkle root, as a hexadecimal string.
+            aux_left (`list[str]`): List of hexadecimal strings for the left-side auxiliary data per level.
+            aux_right (`list[str]`): List of hexadecimal strings for the right-side auxiliary data per level.
 
         Returns:
-            The unlocking script for the script generated by `locking_merkle_proof_with_two_aux`.
+            Script: Unlocking script for use with `locking_merkle_proof_with_two_aux`.
 
-        Note:
-            - `self.hash_function` must be a combination of valid Bitcoin Script hash functions (e.g., `OP_SHA256`).
-            - `self.root` must be set to the expected Merkle root to verify against.
+        Raises:
+            AssertionError: If `d`, `aux_left`, or `aux_right` have invalid formats or incorrect lengths.
 
         """
+
         assert all(
-            c in "0123456789abcdefABCDEF" for node in aux_left for c in node
+            c in string.hexdigits for node in aux_left for c in node
         ), f"{aux_left} is not a valid list of hexadecimal strings."
-
         assert all(
-            c in "0123456789abcdefABCDEF" for node in aux_right for c in node
+            c in string.hexdigits for node in aux_right for c in node
         ), f"{aux_right} is not a valid list of hexadecimal strings."
-
-        assert len(aux_left) == len(aux_right), f"{aux_left} and {aux_right} have different lenghts."
+        assert len(aux_right) == self.depth - 1, f"{aux_right} must be of lenght {self.depth - 1}."
+        assert len(aux_left) == self.depth - 1, f"{aux_left} must be of lenght {self.depth - 1}."
 
         out = Script()
 
@@ -194,5 +158,48 @@ class MerkleTree:
             out.append_pushdata(bytes.fromhex(aux_r))
 
         out.append_pushdata(bytes.fromhex(d))
+
+        return out
+
+    def locking_merkle_proof_with_two_aux(
+        self,
+        is_equal_verify: bool = False,
+    ) -> Script:
+        """Generate locking scripts for Merkle path verification with two auxiliary inputs per level.
+
+        The locking script returned by this function checks the validity of a Merkle path. For a root `r`, the
+        Merkle path for an element `d` is defined as a sequence:
+            `(d, "", "") (aux_{0,1}, h_1, aux_{1,1}) ... (aux_{0,self.depth-1}, h_{self.depth-1}, aux_{1,self.depth-1})`
+        So that:
+            - `h_1 = sef.hash(d)`
+            - `aux_{0,i}` and `aux_{1,i}` are auxiliari values appended to the left and right of `h_i` so that
+                `h_i = self.hash(aux_{0,i-1} || h_{i-1} || aux_{1,i-1})`
+            - `r = self.hash(aux_{0,self.depth-1} || h_{self.depth-1} || aux_{1,self.depth-1})`
+
+        Args:
+            is_equal_verify (`bool`): If `True`, use `OP_EQUALVERIFY` in the final verification step, otherwise
+                `OP_EQUAL`.
+
+        Returns:
+            Script: Locking script for verifying a Merkle path using pairs of auxiliary values.
+
+        Notes:
+            - Requires `self.hash_function` to be a valid Bitcoin Script hash function (e.g., `OP_SHA256`).
+            - `self.root` must be set to the expected Merkle root.
+            - The Merkle path is assumed to be passed as unlocking script in the format:
+              stack = [aux_{0,self.depth-1}, h_{self.depth-1}, aux_{1,self.depth-1}, ..., aux_{0,1}, aux_{1,1}, d].
+
+        """
+        out = Script()
+
+        # stack in: [... aux_{0,i} aux_{1,i} ... d]
+        # stack out: <purported r>
+        out += Script.parse_string(self.hash_function)
+        out += Script.parse_string(" ".join([f"OP_SWAP OP_CAT OP_CAT {self.hash_function}"] * (self.depth - 1)))
+
+        # stack in: [<purported r>]
+        # stack out: [fail if <purported r> != self.root else 1]
+        out.append_pushdata(bytes.fromhex(self.root))
+        out += Script.parse_string("OP_EQUALVERIFY") if is_equal_verify else Script.parse_string("OP_EQUAL")
 
         return out
