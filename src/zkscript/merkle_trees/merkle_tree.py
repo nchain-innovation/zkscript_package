@@ -98,7 +98,7 @@ class MerkleTree:
             - Assumes `self.hash_function` is a valid Bitcoin Script hash function (e.g., `OP_SHA256`).
             - `self.root` should be set to the expected Merkle root.
             - The merkle path is passed as an unlocking script in the form:
-              `stack = [h_{self.depth-1}, aux_{self.depth-1}, bit_{self.depth-1}, ..., aux_1, bit_1, d]`.
+              `stack = [aux_{self.depth-1}, bit_{self.depth-1}, ..., aux_1, bit_1, d]`.
 
         """
 
@@ -187,7 +187,7 @@ class MerkleTree:
             - Requires `self.hash_function` to be a valid Bitcoin Script hash function (e.g., `OP_SHA256`).
             - `self.root` must be set to the expected Merkle root.
             - The Merkle path is assumed to be passed as unlocking script in the format:
-              stack = [aux_{0,self.depth-1}, h_{self.depth-1}, aux_{1,self.depth-1}, ..., aux_{0,1}, aux_{1,1}, d].
+              stack = [aux_{0,self.depth-1}, aux_{1,self.depth-1}, ..., aux_{0,1}, aux_{1,1}, d].
 
         """
         out = Script()
