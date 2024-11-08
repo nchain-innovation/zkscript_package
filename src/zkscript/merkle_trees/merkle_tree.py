@@ -11,7 +11,9 @@ class MerkleTree:
 
         Args:
             root (str): The root hash of the Merkle Tree, provided as a hexadecimal string.
-            hash_function (str): Hash function used in the Merkle Tree, as a valid opcode or combination of opcodes.
+            hash_function (str): Hash function used in the Merkle Tree, the hash function must be a valid hash opcode or
+                a sequence of valid hash opcodes. Valid hash opcodes are `OP_RIPEMD160, OP_SHA1, OP_SHA256, OP_HASH160,`
+                `OP_HASH256`
             depth (int): Number of levels in the Merkle tree.
 
         Raises:
@@ -39,7 +41,14 @@ class MerkleTree:
         """Generate unlocking scripts for Merkle path verification using a bit flag to identify the right and left path.
 
         The unlocking script loads the data on the stack, sorthing them as following:
-        [... aux_i bit_i ... aux_1 bit_1 d]
+
+        Stack input:
+            - stack:    []
+            - altstack: []
+
+        Stack output:
+            - stack:    [aux_{depth - 1} bit_{depth-1} ... aux_1 bit_1 d]
+            - altstack: []
 
         Args:
             d (str): Data for which the Merkle root is being proved, as a hexadecimal string.
@@ -77,15 +86,14 @@ class MerkleTree:
     ) -> Script:
         """Generate locking scripts for Merkle path verification using a bit flag to identify right and left nodes.
 
-        The locking script returned by this function checks the validity of a Merkle path. For a root `r`, the
-        Merkle path for an element `d` is defined as a sequence:
-            `(d, "", "") (h_1, aux_1, bit_1) ... (h_{self.depth-1}, aux_{self.depth-1}, bit_{self.depth-1})`
-        So that:
-            - `h_1 = sef.hash(d)`
-            - `bit_i` are values determining if the node is a left or right node, so that
-                `h_i = self.hash(h_{i-1} || aux_{i-1})` if `bit_{i-1} == 0` else `self.hash(aux_{i-1} || h_{i-1})`
-            - `r = self.hash(h_{self.depth-1} || aux_{self.depth-1})` if `bit_{self.depth-1} == 0`
-                    else `self.hash(aux_{self.depth-1} || h_{self.depth-1})`
+        Stack input:
+            - stack:    [aux_{depth - 1} bit_{depth-1} ... aux_1 bit_1 d]
+            - altstack: []
+
+        Stack output:
+            - stack:    ([1] if not is_equal_verify, else []) if the Merkle proof is valid
+                        ([0] if not is_equalverify, else stack evaluation error) if the Merkle proof is not valid
+            - altstack: []
 
         Args:
             is_equal_verify (bool): If `True`, use `OP_EQUALVERIFY` in the final verification step, otherwise
@@ -97,8 +105,6 @@ class MerkleTree:
         Notes:
             - Assumes `self.hash_function` is a valid Bitcoin Script hash function (e.g., `OP_SHA256`).
             - `self.root` should be set to the expected Merkle root.
-            - The merkle path is passed as an unlocking script in the form:
-              `stack = [aux_{self.depth-1}, bit_{self.depth-1}, ..., aux_1, bit_1, d]`.
 
         """
 
@@ -126,8 +132,13 @@ class MerkleTree:
     ) -> Script:
         """Generate unlocking scripts to verify a Merkle path with two auxiliary inputs per level.
 
-        The unlocking script loads the data on the stack, sorthing them as following:
-        [... aux_{0,i} aux_{1,i} ... aux_{0,1} aux_{1,1} d]
+        Stack input:
+            - stack:    []
+            - altstack: []
+
+        Stack output:
+            - stack:    [aux_{0, depth - 1} aux_{1, depth - 1} ... aux_{0,1} aux_{1,1} d]
+            - altstack: []
 
         Args:
             d (str): Data being verified in the Merkle root, as a hexadecimal string.
@@ -167,14 +178,14 @@ class MerkleTree:
     ) -> Script:
         """Generate locking scripts for Merkle path verification with two auxiliary inputs per level.
 
-        The locking script returned by this function checks the validity of a Merkle path. For a root `r`, the
-        Merkle path for an element `d` is defined as a sequence:
-            `(d, "", "") (aux_{0,1}, h_1, aux_{1,1}) ... (aux_{0,self.depth-1}, h_{self.depth-1}, aux_{1,self.depth-1})`
-        So that:
-            - `h_1 = self.hash(d)`
-            - `aux_{0,i}` and `aux_{1,i}` are auxiliary values appended to the left and right of `h_i` so that
-                `h_i = self.hash(aux_{0,i-1} || h_{i-1} || aux_{1,i-1})`
-            - `r = self.hash(aux_{0,self.depth-1} || h_{self.depth-1} || aux_{1,self.depth-1})`
+        Stack input:
+            - stack:    [aux_{depth - 1} bit_{depth-1} ... aux_1 bit_1 d]
+            - altstack: []
+
+        Stack output:
+            - stack:    ([1] if not is_equal_verify, else []) if the Merkle proof is valid
+                        ([0] if not is_equalverify, else stack evaluation error) if the Merkle proof is not valid
+            - altstack: []
 
         Args:
             is_equal_verify (bool): If `True`, use `OP_EQUALVERIFY` in the final verification step, otherwise
@@ -186,8 +197,6 @@ class MerkleTree:
         Notes:
             - Requires `self.hash_function` to be a valid Bitcoin Script hash function (e.g., `OP_SHA256`).
             - `self.root` must be set to the expected Merkle root.
-            - The Merkle path is assumed to be passed as unlocking script in the format:
-              stack = [aux_{0,self.depth-1}, aux_{1,self.depth-1}, ..., aux_{0,1}, aux_{1,1}, d].
 
         """
         out = Script()
