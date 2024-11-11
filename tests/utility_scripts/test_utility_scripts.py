@@ -10,6 +10,7 @@ from src.zkscript.util.utility_scripts import (
 )
 from src.zkscript.types.stack_elements import StackBaseElement, StackNumber, StackFiniteFieldElement
 from src.zkscript.util.utility_scripts import (
+    enforce_mul_equal,
     mod,
     move,
     nums_to_script,
@@ -418,36 +419,38 @@ def test_bytes_to_unsigned(stack, length_stack_element, stack_element, rolling_o
     assert context.evaluate()
     assert context.get_stack().size() == 1
 
+
 @pytest.mark.parametrize(
     ("stack", "modulus", "a", "b", "c", "rolling_options", "leave_on_top_of_stack", "equation_to_check", "expected"),
     [
-        ([17,6,2,3],-1,2,1,0,7,0,1<<0,[]), # a = b*c
-        ([17,10,9,3],-1,2,1,0,0,0,1<<0,[10,9,3]), # a = b*c, pick everything
-        ([17,9,10,3],-1,2,1,0,7,0,1<<2,[]), # b = a*c
-        ([17,9,3,10],-1,2,1,0,7,0,1<<1,[]), # c = a*b
-        ([17,6,2,3],-1,2,1,0,7,1,1<<0,[6]), # a = b*c, leave a
-        ([17,6,2,3],-1,2,1,0,7,2,1<<0,[2]), # a = b*c, leave b
-        ([17,6,2,3],-1,2,1,0,7,4,1<<0,[3]), # a = b*c, leave c
-        ([17,6,2,3],-1,2,1,0,7,3,1<<0,[6,2]), # a = b*c, leave a, b
-        ([17,6,2,3],-1,2,1,0,7,5,1<<0,[6,3]), # a = b*c, leave a, c
-        ([17,6,2,3],-1,2,1,0,7,6,1<<0,[2,3]), # a = b*c, leave b, c
-        ([17,6,2,3],-1,2,1,0,7,7,1<<0,[6,2,3]), # a = b*c, leave a, b, c
-
-    ]
+        ([17, 6, 2, 3], -1, 2, 1, 0, 7, 0, 1 << 0, []),  # a = b*c
+        ([17, 10, 9, 3], -1, 2, 1, 0, 0, 0, 1 << 0, [10, 9, 3]),  # a = b*c, pick everything
+        ([17, 9, 10, 3], -1, 2, 1, 0, 7, 0, 1 << 2, []),  # b = a*c
+        ([17, 9, 3, 10], -1, 2, 1, 0, 7, 0, 1 << 1, []),  # c = a*b
+        ([17, 6, 2, 3], -1, 2, 1, 0, 7, 1, 1 << 0, [6]),  # a = b*c, leave a
+        ([17, 6, 2, 3], -1, 2, 1, 0, 7, 2, 1 << 0, [2]),  # a = b*c, leave b
+        ([17, 6, 2, 3], -1, 2, 1, 0, 7, 4, 1 << 0, [3]),  # a = b*c, leave c
+        ([17, 6, 2, 3], -1, 2, 1, 0, 7, 3, 1 << 0, [6, 2]),  # a = b*c, leave a, b
+        ([17, 6, 2, 3], -1, 2, 1, 0, 7, 5, 1 << 0, [6, 3]),  # a = b*c, leave a, c
+        ([17, 6, 2, 3], -1, 2, 1, 0, 7, 6, 1 << 0, [2, 3]),  # a = b*c, leave b, c
+        ([17, 6, 2, 3], -1, 2, 1, 0, 7, 7, 1 << 0, [6, 2, 3]),  # a = b*c, leave a, b, c
+    ],
 )
-def test_enforce_mul_equal(stack,modulus,a,b,c,rolling_options,leave_on_top_of_stack,equation_to_check,expected):
+def test_enforce_mul_equal(
+    stack, modulus, a, b, c, rolling_options, leave_on_top_of_stack, equation_to_check, expected
+):
     unlock = nums_to_script(stack)
     lock = enforce_mul_equal(
         True,
         False,
-        StackNumber(modulus,False),
-        StackFiniteFieldElement(a,False,1),
-        StackFiniteFieldElement(b,False,1),
-        StackFiniteFieldElement(c,False,1),
+        StackNumber(modulus, False),
+        StackFiniteFieldElement(a, False, 1),
+        StackFiniteFieldElement(b, False, 1),
+        StackFiniteFieldElement(c, False, 1),
         rolling_options,
         leave_on_top_of_stack,
-        equation_to_check
-        )
+        equation_to_check,
+    )
     for ix, el in enumerate(expected[::-1]):
         lock += nums_to_script([el])
         lock += Script.parse_string("OP_EQUAL" if ix == len(expected) - 1 else "OP_EQUALVERIFY")

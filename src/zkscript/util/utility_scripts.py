@@ -42,14 +42,11 @@ from tx_engine.engine.op_codes import (
 
 from src.zkscript.types.stack_elements import (
     StackBaseElement,
-    StackNumber,
     StackElements,
     StackEllipticCurvePoint,
     StackFiniteFieldElement,
     StackNumber,
 )
-from src.zkscript.util.utility_functions import bitmask_to_boolean_list, check_order
-
 from src.zkscript.util.utility_functions import bitmask_to_boolean_list, check_order
 
 patterns_to_pick = {
@@ -472,13 +469,13 @@ def bytes_to_unsigned(
 def enforce_mul_equal(
     clean_constant: bool = False,
     is_constant_reused: bool = False,
-    modulus: StackNumber = StackNumber(-1,False),
-    a: StackFiniteFieldElement = StackFiniteFieldElement(2,False,1),
-    b: StackFiniteFieldElement = StackFiniteFieldElement(1,False,1),
-    c: StackFiniteFieldElement = StackFiniteFieldElement(0,False,1),
+    modulus: StackNumber = StackNumber(-1, False),  # noqa: B008
+    a: StackFiniteFieldElement = StackFiniteFieldElement(2, False, 1),  # noqa: B008
+    b: StackFiniteFieldElement = StackFiniteFieldElement(1, False, 1),  # noqa: B008
+    c: StackFiniteFieldElement = StackFiniteFieldElement(0, False, 1),  # noqa: B008
     rolling_options: int = 7,
     leave_on_top_of_stack: int = 0,
-    equation_to_check: int = 1
+    equation_to_check: int = 1,
 ) -> Script:
     """Enforce that a = b*c % modulus.
 
@@ -496,11 +493,11 @@ def enforce_mul_equal(
         modulus (StackNumber): the position of the modulus used to check the equality. Defaults to
             `StackNumber(-1,False)`.
         a (StackFiniteFieldElement): the element a for which a = b*c % modulus. Defaults to
-            `StackFiniteFieldElement(2,False,1)`
+            `StackFiniteFieldElement(2,False,1)`. It must have extension_degree equal to 1.
         b (StackFiniteFieldElement): the element b for which a = b*c % modulus. Defaults to
-            `StackFiniteFieldElement(1,False,1)`
+            `StackFiniteFieldElement(1,False,1)`. It must have extension_degree equal to 1.
         c (StackFiniteFieldElement): the element c for which a = b*c % modulus. Defaults to
-            `StackFiniteFieldElement(0,False,1)`
+            `StackFiniteFieldElement(0,False,1)`. It must have extension_degree equal to 1.
         rolling_options (int): Whether to roll the elements. Defaults to `7`, roll everything.
         leave_on_top_of_stack (int): Whether to leave the elements a,b,c on top of the stack after the
             equality check. Defaults to `0`, don't leave anything.
@@ -508,28 +505,32 @@ def enforce_mul_equal(
             - 1 << 0: a = b*c % modulus
             - 1 << 1: c = a*b % modulus
             - 1 << 2: b = a*c % modulus
+
     """
     if modulus.position != -1:
-        check_order([modulus,a,b,c])
+        check_order([modulus, a, b, c])
+    assert all(
+        a.extension_degree == 1, b.extension_degree == 1, c.extension_degree == 1
+    ), "The extension degrees of a, b, and c must be equal to 1."
     list_rolling_options = bitmask_to_boolean_list(rolling_options, 3)
     list_leave_on_top = bitmask_to_boolean_list(leave_on_top_of_stack, 3)
 
-    out = move(a,bool_to_moving_function(list_rolling_options[0]))
+    out = move(a, bool_to_moving_function(list_rolling_options[0]))
     if list_leave_on_top[0]:
         out += Script.parse_string("OP_DUP")
-    out += move(b.shift(1 + list_leave_on_top[0]),bool_to_moving_function(list_rolling_options[1]))
+    out += move(b.shift(1 + list_leave_on_top[0]), bool_to_moving_function(list_rolling_options[1]))
     if list_leave_on_top[1]:
         out += Script.parse_string("OP_TUCK")
     if equation_to_check >> 1 & 1:
         out += Script.parse_string("OP_MUL")
     out += move(
         c.shift(2 + list_leave_on_top[0] + list_leave_on_top[1] - (equation_to_check >> 1 & 1)),
-        bool_to_moving_function(list_rolling_options[2])
-        )
+        bool_to_moving_function(list_rolling_options[2]),
+    )
     if list_leave_on_top[2]:
         out += Script.parse_string("OP_TUCK")
     if equation_to_check >> 2 & 1:
-        out += roll(position=2 + list_leave_on_top[2],n_elements=1) # roll a
+        out += roll(position=2 + list_leave_on_top[2], n_elements=1)  # roll a
     if not (equation_to_check >> 1 & 1):
         out += Script.parse_string("OP_MUL")
     if list_leave_on_top[2]:
@@ -537,18 +538,19 @@ def enforce_mul_equal(
     out += Script.parse_string("OP_SUB")
     out += move(
         modulus.shift(
-            3\
-                + list_leave_on_top[0]\
-                    + list_leave_on_top[1]\
-                        + list_leave_on_top[2]\
-                            - list_rolling_options[0]\
-                                - list_rolling_options[1]\
-                                    - list_rolling_options[2]\
-                                        if modulus.position > 0 else 0
-            ),
-        bool_to_moving_function(clean_constant)
-        )
-    out += mod("",is_constant_reused=is_constant_reused)
+            3
+            + list_leave_on_top[0]
+            + list_leave_on_top[1]
+            + list_leave_on_top[2]
+            - list_rolling_options[0]
+            - list_rolling_options[1]
+            - list_rolling_options[2]
+            if modulus.position > 0
+            else 0
+        ),
+        bool_to_moving_function(clean_constant),
+    )
+    out += mod("", is_constant_reused=is_constant_reused)
     out += Script.parse_string("OP_0 OP_EQUALVERIFY")
 
     return out
