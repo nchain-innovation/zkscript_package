@@ -17,6 +17,7 @@ from src.zkscript.bilinear_pairings.bls12_381.parameters import (
     q,
     twisted_a,
 )
+from src.zkscript.bilinear_pairings.bls12_381.size_estimation_function import size_estimation_miller_loop
 from src.zkscript.bilinear_pairings.model.model_definition import PairingModel
 from src.zkscript.elliptic_curves.ec_operations_fq2 import EllipticCurveFq2
 
@@ -72,4 +73,5 @@ bls12_381 = PairingModel(
     cyclotomic_inverse=final_exponentiation.cyclotomic_inverse,
     easy_exponentiation_with_inverse_check=final_exponentiation.easy_exponentiation_with_inverse_check,
     hard_exponentiation=final_exponentiation.hard_exponentiation,
+    size_estimation_miller_loop=size_estimation_miller_loop,
 )

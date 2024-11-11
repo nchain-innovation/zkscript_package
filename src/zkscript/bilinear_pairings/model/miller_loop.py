@@ -43,8 +43,7 @@ class MillerLoop:
         # stack in:  [gradient_(2T), P, Q, T, {f_i^2}]
         # stack out: [gradient_(2T), P, Q, T, {f_i^2}, ev_(l_(T,T))(P)]
         out += self.line_eval(
-            take_modulo=take_modulo[0] if i == len(self.exp_miller_loop) - 2 else False,
-            positive_modulo=False,
+            take_modulo=True,
             check_constant=False,
             clean_constant=False,
             gradient=gradient_doubling.shift(shift),
@@ -299,8 +298,8 @@ class MillerLoop:
                 out += Script.parse_string("OP_NEGATE")
 
         BIT_SIZE_Q = ceil(log2(self.MODULUS))
-        current_size_T = BIT_SIZE_Q
-        current_size_F = BIT_SIZE_Q
+        size_point_multiplication = BIT_SIZE_Q
+        size_miller_output = BIT_SIZE_Q
 
         gradient_addition = StackFiniteFieldElement(
             2 * self.N_POINTS_TWIST + self.N_POINTS_CURVE + 2 * self.EXTENSION_DEGREE - 1, False, self.EXTENSION_DEGREE
@@ -327,44 +326,26 @@ class MillerLoop:
         # stack in:  [P, Q, T]
         # stack out: [w*Q, miller(P,Q)]
         for i in range(len(self.exp_miller_loop) - 2, -1, -1):
-            take_modulo_F = False
-            take_modulo_T = False
             positive_modulo_i = False
 
             # Constants set up
             if i == 0:
-                take_modulo_F = True
-                take_modulo_T = True
                 positive_modulo_i = positive_modulo
-            elif self.exp_miller_loop[i - 1] == 0:
-                # In this case, the next iteration will have: f <-- f^2 * lineEvaluation and T <-- 2T.
-                future_size_F = log2(13 * 3) + 2 * current_size_F + log2(13 * 3) + BIT_SIZE_Q
-                if future_size_F > modulo_threshold:
-                    take_modulo_F = True
-                    current_size_F = BIT_SIZE_Q
-                else:
-                    current_size_F = future_size_F
 
-                if current_size_T + BIT_SIZE_Q + log2(6) > modulo_threshold:
-                    take_modulo_T = True
-                    current_size_T = BIT_SIZE_Q
-                else:
-                    current_size_T = current_size_T + BIT_SIZE_Q + log2(6)
-            else:
-                # In this case, the next iteration will have:
-                # f <-- f^2 * lineEvaluation * lineEvaluation and T <-- 2T ± Q.
-                future_size_F = log2(13 * 3) + 2 * current_size_F + 2 * log2(13 * 3) + 2 * BIT_SIZE_Q
-                if future_size_F > modulo_threshold:
-                    take_modulo_F = True
-                    current_size_F = BIT_SIZE_Q
-                else:
-                    current_size_F = future_size_F
-
-                if current_size_T + BIT_SIZE_Q + log2(6) > modulo_threshold:
-                    take_modulo_T = True
-                    current_size_T = BIT_SIZE_Q
-                else:
-                    current_size_T = current_size_T + BIT_SIZE_Q + log2(6)
+            (
+                take_modulo_miller_loop_output,
+                take_modulo_point_multiplication,
+                size_miller_output,
+                size_point_multiplication,
+            ) = self.size_estimation_miller_loop(
+                self.MODULUS,
+                modulo_threshold,
+                i,
+                self.exp_miller_loop,
+                size_miller_output,
+                size_point_multiplication,
+                False,
+            )
 
             if i == len(self.exp_miller_loop) - 3:
                 if self.exp_miller_loop[i + 1] == 0:
@@ -374,7 +355,11 @@ class MillerLoop:
                         position=self.N_ELEMENTS_EVALUATION_OUTPUT - 1, n_elements=self.N_ELEMENTS_EVALUATION_OUTPUT
                     )  # Duplicate ev_(l_(T,T))(P)
                     out += self.line_eval_times_eval(
-                        take_modulo=take_modulo_F, check_constant=False, clean_constant=False, is_constant_reused=False, positive_modulo=False
+                        take_modulo=take_modulo_miller_loop_output,
+                        positive_modulo=False,
+                        check_constant=False,
+                        clean_constant=False,
+                        is_constant_reused=False,
                     )
                     out += self.pad_eval_times_eval_to_miller_output
                 else:
@@ -385,7 +370,7 @@ class MillerLoop:
                         n_elements=self.N_ELEMENTS_EVALUATION_TIMES_EVALUATION,
                     )
                     out += self.line_eval_times_eval_times_eval_times_eval(
-                        take_modulo=take_modulo_F, check_constant=False, clean_constant=False, positive_modulo=False
+                        take_modulo=take_modulo_miller_loop_output, positive_modulo=False, check_constant=False, clean_constant=False
                     )
                     out += self.pad_eval_times_eval_times_eval_times_eval_to_miller_output
 
@@ -398,13 +383,27 @@ class MillerLoop:
                 # stack in:  [gradient_(2T), P, Q, T, f_i^2]
                 # stack out: [P, Q, 2T, (f_i^2 * ev_(l_(T,T))(P))]
                 out += self.__one_step_without_addition(
-                    i, [take_modulo_F, take_modulo_T], clean_constant, positive_modulo_i, gradient_doubling, P, T
+                    i,
+                    [take_modulo_miller_loop_output, take_modulo_point_multiplication],
+                    positive_modulo_i,
+                    clean_constant,
+                    gradient_doubling,
+                    P,
+                    T,
                 )
             else:
                 # stack in:  [gradient_(2T ± Q), gradient_(2T), P, Q, T, f_i^2]
                 # stack out: [P, Q, (2T ± Q), (f_i^2 * ev_(l_(T,T))(P) * ev_(l_(2T, ± Q))(P))]
                 out += self.__one_step_with_addition(
-                    i, [take_modulo_F, take_modulo_T], clean_constant, positive_modulo_i, gradient_doubling, gradient_addition, P, Q, T
+                    i,
+                    [take_modulo_miller_loop_output, take_modulo_point_multiplication],
+                    positive_modulo_i,
+                    clean_constant,
+                    gradient_doubling,
+                    gradient_addition,
+                    P,
+                    Q,
+                    T,
                 )
 
         # stack in:  [P, Q, w*Q, miller(P,Q)]

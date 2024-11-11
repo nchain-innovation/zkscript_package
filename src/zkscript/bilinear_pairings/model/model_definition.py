@@ -37,6 +37,7 @@ class PairingModel(MillerLoop, TripleMillerLoop, Pairing):
         cyclotomic_inverse,
         easy_exponentiation_with_inverse_check,
         hard_exponentiation,
+        size_estimation_miller_loop,
     ):
         """Initialise the pairing model.
 
@@ -119,3 +120,5 @@ class PairingModel(MillerLoop, TripleMillerLoop, Pairing):
         self.cyclotomic_inverse = cyclotomic_inverse
         self.easy_exponentiation_with_inverse_check = easy_exponentiation_with_inverse_check
         self.hard_exponentiation = hard_exponentiation
+        # Function to estimate size of elements in the Miller loop and triple Miller loop
+        self.size_estimation_miller_loop = size_estimation_miller_loop

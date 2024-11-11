@@ -577,9 +577,9 @@ class TripleMillerLoop:
             for i in range(3, 0, -1)
         ]
 
-        BITSIZE_Q = ceil(log2(self.MODULUS))
-        current_size_T = BITSIZE_Q
-        current_size_F = BITSIZE_Q
+        BIT_SIZE_Q = ceil(log2(self.MODULUS))
+        size_point_multiplication = BIT_SIZE_Q
+        size_miller_output = BIT_SIZE_Q
 
         out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
@@ -595,31 +595,21 @@ class TripleMillerLoop:
         # stack in:  [P1, P2, P3, Q1, Q2, Q3, T1, T2, T3]
         # stack out: [P1, P2, P3, Q1, Q2, Q3, w*Q1, w*Q2, w*Q3, (miller(P1,Q1) * miller(P2,Q2) * miller(P3,Q3))]
         for i in range(len(self.exp_miller_loop) - 2, -1, -1):
-            take_modulo_F = False
-            take_modulo_T = False
             positive_modulo_i = False
-            # Constants set up
-            if i == 0:
-                take_modulo_F = True
-                take_modulo_T = True
-                positive_modulo_i = positive_modulo
-            else:
-                # Next iteration will have: f <-- f^2 * Dense and Ti <-- 2Ti or Ti <-- 2Ti ± Qi.
-                multiplier = 3 if self.exp_miller_loop[i] == 0 else 6
-                future_size_F = (
-                    multiplier * log2(13 * 3) + multiplier * BITSIZE_Q + (ceil(log2(13 * 3)) + 2 * current_size_F)
-                )
-                if future_size_F > modulo_threshold:
-                    take_modulo_F = True
-                    current_size_F = BITSIZE_Q
-                else:
-                    current_size_F = future_size_F
-
-                if current_size_T + BITSIZE_Q + log2(6) > modulo_threshold:
-                    take_modulo_T = True
-                    current_size_T = BITSIZE_Q
-                else:
-                    current_size_T = current_size_T + BITSIZE_Q + log2(6)
+            (
+                take_modulo_miller_loop_output,
+                take_modulo_point_multiplication,
+                size_miller_output,
+                size_point_multiplication,
+            ) = self.size_estimation_miller_loop(
+                self.MODULUS,
+                modulo_threshold,
+                i,
+                self.exp_miller_loop,
+                size_miller_output,
+                size_point_multiplication,
+                True,
+            )
 
             if i != len(self.exp_miller_loop) - 2:
                 # stack in:  [P1, P2, P3, Q1, Q2, Q3, T1, T2, T3, f_i]
@@ -631,7 +621,13 @@ class TripleMillerLoop:
                 # stack out: [P1, P2, P3, Q1, Q2, Q3, (2*T1), (2*T2), (2*T3),
                 #               {f_i^2} * (ev_(l_(T1,T1))(P1) * ev_(l_(T2,T2))(P2) * ev_(l_(T3,T3))(P3)]
                 out += self.__one_step_without_addition(
-                    i, [take_modulo_F, take_modulo_T], positive_modulo_i, clean_constant, gradients_doubling, P, T
+                    i,
+                    [take_modulo_miller_loop_output, take_modulo_point_multiplication],
+                    positive_modulo_i,
+                    clean_constant,
+                    gradients_doubling,
+                    P,
+                    T,
                 )
             else:
                 # stack in:  [gradient_(2* T1 ± Q1), gradient_(2* T2 ± Q2), gradient_(2* T3 ± Q3), gradient_(2*T1),
@@ -639,7 +635,15 @@ class TripleMillerLoop:
                 # stack out: [P1, P2, P3, Q1, Q2, Q3, (2*T1 ± Q1), (2*T2 ± Q2), (2*T3 ± Q3),
                 #               {f_i^2}*(ev_(l_(T1,T1))(P1)*ev_(l_(T2,T2))(P2)) *(ev_(l_(T3,T3))(P3)*ev_(l_(2*T1,± Q1))(P1)) * (ev_(l_(2*T2,± Q2))(P2)*ev_(l_(2*T3,± Q3))(P3))]  # noqa: E501
                 out += self.__one_step_with_addition(
-                    i, [take_modulo_F, take_modulo_T], positive_modulo_i, clean_constant, gradients_doubling, gradients_addition, P, Q, T
+                    i,
+                    [take_modulo_miller_loop_output, take_modulo_point_multiplication],
+                    positive_modulo_i,
+                    clean_constant,
+                    gradients_doubling,
+                    gradients_addition,
+                    P,
+                    Q,
+                    T,
                 )
 
         # stack in:  [P1, P2, P3, Q1, Q2, Q3, w*Q1, w*Q2, w*Q3, (miller(P1,Q1) * miller(P2,Q2) * miller(P3,Q3))]
