@@ -1,4 +1,6 @@
-from tx_engine import Script
+from typing import List
+
+from tx_engine import Script, hash256d, encode_num
 from tx_engine.engine.util import GROUP_ORDER_INT, PRIME_INT, Gx, Gx_bytes, Gy
 
 from src.zkscript.elliptic_curves.ec_operations_fq import EllipticCurveFq
@@ -15,11 +17,10 @@ from src.zkscript.types.stack_elements import (
 )
 from src.zkscript.util.utility_functions import (
     bitmask_to_boolean_list,
-    bool_to_moving_function,
     boolean_list_to_bitmask,
     check_order,
 )
-from src.zkscript.util.utility_scripts import mod, move, nums_to_script, pick, reverse_endianness, roll
+from src.zkscript.util.utility_scripts import mod, move, nums_to_script, pick, reverse_endianness, roll, enforce_mul_equal, bool_to_moving_function
 
 
 class Secp256k1:
@@ -60,15 +61,14 @@ class Secp256k1:
         is_h_rolled, is_a_rolled, is_A_rolled = bitmask_to_boolean_list(rolling_options, 3)
 
         out = Script()
-
         if check_constants:
-            out.append_pushdata(bytes.fromhex("0220") + cls.Gx_bytes + bytes.fromhex("02"))
-            out += nums_to_script([cls.Gx, cls.GROUP_ORDER])
-            out += pick(position=-1, n_elements=1)
-            out += Script.parse_string("OP_EQUALVERIFY")
-            out += pick(position=-2, n_elements=1)
-            out += Script.parse_string("OP_EQUALVERIFY")
-            out += pick(position=-3, n_elements=1)
+            out += pick(position=-1,n_elements=3)
+            out += Script.parse_string("OP_CAT OP_CAT OP_HASH256")
+            out.append_pushdata(hash256d(
+                encode_num(cls.GROUP_ORDER) \
+                    + encode_num(cls.Gx) \
+                        + bytes.fromhex("0220") + cls.Gx_bytes + bytes.fromhex("02")
+            ))
             out += Script.parse_string("OP_EQUALVERIFY")
 
         # Compute h + a
@@ -155,7 +155,7 @@ class Secp256k1:
         - G is the generator of secp256k1.
 
         Stack input:
-            - stack: PRIME_INT GROUP_ORDER Gx 0x0220||Gx_bytes||02, Gy, MODULUS, .., h .., gradient .., a .., A, ..,
+            - stack: MODULUS GROUP_ORDER Gx 0x0220||Gx_bytes||02, Gy, .., h .., gradient .., a .., A, ..,
             - altstack:
         Stack out:
             - stack: GROUP_ORDER Gx 0x0220||Gx_bytes||02, Gy, .., h .., gradient .., a .., A, ..,,
@@ -168,30 +168,16 @@ class Secp256k1:
         is_h_rolled, is_gradient_rolled, is_a_rolled, is_A_rolled = bitmask_to_boolean_list(rolling_options, 4)
 
         out = Script()
-
         if check_constants:
-            out += nums_to_script(
-                [
-                    cls.Gy,
-                ]
-            )
-            out.append_pushdata(bytes.fromhex("0220") + cls.Gx_bytes + bytes.fromhex("02"))
-            out += nums_to_script(
-                [
-                    cls.Gx,
-                    cls.GROUP_ORDER,
-                    cls.MODULUS,
-                ]
-            )
-            out += pick(position=-1, n_elements=1)
-            out += Script.parse_string("OP_EQUALVERIFY")
-            out += pick(position=-2, n_elements=1)
-            out += Script.parse_string("OP_EQUALVERIFY")
-            out += pick(position=-3, n_elements=1)
-            out += Script.parse_string("OP_EQUALVERIFY")
-            out += pick(position=-4, n_elements=1)
-            out += Script.parse_string("OP_EQUALVERIFY")
-            out += pick(position=-5, n_elements=1)
+            out += pick(position=-1,n_elements=5)
+            out += Script.parse_string("OP_CAT OP_CAT OP_CAT OP_CAT OP_HASH256")
+            out.append_pushdata(hash256d(
+                encode_num(cls.MODULUS) \
+                    + encode_num(cls.GROUP_ORDER) \
+                        + encode_num(cls.Gx) \
+                            + bytes.fromhex("0220") + cls.Gx_bytes + bytes.fromhex("02") \
+                                + encode_num(cls.Gy)
+            ))
             out += Script.parse_string("OP_EQUALVERIFY")
 
         # Compute A + G
@@ -245,6 +231,7 @@ class Secp256k1:
         cls,
         check_constants: bool = False,
         clean_constants: bool = False,
+        additional_constant: int = 0,
         h: StackFiniteFieldElement = StackFiniteFieldElement(3, False, 1),  # noqa: B008
         a: StackFiniteFieldElement = StackFiniteFieldElement(2, False, 1),  # noqa: B008
         A: StackEllipticCurvePoint = StackEllipticCurvePoint(  # noqa: B008, N803
@@ -253,7 +240,7 @@ class Secp256k1:
         ),
         rolling_options: int = 7,
     ) -> Script:
-        """Verify that A = aG.
+        """Verify that A = (a+additional_constant)G.
 
         This script verifies that A = aG, where:
         - A is a point on E
@@ -274,15 +261,14 @@ class Secp256k1:
         is_h_rolled, is_a_rolled, is_A_rolled = bitmask_to_boolean_list(rolling_options, 3)
 
         out = Script()
-
         if check_constants:
-            out.append_pushdata(bytes.fromhex("0220") + cls.Gx_bytes + bytes.fromhex("02"))
-            out += nums_to_script([cls.Gx, cls.GROUP_ORDER])
-            out += pick(position=-1, n_elements=1)
-            out += Script.parse_string("OP_EQUALVERIFY")
-            out += pick(position=-2, n_elements=1)
-            out += Script.parse_string("OP_EQUALVERIFY")
-            out += pick(position=-3, n_elements=1)
+            out += pick(position=-1,n_elements=3)
+            out += Script.parse_string("OP_CAT OP_CAT OP_HASH256")
+            out.append_pushdata(hash256d(
+                encode_num(cls.GROUP_ORDER) \
+                    + encode_num(cls.Gx) \
+                        + bytes.fromhex("0220") + cls.Gx_bytes + bytes.fromhex("02")
+            ))
             out += Script.parse_string("OP_EQUALVERIFY")
 
         # Prepare A and -A
@@ -296,19 +282,19 @@ class Secp256k1:
         out += reverse_endianness(32)  # Reverse endianness of A.x
         out += Script.parse_string("OP_TUCK OP_CAT")  # Construct -A
 
-        # Verify that -A = (-a + epsilon)G
+        # Verify that -A = (-a - additional_constant + epsilon)G
         # stack in:  [GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, Gy, .., h .., a, .., A, .., [2/3], A.x, -A]
         # stack out: [GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, Gy, .., h .., a, .., A, .., [2/3], A.x], or fail
         out += cls.verify_base_point_multiplication_up_to_epsilon(
             check_constants=False,
             clean_constants=False,
-            additional_constant=0,
+            additional_constant=-additional_constant,
             h=h.shift(3 - 2 * is_A_rolled),
             a=a.shift(3 - 2 * is_A_rolled).set_negate(True),
             rolling_options=boolean_list_to_bitmask([False, False, True]),
         )
 
-        # Verify that A = (a + epsilon)G
+        # Verify that A = (a + additional_constant + epsilon)G
         # stack in:  [GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, Gy, .., h .., a, .., A, ..,
         #               [2/3], A.x]
         # stack out: [GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, Gy, .., h .., a, .., A, ..]
@@ -316,7 +302,7 @@ class Secp256k1:
         out += cls.verify_base_point_multiplication_up_to_epsilon(
             check_constants=False,
             clean_constants=clean_constants,
-            additional_constant=0,
+            additional_constant=additional_constant,
             h=h.shift(1 - 2 * is_A_rolled),
             a=a.shift(1 - 2 * is_A_rolled),
             rolling_options=boolean_list_to_bitmask([is_h_rolled, is_a_rolled, True]),
@@ -371,17 +357,15 @@ class Secp256k1:
         list_rolling_options = bitmask_to_boolean_list(rolling_options, 8)
 
         out = Script()
-
         if check_constants:
-            out.append_pushdata(bytes.fromhex("0220") + cls.Gx_bytes + bytes.fromhex("02"))
-            out += nums_to_script([cls.Gx, cls.GROUP_ORDER, cls.MODULUS])
-            out += pick(position=-1, n_elements=1)
-            out += Script.parse_string("OP_EQUALVERIFY")
-            out += pick(position=-2, n_elements=1)
-            out += Script.parse_string("OP_EQUALVERIFY")
-            out += pick(position=-3, n_elements=1)
-            out += Script.parse_string("OP_EQUALVERIFY")
-            out += pick(position=-4, n_elements=1)
+            out += pick(position=-1,n_elements=4)
+            out += Script.parse_string("OP_CAT OP_CAT OP_CAT OP_HASH256")
+            out.append_pushdata(hash256d(
+                encode_num(cls.MODULUS) \
+                    + encode_num(cls.GROUP_ORDER) \
+                        + encode_num(cls.Gx) \
+                            + bytes.fromhex("0220") + cls.Gx_bytes + bytes.fromhex("02")
+            ))
             out += Script.parse_string("OP_EQUALVERIFY")
 
         # Compute P - h_times_x_coordinate_target_inverse_times_G
@@ -541,3 +525,364 @@ class Secp256k1:
             out += Script.parse_string("OP_DROP")
 
         return out
+
+    @classmethod
+    def verify_point_multiplication(
+        cls,
+        check_constants: bool = False,
+        clean_constants: bool = False,
+        h: StackFiniteFieldElement = StackFiniteFieldElement(18, False, 1),  # noqa: B008
+        s: List[StackFiniteFieldElement] = (
+            StackFiniteFieldElement(17, False, 1),  # noqa: B008
+            StackFiniteFieldElement(16, False, 1),  # noqa: B008
+        ),
+        gradients: List[StackFiniteFieldElement] = (
+            StackFiniteFieldElement(15, False, 1),  # noqa: B008
+            StackFiniteFieldElement(14, False, 1),  # noqa: B008
+            StackFiniteFieldElement(13, False, 1),  # noqa: B008
+        ),
+        d: List[StackFiniteFieldElement] = (
+            StackFiniteFieldElement(12,False,1),  # noqa: B008
+            StackFiniteFieldElement(11,False,1),  # noqa: B008
+        ),
+        D: List[StackEllipticCurvePoint] = (  # noqa: N803
+            StackEllipticCurvePoint(  # noqa: B008
+                StackFiniteFieldElement(10, False, 1),  # noqa: B008
+                StackFiniteFieldElement(9, False, 1),  # noqa: B008
+            ),
+            StackEllipticCurvePoint(  # noqa: B008
+                StackFiniteFieldElement(8, False, 1),  # noqa: B008
+                StackFiniteFieldElement(7, False, 1),  # noqa: B008
+            ),
+            StackEllipticCurvePoint(  # noqa: B008
+                StackFiniteFieldElement(6, False, 1),  # noqa: B008
+                StackFiniteFieldElement(5, False, 1),  # noqa: B008
+            ),
+        ),
+        Q: StackEllipticCurvePoint = StackEllipticCurvePoint(  # noqa: B008, N803
+            StackFiniteFieldElement(4, False, 1),  # noqa: B008
+            StackFiniteFieldElement(3, False, 1),  # noqa: B008
+        ),
+        b: StackFiniteFieldElement = StackFiniteFieldElement(2, False, 1),  # noqa: B008
+        P: StackEllipticCurvePoint = StackEllipticCurvePoint(  # noqa: B008, N803
+            StackFiniteFieldElement(1, False, 1),  # noqa: B008
+            StackFiniteFieldElement(0, False, 1),  # noqa: B008
+        ),
+        rolling_options: int = (2 << 13) - 1,
+    ) -> Script:
+        """Verify Q = bP.
+
+        Meaning of the arguments:
+            - h = msg digest
+            - s[0] = x_Q / b mod GROUP_ORDER, s[1] = x_{Q + bG} / b mod GROUP_ORDER
+            - gradients[0] = gradient(P,D[0]), gradients[1] = gradient(P,D[1]), gradients[2] = gradient(P,D[2])
+            - d[0] = h / x_Q mod GROUP_ORDER, d[1] = h / x_{Q + bG} mod GROUP_ORDER
+            - D[0] = h / x_Q * G, D[1] = (h / x_{Q + bG} - 1) * G, D[2] = b * G
+            - Q = bP
+
+        Stack input:
+            - stack: [MODULUS, GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, ..]
+        """
+
+        check_order([h,*s,*gradients,*d,*D,Q,b,P])
+        list_rolling_options = bitmask_to_boolean_list(rolling_options,14)
+
+        out = Script()
+        if check_constants:
+            out += pick(position=-1,n_elements=4)
+            out += Script.parse_string("OP_CAT OP_CAT OP_CAT OP_HASH256")
+            out.append_pushdata(hash256d(
+                encode_num(cls.MODULUS) \
+                    + encode_num(cls.GROUP_ORDER) \
+                        + encode_num(cls.Gx) \
+                            + bytes.fromhex("0220") + cls.Gx_bytes + bytes.fromhex("02")
+            ))
+            out += Script.parse_string("OP_EQUALVERIFY")
+
+        # compute P - D[0]
+        # stack in:  [MODULUS, GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, .., h, s[:],
+        #               gradients[:], d[:], D[:], Q, b, P]
+        # stack out: [MODULUS, GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, .., h, s[:],
+        #               gradients[:], d[:], D[:], Q, b, P]
+        # altstack out: [P - D[0]]
+        out += cls.ec_fq.point_algebraic_addition(
+            take_modulo=True,
+            check_constant=False,
+            clean_constant=False,
+            verify_gradient=True,
+            gradient=gradients[0],
+            P=D[0].set_negate(True),
+            Q=P,
+            rolling_options=boolean_list_to_bitmask([list_rolling_options[3],False,False])
+        )
+        out += Script.parse_string("OP_TOALTSTACK OP_TOALTSTACK")
+
+        # compute P - D[1]
+        # stack in:  [MODULUS, GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, .., h, s[:],
+        #               gradients[:], d[:], D[:], Q, b, P]
+        # stack out: [GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, .., h, s[:],
+        #               gradients[:], d[:], D[:], Q, b, P] or fail
+        # altstack out: [P - D[0], P - D[1]]
+        out += cls.ec_fq.point_algebraic_addition(
+            take_modulo=True,
+            check_constant=False,
+            clean_constant=False,
+            verify_gradient=True,
+            gradient=gradients[1],
+            P=D[1].set_negate(True),
+            Q=P,
+            rolling_options=boolean_list_to_bitmask([list_rolling_options[4],False,list_rolling_options[13]])
+        )
+        out += Script.parse_string("OP_TOALTSTACK OP_TOALTSTACK")
+
+        # compute Q + D[2]
+        # stack in:  [MODULUS, GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, .., h, s[:],
+        #               gradients[:], d[:], D[:], Q, b, P]
+        # stack out: [GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, .., h, s[:],
+        #               gradients[:], d[:], D[:], Q, b, P] or fail
+        # altstack out: [P - D[0], P - D[1], (Q + D[2])_x]
+        out += cls.ec_fq.point_algebraic_addition(
+            take_modulo=True,
+            check_constant=False,
+            clean_constant=True,
+            verify_gradient=True,
+            gradient=gradients[2].shift(-2*list_rolling_options[13]),
+            P=D[2].shift(-2*list_rolling_options[13]),
+            Q=Q.shift(-2*list_rolling_options[13]),
+            rolling_options=boolean_list_to_bitmask([list_rolling_options[5],False,False])
+        )
+        out += Script.parse_string("OP_DROP OP_TOALTSTACK")
+
+        # verify D[0] = d[0] * G
+        # stack in:  [GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, .., h, s[:],
+        #               gradients[:], d[:], D[:], Q, b, P]
+        # stack out: [GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, .., h, s[:],
+        #               gradients[:], d[:], D[:], Q, b, P] or fail
+        # altstack out: [P - D[0], P - D[1], (Q + D[2])_x]
+        out += cls.verify_base_point_multiplication_with_negation(
+            check_constants=False,
+            clean_constants=False,
+            h=h.shift(
+                -list_rolling_options[3] -list_rolling_options[4] -list_rolling_options[5] - 2*list_rolling_options[13]
+                ),
+            a=d[0].shift(-2*list_rolling_options[13]),
+            A=D[0].shift(-2*list_rolling_options[13]),
+            rolling_options=boolean_list_to_bitmask([False,False,list_rolling_options[8]])
+        )
+
+        # verify D[1] = (d[1]-1)* G
+        # stack in:  [GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, .., h, s[:],
+        #               gradients[:], d[:], D[:], Q, b, P]
+        # stack out: [GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, .., h, s[:],
+        #               gradients[:], d[:], D[:], Q, b, P] or fail
+        # altstack out: [P - D[0], P - D[1], (Q + D[2])_x]
+        out += cls.verify_base_point_multiplication_with_negation(
+            check_constants=False,
+            clean_constants=False,
+            additional_constant=-1,
+            h=h.shift(
+                -list_rolling_options[3]\
+                    -list_rolling_options[4]\
+                        -list_rolling_options[5]\
+                            -2*list_rolling_options[8]\
+                                -2*list_rolling_options[13]
+                ),
+            a=d[1].shift(-2*list_rolling_options[8]-2*list_rolling_options[13]),
+            A=D[1].shift(-2*list_rolling_options[13]),
+            rolling_options=boolean_list_to_bitmask([False,False,list_rolling_options[9]])
+        )
+
+        # verify D[2] = b * G
+        # stack in:  [GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, .., h, s[:],
+        #               gradients[:], d[:], D[:], Q, b, P]
+        # stack out: [GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, .., h, s[:],
+        #               gradients[:], d[:], D[:], Q, b, P] or fail
+        # altstack out: [P - D[0], P - D[1], (Q + D[2])_x]
+        out += move(
+            D[2].shift(-2*list_rolling_options[13]),bool_to_moving_function(list_rolling_options[10])
+            ) # Move D[2]
+        out += cls.verify_base_point_multiplication_with_negation(
+            check_constants=False,
+            clean_constants=False,
+            additional_constant=0,
+            h=h.shift(
+                -list_rolling_options[3]\
+                    -list_rolling_options[4]\
+                        -list_rolling_options[5]\
+                            -2*list_rolling_options[8]\
+                                -2*list_rolling_options[9]\
+                                    -2*list_rolling_options[10]\
+                                        -2*list_rolling_options[13]\
+                                            +2
+                ),
+            a=b.shift(-2*list_rolling_options[13]+2),
+            rolling_options=boolean_list_to_bitmask([False,False,True])
+        )
+
+        # verify d[1] * (Q + bG)_x = h mod GROUP_ORDER
+        # stack in:  [GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, .., h, s[:],
+        #               gradients[:], d[:], D[:], Q, b, P]
+        # stack out: [GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, .., h, s[:],
+        #               gradients[:], d[:], D[:], Q, b, P, (Q + D[2])_x] or fail
+        # altstack out: [P - D[0], P - D[1]]
+        out += Script.parse_string("OP_FROMALTSTACK")
+        out += enforce_mul_equal(
+            is_constant_reused=False,
+            a=h.shift(
+                -list_rolling_options[3]\
+                    -list_rolling_options[4]\
+                        -list_rolling_options[5]\
+                            -2*list_rolling_options[8]\
+                                -2*list_rolling_options[9]\
+                                    -2*list_rolling_options[10]\
+                                        -2*list_rolling_options[13]\
+                                            +1
+                ),
+            b=d[1].shift(
+                -2*list_rolling_options[8]\
+                    -2*list_rolling_options[9]\
+                        -2*list_rolling_options[10]\
+                            -2*list_rolling_options[13]\
+                                +1
+            ),
+            rolling_options=boolean_list_to_bitmask([False,list_rolling_options[7],False]),
+            leave_on_top_of_stack=0,
+            equation_to_check=(1<<0)
+        )
+
+        # verify s[1] * b = (Q + bG)_x mod GROUP_ORDER
+        # stack in:  [GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, .., h, s[:],
+        #               gradients[:], d[:], D[:], Q, b, P, (Q + D[2])_x]
+        # stack out: [GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, .., h, s[:],
+        #               gradients[:], d[:], D[:], Q, b, P, (Q + D[2])_x, s[0]] or fail
+        # altstack out: [P - D[0], P - D[1]]
+        out += enforce_mul_equal(
+            is_constant_reused=False,
+            a=s[1].shift(
+                -list_rolling_options[3]\
+                    -list_rolling_options[4]\
+                        -list_rolling_options[5]\
+                            -list_rolling_options[7]\
+                                -2*list_rolling_options[8]\
+                                    -2*list_rolling_options[9]\
+                                        -2*list_rolling_options[10]\
+                                            -2*list_rolling_options[13]\
+                                                +1
+                ),
+            b=b.shift(-2*list_rolling_options[13]+1),
+            rolling_options=boolean_list_to_bitmask([list_rolling_options[2],False,False]),
+            leave_on_top_of_stack=1,
+            equation_to_check=(1<<1)
+        )
+
+        # verify that Der((Q + bG)_x,s[1]) is valid for compressed(P - D[1])
+        # stack in: [GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, .., h, s[:],
+        #               gradients[:], d[:], D[:], Q, b, P, (Q + D[2])_x, s[0]] or fail
+        # altstack in: [P - D[0], P - D[1]]
+        # stack out: [GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, .., h, s[:],
+        #               gradients[:], d[:], D[:], Q, b, P] or fail
+        # altstack out: [P - D[0]]
+        out += int_sig_to_s_component(group_order=StackNumber(-1,False),rolling_options=2,add_prefix=True)
+        out += Script.parse_string("OP_TOALTSTACK")
+        out += x_coordinate_to_r_component()
+        out += Script.parse_string("OP_FROMALTSTACK")
+        out += Script.parse_string(
+            "OP_CAT OP_SIZE OP_SWAP OP_CAT 0x30 OP_SWAP OP_CAT 0x41 OP_CAT"
+        )
+        out += Script.parse_string("OP_FROMALTSTACK OP_FROMALTSTACK")
+        out += stack_elliptic_curve_point_to_compressed_pubkey()
+        out += Script.parse_string("OP_CHECKSIGVERIFY")
+
+
+        # verify d[0] * x_Q = h mod GROUP_ORDER
+        # stack in: [GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, .., h, s[:],
+        #               gradients[:], d[:], D[:], Q, b, P] or fail
+        # altstack in: [P - D[0]]
+        # stack out: [GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, .., h, s[:],
+        #               gradients[:], d[:], D[:], Q, b, P, x_Q] or fail
+        # altstack out: [P - D[0]]
+        out += enforce_mul_equal(
+            clean_constant=False,
+            is_constant_reused=False,
+            a=h.shift(
+                -list_rolling_options[2]\
+                    -list_rolling_options[3]\
+                        -list_rolling_options[4]\
+                            -list_rolling_options[5]\
+                                -list_rolling_options[7]\
+                                    -2*list_rolling_options[8]\
+                                        -2*list_rolling_options[9]\
+                                            -2*list_rolling_options[10]\
+                                                -2*list_rolling_options[13]\
+                ),
+            b=d[0].shift(-list_rolling_options[7]\
+                                    -2*list_rolling_options[8]\
+                                        -2*list_rolling_options[9]\
+                                            -2*list_rolling_options[10]\
+                                                -2*list_rolling_options[13]
+            ),
+            c=Q.x.shift(-2*list_rolling_options[13]),
+            rolling_options=boolean_list_to_bitmask([list_rolling_options[0],list_rolling_options[6],list_rolling_options[11]]),
+            leave_on_top_of_stack=4,
+            equation_to_check=(1<<0)
+        )
+
+        # verify s[0] * b = x_Q mod GROUP_ORDER
+        # stack in: [GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, .., h, s[:],
+        #               gradients[:], d[:], D[:], Q, b, P, x_Q]
+        # altstack in: [P - D[0]]
+        # stack out: [GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, .., h, s[:],
+        #               gradients[:], d[:], D[:], Q, b, P, x_Q, s[0]] or fail
+        # altstack out: [P - D[0]]
+        out += enforce_mul_equal(
+            clean_constant=False,
+            is_constant_reused=False,
+            a=s[0].shift(
+                -list_rolling_options[2]\
+                    -list_rolling_options[3]\
+                        -list_rolling_options[4]\
+                            -list_rolling_options[5]\
+                                -list_rolling_options[6]\
+                                    -list_rolling_options[7]\
+                                        -2*list_rolling_options[8]\
+                                            -2*list_rolling_options[9]\
+                                                -2*list_rolling_options[10]\
+                                                    -list_rolling_options[11]\
+                                                        -2*list_rolling_options[13]\
+                                                            +1
+                ),
+            b=b.shift(-2*list_rolling_options[13]+1),
+            rolling_options=boolean_list_to_bitmask([list_rolling_options[2],list_rolling_options[12],False]),
+            leave_on_top_of_stack=1,
+            equation_to_check=(1<<1)
+        )
+
+        # verify that Der(x_Q,s[0]) is valid for compressed(P - D[0])
+        # stack in: [GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, .., h, s[:],
+        #               gradients[:], d[:], D[:], Q, b, P, x_Q, s[0]]
+        # altstack in: [P - D[0]]
+        # stack out: [GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, .., h, s[:],
+        #               gradients[:], d[:], D[:], Q, b, P] or fail
+        # altstack out: []
+        out += int_sig_to_s_component(group_order=StackNumber(-1,False),rolling_options=2,add_prefix=True)
+        out += Script.parse_string("OP_TOALTSTACK")
+        out += x_coordinate_to_r_component()
+        out += Script.parse_string("OP_FROMALTSTACK")
+        out += Script.parse_string(
+            "OP_CAT OP_SIZE OP_SWAP OP_CAT 0x30 OP_SWAP OP_CAT 0x41 OP_CAT"
+        )
+        out += Script.parse_string("OP_FROMALTSTACK OP_FROMALTSTACK")
+        out += stack_elliptic_curve_point_to_compressed_pubkey()
+        out += Script.parse_string("OP_CHECKSIGVERIFY")
+
+        if list_rolling_options[11]:
+            out += move(
+                Q.y.shift(-list_rolling_options[12]-2*list_rolling_options[13]),bool_to_moving_function(list_rolling_options[12])
+                ) # Move Q.y
+            out += Script.parse_string("OP_DROP")
+        if clean_constants:
+            out += roll(position=-1,n_elements=3) # Roll the constants
+            out += Script.parse_string("OP_2DROP OP_DROP")
+
+        return out
+

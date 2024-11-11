@@ -3,7 +3,6 @@ from elliptic_curves.fields.fq import base_field_from_modulus
 from elliptic_curves.models.curve import Curve
 from elliptic_curves.models.ec import elliptic_curve_from_curve
 from tx_engine import Context, Script, hash256d
-from tx_engine.engine.util import GROUP_ORDER_INT, PRIME_INT, Gx, Gx_bytes, Gy
 
 from src.zkscript.elliptic_curves.secp256k1.secp256k1 import Secp256k1
 from src.zkscript.types.stack_elements import StackBaseElement, StackEllipticCurvePoint, StackFiniteFieldElement
@@ -19,8 +18,9 @@ generator = secp256k1(
     y=Fq_k1(0x483ADA7726A3C4655DA4FBFC0E1108A8FD17B448A68554199C47D08FFB10D4B8),
 )
 
-signature_prefix = bytes.fromhex("0220") + Gx_bytes + bytes.fromhex("02")
+signature_prefix = bytes.fromhex("0220") + generator.x.x.to_bytes(32) + bytes.fromhex("02")
 dummy_h = int.to_bytes(53458750141241331933368176931386592061784348704092867077248862953896423193426, 32)
+h = int.from_bytes(hash256d(dummy_h))
 
 
 def compress(P) -> bytes:  # noqa: N803
@@ -37,7 +37,7 @@ def compress(P) -> bytes:  # noqa: N803
 
 
 def tweak_private_key(a: int) -> int:
-    return (-2 * int.from_bytes(hash256d(dummy_h)) * pow(Gx, -1, GROUP_ORDER_INT) - a) % GROUP_ORDER_INT
+    return (-2 * h * pow(generator.x.x, -1, order) - a) % order
 
 
 @pytest.mark.parametrize(
@@ -67,10 +67,9 @@ def test_verify_base_point_multiplication_up_to_epsilon(a, A, additional_constan
     )
     lock += Script.parse_string("OP_1")
 
-    unlock = nums_to_script([GROUP_ORDER_INT, Gx])
+    unlock = nums_to_script([order, generator.x.x])
     unlock.append_pushdata(signature_prefix)
-    unlock.append_pushdata(hash256d(dummy_h)[::-1])
-    unlock += nums_to_script([a])
+    unlock += nums_to_script([h,a])
     if compressed_pubkey:
         unlock.append_pushdata(compress(A))
     else:
@@ -95,10 +94,9 @@ def test_verify_base_point_multiplication_with_addition(gradient, a, A):  # noqa
     )
     lock += Script.parse_string("OP_1")
 
-    unlock = nums_to_script([PRIME_INT, GROUP_ORDER_INT, Gx])
+    unlock = nums_to_script([modulus, order, generator.x.x])
     unlock.append_pushdata(signature_prefix)
-    unlock += nums_to_script([Gy])
-    unlock.append_pushdata(hash256d(dummy_h)[::-1])
+    unlock += nums_to_script([generator.y.x, h])
     unlock += nums_to_script(gradient.to_list())
     unlock += nums_to_script([a])
     unlock += nums_to_script(A.to_list())
@@ -116,17 +114,16 @@ def test_verify_base_point_multiplication_with_negation(a, A):  # noqa: N803
     )
     lock += Script.parse_string("OP_1")
 
-    unlock = nums_to_script([GROUP_ORDER_INT, Gx])
+    unlock = nums_to_script([order, generator.x.x])
     unlock.append_pushdata(signature_prefix)
-    unlock.append_pushdata(hash256d(dummy_h)[::-1])
-    unlock += nums_to_script([a])
+    unlock += nums_to_script([h, a])
     unlock += nums_to_script(A.to_list())
 
     context = Context(unlock + lock, z=hash256d(dummy_h))
     assert context.evaluate()
     assert len(context.get_stack()) == 1
 
-
+@pytest.mark.parametrize("negate", [True,False])
 @pytest.mark.parametrize(
     ("b", "P"),
     [
@@ -134,9 +131,8 @@ def test_verify_base_point_multiplication_with_negation(a, A):  # noqa: N803
         (56, generator.multiply(231)),
     ],
 )
-def test_verify_point_multiplication_up_to_sign(b, P):  # noqa: N803
+def test_verify_point_multiplication_up_to_sign(b, P, negate):  # noqa: N803
     Q = P.multiply(b)
-    h = int.from_bytes(hash256d(dummy_h))
     h_times_x_coordinate_target_inverse = Fr_k1(h) * Fr_k1(Q.x.x).invert()
     h_times_x_coordinate_target_inverse_times_G = generator.multiply(h_times_x_coordinate_target_inverse.x)
     gradient = P.get_lambda(-h_times_x_coordinate_target_inverse_times_G)
@@ -149,14 +145,61 @@ def test_verify_point_multiplication_up_to_sign(b, P):  # noqa: N803
     lock += Script.parse_string("OP_1")
 
     unlock = Script()
-    unlock += nums_to_script([PRIME_INT, GROUP_ORDER_INT, Gx])
+    unlock += nums_to_script([modulus, order, generator.x.x])
     unlock.append_pushdata(signature_prefix)
     unlock += nums_to_script([h, b, x_coordinate_times_b_inverse.x, h_times_x_coordinate_target_inverse.x])
     unlock += nums_to_script(gradient.to_list())
-    unlock += nums_to_script(Q.to_list())
+    unlock += nums_to_script(Q.multiply(-1 if negate else 1).to_list())
     unlock += nums_to_script(P.to_list())
     unlock += nums_to_script(h_times_x_coordinate_target_inverse_times_G.to_list())
 
     context = Context(unlock + lock, z=hash256d(dummy_h))
+    assert context.evaluate()
+    assert len(context.get_stack()) == 1
+
+@pytest.mark.parametrize(("b","P"), [(3, generator.multiply(10)), (110, generator.multiply(547))])
+def test_verify_point_multiplication(b,P):  # noqa: N803
+    Q = P.multiply(b)
+
+    d = []
+    d.append(Fr_k1(h) * Fr_k1(Q.x.x).invert())
+    d.append(Fr_k1(h) * Fr_k1((Q + generator.multiply(b)).x.x).invert())
+
+    s = []
+    s.append(Fr_k1(Q.x.x) * Fr_k1(b).invert())
+    s.append(Fr_k1((Q + generator.multiply(b)).x.x) * Fr_k1(b).invert())
+
+    D = []
+    D.append(generator.multiply(d[0].x))
+    D.append(generator.multiply(d[1].x-1))
+    D.append(generator.multiply(b))
+
+    gradients = []
+    gradients.append(P.get_lambda(-D[0]))
+    gradients.append(P.get_lambda(-D[1]))
+    gradients.append(Q.get_lambda(D[2]))
+
+
+    lock = Secp256k1.verify_point_multiplication(
+        True,
+        True,
+    )
+    lock += Script.parse_string("OP_1")
+
+    unlock = Script()
+    unlock += nums_to_script([modulus,order,generator.x.x])
+    unlock.append_pushdata(signature_prefix)
+
+    unlock += nums_to_script([h])
+    unlock += nums_to_script([s_.x for s_ in s])
+    unlock += nums_to_script([gradients_.x for gradients_ in gradients])
+    unlock += nums_to_script([d_.x for d_ in d])
+    for D_ in D:
+        unlock += nums_to_script(D_.to_list())
+    unlock += nums_to_script(Q.to_list())
+    unlock += nums_to_script([b])
+    unlock += nums_to_script(P.to_list())
+
+    context = Context(unlock + lock, z = hash256d(dummy_h))
     assert context.evaluate()
     assert len(context.get_stack()) == 1

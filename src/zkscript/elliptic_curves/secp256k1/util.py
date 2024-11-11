@@ -7,9 +7,9 @@ from src.zkscript.types.stack_elements import (
 )
 from src.zkscript.util.utility_functions import (
     bitmask_to_boolean_list,
-    bool_to_moving_function,
 )
 from src.zkscript.util.utility_scripts import (
+    bool_to_moving_function,
     move,
     pick,
     reverse_endianness,
