@@ -4,7 +4,7 @@ import pytest
 from tx_engine import Context
 
 from src.zkscript.merkle_tree.merkle_tree import MerkleTree as MerkleTreeScript
-from src.zkscript.types.unlocking_keys.merkle_tree import MerkleTreeUnlockingKey
+from src.zkscript.types.unlocking_keys.merkle_tree import MerkleTreeBitFlagsUnlockingKey, MerkleTreeTwoAuxUnlockingKey
 from tests.fields.util import save_scripts
 
 
@@ -146,7 +146,7 @@ class MerkleTree:
 )
 def test_merkle_proof_with_bit_flags(root, hash_function, depth, d, aux, bit, save_to_json_folder):
     merkle_tree = MerkleTreeScript(root=root, hash_function=hash_function, depth=depth)
-    unlocking_key = MerkleTreeUnlockingKey(algorithm="bit_flag", data=d, aux=aux, bit=bit)
+    unlocking_key = MerkleTreeBitFlagsUnlockingKey(data=d, aux=aux, bit=bit)
     lock = merkle_tree.locking_merkle_proof_with_bit_flags()
     unlock = unlocking_key.to_unlocking_script(merkle_tree=merkle_tree)
     context = Context(script=unlock + lock)
@@ -172,7 +172,7 @@ def test_merkle_proof_with_bit_flags(root, hash_function, depth, d, aux, bit, sa
 )
 def test_merkle_proof_with_two_aux(root, hash_function, depth, d, aux_left, aux_right, save_to_json_folder):
     merkle_tree = MerkleTreeScript(root=root, hash_function=hash_function, depth=depth)
-    unlocking_key = MerkleTreeUnlockingKey(algorithm="two_aux", data=d, aux_left=aux_left, aux_right=aux_right)
+    unlocking_key = MerkleTreeTwoAuxUnlockingKey(data=d, aux_left=aux_left, aux_right=aux_right)
 
     lock = merkle_tree.locking_merkle_proof_with_two_aux()
     unlock = unlocking_key.to_unlocking_script(merkle_tree=merkle_tree)

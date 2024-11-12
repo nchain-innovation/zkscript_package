@@ -1,99 +1,70 @@
 import string
-from typing import Literal, Union
+from dataclasses import dataclass, field
+from typing import List, Optional
 
 from tx_engine import Script
 
 from src.zkscript.merkle_tree.merkle_tree import MerkleTree
 
 
-class MerkleTreeUnlockingKey:
-    """Class implementing methods to generate unlocking scripts verifying Merkle paths."""
+@dataclass
+class MerkleTreeBitFlagsUnlockingKey:
+    """Class for generating unlocking scripts to verify Merkle paths using bit flags.
 
-    def __init__(
-        self,
-        algorithm: Union[Literal["two_aux", "bit_flag"]],
-        data: str,
-        aux_left: list[str] | None = None,
-        aux_right: list[str] | None = None,
-        aux: list[str] | None = None,
-        bit: list[bool] | None = None,
-    ):
-        """Initialize a MerkleTree instance.
+    Attributes:
+        data: The data being verified, as a hexadecimal string.
+        path_data: The Merkle path for the data, containing auxiliary data and bit flags.
 
-        Args:
-            algorithm (str): A flag determining which Merkle proof algorithm is used. Can be "two_aux" or "bit_flag".
-            data (str): Data being verified, passed as a hexadecimal string.
-            aux_left (list[str], optional): List of left auxiliary strings in hexadecimal format for the "two_aux"
-                algorithm.
-            aux_right (list[str], optional): List of right auxiliary strings in hexadecimal format for the "two_aux"
-                algorithm.
-            aux (list[str], optional): List of auxiliary data in hexadecimal format for the "bit_flag" algorithm.
-            bit (list[bool], optional): List of boolean values for the "bit_flag" algorithm.
+    """
+
+    data: str
+    aux: Optional[List[str]] = field(default=None)
+    bit: Optional[List[bool]] = field(default=None)
+    path_data: Optional[List] = field(init=False)
+
+    def __post_init__(self):
+        """Validate inputs and initialize path_data.
 
         Raises:
-            AssertionError: Raised if input conditions are not met based on the following conditions:
-                - For `algorithm == "two_aux"`:
-                    - aux_left (list[str]): Must be provided and contain strings only in hexadecimal format.
-                    - aux_right (list[str]): Must be provided and contain strings only in hexadecimal format.
-                    - Length of aux_left and aux_right must be the same, ensuring balanced auxiliary inputs.
-                - For other algorithms:
-                    - aux_left and aux_right (list[str]): Must be provided and contain hexadecimal format strings.
-                    - `aux` (list[str]): All elements must be hexadecimal strings.
-                    - Length of `bit` and `aux` lists must match, ensuring consistency between bit flags and auxiliary
-                        data.
+            AssertionError: Raised if
+                - `aux` is not provided.
+                - `bit` is not provided.
+                - The length of `bit` does not match the length of `aux`.
+                - `aux` elements are not hexadecimal strings.
+                - `data` is not an hexadecimal sting.
 
         """
-        if algorithm == "two_aux":
-            assert aux_left is not None, f"{aux_left} should be a list of strings"
-            assert aux_right is not None, f"{aux_right} should be a list of strings"
-            assert len(aux_left) == len(aux_right), f"{aux_left} and {aux_right} should have the same lenght"
-            assert all(
-                c in string.hexdigits for node in aux_left for c in node
-            ), f"{aux_left} is not a valid list of hexadecimal strings"
-            assert all(
-                c in string.hexdigits for node in aux_right for c in node
-            ), f"{aux_left} is not a valid list of hexadecimal strings"
-            path_data = [aux_left, aux_right]
-        else:
-            assert aux is not None, f"{aux_left} should be a list of strings"
-            assert bit is not None, f"{aux_right} should be a list of strings"
-            assert len(bit) == len(aux), f"{bit} and {aux} should have the same lenght"
-            assert all(
-                c in string.hexdigits for node in aux for c in node
-            ), f"{aux} is not a valid list of hexadecimal strings"
-            path_data = [aux, bit]
+        assert self.aux is not None, f"{self.aux} should be a list of strings"
+        assert self.bit is not None, f"{self.bit} should be a list of strings"
+        assert len(self.bit) == len(self.aux), f"{self.bit} and {self.aux} should have the same lenght"
+        assert all(
+            c in string.hexdigits for node in self.aux for c in node
+        ), f"{self.aux} is not a valid list of hexadecimal strings"
+        assert all(c in string.hexdigits for c in self.data)
 
-        self.algortihm = algorithm
-        self.data = data
-        self.path_data = path_data
+        # Initialize path_data
+        self.path_data = [self.aux, self.bit]
 
     def to_unlocking_script(self, merkle_tree: MerkleTree) -> Script:
-        """Generate the unlocking script for a Merkle proof verification.
+        """Generate the unlocking script for a Merkle proof verification using bit flags.
 
-        This method generates an unlocking script to verify a Merkle path against a Merkle root. The unlocking script
-        is configured based on the chosen algorithm (either `"two_aux"` or `"bit_flag"`) and produces the necessary
-        script commands to validate the data's membership in the Merkle tree.
+        Stack input:
+            stack:    []
+            altstack: []
 
-        For `"two_aux"`, it generates the path using two auxiliary nodes per level:
-            - Stack input:    []
-            - Stack output:   [aux_{0, depth - 1}, aux_{1, depth - 1}, ..., aux_{0,1}, aux_{1,1}, d]
-
-
-        For `"bit_flag"`, it generates the path using a bit flags to identify the position of the node:
-            - Stack input:    [aux_{depth - 1}, bit_{depth - 1}, ..., aux_1, bit_1, d]
-            - Stack output:   []
+        Stack output:
+            stack:   [aux_{depth - 1}, bit_{depth - 1}, ..., aux_1, bit_1, d]
+            altstack:[]
 
         Args:
             merkle_tree (MerkleTree): The MerkleTree instance containing the depth information.
 
         Returns:
-            An unlocking script corresponding to the locking script generated by `locking_merkle_proof_with_two_aux` or
-            `locking_merkle_proof_with_bit_flags`.
+            An unlocking script corresponding to the locking script generated by `locking_merkle_proof_with_bit_flags`.
 
         Raises:
             AssertionError: Raised if
                 - the lengths of `self.path_data[0]` or `self.path_data[1]` do not match `merkle_tree.depth - 1`.
-                - `self.data` must be a valid hexadecimal string for successful execution.
 
         """
 
@@ -106,14 +77,94 @@ class MerkleTreeUnlockingKey:
 
         out = Script()
 
-        if self.algortihm == "two_aux":
-            for aux_l, aux_r in zip(self.path_data[0], self.path_data[1]):
-                out.append_pushdata(bytes.fromhex(aux_l))
-                out.append_pushdata(bytes.fromhex(aux_r))
-        else:
-            for aux_, bit_ in zip(self.path_data[0], self.path_data[1]):
-                out.append_pushdata(bytes.fromhex(aux_))
-                out += Script.parse_string("OP_1" if bit_ else "OP_0")
+        for aux_, bit_ in zip(self.path_data[0], self.path_data[1]):
+            out.append_pushdata(bytes.fromhex(aux_))
+            out += Script.parse_string("OP_1" if bit_ else "OP_0")
+
+        out.append_pushdata(bytes.fromhex(self.data))
+
+        return out
+
+
+@dataclass
+class MerkleTreeTwoAuxUnlockingKey:
+    """Class implementing methods to generate unlocking scripts verifying Merkle paths using two auxiliary values.
+
+    Attributes:
+        data: the data being verified.
+        path_data: the Merkle path of the data, formatted accordingly to the locking script.
+
+    """
+
+    data: str
+    aux_left: Optional[List[str]] = field(default=None)
+    aux_right: Optional[List[str]] = field(default=None)
+    path_data: Optional[List] = field(init=False)
+
+    def __post_init__(self):
+        """Validate inputs and initialize path_data.
+
+        Raises:
+            AssertionError: Raised if
+                - `aux_left` is not provided.
+                - `aux_right` is not provided.
+                - The length of `aux_left` does not match the length of `aux_right`.
+                - `aux_left` elements are not hexadecimal strings.
+                - `aux_right` elements are not hexadecimal strings.
+                - `data` is not an hexadecimal sting.
+
+        """
+        assert self.aux_left is not None, f"{self.aux_left} should be a list of strings"
+        assert self.aux_right is not None, f"{self.aux_right} should be a list of strings"
+        assert len(self.aux_left) == len(
+            self.aux_right
+        ), f"{self.aux_left} and {self.aux_right} should have the same lenght"
+        assert all(
+            c in string.hexdigits for node in self.aux_left for c in node
+        ), f"{self.aux_left} is not a valid list of hexadecimal strings"
+        assert all(
+            c in string.hexdigits for node in self.aux_right for c in node
+        ), f"{self.aux_left} is not a valid list of hexadecimal strings"
+        assert all(c in string.hexdigits for c in self.data)
+
+        # Initialize path_data
+        self.path_data = [self.aux_left, self.aux_right]
+
+    def to_unlocking_script(self, merkle_tree: MerkleTree) -> Script:
+        """Generate the unlocking script for a Merkle proof verification using two auxiliary values.
+
+        Stack input:
+            stack:    []
+            altstack: []
+
+        Stack output:
+            stack:   [aux_{0, depth - 1}, aux_{1, depth - 1}, ..., aux_{0,1}, aux_{1,1}, d]
+            altstack:[]
+
+        Args:
+            merkle_tree (MerkleTree): The MerkleTree instance containing the depth information.
+
+        Returns:
+            An unlocking script corresponding to the locking script generated by `locking_merkle_proof_with_two_aux`.
+
+        Raises:
+            AssertionError: Raised if
+                - the lengths of `self.path_data[0]` or `self.path_data[1]` do not match `merkle_tree.depth - 1`.
+
+        """
+
+        assert (
+            len(self.path_data[0]) == merkle_tree.depth - 1
+        ), f"{self.path_data[0]} must be of lenght {merkle_tree.depth - 1}."
+        assert (
+            len(self.path_data[1]) == merkle_tree.depth - 1
+        ), f"{self.path_data[1]} must be of lenght {merkle_tree.depth - 1}."
+
+        out = Script()
+
+        for aux_l, aux_r in zip(self.path_data[0], self.path_data[1]):
+            out.append_pushdata(bytes.fromhex(aux_l))
+            out.append_pushdata(bytes.fromhex(aux_r))
 
         out.append_pushdata(bytes.fromhex(self.data))
 

@@ -1,5 +1,5 @@
 """Classes to generate unlocking keys associated to scripts.
 
 Includes:
-- merkle_tree - implement class MerkleTreeUnlockingKey.
+- merkle_tree - implement class MerkleTreeBitFlagsUnlockingKey and MerkleTreeTwoAuxUnlockingKey.
 """
