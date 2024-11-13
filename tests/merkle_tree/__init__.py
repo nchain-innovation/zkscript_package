@@ -1,1 +1,1 @@
-"""Test for Merkle tree scripts"""
+"""Test for Merkle tree scripts."""

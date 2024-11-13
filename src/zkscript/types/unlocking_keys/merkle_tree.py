@@ -1,6 +1,6 @@
 import string
 from dataclasses import dataclass, field
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 from tx_engine import Script
 
@@ -13,6 +13,8 @@ class MerkleTreeBitFlagsUnlockingKey:
 
     Attributes:
         data: The data being verified, as a hexadecimal string.
+        aux: The list of labels used in the Merkle path.
+        bit: A list of booleans representing the position of the nodes in the Merkle path.
         path_data: The Merkle path for the data, containing auxiliary data and bit flags.
 
     """
@@ -20,7 +22,7 @@ class MerkleTreeBitFlagsUnlockingKey:
     data: str
     aux: Optional[List[str]] = field(default=None)
     bit: Optional[List[bool]] = field(default=None)
-    path_data: Optional[List] = field(init=False)
+    path_data: Optional[List[Tuple[str, bool]]] = field(init=False)
 
     def __post_init__(self):
         """Validate inputs and initialize path_data.
@@ -43,7 +45,7 @@ class MerkleTreeBitFlagsUnlockingKey:
         assert all(c in string.hexdigits for c in self.data)
 
         # Initialize path_data
-        self.path_data = [self.aux, self.bit]
+        self.path_data = list(zip(self.aux, self.bit))
 
     def to_unlocking_script(self, merkle_tree: MerkleTree) -> Script:
         """Generate the unlocking script for a Merkle proof verification using bit flags.
@@ -77,7 +79,7 @@ class MerkleTreeBitFlagsUnlockingKey:
 
         out = Script()
 
-        for aux_, bit_ in zip(self.path_data[0], self.path_data[1]):
+        for aux_, bit_ in self.path_data:
             out.append_pushdata(bytes.fromhex(aux_))
             out += Script.parse_string("OP_1" if bit_ else "OP_0")
 
@@ -92,6 +94,8 @@ class MerkleTreeTwoAuxUnlockingKey:
 
     Attributes:
         data: the data being verified.
+        aux_left: list of node labels. If the a right node is required in the Merkle path, an empty string is used.
+        aux_right: list of node labels. If the a left node is required in the Merkle path, an empty string is used.
         path_data: the Merkle path of the data, formatted accordingly to the locking script.
 
     """
@@ -99,7 +103,7 @@ class MerkleTreeTwoAuxUnlockingKey:
     data: str
     aux_left: Optional[List[str]] = field(default=None)
     aux_right: Optional[List[str]] = field(default=None)
-    path_data: Optional[List] = field(init=False)
+    path_data: Optional[List[Tuple[str, str]]] = field(init=False)
 
     def __post_init__(self):
         """Validate inputs and initialize path_data.
@@ -128,7 +132,7 @@ class MerkleTreeTwoAuxUnlockingKey:
         assert all(c in string.hexdigits for c in self.data)
 
         # Initialize path_data
-        self.path_data = [self.aux_left, self.aux_right]
+        self.path_data = list(zip(self.aux_left, self.aux_right))
 
     def to_unlocking_script(self, merkle_tree: MerkleTree) -> Script:
         """Generate the unlocking script for a Merkle proof verification using two auxiliary values.
@@ -162,7 +166,7 @@ class MerkleTreeTwoAuxUnlockingKey:
 
         out = Script()
 
-        for aux_l, aux_r in zip(self.path_data[0], self.path_data[1]):
+        for aux_l, aux_r in self.path_data:
             out.append_pushdata(bytes.fromhex(aux_l))
             out.append_pushdata(bytes.fromhex(aux_r))
 
