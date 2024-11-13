@@ -1,39 +1,36 @@
 import string
-from dataclasses import dataclass
 
 from tx_engine import Script
 
 
-@dataclass
 class MerkleTree:
-    """Class implementing methods to generate locking scripts for Merkle path verification.
+    """Class implementing methods to generate locking for Merkle paths verification."""
 
-    Attributes:
-        root (str): Root hash of the Merkle Tree, as a hexadecimal string.
-        hash_function (str): Hash function used in the Merkle Tree.
-        depth (int): Number of levels in the Merkle Tree.
+    def __init__(self, root: str, hash_function: str, depth: int):
+        """Initialize a MerkleTree instance.
 
-    """
-
-    root: str
-    hash_function: str
-    depth: int
-
-    def __post_init__(self):
-        """Validate inputs and raise errors if any conditions are not met.
+        Args:
+            root (str): The root hash of the Merkle Tree, provided as a hexadecimal string.
+            hash_function (str): Hash function used in the Merkle Tree, the hash function must be a valid hash opcode or
+                a sequence of valid hash opcodes. Valid hash opcodes are `OP_RIPEMD160, OP_SHA1, OP_SHA256, OP_HASH160,`
+                `OP_HASH256`
+            depth (int): Number of levels in the Merkle tree.
 
         Raises:
             AssertionError: If `root` is not a hexadecimal or `hash_function` contains invalid opcodes.
 
         """
+        assert all(c in string.hexdigits for c in root), f"{root} is not a valid hexadecimal string."
 
-        assert all(c in string.hexdigits for c in self.root), f"{self.root} is not a valid hexadecimal string."
-
-        assert set(self.hash_function.split(" ")).issubset(
+        assert set(hash_function.split(" ")).issubset(
             {"OP_RIPEMD160", "OP_SHA1", "OP_SHA256", "OP_HASH160", "OP_HASH256"}
-        ), f"{self.hash_function} is not a valid hash function."
+        ), f"{hash_function} is not a valid hash function."
 
-        assert self.depth > 0
+        assert depth > 0
+
+        self.root = root
+        self.hash_function = hash_function
+        self.depth = depth
 
     def locking_merkle_proof_with_bit_flags(
         self,
