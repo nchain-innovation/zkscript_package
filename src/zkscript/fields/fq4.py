@@ -28,7 +28,7 @@ class Fq4:
 
     Attributes:
         MODULUS: The characteristic of the field F_q.
-        BASE_FIELD: The script implementation of the field F_q^2.
+        BASE_FIELD (Fq2): Bitcoin script instance to perform arithmetic operations in F_q^2.
         GAMMAS_FROBENIUS: The list of [gamma1,gamma2,...,gamma3] for the Frobenius where gammai = [gammai1],
             with gammai1 = non_residue_over_fq2.power((q**i-1)//2).
     """
@@ -38,7 +38,7 @@ class Fq4:
 
         Args:
             q: The characteristic of the field F_q.
-            base_field: The script implementation of the field F_q^2.
+            base_field (Fq2): Bitcoin script instance to perform arithmetic operations in F_q^2.
             gammas_frobenius: The list of [gamma1,gamma2,...,gamma3] for the Frobenius where gammai = [gammai1],
                 with gammai1 = non_residue_over_fq2.power((q**i-1)//2).
         """

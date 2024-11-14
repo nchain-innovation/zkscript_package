@@ -171,7 +171,7 @@ class Groth16(PairingModel):
         lambdas_minus_gamma_exp_miller_loop: list[list[list[int]]],
         lambdas_minus_delta_exp_miller_loop: list[list[list[int]]],
         inverse_miller_loop: list[int],
-        lamdbas_partial_sums: list[int],
+        lambdas_partial_sums: list[int],
         lambdas_multiplications: list[int],
         max_multipliers: list[int] | None = None,
         load_q=True,
@@ -190,7 +190,7 @@ class Groth16(PairingModel):
             lambdas_minus_delta_exp_miller_loop (list[list[list[int]]]): Gradients needed to compute val * (-delta).
             inverse_miller_loop (list[int]): Inverse of miller_loop(A,B) * miller_loop(C,-gamma) *
                 miller_loop(sum_gamma_abc,-delta), where gamma_abc is taken from the vk.
-            lamdbas_partial_sums (list[int]): List of gradients, the element at position n_pub - i - 1 is the list of
+            lambdas_partial_sums (list[int]): List of gradients, the element at position n_pub - i - 1 is the list of
                 gradients to compute a_(i+1) * gamma_abc[i] and \sum_(j=0)^(i) a_j * gamma_abc[j], 0 <= i <= n_pub - 1.
             lambdas_multiplications (list[int]): List of gradients, the element at position i is the list of gradients
                 to compute pub[i] * gamma_abc[i], 0 <= i <= n_pub - 1.
@@ -225,7 +225,7 @@ class Groth16(PairingModel):
 
         # Partial sums
         for i in range(n_pub):
-            out += nums_to_script(lamdbas_partial_sums[i])
+            out += nums_to_script(lambdas_partial_sums[i])
 
         # Multiplications pub[i] * gamma_abc[i]
         for i in range(n_pub):

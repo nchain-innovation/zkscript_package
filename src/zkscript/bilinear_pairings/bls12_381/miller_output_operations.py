@@ -13,9 +13,9 @@ class MillerOutputOperations(Fq12CubicScriptModel):
     Operations are performed in Fq12Cubic, Fq^12 = Fq^4[r] / (r^3 - s) = F_q^2[s,r] / (r^3 - s, s^2 - xi).
 
     We call:
-        - `sparse` elements of the form: a + bs + cr^2 in with a, c in F_q^2, and b in F_q.
-        - `somewhat sparse` elements of the form: a + b s + c rs + d r^2 + e r^2s.
-        - `dense` elements of the form: a + bs + cr + drs + er^2 + f r^2s.
+        - `sparse` elements of the form: a + bs + cr^2, with a, c in F_q^2, and b in F_q.
+        - `somewhat sparse` elements of the form: a + b s + c rs + d r^2 + e r^2s, with a, b, c, d, e in F_q^2.
+        - `dense` elements of the form: a + bs + cr + drs + er^2 + f r^2s, with a, b, c, d, e, f in F_q^2.
 
     The output of line evaluations are sparse elements.
     The product of two line evaluations are somewhat sparse elements.

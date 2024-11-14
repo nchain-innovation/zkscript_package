@@ -1,4 +1,4 @@
-"""Bitcoin scripts that perform elliptic curve arithmetic in E(F_q)."""
+"""Bitcoin scripts that perform arithmetic operations over the elliptic curve E(F_q)."""
 
 from tx_engine import Script
 
@@ -8,7 +8,7 @@ from src.zkscript.util.utility_scripts import mod, move, nums_to_script, pick, r
 
 
 class EllipticCurveFq:
-    """Construct Bitcoin scripts that perform elliptic curve arithmetic in E(F_q).
+    """Construct Bitcoin scripts that perform arithmetic operations over the elliptic curve E(F_q).
 
     Attributes:
         MODULUS: The characteristic of the field F_q.
@@ -46,7 +46,6 @@ class EllipticCurveFq:
 
         This function computes the algebraic addition of P and Q for elliptic curve points `P` and `Q`.
         The function branches according to the value of verify_gradient.
-        If `take_modulo` is `True`, the result is reduced modulo `q`.
         It also handles optional checks on the curve constant and whether the constant should be cleaned or reused.
 
         Stack input:
@@ -127,7 +126,6 @@ class EllipticCurveFq:
 
         This function computes the algebraic doubling of P for the elliptic curve points `P`.
         The function branches according to the value of verify_gradient.
-        If `take_modulo` is `True`, the result is reduced modulo `q`.
         It also handles optional checks on the curve constant and whether the constant should be cleaned or reused.
 
         Stack input:
@@ -201,7 +199,6 @@ class EllipticCurveFq:
         """Perform algebraic addition of points on an elliptic curve defined over Fq.
 
         This function computes the algebraic addition of P and Q for elliptic curve points `P` and `Q`.
-        If `take_modulo` is `True`, the result is reduced modulo `q`.
         It also handles optional checks on the curve constant and whether the constant should be cleaned or reused.
 
         Stack input:
@@ -346,7 +343,6 @@ class EllipticCurveFq:
 
         This function computes the algebraic addition of P and Q for elliptic curve points `P` and `Q`.
         This functions does not verify the validity of the gradient provided.
-        If `take_modulo` is `True`, the result is reduced modulo `q`.
         It also handles optional checks on the curve constant and whether the constant should be cleaned or reused.
 
         Stack input:
@@ -456,7 +452,6 @@ class EllipticCurveFq:
         """Perform algebraic point doubling of points on an elliptic curve defined over Fq.
 
         This function computes the algebraic doubling of P for the elliptic curve points `P`.
-        If `take_modulo` is `True`, the result is reduced modulo `q`.
         It also handles optional checks on the curve constant and whether the constant should be cleaned or reused.
 
         Stack input:
@@ -578,7 +573,6 @@ class EllipticCurveFq:
 
         This function computes the algebraic doubling of P for the elliptic curve points `P`.
         This function does not verify the validity of the gradient provided.
-        If `take_modulo` is `True`, the result is reduced modulo `q`.
         It also handles optional checks on the curve constant and whether the constant should be cleaned or reused.
 
         Stack input:
@@ -660,7 +654,6 @@ class EllipticCurveFq:
     ) -> Script:
         """Sum two points which we do not know whether they are equal, different, or the inverse of one another.
 
-        If `take_modulo` is `True`, the result is reduced modulo `q`.
         It also handles optional checks on the curve constant and whether the constant should be cleaned or reused.
 
         Stack input:

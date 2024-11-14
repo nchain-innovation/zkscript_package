@@ -1,4 +1,4 @@
-"""Bitcoin scripts that perform elliptic curve arithmetic in E(F_q)."""
+"""Bitcoin scripts that perform arithmetic operations over the elliptic curve E(F_q)."""
 
 from math import ceil, log2
 
@@ -11,11 +11,12 @@ from src.zkscript.util.utility_scripts import nums_to_script, roll, verify_botto
 
 
 class EllipticCurveFqUnrolled:
-    """Construct Bitcoin scripts that perform elliptic curve arithmetic in E(F_q).
+    """Construct Bitcoin scripts that perform arithmetic operations over the elliptic curve E(F_q).
 
     Attributes:
         MODULUS: The characteristic of the field F_q.
-        EC_OVER_FQ: The script implementation for the elliptic curve E(F_q).
+        EC_OVER_FQ (EllipticCurveFq): Bitcoin script instance to perform arithmetic operations over the elliptic
+            curve E(F_q).
     """
 
     def __init__(self, q: int, ec_over_fq: EllipticCurveFq):
@@ -23,7 +24,8 @@ class EllipticCurveFqUnrolled:
 
         Args:
             q: The characteristic of the field F_q.
-            ec_over_fq: The script implementation for the elliptic curve E(F_q).
+            ec_over_fq (EllipticCurveFq): Bitcoin script instance to perform arithmetic operations over the elliptic
+                curve E(F_q).
         """
         self.MODULUS = q
         self.EC_OVER_FQ = ec_over_fq
@@ -57,17 +59,18 @@ class EllipticCurveFqUnrolled:
             Script to multiply a point on E(F_q) using double-and-add scalar multiplication.
 
         Notes:
-            The formula for EC point doubling/addition is:
-            `x_(P+Q) = lambda^2 - x_P - x_Q`
-            `y_(P+Q) = -y_P + (x_(P+Q) - x_P) * lambda`
+            The formula for EC point addition `P + Q` where `Q != -P` and `P` and `Q` are not the point at infinity,
+            where the curve is in short Weierstrass form, is:
+                `x_(P+Q) = lambda^2 - x_P - x_Q`
+                `y_(P+Q) = -y_P + (x_(P+Q) - x_P) * lambda`
             where lambda is the gradient of the line through P and Q. Then, we have (with q exchanged for current_size
-            in future steps)
+            in future steps):
 
-            log_2(abs(x_(P+Q)) <= log_2(q^2 + 2q) = log_2(q) + log_2(q+2) <= 2 log_2(q+2)
-            log_2(abs(y_(P+Q)) <= log_2(q + (q^2 + 3q) * q) = log_2(q + q^3 + 3q^2) <= log_2(q) + log_2(1 + q^2 + 3q)
+            `log_2(abs(x_(P+Q)) <= log_2(q^2 + 2q) = log_2(q) + log_2(q+2) <= 2 log_2(q+2)`
+            `log_2(abs(y_(P+Q)) <= log_2(q + (q^2 + 3q) * q) = log_2(q + q^3 + 3q^2) <= log_2(q) + log_2(1 + q^2 + 3q)`
 
-            At every step we check that the next operation doesn't make log_2(q) + log_2(1 + q^2 + 3q) >
-            modulo_threshold.
+            At every step we check that the next operation doesn't make `log_2(q) + log_2(1 + q^2 + 3q) >
+            modulo_threshold`.
         """
         ec_over_fq = self.EC_OVER_FQ
 
@@ -192,8 +195,10 @@ class EllipticCurveFqUnrolled:
             We ignore the last element of `exp_a`, therefore `len(lambdas) = len(exp_a)-1`.
 
         Returns:
-            Script containing the gradients and operational steps to execute double-and-add scalar multiplication. The
-            script is based on the binary expansion of `a` (denoted `exp_a`) and the list of gradients `lambdas`.
+            Script containing the gradients and operational steps to execute double-and-add scalar multiplication.
+
+        Notes:
+            The script is based on the binary expansion of `a` (denoted `exp_a`) and the list of gradients `lambdas`.
             Here's how it is built:
             - Let `exp_a = (a0, a1, ..., aN)` where `a = sum_i 2^i * ai`, and let `M = log2(max_multiplier)`.
             - Start with the point [xP yP].

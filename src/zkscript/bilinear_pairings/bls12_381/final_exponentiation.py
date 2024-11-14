@@ -1,4 +1,4 @@
-"""Bitcoin scripts that perform the final exponentiation in the Ate pairing for BLS12-381."""
+"""Bitcoin scripts that perform the final exponentiation in the pairing for BLS12-381."""
 
 from tx_engine import Script
 
@@ -9,13 +9,14 @@ from src.zkscript.util.utility_scripts import pick, roll, verify_bottom_constant
 
 
 class FinalExponentiation(CyclotomicExponentiation):
-    """Final exponentiation in the Ate pairing for BLS12-381."""
+    """Final exponentiation in the pairing for BLS12-381."""
 
     def __init__(self, fq12):
         """Initialise the final exponentiation for BLS12-381.
 
         Args:
-            fq12: The script implementation of the field F_q^12, the quadratic extension of F_q^6.
+            fq12 (Fq12): Bitcoin script instance to perform arithmetic operations in F_q^12, the quadratic extension of
+            F_q^6.
         """
         self.MODULUS = fq12.MODULUS
         self.FQ12 = fq12
@@ -51,7 +52,7 @@ class FinalExponentiation(CyclotomicExponentiation):
                 after execution. Defaults to `None`.
 
         Returns:
-            Script to perform the easy part of the exponentiation in the Ate pairing for BLS12-381.
+            Script to perform the easy part of the exponentiation in the pairing for BLS12-381.
 
         Notes:
             The inverse of `f` `inverse(f_quadratic)` is passed as input value on the stack and verified during script
@@ -118,7 +119,7 @@ class FinalExponentiation(CyclotomicExponentiation):
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
 
         Returns:
-            Script to perform the hard part of the exponentiation in the Ate pairing for BLS12-381.
+            Script to perform the hard part of the exponentiation in the pairing for BLS12-381.
 
         Notes:
             - `g` is the output of the easy part of the exponentiation.

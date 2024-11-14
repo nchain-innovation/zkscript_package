@@ -29,7 +29,7 @@ class Fq6:
 
     Attributes:
         MODULUS: The characteristic of the field F_q.
-        BASE_FIELD: The script implementation of the field F_q^2.
+        BASE_FIELD (Fq2): Bitcoin script instance to perform arithmetic operations in F_q^2.
     """
 
     def __init__(self, q: int, base_field):
@@ -37,7 +37,7 @@ class Fq6:
 
         Args:
             q: The characteristic of the field F_q.
-            base_field: The script implementation of the field F_q^2.
+            base_field (Fq2): Bitcoin script instance to perform arithmetic operations in F_q^2.
         """
         self.MODULUS = q
         self.BASE_FIELD = base_field

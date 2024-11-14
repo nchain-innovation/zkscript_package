@@ -15,8 +15,8 @@ class Fq12:
 
     Attributes:
         MODULUS: The characteristic of the field F_q.
-        FQ2: The script implementation of the field F_q^2.
-        FQ6: The script implementation of the field F_q^6.
+        FQ2 (Fq2): Bitcoin script instance to perform arithmetic operations in F_q^2.
+        FQ6 (Fq6): Bitcoin script instance to perform arithmetic operations in F_q^6.
         GAMMAS_FROBENIUS: The list of [gamma1,gamma2,...,gamma11] for the Frobenius where
             gammai = [gammai1, .., gammai6] with gammaij = list of coefficients of
             NON_RESIDUE_OVER_FQ2.power(j * (q**i-1)//6)
@@ -27,8 +27,8 @@ class Fq12:
 
         Args:
             q: The characteristic of the field F_q.
-            fq2: The script implementation of the field F_q^2.
-            fq6: The script implementation of the field F_q^6.
+            fq2 (Fq2): Bitcoin script instance to perform arithmetic operations in F_q^2.
+            fq6 (Fq6): Bitcoin script instance to perform arithmetic operations in F_q^6.
             gammas_frobenius: The list of [gamma1,gamma2,...,gamma11] for the Frobenius where
                 gammai = [gammai1, .., gammai6] with gammaij = list of coefficients of
                 NON_RESIDUE_OVER_FQ2.power(j * (q**i-1)//6)
@@ -442,7 +442,6 @@ class Fq12:
             Script to compute the Frobenius endomorphism for odd powers of an element in F_q^12.
         """
         assert n % 2 == 1
-        assert n % 12 != 0
 
         # Fq6 implementation
         fq2 = self.FQ2

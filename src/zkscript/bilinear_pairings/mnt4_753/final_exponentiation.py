@@ -1,4 +1,4 @@
-"""Bitcoin scripts that perform the final exponentiation in the Ate pairing for MNT4-753."""
+"""Bitcoin scripts that perform the final exponentiation in the pairing for MNT4-753."""
 
 from tx_engine import Script
 
@@ -9,14 +9,16 @@ from src.zkscript.util.utility_scripts import pick, verify_bottom_constant
 
 
 class FinalExponentiation(CyclotomicExponentiation):
-    """Final exponentiation in the Ate pairing for MNT4-753."""
+    """Final exponentiation in the pairing for MNT4-753."""
 
     def __init__(self, fq2, fq4):
         """Initialise the final exponentiation for MNT4-753.
 
         Args:
-            fq2: The script implementation of the field F_q^2, the quadratic extension of F_q.
-            fq4: The script implementation of the field F_q^4, the quadratic extension of F_q^2.
+            fq2 (Fq2): Bitcoin script instance to perform arithmetic operations in F_q^2, the quadratic extension of
+                F_q.
+            fq4 (Fq4): Bitcoin script instance to perform arithmetic operations in F_q^4, the quadratic extension of
+                F_q^2.
         """
         self.MODULUS = fq4.MODULUS
         self.FQ4 = fq4
@@ -50,7 +52,7 @@ class FinalExponentiation(CyclotomicExponentiation):
                 after execution. Defaults to `None`.
 
         Returns:
-            Script to perform the easy part of the exponentiation in the Ate pairing for MNT4-753.
+            Script to perform the easy part of the exponentiation in the pairing for MNT4-753.
 
         Notes:
             The inverse of `f` `inverse(f)` is passed as input value on the stack and verified during script execution.
@@ -107,7 +109,7 @@ class FinalExponentiation(CyclotomicExponentiation):
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
 
         Returns:
-            Script to perform the hard part of the exponentiation in the Ate pairing for MNT4-753.
+            Script to perform the hard part of the exponentiation in the pairing for MNT4-753.
 
         Notes:
             `g` is the output of the easy part of the exponentiation.

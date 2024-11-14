@@ -19,8 +19,8 @@ class Fq12Cubic:
 
     Attributes:
         MODULUS: The characteristic of the field F_q.
-        FQ2: The script implementation of the field F_q^2.
-        FQ4: The script implementation of the field F_q^4.
+        FQ2 (Fq2): Bitcoin script instance to perform arithmetic operations in F_q^2.
+        FQ4 (Fq4): Bitcoin script instance to perform arithmetic operations in F_q^4.
     """
 
     def __init__(self, q: int, fq2, fq4):
@@ -28,8 +28,8 @@ class Fq12Cubic:
 
         Args:
             q: The characteristic of the field F_q.
-            fq2: The script implementation of the field F_q^2.
-            fq4: The script implementation of the field F_q^4.
+            fq2 (Fq2): Bitcoin script instance to perform arithmetic operations in F_q^2.
+            fq4 (Fq4): Bitcoin script instance to perform arithmetic operations in F_q^4.
         """
         self.MODULUS = q
         self.FQ2 = fq2

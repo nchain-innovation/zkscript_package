@@ -13,7 +13,7 @@ class LineFunctions:
         """Initialise line evaluation for BLS12-381.
 
         Args:
-            fq2: The script implementation of the field F_q^2.
+            fq2 (Fq2): Bitcoin script instance to perform arithmetic operations in F_q^2.
         """
         self.MODULUS = fq2.MODULUS
         self.FQ2 = fq2
