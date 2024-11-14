@@ -29,6 +29,9 @@ ENV/
 env.bak/
 venv.bak/
 
-# Project specific
+### Project specific
 scripts_json/
 data/
+
+### Rust
+**/target/
