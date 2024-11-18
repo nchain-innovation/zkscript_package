@@ -3,8 +3,16 @@
 from tx_engine import Script
 
 from src.zkscript.types.stack_elements import StackEllipticCurvePoint, StackFiniteFieldElement
-from src.zkscript.util.utility_functions import bitmask_to_boolean_list, bool_to_moving_function, check_order
-from src.zkscript.util.utility_scripts import mod, move, nums_to_script, pick, roll, verify_bottom_constant
+from src.zkscript.util.utility_functions import bitmask_to_boolean_list, check_order
+from src.zkscript.util.utility_scripts import (
+    bool_to_moving_function,
+    mod,
+    move,
+    nums_to_script,
+    pick,
+    roll,
+    verify_bottom_constant,
+)
 
 
 class EllipticCurveFq:
