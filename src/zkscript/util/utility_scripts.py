@@ -445,8 +445,7 @@ def int_sig_to_s_component(
 
     if add_prefix:
         out += Script.parse_string("OP_SIZE OP_SWAP OP_CAT")  # Compute len(s)||s
-        out.append_pushdata(bytes.fromhex("02"))
-        out += Script.parse_string("OP_SWAP OP_CAT")  # Compute 02||len(s)||s
+        out += Script.parse_string("OP_2 OP_SWAP OP_CAT")  # Compute 02||len(s)||s
 
     return out
 

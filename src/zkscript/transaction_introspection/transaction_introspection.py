@@ -87,7 +87,7 @@ class TransactionIntrospection:
         #               Gx_bytes, 0x0220||Gx_bytes||02]
         out.append_pushdata(bytes.fromhex("0220"))
         out += roll(position=-3, n_elements=1) if clean_constants else pick(position=-3, n_elements=1)  # Move Gx_bytes
-        out += Script.parse_string("OP_TUCK 0x02 OP_CAT OP_CAT")
+        out += Script.parse_string("OP_TUCK OP_2 OP_CAT OP_CAT")
 
         # stack in:  [GROUP_ORDER_INT, Gx, Gx_bytes, .., sig_hash_preimage, ..,
         #               Gx_bytes, 0x0220||Gx_bytes||02]
@@ -131,7 +131,7 @@ class TransactionIntrospection:
         #               Gx_bytes, Der(Gx,s)]
         # stack out: [GROUP_ORDER_INT, Gx, Gx_bytes, .., sig_hash_preimage, ..,
         #               Der(Gx,s), Gx_bytes]
-        out += Script.parse_string("0x02 OP_ROT OP_CAT")
+        out += Script.parse_string("OP_2 OP_ROT OP_CAT")
 
         if is_checksigverify and not is_opcodeseparator:
             out += Script.parse_string("OP_CHECKSIGVERIFY")
