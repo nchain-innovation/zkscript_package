@@ -286,8 +286,7 @@ class TransactionIntrospection:
         sig_hash_int = int.from_bytes(sig_hash)
 
         while sig_hash_int % 2**security != 1 or sig_hash_int // 2**security < 2 ** (31 * 8):
-            tx_in.sequence += 1
-            tx_in.sequence = tx_in.sequence % 0xFFFFFFFF
+            tx_in.sequence = (tx_in.sequence + 1) % 0xFFFFFFFF
             tx.tx_ins = [tx_in]
             sig_hash_preimage = tx_to_sig_hash_preimage(
                 tx,
