@@ -5,9 +5,6 @@ from src.zkscript.types.stack_elements import (
     StackFiniteFieldElement,
     StackNumber,
 )
-from src.zkscript.util.utility_functions import (
-    bitmask_to_boolean_list,
-)
 from src.zkscript.util.utility_scripts import (
     bool_to_moving_function,
     move,
@@ -53,62 +50,6 @@ def stack_elliptic_curve_point_to_compressed_pubkey(
     # minimally encoded number
     out += reverse_endianness(32)
     out += Script.parse_string("OP_CAT")
-
-    return out
-
-
-def int_sig_to_s_component(
-    group_order: StackNumber = StackNumber(1, False),  # noqa: B008
-    int_sig: StackNumber = StackNumber(0, False),  # noqa: B008
-    rolling_options: int = 3,
-    add_prefix: bool = True,
-) -> Script:
-    """Return the script that transforms int_sig to the s-component of a secp256k1 ECDSA signature.
-
-    Args:
-        group_order (StackNumber): The position in the stack of the group order of secp256k1. Defaults
-            to `StackNumber(1,False)`.
-        int_sig (StackNumber): The position in the stack of int_sig. Defaults to `StackNumber(0,False)`.
-        rolling_options (int): Whether or not to roll group_order and int_sig, defaults to 3 (roll everything).
-        add_prefix (bool): Whether or not to prepend s with 0x02||len(s). Defaults to `True`.
-
-    """
-
-    is_group_order_rolled, is_int_sig_rolled = bitmask_to_boolean_list(rolling_options, 2)
-
-    if [int_sig.position, group_order.position] == [1, 0]:
-        # stack in:  [.., int_sig, group_order]
-        # stack in:  [.., int_sig, group_order, int_sig, group_order]
-        out = Script.parse_string("OP_2DUP")
-    elif [int_sig.position, group_order.position] == [0, 1] and all([is_group_order_rolled, is_int_sig_rolled]):
-        # stack in:  [.., group_order, int_sig]
-        # stack in:  [.., int_sig, group_order, int_sig, group_order]
-        out = Script.parse_string("OP_SWAP OP_2DUP")
-    else:
-        # stack in:  [.., group_order, .., int_sig, ..]
-        # stack out: [.., group_order, .., int_sig, .., int_sig, group_order, int_sig, group_order]
-        out = move(int_sig, bool_to_moving_function(is_int_sig_rolled))  # Move int_sig
-        out = Script.parse_string("OP_DUP")  # Duplicate int_sig
-        out += move(
-            group_order.shift(2 - is_int_sig_rolled if group_order.position >= 0 else 0),
-            bool_to_moving_function(is_group_order_rolled),
-        )  # Move group_order
-        out += Script.parse_string("OP_TUCK")
-
-    # Put int_sig in canonical form
-    # stack in:  [.., group_order, .., int_sig, ..]
-    # stack out: [.., {group_order}, .., {int_sig}, .., min{int_sig, group_order - int_sig}]
-    out += Script.parse_string("OP_2 OP_DIV OP_GREATERTHAN OP_IF OP_SWAP OP_SUB OP_ELSE OP_DROP OP_ENDIF")
-
-    # Reverse endianness of min{int_sig, group_order - int_sig}
-    # stack in:  [.., {group_order}, .., {int_sig}, .., min{int_sig, group_order - int_sig}]
-    # stack out: [.., {group_order}, .., {int_sig}, .., s]
-    out += reverse_endianness_unknown_length(max_length=32)
-
-    if add_prefix:
-        out += Script.parse_string("OP_SIZE OP_SWAP OP_CAT")  # Compute len(s)||s
-        out.append_pushdata(bytes.fromhex("02"))
-        out += Script.parse_string("OP_SWAP OP_CAT")  # Compute 02||len(s)||s
 
     return out
 

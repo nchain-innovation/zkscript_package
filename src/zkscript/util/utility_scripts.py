@@ -510,7 +510,7 @@ def enforce_mul_equal(
     if modulus.position != -1:
         check_order([modulus, a, b, c])
     assert all(
-        a.extension_degree == 1, b.extension_degree == 1, c.extension_degree == 1
+        [a.extension_degree == 1, b.extension_degree == 1, c.extension_degree == 1]
     ), "The extension degrees of a, b, and c must be equal to 1."
     list_rolling_options = bitmask_to_boolean_list(rolling_options, 3)
     list_leave_on_top = bitmask_to_boolean_list(leave_on_top_of_stack, 3)

@@ -5,7 +5,6 @@ from tx_engine.engine.util import GROUP_ORDER_INT, PRIME_INT, Gx, Gx_bytes, Gy
 
 from src.zkscript.elliptic_curves.ec_operations_fq import EllipticCurveFq
 from src.zkscript.elliptic_curves.secp256k1.util import (
-    int_sig_to_s_component,
     stack_elliptic_curve_point_to_compressed_pubkey,
     x_coordinate_to_r_component,
 )
@@ -23,6 +22,7 @@ from src.zkscript.util.utility_functions import (
 from src.zkscript.util.utility_scripts import (
     bool_to_moving_function,
     enforce_mul_equal,
+    int_sig_to_s_component,
     mod,
     move,
     nums_to_script,

@@ -11,6 +11,7 @@ from src.zkscript.util.utility_scripts import (
 from src.zkscript.types.stack_elements import StackBaseElement, StackNumber, StackFiniteFieldElement
 from src.zkscript.util.utility_scripts import (
     enforce_mul_equal,
+    int_sig_to_s_component,
     mod,
     move,
     nums_to_script,
@@ -418,6 +419,128 @@ def test_bytes_to_unsigned(stack, length_stack_element, stack_element, rolling_o
     context = Context(unlock + lock)
     assert context.evaluate()
     assert context.get_stack().size() == 1
+
+
+@pytest.mark.parametrize("add_prefix", [True, False])
+@pytest.mark.parametrize(
+    ("stack", "group_order", "stack_element", "rolling_options", "expected"),
+    [
+        (
+            [
+                bytes.fromhex("01"),
+                encode_num(GROUP_ORDER_INT),
+                encode_num(23273337322559462728397485925482564225812377166088316918328726254919566391069),  # sig
+            ],
+            StackNumber(1, False),
+            StackNumber(0, False),
+            3,
+            [
+                bytes.fromhex("01"),
+                (23273337322559462728397485925482564225812377166088316918328726254919566391069).to_bytes(32),
+            ],
+        ),
+        (
+            [
+                bytes.fromhex("01"),
+                encode_num(23273337322559462728397485925482564225812377166088316918328726254919566391069),  # sig
+                encode_num(GROUP_ORDER_INT),
+            ],
+            StackNumber(0, False),
+            StackNumber(1, False),
+            3,
+            [
+                bytes.fromhex("01"),
+                (23273337322559462728397485925482564225812377166088316918328726254919566391069).to_bytes(32),
+            ],
+        ),
+        (
+            [
+                encode_num(GROUP_ORDER_INT),
+                bytes.fromhex("01"),
+                encode_num(23273337322559462728397485925482564225812377166088316918328726254919566391069),  # sig
+            ],
+            StackNumber(-1, False),
+            StackNumber(0, False),
+            3,
+            [
+                bytes.fromhex("01"),
+                (23273337322559462728397485925482564225812377166088316918328726254919566391069).to_bytes(32),
+            ],
+        ),
+        (
+            [
+                bytes.fromhex("01"),
+                encode_num(GROUP_ORDER_INT),
+                encode_num(23273337322559462728397485925482564225812377166088316918328726254919566391069),  # sig
+            ],
+            StackNumber(1, False),
+            StackNumber(0, False),
+            0,
+            [
+                bytes.fromhex("01"),
+                encode_num(GROUP_ORDER_INT),
+                encode_num(23273337322559462728397485925482564225812377166088316918328726254919566391069),  # sig
+                (23273337322559462728397485925482564225812377166088316918328726254919566391069).to_bytes(32),
+            ],
+        ),
+        (
+            [
+                bytes.fromhex("01"),
+                encode_num(GROUP_ORDER_INT),
+                encode_num(23273337322559462728397485925482564225812377166088316918328726254919566391069),  # sig
+                bytes.fromhex("02"),
+            ],
+            StackNumber(2, False),
+            StackNumber(1, False),
+            0,
+            [
+                bytes.fromhex("01"),
+                encode_num(GROUP_ORDER_INT),
+                encode_num(23273337322559462728397485925482564225812377166088316918328726254919566391069),  # sig
+                bytes.fromhex("02"),
+                (23273337322559462728397485925482564225812377166088316918328726254919566391069).to_bytes(32),
+            ],
+        ),
+        (
+            [
+                bytes.fromhex("01"),
+                encode_num(GROUP_ORDER_INT),
+                encode_num(208306889145243764628110735254800045248183311764997803938817302883604514149),  # sig
+            ],
+            StackNumber(1, False),
+            StackNumber(0, False),
+            3,
+            [
+                bytes.fromhex("01"),
+                (208306889145243764628110735254800045248183311764997803938817302883604514149).to_bytes(31),
+            ],
+        ),
+        (
+            [
+                bytes.fromhex("01"),
+                encode_num(GROUP_ORDER_INT),
+                encode_num(GROUP_ORDER_INT // 2 + 100),  # sig
+            ],
+            StackNumber(1, False),
+            StackNumber(0, False),
+            3,
+            [bytes.fromhex("01"), (GROUP_ORDER_INT - (GROUP_ORDER_INT // 2 + 100)).to_bytes(32)],
+        ),
+    ],
+)
+def test_int_sig_to_s_component(stack, group_order, stack_element, rolling_options, add_prefix, expected):
+    unlock = Script()
+    for el in stack:
+        unlock.append_pushdata(el)
+
+    lock = int_sig_to_s_component(group_order, stack_element, rolling_options, add_prefix)
+    for ix, el in enumerate(expected[::-1]):
+        lock.append_pushdata(el if ix != 0 or not add_prefix else bytes.fromhex("02" + hex(len(el))[2:]) + el)
+        lock += Script.parse_string("OP_EQUAL" if ix == len(expected) - 1 else "OP_EQUALVERIFY")
+
+    context = Context(unlock + lock)
+    assert context.evaluate()
+    assert len(context.get_stack()) == 1
 
 
 @pytest.mark.parametrize(
