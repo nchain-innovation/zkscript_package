@@ -26,7 +26,7 @@ pushtx_bit_shift_data = {
     },
     3: {
         "signature_prefix": bytes.fromhex("30440220"),
-        # R = 2^2 * G
+        # R = 2^3 * G
         "R": bytes.fromhex("022f01e5e15cca351daff3843fb70f3c2f0a1bdd05e5af888a67784ef3e10a2a01"),
         # P = a * G s.t. a * R_x = -1 mod GROUP_ORDER_INT
         "P": bytes.fromhex("03ad36fad55727ebf76f8af96c7c2df9a298dc21d6c15269fdedfd47a70b327637"),
