@@ -1,19 +1,24 @@
-# Operations between Miller output (of type Fq4) and line evaluations
+"""Operations between Miller output (in F_q^12 as cubic extension of F_q^4) and line evaluations for BLS12-381."""
 
 from tx_engine import Script
 
 from src.zkscript.bilinear_pairings.bls12_381.fields import fq2_script, fq4_script
-
-# Fq2 Script implementation
 from src.zkscript.fields.fq12_3_over_2_over_2 import Fq12Cubic as Fq12CubicScriptModel
 from src.zkscript.util.utility_scripts import mod, pick, roll, verify_bottom_constant
 
 
 class MillerOutputOperations(Fq12CubicScriptModel):
-    """Implementation of arithmetic for Miller loop of BLS12_381.
+    """Arithmetic for Miller loop for BLS12-381.
 
-    Output of line evaluations are sparse elements in Fq12Cubic, i.e., they are of the form:
-    Output of product of two line evaluations are somewhat sparse elements in Fq12Cubic
+    Operations are performed in Fq12Cubic, Fq^12 = Fq^4[r] / (r^3 - s) = F_q^2[s,r] / (r^3 - s, s^2 - xi).
+
+    We call:
+        - `sparse` elements of the form: a + b s + c r^2, with a, c in F_q^2, and b in F_q.
+        - `somewhat sparse` elements of the form: a + b s + c rs + d r^2 + e r^2s, with a, b, c, d, e in F_q^2.
+        - `dense` elements of the form: a + b s + c r + d rs + e r^2 + f r^2s, with a, b, c, d, e, f in F_q^2.
+
+    The output of line evaluations are sparse elements.
+    The product of two line evaluations are somewhat sparse elements.
     """
 
     def line_eval_times_eval(
@@ -23,20 +28,25 @@ class MillerOutputOperations(Fq12CubicScriptModel):
         clean_constant: bool | None = None,
         is_constant_reused: bool | None = None,
     ) -> Script:
-        """Multiplication of sparse by sparse in Fq^12 as a cubic extension.
+        """Multiplication of two sparse elements in F_q^12 as a cubic extension of F_q^4.
 
-        Sparse (M twist) means: a + bs + cr^2 in Fq^12 = Fq^4[r] / (r^3 - s) = F_q^2[s,r] / (r^3 - s, s^2 - xi),
-        a,c are in Fq^2, b is in Fq
-        Input parameters:
-            - Stack: q .. X Y
-            - Altstack: []
-        Output:
-            - X * Y (somewhat sparse, which means: a + b s + c rs + d r^2 + e r^2*s)
-        Assumption on data:
-            - X and Y are passed as a sparse elements in Fq^12 (elements in Fq2).
-        Variables:
-            - If take_modulo is set to True, then the coordinates of the result are in Z_q; otherwise, the coordinates
-            are not taken modulo q.
+        Stack input:
+            - stack:    [q, ..., x := (a1, b1, c1), y := (a2, b2, c2)], `x`, `y` are two sparse elements in F_q^12
+            - altstack: []
+
+        Stack output:
+            - stack:    [q, ..., z := x * y], `z` is a somewhat sparse element in F_q^12
+            - altstack: []
+
+        Args:
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
+            is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
+                after execution. Defaults to `None`.
+
+        Returns:
+            Script to multiply two sparse elements in F_q^12.
         """
         # Fq2 implementation
         fq2 = self.FQ2
@@ -154,21 +164,26 @@ class MillerOutputOperations(Fq12CubicScriptModel):
         clean_constant: bool | None = None,
         is_constant_reused: bool | None = None,
     ) -> Script:
-        """Multiplication of dense by sparse in Fq^12 as a cubic extension.
+        """Multiplication of dense element by sparse element in F_q^12 as a cubic extension of F_q^4.
 
-        Sparse means: a + bs + cr^2 in Fq^12 = Fq^4[r] / (r^3 - s) = F_q^2[s,r] / (r^3 - s, s^2 - xi), a,c are in Fq^2
-        and b in Fq, as when evaluating line functions
-        Dense means: a + bs + cr + drs + er^2 + f r^2s
-        Input parameters:
-            - Stack: q .. X Y
-            - Altstack: []
-        Output:
-            - X * Y (dense)
-        Assumption on data:
-            - X and Y are passed as a sparse/dense elements in Fq^12 (elements in Fq2).
-        Variables:
-            - If take_modulo is set to True, then the coordinates of the result are in Z_q; otherwise, the coordinates
-            are not taken modulo q.
+        Stack input:
+            - stack:    [q, ..., x := (a1, b1, c1, d1, e1, f1), y := (a2, b2, c2)], `x` is a dense element, `y` is a
+                sparse element in F_q^12
+            - altstack: []
+
+        Stack output:
+            - stack:    [q, ..., z := x * y], `z` is a dense element in F_q^12
+            - altstack: []
+
+        Args:
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
+            is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
+                after execution. Defaults to `None`.
+
+        Returns:
+            Script to multiply a dense element by a sparse element in F_q^12.
         """
         # Fq2 implementation
         fq2 = self.FQ2
@@ -347,21 +362,26 @@ class MillerOutputOperations(Fq12CubicScriptModel):
         clean_constant: bool | None = None,
         is_constant_reused: bool | None = None,
     ) -> Script:
-        """Multiplication of sparse by somewhat sparse in Fq^12 as a cubic extension.
+        """Multiplication of sparse element by somewhat sparse element in F_q^12 as a cubic extension of F_q^4.
 
-        Sparse means: a + bs + cr in Fq^12 = Fq^4[r] / (r^3 - s) = F_q^2[s,r] / (r^3 - s, s^2 - xi), a,c are in Fq^2, b
-        is in fq
-        Somewhat sparse means: a + b s + c rs + d r^2 + e r^2s
-        Input parameters:
-            - Stack: q .. X Y
-            - Altstack: []
-        Output:
-            - X * Y (dense)
-        Assumption on data:
-            - X and Y are passed as a sparse/somewhat sparse elements in Fq^12 (elements in Fq2).
-        Variables:
-            - If take_modulo is set to True, then the coordinates of the result are in Z_q; otherwise, the coordinates
-            are not taken modulo q.
+        Stack input:
+            - stack:    [q, ..., x := (a1, b1, c1), y := (a2, b2, c2, d2, e2)], `x` is a sparse element, `y` is a
+                somewhat sparse element in F_q^12
+            - altstack: []
+
+        Stack output:
+            - stack:    [q, ..., z := x * y], `z` is a dense element in F_q^12
+            - altstack: []
+
+        Args:
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
+            is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
+                after execution. Defaults to `None`.
+
+        Returns:
+            Script to multiply a sparse element by a somewhat sparse element in F_q^12.
         """
         # Fq2 implementation
         fq2 = self.FQ2
@@ -518,19 +538,26 @@ class MillerOutputOperations(Fq12CubicScriptModel):
         clean_constant: bool | None = None,
         is_constant_reused: bool | None = None,
     ) -> Script:
-        """Multiplication of somewhat sparse by somewhat sparse in Fq^12 as a cubic extension.
+        """Multiplication of two somewhat sparse elements in F_q^12 as a cubic extension of F_q^4.
 
-        Somewhat sparse means: a + bs + c rs + d r^2 + e r^2s
-        Input parameters:
-            - Stack: q .. X Y
-            - Altstack: []
-        Output:
-            - X * Y (dense)
-        Assumption on data:
-            - X and Y are passed as a somewhat sparse elements in Fq^12 (elements in Fq2).
-        Variables:
-            - If take_modulo is set to True, then the coordinates of the result are in Z_q; otherwise, the coordinates
-            are not taken modulo q.
+        Stack input:
+            - stack:    [q, ..., x := (a1, b1, c1, d1, e1), y := (a2, b2, c2, d2, e2)], `x` `y` are somewhat sparse
+                elements in F_q^12
+            - altstack: []
+
+        Stack output:
+            - stack:    [q, ..., z := x * y], `z` is a dense element in F_q^12
+            - altstack: []
+
+        Args:
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
+            is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
+                after execution. Defaults to `None`.
+
+        Returns:
+            Script to multiply two somewhat sparse elements in F_q^12.
         """
         # Fq2 implementation
         fq2 = self.FQ2
@@ -776,20 +803,26 @@ class MillerOutputOperations(Fq12CubicScriptModel):
         clean_constant: bool | None = None,
         is_constant_reused: bool | None = None,
     ) -> Script:
-        """Multiplication of somewhat sparse by dense in Fq^12 as a cubic extension.
+        """Multiplication of somewhat sparse element by dense element in F_q^12 as a cubic extension of F_q^4.
 
-        Somewhat sparse means: a + bs + cr + dr^2 + e r^2s
-        Dense means: a + bs + cr + drs + e r^2 + f r^2 s
-        Input parameters:
-            - Stack: q .. X Y
-            - Altstack: []
-        Output:
-            - X * Y (dense)
-        Assumption on data:
-            - X and Y are passed as a somewhat sparse elements in Fq^12 (elements in Fq2).
-        Variables:
-            - If take_modulo is set to True, then the coordinates of the result are in Z_q; otherwise, the coordinates
-            are not taken modulo q.
+        Stack input:
+            - stack:    [q, ..., x := (a1, b1, c1, d1, e1), y := (a2, b2, c2, d2, e2, f2)], `x` is a somewhat sparse
+                element, `y` is a dense element in F_q^12
+            - altstack: []
+
+        Stack output:
+            - stack:    [q, ..., z := x * y], `z` is a dense element in F_q^12
+            - altstack: []
+
+        Args:
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
+            is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
+                after execution. Defaults to `None`.
+
+        Returns:
+            Script to multiply a somewhat sparse element by a dense element in F_q^12.
         """
         # Fq2 implementation
         fq2 = self.FQ2
@@ -1069,6 +1102,7 @@ class MillerOutputOperations(Fq12CubicScriptModel):
         clean_constant: bool | None = None,
         is_constant_reused: bool | None = None,
     ) -> Script:
+        """Squaring of the Miller output in F_q^12 as a cubic extension of F_q^4."""
         return MillerOutputOperations.square(
             self,
             take_modulo=take_modulo,
@@ -1084,6 +1118,7 @@ class MillerOutputOperations(Fq12CubicScriptModel):
         clean_constant: bool | None = None,
         is_constant_reused: bool | None = None,
     ) -> Script:
+        """Multiplication in F_q^12 as a cubic extension of F_q^4."""
         return MillerOutputOperations.mul(
             self,
             take_modulo=take_modulo,
@@ -1099,6 +1134,7 @@ class MillerOutputOperations(Fq12CubicScriptModel):
         clean_constant: bool | None = None,
         is_constant_reused: bool | None = None,
     ) -> Script:
+        """Multiplication of somewhat sparse element by dense element in F_q^12 as a cubic extension of F_q^4."""
         return self.line_eval_times_eval_times_eval_times_eval_times_eval_times_eval(
             take_modulo=take_modulo,
             check_constant=check_constant,
@@ -1113,6 +1149,7 @@ class MillerOutputOperations(Fq12CubicScriptModel):
         clean_constant: bool | None = None,
         is_constant_reused: bool | None = None,
     ) -> Script:
+        """Multiplication in F_q^12 as a cubic extension of F_q^4.."""
         return MillerOutputOperations.mul(
             self,
             take_modulo=take_modulo,
@@ -1128,6 +1165,7 @@ class MillerOutputOperations(Fq12CubicScriptModel):
         clean_constant: bool | None = None,
         is_constant_reused: bool | None = None,
     ) -> Script:
+        """Multiplication in F_q^12 as a cubic extension of F_q^4."""
         return MillerOutputOperations.mul(
             self,
             take_modulo=take_modulo,
@@ -1143,6 +1181,7 @@ class MillerOutputOperations(Fq12CubicScriptModel):
         clean_constant: bool | None = None,
         is_constant_reused: bool | None = None,
     ) -> Script:
+        """Multiplication in F_q^12 as a cubic extension of F_q^4."""
         return MillerOutputOperations.mul(
             self,
             take_modulo=take_modulo,

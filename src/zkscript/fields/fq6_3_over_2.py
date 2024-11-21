@@ -1,13 +1,12 @@
+"""Bitcoin scripts that perform arithmetic operations in a cubic extension of F_q^2."""
+
 from tx_engine import Script
 
 from src.zkscript.util.utility_scripts import mod, pick, roll, verify_bottom_constant
 
 
 def fq6_for_towering(mul_by_non_residue):
-    """Construct towering extensions.
-
-    Export Fq2 class below together with a mul_by_non_residue method.
-    """
+    """Export Fq6 class with a mul_by_non_residue method to construct towering extensions."""
 
     class Fq6ForTowering(Fq6):
         pass
@@ -18,15 +17,29 @@ def fq6_for_towering(mul_by_non_residue):
 
 
 class Fq6:
-    """F_q^6 built as cubic extension of F_q^2.
+    """Construct Bitcoin scripts that perform arithmetic operations in F_q^6 = F_q^2[v] / (v^3 - non_residue_over_fq2).
 
-    The non residue is specified by defining the method self.BASE_FIELD.mul_by_non_residue.
+    F_q^6 = F_q^2[v] / (v^3 - non_residue_over_fq2) is a cubic extension of F_q^2.
+
+    Elements in F_q^6 are of the form `a + b * v + c * v^2`, where `a`, `b`, `c` are elements of F_q^2, `v^3` is equal
+    to the cubic non_residue_over_fq2, and the arithmetic operations `+` and `*` are derived from the operations in
+    F_q^2.
+
+    The cubic non_residue_over_fq2 is specified by defining the method self.BASE_FIELD.mul_by_non_residue.
+
+    Attributes:
+        MODULUS: The characteristic of the field F_q.
+        BASE_FIELD (Fq2): Bitcoin script instance to perform arithmetic operations in F_q^2.
     """
 
     def __init__(self, q: int, base_field):
-        # Characteristic of the field
+        """Initialise F_q^6, the cubic extension of F_q^2.
+
+        Args:
+            q: The characteristic of the field F_q.
+            base_field (Fq2): Bitcoin script instance to perform arithmetic operations in F_q^2.
+        """
         self.MODULUS = q
-        # Script implementation of the base field Fq2
         self.BASE_FIELD = base_field
 
     def add(
@@ -38,21 +51,24 @@ class Fq6:
     ) -> Script:
         """Addition in F_q^6.
 
-        Input parameters:
-            - Stack: q .. X Y
-            - Altstack: []
-        Output:
-            - X + Y
-        Assumption on data:
-            - X and Y are passed as triplets of elements of Fq2
-        Variables:
-            - If take_modulo is set to True, then the coordinates of X + Y are in Z_q; otherwise, the coordinates are
-            not taken modulo q.
+        Stack input:
+            - stack:    [q, ..., x := (x0, x1, x2, x3, x4, x5), y := (y0, y1, y2, y3, y4, y5)], `x`, `y` are triplets of
+                elements of F_q^2
+            - altstack: []
 
-        Example:
-            - x00 x01 x10 x11 x20 x21 y00 y01 y10 y11 y20 y21 [add] --> (x00 + y00) (x01 + y01) (x10 + y10) (x11 + y11)
-            (x20 + y20) (x21 + y21)
+        Stack output:
+            - stack:    [q, ..., x + y]
+            - altstack: []
 
+        Args:
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
+            is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
+                after execution. Defaults to `None`.
+
+        Returns:
+            Script to add two elements in F_q^6.
         """
         # Fq2 implementation
         fq2 = self.BASE_FIELD
@@ -97,16 +113,24 @@ class Fq6:
     ) -> Script:
         """Subtraction in F_q^6.
 
-        Input parameters:
-            - Stack: q .. X Y
-            - Altstack: []]
-        Output:
-            - X - Y
-        Assumption on data:
-            - X and Y are passed as triplets of elements in F_q^2
-        Variables:
-            - If take_modulo is set to True, then the coordinates of the result are in Z_q; otherwise, the coordinates
-            are not taken modulo q.
+        Stack input:
+            - stack:    [q, ..., x := (x0, x1, x2, x3, x4, x5), y := (y0, y1, y2, y3, y4, y5)], `x`, `y` are triplets of
+                elements of F_q^2
+            - altstack: []
+
+        Stack output:
+            - stack:    [q, ..., x - y]
+            - altstack: []
+
+        Args:
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
+            is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
+                after execution. Defaults to `None`.
+
+        Returns:
+            Script to subtract two elements in F_q^6.
         """
         # Fq2 implementation
         fq2 = self.BASE_FIELD
@@ -151,17 +175,24 @@ class Fq6:
     ) -> Script:
         """Multiplication in F_q^6 by a scalar in F_q.
 
-        Input parameters:
-            - Stack: q .. X <lambda>
-            - Altstack: []
-        Output:
-            - lambda * X
-        Assumption on data:
-            - X is passed as a couple of elements of Fq2
-            - lambda is passed as an integer: minimally encoded, little endian
-        Variables:
-            - If take_modulo is set to True, then the coordinates X are in Z_q; otherwise, the coordinates are not taken
-            modulo q.
+        Stack input:
+            - stack:    [q, ..., x := (x0, x1, x2, x3, x4, x5), lambda], `x` is a triplet of elements of F_q^2,
+                `lambda` is an element of F_q
+            - altstack: []
+
+        Stack output:
+            - stack:    [q, ..., x * lambda]
+            - altstack: []
+
+        Args:
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
+            is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
+                after execution. Defaults to `None`.
+
+        Returns:
+            Script to multiply an element in F_q^6 by a scalar `lambda` in F_q.
         """
         # Fq2 implementation
         fq2 = self.BASE_FIELD
@@ -199,19 +230,26 @@ class Fq6:
         clean_constant: bool | None = None,
         is_constant_reused: bool | None = None,
     ) -> Script:
-        """Multiplication by scalar in F_q^6.
+        """Scalar multiplication in F_q^6.
 
-        Input parameters:
-            - Stack: q .. X <lambda>
-            - Altstack: []
-        Output:
-            - lambda * X
-        Assumption on data:
-            - X is passed as a couple of elements of Fq2
-            - lambda is in F_q^2
-        Variables:
-            - If take_modulo is set to True, then the coordinates X are in Z_q; otherwise, the coordinates are not taken
-            modulo q.
+        Stack input:
+            - stack:    [q, ..., x := (x0, x1, x2, x3, x4, x5), lambda := (l0, l1)], `x` is a triplet of elements of
+                F_q^2, `lambda` is an element of F_q^2
+            - altstack: []
+
+        Stack output:
+            - stack:    [q, ..., x * lambda]
+            - altstack: []
+
+        Args:
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
+            is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
+                after execution. Defaults to `None`.
+
+        Returns:
+            Script to multiply an element in F_q^4 by a scalar `lambda` in F_q^2.
         """
         # Fq2 implementation
         fq2 = self.BASE_FIELD
@@ -253,17 +291,23 @@ class Fq6:
     ) -> Script:
         """Negation in F_q^6.
 
-        Input parameters:
-            - Stack: q .. X
-            - Altstack: []
-        Output:
-            - -X
-        Assumption on data:
-            - X is passed as a triplet of elements in F_q^2
-        Variables:
-            - If take_modulo is set to True, then the coordinates of the result are in Z_q; otherwise, the coordinates
-            are not taken modulo q.
-        REMARK: OP_0 OP_NEGATE returns OP_0
+        Stack input:
+            - stack:    [q, ..., x := (x0, x1, x2, x3, x4, x5)], `x` is a triplet of elements of F_q^2
+            - altstack: []
+
+        Stack output:
+            - stack:    [q, ..., -x]
+            - altstack: []
+
+        Args:
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
+            is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
+                after execution. Defaults to `None`.
+
+        Returns:
+            Script to negate an element in F_q^6.
         """
         # Fq2 implementation
         fq2 = self.BASE_FIELD
@@ -309,17 +353,24 @@ class Fq6:
     ) -> Script:
         """Multiplication in F_q^6.
 
-        Input parameters:
-            - Stack: q .. X Y
-            - Altstack: []
-        Output:
-            - X * Y
-        Assumption on data:
-            - X and Y are passed as couples of elements of Fq2
-            - The coordinates of X and Y are in Z_q
-        Variables:
-            - If take_modulo is set to True, then the coordinates of the result are in Z_q; otherwise, the coordinates
-            are not taken modulo q.
+        Stack input:
+            - stack:    [q, ..., x := (x0, x1, x2, x3, x4, x5), y := (y0, y1, y2, y3, y4, y5)], `x`, `y` are triplets of
+                elements of F_q^2
+            - altstack: []
+
+        Stack output:
+            - stack:    [q, ..., x * y]
+            - altstack: []
+
+        Args:
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
+            is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
+                after execution. Defaults to `None`.
+
+        Returns:
+            Script to multiply two elements in F_q^6.
         """
         # Fq2 implementation
         fq2 = self.BASE_FIELD
@@ -416,16 +467,23 @@ class Fq6:
     ) -> Script:
         """Squaring in F_q^6.
 
-        Input parameters:
-            - Stack: q .. X
-            - Altstack: []
-        Output:
-            - X**2
-        Assumption on data:
-            - X is passed as as a triplet of elements of Fq2
-        Variables:
-            - If take_modulo is set to True, then the coordinates of the result are in Z_q; otherwise, the coordinates
-            are not taken modulo q.
+        Stack input:
+            - stack:    [q, ..., x := (x0, x1, x2, x3, x4, x5)], `x` is a triplet of elements of F_q^2
+            - altstack: []
+
+        Stack output:
+            - stack:    [q, ..., x^2]
+            - altstack: []
+
+        Args:
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
+            is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
+                after execution. Defaults to `None`.
+
+        Returns:
+            Script to square an element in F_q^6.
         """
         # Fq2 implementation
         fq2 = self.BASE_FIELD
@@ -512,18 +570,25 @@ class Fq6:
         clean_constant: bool | None = None,
         is_constant_reused: bool | None = None,
     ) -> Script:
-        """Multiplication by v in F_q^6.
+        """Multiplication by v in F_q^6 = F_q^2[v] / (v^3 - non_residue_over_fq2).
 
-        Input parameters:
-            - Stack: q .. X
-            - Altstack: []
-        Output:
-            - X * s
-        Assumption on data:
-            - X is passed as a triplet of elements of Fq2
-        Variables:
-            - If take_modulo is set to True, then the coordinates of the result are in Z_q; otherwise, the coordinates
-            are not taken modulo q.
+        Stack input:
+            - stack:    [q, ..., x := (x0, x1, x2, x3, x4, x5)], `x` is a triplet of elements of F_q^2
+            - altstack: []
+
+        Stack output:
+            - stack:    [q, ..., x * v]
+            - altstack: []
+
+        Args:
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
+            is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
+                after execution. Defaults to `None`.
+
+        Returns:
+            Script to multiply an element by v in F_q^6.
         """
         # Fq2 implementation
         fq2 = self.BASE_FIELD

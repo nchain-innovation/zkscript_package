@@ -1,3 +1,5 @@
+"""Utility functions to construct script."""
+
 from typing import Union
 
 from tx_engine import Script, encode_num
@@ -60,7 +62,7 @@ patterns_to_roll = {
     (5, 4): [OP_2ROT, OP_2ROT],
 }
 op_range = range(-1, 17)
-op_range_to_opccode = {
+op_range_to_opcode = {
     -1: OP_1NEGATE,
     0: OP_0,
     1: OP_1,
@@ -83,17 +85,28 @@ op_range_to_opccode = {
 
 
 def pick(position: int, n_elements: int) -> Script:
-    """Pick the elements x_{position}, .., x_{position-n_elements}.
+    """Pick the elements x_{position}, ..., x_{position-n_elements}.
 
-    `position` is the stack position, so we start counting from 0. If `position < 0`, then we pick
-    from the bottom of the stack, which we consider at position -1.
+    Args:
+        position (int): The index of the leftmost element to pick.
+        n_elements (int): The number of elements to pick.
+
+    Returns:
+        Script to pick elements x_{position}, ..., x_{position-n_elements}.
+
+    Notes:
+        {position} is the stack position, so we start counting from 0. If `position < 0`, then we pick from the
+            bottom of the stack, which we consider at position -1.
 
     Example:
-        `n_elements` = 2, `position` = 2 --> OP_2 OP_PICK OP_2 OP_PICK
-        `n_elements` = 2, `position` = 8 --> OP_8 OP_PICK OP_8 OP_PICK
-        `n_elements` = 2, `position` = 1 --> OP_2DUP
-        `n_elements` = 1, `position` = -1 --> OP_DEPTH OP_1SUB OP_PICK
-
+        >>> pick(2, 2)
+        OP_2 OP_PICK OP_2 OP_PICK
+        >>> pick(8, 2)
+        OP_8 OP_PICK OP_8 OP_PICK
+        >>> pick(1, 2)
+        OP_2DUP
+        >>> pick(-1, 1)
+        OP_DEPTH OP_1SUB OP_PICK
     """
     if position >= 0 and position < n_elements - 1:
         msg = "When positive, position must be at least equal to n_elements - 1: "
@@ -105,7 +118,7 @@ def pick(position: int, n_elements: int) -> Script:
     if (position, n_elements) in patterns_to_pick:
         out += Script(patterns_to_pick[(position, n_elements)])
     elif position in op_range[1:]:
-        out += Script([op_range_to_opccode[position], OP_PICK] * n_elements)
+        out += Script([op_range_to_opcode[position], OP_PICK] * n_elements)
     elif position < 0:
         ix_to_pick = position
         for _ in range(n_elements):
@@ -129,15 +142,26 @@ def pick(position: int, n_elements: int) -> Script:
 def roll(position: int, n_elements: int) -> Script:
     """Roll the elements x_{position}, .., x_{position-n_elements}.
 
-    `position` is the stack position, so we start counting from 0. If `position` < 0, then we roll
-    from the bottom of the stack, which we consider at position -1.
+    Args:
+        position (int): The index of the leftmost element to roll.
+        n_elements (int): The number of elements to roll.
+
+    Returns:
+        Script to roll elements x_{position}, ..., x_{position-n_elements}.
+
+    Notes:
+        {position} is the stack position, so we start counting from 0. If `position` < 0, then we roll from the
+            bottom of the stack, which we consider at position -1.
 
     Example:
-        `n_elements` = 2, `position` = 2 --> OP_2 OP_PICK OP_2 OP_PICK
-        `n_elements` = 2, `position` = 8 --> OP_8 OP_PICK OP_8 OP_PICK
-        `n_elements` = 1, `position` = 1 --> OP_SWAP
-        `n_elements` = 1, `position` = -1 --> OP_DEPTH OP_1SUB OP_ROLL
-
+        >>> roll(2, 2)
+        OP_ROT OP_ROT
+        >>> roll(8, 2)
+        OP_8 OP_ROLL OP_8 OP_ROLL
+        >>> roll(1, 1)
+        OP_SWAP
+        >>> roll(-1, 1)
+        OP_DEPTH OP_1SUB OP_ROLL
     """
     if position >= 0 and position < n_elements - 1:
         msg = "When positive, position must be at least equal to n_elements - 1: "
@@ -152,7 +176,7 @@ def roll(position: int, n_elements: int) -> Script:
     if (position, n_elements) in patterns_to_roll:
         out += Script(patterns_to_roll[(position, n_elements)])
     elif position in op_range[2:]:
-        out += Script([op_range_to_opccode[position], OP_ROLL] * n_elements)
+        out += Script([op_range_to_opcode[position], OP_ROLL] * n_elements)
     elif position < 0:
         for _ in range(n_elements):
             out += Script.parse_string("OP_DEPTH")
@@ -172,11 +196,22 @@ def roll(position: int, n_elements: int) -> Script:
 
 
 def nums_to_script(nums: list[int]) -> Script:
-    """Take a list of number and return the script pushing those numbers to the stack."""
+    """Push a list of numbers to the stack.
+
+    Args:
+        nums (list[int]): List of numbers to push to the stack.
+
+    Returns:
+        Script containing the numbers to push.
+
+    Example:
+        >>> nums_to_script([-2, -1, 0, 1, 2, 16, 17, 64, 128])
+        0x82 OP_1NEGATE OP_0 OP_1 OP_2 OP_16 0x11 0x40 0x8000
+    """
     out = Script()
     for n in nums:
         if n in op_range:
-            out += Script([op_range_to_opccode[n]])
+            out += Script([op_range_to_opcode[n]])
         else:
             out.append_pushdata(encode_num(n))
 
@@ -195,14 +230,14 @@ def mod(
     operation can be customised using the provided parameters.
 
     Args:
-        stack_preparation (`str`, optional): Prepare the stack before performing the modulo operation. Defaults to
-        `OP_FROMALTSTACK OP_ROT`.
-        is_mod_on_top (`bool`, optional): If `True`, the modulo constant is the one at the top of the stack after the
+        stack_preparation (str, optional): Prepare the stack before performing the modulo operation. Defaults to
+            `OP_FROMALTSTACK OP_ROT`.
+        is_mod_on_top (bool, optional): If `True`, the modulo constant is the one at the top of the stack after the
             stack preparation, else the modulo constant is the second one from the top of the stack. Defaults to `True`.
-        is_positive (`bool`, optional): If `True`, adds operations to ensure the modulo value is positive.
+        is_positive (bool, optional): If `True`, adds operations to ensure the modulo value is positive.
             Defaults to `True`.
-        is_constant_reused (`bool`, optional): If `True`, modifies the script to leave the modulo constant on the stack.
-            Defaults to `True`.
+        is_constant_reused (bool, optional): If `True`, the modulo constant remains as the second-to-top element on the
+            stack after execution. Defaults to `True`.
 
     Returns:
         A Bitcoin Script that performs the modulo operation based on the specified parameters.
@@ -227,9 +262,7 @@ def mod(
           altstack. The two opcodes added to the script if `stack_preparation = True`, modify the stack as follows:
             Let `stack_in = [1, 2], alt_stack_in = [3]`, after `OP_FROMALTSTACK OP_ROT`, we get:
             `stack_out = [2, 3, 1], alt_stack_out = []`.
-
     """
-
     out = Script.parse_string(stack_preparation)
 
     if is_positive:
@@ -265,11 +298,10 @@ def verify_bottom_constant(n: int) -> Script:
     the top of the stack. If the check passes, the script continues; otherwise, it terminates the transaction.
 
     Args:
-        n (`int`): The constant value to check against.
+        n (int): The constant value to check against.
 
     Returns:
         A Bitcoin Script that verifies the constant against the value at the bottom of the stack.
-
     """
     return Script([OP_DEPTH, OP_1SUB, OP_PICK]) + nums_to_script([n]) + Script([OP_EQUALVERIFY])
 
@@ -277,7 +309,7 @@ def verify_bottom_constant(n: int) -> Script:
 def move(
     stack_element: StackElements, moving_function: Union[roll, pick], start_index: int = 0, end_index: int | None = None
 ) -> Script:
-    """Return the script that moves stack_element[start_index], .., stack_element[end_index] with moving_function."""
+    """Return the script that moves stack_element[start_index], ..., stack_element[end_index] with moving_function."""
     length = (
         1
         if not isinstance(stack_element, (StackFiniteFieldElement, StackEllipticCurvePoint))

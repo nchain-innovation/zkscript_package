@@ -1,3 +1,5 @@
+"""Bitcoin scripts that perform arithmetic operations in a quadratic extension of F_q^2."""
+
 from tx_engine import Script
 
 from src.zkscript.fields.fq4 import Fq4
@@ -5,14 +7,13 @@ from src.zkscript.util.utility_scripts import mod, nums_to_script, pick, verify_
 
 
 class Fq2Over2ResidueEqualU(Fq4):
-    """Represents F_q^4 = F_q^2[v] / (v^2 - u).
+    """Construct Bitcoin scripts that perform arithmetic operations in F_q^4 = F_q^2[v] / (v^2 - u).
 
-    This class constructs F_q^4 as a quadratic extension of F_q^2 = F_q[u] / (u^2 - NON_RESIDUE), with residue u.
+    F_q^4 = F_q^2[v] / (v^2 - u) is a quadratic extension of F_q^2 = F_q[u] / (u^2 - non_residue).
 
-    The generic element of this field is represented by 4 elements of F_q and is of the form x0 + x1*u + x2*v + x3*uv,
-    with relations:
-        u^2 = NON_RESIDUE
-        v^2 = u
+    Elements in F_q^4 are of the form `a + b * v`, where `a` and `b` are elements of F_q^2, `v^2` is equal to
+    `u`, and `u^2` is equal to the non-residue used to define F_q^2. Elements in F_q^4 can also be written as
+    `x0 + x1*u + x2*v + x3*uv`, where `x0`, `x1`, `x2`, `x3` are elements of F_q.
     """
 
     def square(
@@ -22,31 +23,29 @@ class Fq2Over2ResidueEqualU(Fq4):
         clean_constant: bool | None,
         is_constant_reused: bool | None = None,
     ) -> Script:
-        """Perform squaring in Fq4 = F_q^2[v] / (v^2 - u).
+        """Squaring in F_q^4 = F_q^2[v] / (v^2 - u).
 
         Stack input:
-            - stack    = [modulo, ..., x := (x0, x1, x2, x3)]
+            - stack    = [q, ..., x := (x0, x1, x2, x3)], `x` is a couple of elements of F_q^2
             - altstack = []
 
         Stack output:
-            - stack    = [modulo, ..., x, x^2]
+            - stack    = [q, ..., x^2]
             - altstack = []
 
         Args:
-            take_modulo (bool): Whether to take modulo after the operation.
-            check_constant (bool | None): Whether to check the modulo constant.
-            clean_constant (bool | None): Whether to delete the modulo constant after the operation.
-            is_constant_reused (bool | None, optional): Whether the modulo constant is reused after the current
-                operation.
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
+            is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
+                after execution. Defaults to `None`.
 
         Returns:
-            Script: Locking script performing squaring in Fq4 = F_q^2[v] / (v^2 - u).
+            Script to square an element in Fq4 = F_q^2[v] / (v^2 - u).
 
         Raises:
-            AssertionError: If `clean_constant` or `check_constant` are not provided when required.
-
+            AssertionError: If `clean_constant` or `check_constant` are not provided when take_modulo is `True`.
         """
-
         # Check the modulo constant
         out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
@@ -87,8 +86,8 @@ class Fq2Over2ResidueEqualU(Fq4):
         out += Script.parse_string("OP_ADD")
         out += Script.parse_string("OP_TOALTSTACK")
 
-        # Compute the zero term in (x0 + x1*u + x2*v + x3*uv)^2
-        # stack out:    [..., x0, x1, x2, x3, zero term := x0^2 + (x1^2 + 2*x2*x3)*NON_RESIDUE]
+        # Compute the zeroth term in (x0 + x1*u + x2*v + x3*uv)^2
+        # stack out:    [..., zeroth term := x0^2 + (x1^2 + 2*x2*x3)*NON_RESIDUE]
         # altstack out: [uv coefficient, v coefficient, u coefficient]
         out += Script.parse_string("OP_2 OP_MUL OP_MUL")
         out += Script.parse_string("OP_SWAP")
@@ -102,11 +101,8 @@ class Fq2Over2ResidueEqualU(Fq4):
         if take_modulo:
             batched_modulo = Script()
 
-            if clean_constant is None and is_constant_reused is None:
-                msg = (
-                    f"If take_modulo is set, both clean_constant: {clean_constant} "
-                    f"and is_constant_reused: {is_constant_reused} must be set."
-                )
+            if clean_constant is None or is_constant_reused is None:
+                msg = "If take_modulo is True, clean_constant and is_constant_reused must be set."
                 raise ValueError(msg)
 
             if clean_constant:
@@ -132,31 +128,30 @@ class Fq2Over2ResidueEqualU(Fq4):
         clean_constant: bool | None,
         is_constant_reused: bool | None = None,
     ) -> Script:
-        """Perform multiplication in Fq4 = F_q^2[v] / (v^2 - u).
+        """Multiplication in Fq4 = F_q^2[v] / (v^2 - u).
 
         Stack input:
-            - stack    = [modulo, ..., x := (x0, x1, x2, x3), y := (y0, y1, y2, y3)]
+            - stack    = [q, ..., x := (x0, x1, x2, x3), y := (y0, y1, y2, y3)], `x`, `y` are couples of elements of
+                F_q^2
             - altstack = []
 
         Stack output:
-            - stack    = [modulo, ..., x, y, x*y]
+            - stack    = [q, ..., x * y]
             - altstack = []
 
         Args:
-            take_modulo (bool): Whether to take modulo after the operation.
-            check_constant (bool | None): Whether to check the modulo constant.
-            clean_constant (bool | None): Whether to delete the modulo constant after the operation.
-            is_constant_reused (bool | None, optional): Whether the modulo constant is reused after the current
-                operation.
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
+            is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
+                after execution. Defaults to `None`.
 
         Returns:
-            Script: Locking script performing multiplication in Fq4 = F_q^2[v] / (v^2 - u).
+            Script to multiply two elements in Fq4 = F_q^2[v] / (v^2 - u).
 
         Raises:
-            AssertionError: If `clean_constant` or `check_constant` are not provided when required.
-
+            AssertionError: If `clean_constant` or `check_constant` are not provided when take_modulo is `True`.
         """
-
         # Check the modulo constant
         out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
@@ -204,8 +199,8 @@ class Fq2Over2ResidueEqualU(Fq4):
         out += pick(position=8, n_elements=1)
         out += Script.parse_string("OP_MUL OP_ADD OP_TOALTSTACK")
 
-        # Compute the zero term in (x0 + x1*u + x2*v + x3*uv)*(y0 + y1*u + y2*v + y3*uv)
-        # stack out:    [..., x0, x1, x2, x3, y0, y1, y2, y3, zero term := x0*y0 + (x1*y1 + x2*y3 + x3*y2)*NON_RESIDUE]
+        # Compute the zeroth term in (x0 + x1*u + x2*v + x3*uv)*(y0 + y1*u + y2*v + y3*uv)
+        # stack out:    [..., zeroth term := x0*y0 + (x1*y1 + x2*y3 + x3*y2)*NON_RESIDUE]
         # altstack out: [uv coefficient, v coefficient, u coefficient]
         out += Script.parse_string("OP_2ROT OP_TOALTSTACK OP_MUL OP_SWAP OP_FROMALTSTACK OP_MUL OP_ADD OP_TOALTSTACK")
         out += Script.parse_string("OP_ROT OP_MUL OP_TOALTSTACK OP_MUL")

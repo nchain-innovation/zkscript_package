@@ -1,3 +1,5 @@
+"""Bitcoin scripts that perform arithmetic operations over the elliptic curve E(F_q^2)."""
+
 from tx_engine import Script
 
 from src.zkscript.types.stack_elements import StackEllipticCurvePoint, StackFiniteFieldElement
@@ -6,14 +8,24 @@ from src.zkscript.util.utility_scripts import mod, move, nums_to_script, pick, r
 
 
 class EllipticCurveFq2:
-    """Elliptic curve arithmetic over Fq2."""
+    """Construct Bitcoin scripts that perform arithmetic operations over the elliptic curve E(F_q^2).
+
+    Attributes:
+        MODULUS: The characteristic of the field F_q.
+        CURVE_A: The `a` coefficient in the Short-Weierstrass equation of the curve (an element in F_q^2).
+        FQ2 (Fq2): Bitcoin script instance to perform arithmetic operations in F_q^2.
+    """
 
     def __init__(self, q: int, curve_a: list[int], fq2):
-        # Characteristic of the field over which the curve is defined
+        """Initialise the elliptic curve group E(F_q^2).
+
+        Args:
+            q: The characteristic of the field F_q.
+            curve_a: The `a` coefficient in the Short-Weierstrass equation of the curve (an element in F_q^2).
+            fq2 (Fq2): Bitcoin script instance to perform arithmetic operations in F_q^2.
+        """
         self.MODULUS = q
-        # A coefficient of the curve over which we carry out the operations, as a list of integers
         self.CURVE_A = curve_a
-        # Fq2 implementation in script
         self.FQ2 = fq2
 
     def point_algebraic_addition(
@@ -37,11 +49,10 @@ class EllipticCurveFq2:
 
         This function computes the algebraic addition of P and Q for elliptic curve points `P` and `Q`.
         The function branches according to the value of verify_gradient.
-        If `take_modulo` is `True`, the result is reduced modulo `q`.
         It also handles optional checks on the curve constant and whether the constant should be cleaned or reused.
 
         Stack input:
-            - stack    = [Q, .., gradient, .., P, .., Q, ..]
+            - stack    = [q, .., gradient, .., P, .., Q, ..]
             - altstack = []
 
         Stack output:
@@ -53,10 +64,9 @@ class EllipticCurveFq2:
         Q_ = -Q if Q.y.negate else Q
 
         Args:
-            take_modulo (bool): If `True`, the result is reduced modulo q.
-            check_constant (bool | None, optional): If `True`, check if the constant (q) is valid before proceeding.
-            clean_constant (bool | None, optional): If `True`, clean the constant by removing it
-                from the stack after use.
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             verify_gradient (bool): If `True`, the validity of the gradient provided is checked.
             gradient (StackFiniteFieldElement): The position of gradient through P_ and Q_ in the stack,
                 its length, whether it should be negated, and whether it should be rolled or picked.
@@ -89,10 +99,6 @@ class EllipticCurveFq2:
             - The input points `P` and `Q` must be on the elliptic curve.
             - The modulo q must be a prime number.
             - `P_` and `Q_` are not equal, nor inverse, nor the point at infinity
-
-        Notes:
-            This function assumes the input points are represented as minimally encoded, little-endian integers.
-
         """
         return (
             self.point_algebraic_addition_verifying_gradient(
@@ -121,11 +127,10 @@ class EllipticCurveFq2:
 
         This function computes the algebraic doubling of P for the elliptic curve points `P`.
         The function branches according to the value of verify_gradient.
-        If `take_modulo` is `True`, the result is reduced modulo `q`.
         It also handles optional checks on the curve constant and whether the constant should be cleaned or reused.
 
         Stack input:
-            - stack    = [Q, .., gradient, .., P, ..]
+            - stack    = [q, .., gradient, .., P, ..]
             - altstack = []
 
         Stack output:
@@ -136,10 +141,9 @@ class EllipticCurveFq2:
         P_ = -P if P.y.negate else P
 
         Args:
-            take_modulo (bool): If `True`, the result is reduced modulo q.
-            check_constant (bool | None, optional): If `True`, check if the constant (q) is valid before proceeding.
-            clean_constant (bool | None, optional): If `True`, clean the constant by removing it
-                from the stack after use.
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             verify_gradient (bool): If `True`, the validity of the gradient provided is checked.
             gradient (StackFiniteFieldElement): The position of gradient of the line tangent at P_ in the stack,
                     its length, whether it should be negated, and whether it should be rolled or picked.
@@ -165,10 +169,6 @@ class EllipticCurveFq2:
             - The input point `P` must be on the elliptic curve.
             - The modulo q must be a prime number.
             - `P` not the point at infinity
-
-        Notes:
-            This function assumes the input points are represented as minimally encoded, little-endian integers.
-
         """
         return (
             self.point_algebraic_doubling_verifying_gradient(
@@ -187,18 +187,28 @@ class EllipticCurveFq2:
         clean_constant: bool | None = None,
         is_constant_reused: bool | None = None,
     ) -> Script:
-        """Point negation.
+        """Perform point negation on an elliptic curve defined over Fq2.
 
-        Input Parameters:
-            - Stack: Q, .., gradient P
-            - Altstack: []
-        Output:
-            - -P
-        Assumption on parameters:
-            - P is a point on E(F_q^2), passed as an element in Fq2
-        If take_modulo = True, the coordinates of -P are in F_q
+        Stack input:
+            - stack:    [q, ..., P]
+            - altstack: []
 
-        NOTE: The constant cannot be cleaned from inside this function
+        Stack output:
+            - stack:    [q, ..., -P]
+            - altstack: []
+
+        Args:
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
+            is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
+                after execution. Defaults to `None`.
+
+        Returns:
+            Script to negate a point on E(F_q^2).
+
+        Note:
+            The constant cannot be cleaned from inside this function.
         """
         assert (not clean_constant) or (
             clean_constant is None
@@ -253,7 +263,6 @@ class EllipticCurveFq2:
         """Perform algebraic addition of points on an elliptic curve defined over Fq2.
 
         This function computes the algebraic addition of P and Q for elliptic curve points `P` and `Q`.
-        If `take_modulo` is `True`, the result is reduced modulo `q`.
         It also handles optional checks on the curve constant and whether the constant should be cleaned or reused.
 
         Stack input:
@@ -269,10 +278,9 @@ class EllipticCurveFq2:
         Q_ = -Q if Q.y.negate else Q
 
         Args:
-            take_modulo (bool): If `True`, the result is reduced modulo q.
-            check_constant (bool | None, optional): If `True`, check if the constant (q) is valid before proceeding.
-            clean_constant (bool | None, optional): If `True`, clean the constant by removing it
-                from the stack after use.
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             gradient (StackFiniteFieldElement): The position of gradient through P_ and Q_ in the stack,
                 its length, whether it should be negated, and whether it should be rolled or picked.
                 Defaults to: StackFiniteFieldElement(9, False, 2)
@@ -305,10 +313,8 @@ class EllipticCurveFq2:
             - `P_` and `Q_` are not equal, nor inverse, nor the point at infinity
 
         Notes:
-            This function assumes the input points are represented as minimally encoded, little-endian integers.
             If this function is used when `P_` != `Q_` or `P_ != -Q_`, then any gradient will pass
             the gradient verification, but the point computed is not going to be `P_ + Q_`.
-
         """
         check_order([gradient, P, Q])
         is_gradient_rolled, is_p_rolled, is_q_rolled = bitmask_to_boolean_list(rolling_options, 3)
@@ -446,11 +452,10 @@ class EllipticCurveFq2:
 
         This function computes the algebraic addition of P and Q for elliptic curve points `P` and `Q` without
         verifying the gradient provided.
-        If `take_modulo` is `True`, the result is reduced modulo `q`.
         It also handles optional checks on the curve constant and whether the constant should be cleaned or reused.
 
         Stack input:
-            - stack    = [Q, .., gradient, .., P, .., Q, ..]
+            - stack    = [q, .., gradient, .., P, .., Q, ..]
             - altstack = []
 
         Stack output:
@@ -462,10 +467,9 @@ class EllipticCurveFq2:
         Q_ = -Q if Q.y.negate else Q
 
         Args:
-            take_modulo (bool): If `True`, the result is reduced modulo q.
-            check_constant (bool | None, optional): If `True`, check if the constant (q) is valid before proceeding.
-            clean_constant (bool | None, optional): If `True`, clean the constant by removing it
-                from the stack after use.
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             gradient (StackFiniteFieldElement): The position of gradient through P_ and Q_ in the stack,
                 its length, whether it should be negated, and whether it should be rolled or picked.
                 Defaults to: StackFiniteFieldElement(9, False, 2)
@@ -498,9 +502,7 @@ class EllipticCurveFq2:
             - `P_` and `Q_` are not equal, nor inverse, nor the point at infinity
 
         Notes:
-            This function assumes the input points are represented as minimally encoded, little-endian integers.
             This function does not check the validity of the gradient provided.
-
         """
         check_order([gradient, P, Q])
         is_gradient_rolled, is_p_rolled, is_q_rolled = bitmask_to_boolean_list(rolling_options, 3)
@@ -586,11 +588,10 @@ class EllipticCurveFq2:
         """Perform algebraic point doubling of points on an elliptic curve defined over Fq2.
 
         This function computes the algebraic doubling of P for the elliptic curve points `P`.
-        If `take_modulo` is `True`, the result is reduced modulo `q`.
         It also handles optional checks on the curve constant and whether the constant should be cleaned or reused.
 
         Stack input:
-            - stack    = [Q, .., gradient, .., P, ..]
+            - stack    = [q, .., gradient, .., P, ..]
             - altstack = []
 
         Stack output:
@@ -601,10 +602,9 @@ class EllipticCurveFq2:
         P_ = -P if P.y.negate else P
 
         Args:
-            take_modulo (bool): If `True`, the result is reduced modulo q.
-            check_constant (bool | None, optional): If `True`, check if the constant (q) is valid before proceeding.
-            clean_constant (bool | None, optional): If `True`, clean the constant by removing it
-                from the stack after use.
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             gradient (StackFiniteFieldElement): The position of gradient of the line tangent at P_ in the stack,
                     its length, whether it should be negated, and whether it should be rolled or picked.
                     Defaults to: StackFiniteFieldElement(5,False,2).
@@ -629,10 +629,6 @@ class EllipticCurveFq2:
             - The input point `P` must be on the elliptic curve.
             - The modulo q must be a prime number.
             - `P` not the point at infinity
-
-        Notes:
-            This function assumes the input points are represented as minimally encoded, little-endian integers.
-
         """
         check_order([gradient, P])
         is_gradient_rolled, is_p_rolled = bitmask_to_boolean_list(rolling_options, 2)
@@ -738,11 +734,10 @@ class EllipticCurveFq2:
 
         This function computes the algebraic doubling of P for the elliptic curve point `P` without
         verifying the gradient provided.
-        If `take_modulo` is `True`, the result is reduced modulo `q`.
         It also handles optional checks on the curve constant and whether the constant should be cleaned or reused.
 
         Stack input:
-            - stack    = [Q, .., gradient, .., P, ..]
+            - stack    = [q, .., gradient, .., P, ..]
             - altstack = []
 
         Stack output:
@@ -753,10 +748,9 @@ class EllipticCurveFq2:
         P_ = -P if P.y.negate else P
 
         Args:
-            take_modulo (bool): If `True`, the result is reduced modulo q.
-            check_constant (bool | None, optional): If `True`, check if the constant (q) is valid before proceeding.
-            clean_constant (bool | None, optional): If `True`, clean the constant by removing it
-                from the stack after use.
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             gradient (StackFiniteFieldElement): The position of gradient of the line tangent at P_ in the stack,
                     its length, whether it should be negated, and whether it should be rolled or picked.
                     Defaults to: StackFiniteFieldElement(5,False,2).
@@ -783,9 +777,7 @@ class EllipticCurveFq2:
             - `P` not the point at infinity
 
         Notes:
-            This function assumes the input points are represented as minimally encoded, little-endian integers.
             This function does not check the validity of the gradient provided.
-
         """
         check_order([gradient, P])
         is_gradient_rolled, is_p_rolled = bitmask_to_boolean_list(rolling_options, 2)

@@ -1,4 +1,5 @@
-# from src.tx_engine.engine.script import Script
+"""Bitcoin scripts that compute bilinear pairings."""
+
 from tx_engine import Script
 
 from src.zkscript.util.utility_functions import optimise_script
@@ -6,24 +7,34 @@ from src.zkscript.util.utility_scripts import nums_to_script, pick, roll, verify
 
 
 class Pairing:
+    """Pairing class."""
+
     def single_pairing(
         self, modulo_threshold: int, check_constant: bool | None = None, clean_constant: bool | None = None
     ) -> Script:
-        """Pairing computation.
+        """Bilinear pairing.
 
-        Input parameters:
-            - Stack: q .. miller(P,Q)^-1 lambdas P Q
-            - Altstack: []
-        Output:
-            - e(P,Q)
-        Assuption on data:
-            - P is a point on E(F_q)
-            - Q is a point on E'(F_q^{k/d})
-            - miller(P,Q) is the output of the miller loop computed on P,Q represented as an element in F_q^{k/d}
-            - If P is the point at infinity, then it is encoded as 0x00 * N_POINTS_CURVE
-            (NOT OP_0, data payloads of 0x00)
-            - If Q is the point at infinity, then it is encoded as 0x00 * N_POINTS_TWIST
-            (NOT OP_0, data payloads of 0x00)
+        Stack input:
+            - stack:    [q, ..., miller(P,Q)^-1, lambdas, P, Q], `P` is a point on E(F_q), `Q` is a point on
+                E'(F_q^{k/d}), `lambdas` is the sequence of gradients to compute the miller loop, `miller(P,Q)^-1` is
+                the inverse of the miller loop
+            - altstack: []
+
+        Stack output:
+            - stack:    [q, ..., e(P,Q)],
+            - altstack: []
+
+        Args:
+            modulo_threshold (int): Bit-length threshold. Values whose bit-length exceeds it are reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
+
+        Returns:
+            Script to evaluate the bilinear pairing e(P,Q).
+
+        Preconditions:
+            - If `P` is the point at infinity, then it is encoded as 0x00 * N_POINTS_CURVE (not OP_0)
+            - If `Q` is the point at infinity, then it is encoded as 0x00 * N_POINTS_TWIST (not OP_0)
         """
         q = self.MODULUS
 
@@ -50,7 +61,7 @@ class Pairing:
         out += Script.parse_string("0x" + "00" * N_POINTS_CURVE + " OP_EQUAL OP_NOT")
         out += Script.parse_string("OP_IF")
 
-        # Execute pairing computation ----------------------------------------------------------------------------------
+        # Execute pairing computation
 
         # After this, the stack is: miller(P,Q)^-1 (t-1)Q miller(P,Q)
         out += self.miller_loop(modulo_threshold=modulo_threshold, check_constant=False, clean_constant=False)
@@ -65,9 +76,7 @@ class Pairing:
             take_modulo=True, modulo_threshold=modulo_threshold, check_constant=False, clean_constant=clean_constant
         )
 
-        # --------------------------------------------------------------------------------------------------------------
-
-        # Come here if P is point at infinity
+        # Jump here if P is point at infinity
         out += Script.parse_string("OP_ELSE")
         for _ in range((N_POINTS_TWIST + N_POINTS_CURVE) // 2):
             out += Script.parse_string("OP_2DROP")
@@ -76,7 +85,7 @@ class Pairing:
             out += Script.parse_string("OP_DEPTH OP_1SUB OP_ROLL OP_DROP")
         out += Script.parse_string("OP_ENDIF")
 
-        # Come here if Q is point at infinity
+        # Jump here if Q is point at infinity
         out += Script.parse_string("OP_ELSE")
         for _ in range((N_POINTS_TWIST + N_POINTS_CURVE) // 2):
             out += Script.parse_string("OP_2DROP")
@@ -90,21 +99,30 @@ class Pairing:
     def triple_pairing(
         self, modulo_threshold: int, check_constant: bool | None = None, clean_constant: bool | None = None
     ) -> Script:
-        """Pairing computation.
+        """Product of three bilinear pairings.
 
-        NOTE: At the moment, this function does not handle the case where one of the Pi's or one of the Qi's is the
-        point at infinity
+        Stack input:
+            - stack:    [q, ..., (miller(P1,Q1) * miller(P2,Q2) * miller(P3,Q3))^-1, lambdas, P1, P2, P3, Q1, Q2, Q3],
+                `Pi` are points on E(F_q), `Qi` are points on E'(F_q^{k/d}), `lambdas` is the sequence of gradients to
+                compute the miller loops, `(miller(P1,Q1) * miller(P2,Q2) * miller(P3,Q3))^-1` is the inverse of the
+                product of the miller loops computed on each Pi,Qi
+            - altstack: []
 
-        Input parameters:
-            - Stack: [miller(P1,Q1) * miller(P2,Q2) * miller(P3,Q3)]^-1 lambdas P1 P2 P3 Q1 Q2 Q3
-            - Altstack:
-        Output:
-            - e(P1,Q1) * e(P2,Q2) * e(P3,Q3)
-        Assuption on data:
-            - Pi are points on E(F_q)
-            - Qi are points on E'(F_q)
-            - [miller(P1,Q1) * miller(P2,Q2) * miller(P3,Q3)] is the product of the outputs of the miller loops computed
-            on Pi,Qi
+        Stack output:
+            - stack:    [q, ..., e(P1,Q1) * e(P2,Q2) * e(P3,Q3)]
+            - altstack: []
+
+        Args:
+            modulo_threshold (int): Bit-length threshold. Values whose bit-length exceeds it are reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
+
+        Returns:
+            Script to compute the product of three bilinear pairings e(P1,Q1) * e(P2,Q2) * e(P3,Q3).
+
+        Notes:
+            At the moment, this function does not handle the case where one of the Pi's or one of the Qi's is the
+            point at infinity.
         """
         q = self.MODULUS
 
@@ -133,12 +151,20 @@ class Pairing:
         miller_output_inverse: list[int] | None,
         load_q: bool = True,
     ) -> Script:
-        """Return the script needed to execute the single_pairing function above.
+        """Returns a script containing the data required to execute the `self.single_pairing` method.
 
-        Take P, Q, and the curve as input
+        Args:
+            point_p (list[int]): Elliptic curve point on E(F_q).
+            point_q (list[int]): Elliptic curve point on E'(F_q^{k/d}).
+            lambdas_q_exp_miller_loop (list[list[list[int]]]): The sequence of gradients to compute the miller loop.
+            miller_output_inverse (list[int] | None): The inverse of the miller loop output.
+            load_q (bool): If `True`, load the modulus `q` on the stack. Defaults to `True`.
 
-        If P is the point at infinity, then it should be passed as [None, None]
-        If Q is the point at infinity, then it should be passed as [None, None]
+        Preconditions:
+            - If `point_p` or `point_q` are the points at infinity, then they should be passed as [None, None].
+
+        Returns:
+            Script pushing [miller(P,Q)^-1, lambdas, P, Q] on the stack.
         """
         q = self.MODULUS
         N_POINTS_CURVE = self.N_POINTS_CURVE
@@ -186,9 +212,24 @@ class Pairing:
         miller_output_inverse: list[int],
         load_q: bool = True,
     ) -> Script:
-        """Return the script needed to execute the triple_pairing function above.
+        """Returns a script containing the data required to execute the `self.triple_pairing` method.
 
-        Take Pi, Qi, the lamdbas for computing (t-1)Qi, and the inverse of the miller loop as input.
+        Args:
+            point_p1 (list[int]): Elliptic curve point on E(F_q).
+            point_p2 (list[int]): Elliptic curve point on E(F_q).
+            point_p3 (list[int]): Elliptic curve point on E(F_q).
+            point_q1 (list[int]): Elliptic curve point on E'(F_q^{k/d}).
+            point_q2 (list[int]): Elliptic curve point on E'(F_q^{k/d}).
+            point_q3 (list[int]): Elliptic curve point on E'(F_q^{k/d}).
+            lambdas_q1_exp_miller_loop (list[list[list[int]]]): The sequence of gradients to compute the miller loop.
+            lambdas_q2_exp_miller_loop (list[list[list[int]]]): The sequence of gradients to compute the miller loop.
+            lambdas_q3_exp_miller_loop (list[list[list[int]]]): The sequence of gradients to compute the miller loop.
+            miller_output_inverse (list[int] | None): The inverse of the miller loop output.
+            load_q (bool): If `True`, load the modulus `q` on the stack. Defaults to `True`.
+
+        Returns:
+            Script pushing [miller(P1,Q1) * miller(P2,Q2) * miller(P3,Q3)]^-1, lambdas, P1, P2, P3, Q1, Q2, Q3] on the
+            stack.
         """
         q = self.MODULUS
         lambdas = [lambdas_q1_exp_miller_loop, lambdas_q2_exp_miller_loop, lambdas_q3_exp_miller_loop]

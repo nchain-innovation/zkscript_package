@@ -1,7 +1,7 @@
-# Math
+"""Bitcoin scripts that compute the product of three Miller loops."""
+
 from math import ceil, log2
 
-# from src.tx_engine.engine.script import Script
 from tx_engine import Script
 
 from src.zkscript.util.utility_functions import optimise_script
@@ -9,16 +9,64 @@ from src.zkscript.util.utility_scripts import nums_to_script, pick, roll, verify
 
 
 class TripleMillerLoop:
+    """Triple miller loop operation."""
+
     def triple_miller_loop(
         self, modulo_threshold: int, check_constant: bool | None = None, clean_constant: bool | None = None
     ) -> Script:
-        """Evaluate the miller loop.
+        """Evaluation of the product of three Miller loops.
 
-        Input parameters:
-            - Stack: q .. lambdas P1 P2 P3 Q1 Q2 Q3
-            - Altstack: []
-        Output:
-            - miller(P1,Q1) * miller(P2,Q2) * miller(P3,Q3)
+        Stack input:
+            - stack:    [q, ..., lambdas, P1, P2, P3, Q1, Q2, Q3], `P` is a point on E(F_q), `Q` is a point on
+                E'(F_q^{k/d})
+            - altstack: []
+
+        Stack output:
+            - stack:    [q, ..., miller(P1,Q1) * miller(P2,Q2) * miller(P3,Q3)]
+            - altstack: []
+
+        Args:
+            modulo_threshold (int): Bit-length threshold. Values whose bit-length exceeds it are reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
+
+        Returns:
+            Script to evaluate the product of three Miller loops.
+
+        Notes:
+            At the beginning of every iteration of the loop the stack is assumed to be:
+            [... lambda_(2*T1) lambda_(2*T2) lambda_(2*T3) P1 P2 P3 Q1 Q2 Q3 -Q1 -Q2 -Q3 T1 T2 T3 f_i]
+            where:
+                - lambda_(2*Tj) is the gradient of the line tangent at Tj.
+                - f_i is the value of the i-th step in the computation of
+                    [miller(P1,Q1) * miller(P2,Q2) * miller(P3,Q3)]
+            If exp_miller_loop[i] != 0, then the stack is:
+                [... lambda_(2* T1 pm Q1) lambda_(2* T2 pm Q2) lambda_(2* T3 pm Q3) lambda_(2*T1) lambda_(2*T2) lambda_(
+                2*T3) P1 P2 P3 Q1 Q2 Q3 -Q1 -Q2 -Q3 T1 T2 T3 f_i]
+            where:
+                - lambda_(2* Tj pm Qj) is the gradient of the line through 2 * Tj and (pm Qj)
+
+            The computation at the i-th iteration of the loop is as follows:
+                - if exp_miller_loop[i] == 0, then:
+                    - compute t_j = ev_l_(T_j,T,j)(P_j)
+                    - compute 2 * T_j
+                    - compute t_1 * t_2 * t_3
+                    - compute f_i * (t_1 * t_2 * t_3) to get f_(i+1)
+                - exp_miller_loop[i] != 0, then:
+                    - compute t_j = ev_l_(T_j,T,j)(P_j)
+                    - compute 2 * T_j
+                    - compute (2 * T_j) pm Q_j
+                    - compute t'_j = ev_l_((2 * T_j),pm Q_j)(P_j)
+                    - compute t_1 * t_2
+                    - compute t_3 * t_1'
+                    - compute t'_2 * t_'3
+                    - compute (t_1 * t_2) * (t_3 * t_1') * (t'_2 * t_'3)
+                    - compute f_i * (t_1 * t_2) * (t_3 * t_1') * (t'_2 * t_'3) to get f_(i+1)
+
+            Modulo operations are carried out as in a similar fashion to a single miller loop, with the only difference
+            being that the update of f is now always of the form: f <-- f^2 * Dense
+        """
+        """
         Assumption on data:
             - Pi are passed as couples of integers (minimally encoded, in little endian)
             - Qi are passed as couples of elements in Fq2 (see Fq2.py)
@@ -48,39 +96,6 @@ class TripleMillerLoop:
         N_ELEMENTS_MILLER_OUTPUT = self.N_ELEMENTS_MILLER_OUTPUT
         N_ELEMENTS_EVALUATION_OUTPUT = self.N_ELEMENTS_EVALUATION_OUTPUT
         N_ELEMENTS_EVALUATION_TIMES_EVALUATION = self.N_ELEMENTS_EVALUATION_TIMES_EVALUATION
-
-        """
-        At the beginning of every iteration of the loop the stack is assumed to be:
-            lambda_(2*T1) lambda_(2*T2) lambda_(2*T3) P1 P2 P3 Q1 Q2 Q3 -Q1 -Q2 -Q3 T1 T2 T3 f_i
-        where:
-            - lambda_(2*Tj) is the gradient of the line tangent at Tj.
-            - f_i is the value of the i-th step in the computation of [miller(P1,Q1) * miller(P2,Q2) * miller(P3,Q3)]
-        If exp_miller_loop[i] != 0, then the stack is:
-            lambda_(2* T1 pm Q1) lambda_(2* T2 pm Q2) lambda_(2* T3 pm Q3) lambda_(2*T1) lambda_(2*T2) lambda_(2*T3) P1
-            P2 P3 Q1 Q2 Q3 -Q1 -Q2 -Q3 T1 T2 T3 f_i
-        where:
-            - lambda_(2* Tj pm Qj) is the gradient of the line through 2 * Tj and (pm Qj)
-
-        The computation at the i-th iteration of the loop is as follows:
-            - if exp_miller_loop[i] == 0, then:
-                - compute t_j = ev_l_(T_j,T,j)(P_j)
-                - compute 2 * T_j
-                - compute t_1 * t_2 * t_3
-                - compute f_i * (t_1 * t_2 * t_3) to get f_(i+1)
-            - exp_miller_loop[i] != 0, then:
-                - compute t_j = ev_l_(T_j,T,j)(P_j)
-                - compute 2 * T_j
-                - compute (2 * T_j) pm Q_j
-                - compute t'_j = ev_l_((2 * T_j),pm Q_j)(P_j)
-                - compute t_1 * t_2
-                - compute t_3 * t_1'
-                - compute t'_2 * t_'3
-                - compute (t_1 * t_2) * (t_3 * t_1') * (t'_2 * t_'3)
-                - compute f_i * (t_1 * t_2) * (t_3 * t_1') * (t'_2 * t_'3) to get f_(i+1)
-
-        Modulo operations are carried out as in a similar fashion to a single miller loop, with the only difference
-        being that the update of f is now always of the form: f <-- f^2 * Dense
-        """
 
         out = verify_bottom_constant(q) if check_constant else Script()
 
@@ -1259,7 +1274,6 @@ class TripleMillerLoop:
             n_elements=9 * N_POINTS_TWIST + 3 * N_POINTS_CURVE,
         )
         out += Script.parse_string(" ".join(["OP_DROP"] * (9 * N_POINTS_TWIST + 3 * N_POINTS_CURVE)))
-        # ----------------------------------------------
 
         return optimise_script(out)
 
@@ -1275,9 +1289,21 @@ class TripleMillerLoop:
         lambdas_q2_exp_miller_loop: list[list[list[int]]],
         lambdas_q3_exp_miller_loop: list[list[list[int]]],
     ) -> Script:
-        """Return the script needed to execute the triple_miller_loop function above.
+        """Returns a script containing the data required to execute the `self.triple_miller_loop` method.
 
-        Take Pi, Qi, and the lamdbas for computing (t-1)Qi as input
+        Args:
+            point_p1 (list[int]): Elliptic curve point on E(F_q).
+            point_p2 (list[int]): Elliptic curve point on E(F_q).
+            point_p3 (list[int]): Elliptic curve point on E(F_q).
+            point_q1 (list[int]): Elliptic curve point on E'(F_q^{k/d}).
+            point_q2 (list[int]): Elliptic curve point on E'(F_q^{k/d}).
+            point_q3 (list[int]): Elliptic curve point on E'(F_q^{k/d}).
+            lambdas_q1_exp_miller_loop (list[list[list[int]]]): The sequence of gradients to compute the miller loop.
+            lambdas_q2_exp_miller_loop (list[list[list[int]]]): The sequence of gradients to compute the miller loop.
+            lambdas_q3_exp_miller_loop (list[list[list[int]]]): The sequence of gradients to compute the miller loop.
+
+        Returns:
+            Script pushing [lambdas, P1, P2, P3, Q1, Q2, Q3] on the stack.
         """
         q = self.MODULUS
         lambdas = [lambdas_q1_exp_miller_loop, lambdas_q2_exp_miller_loop, lambdas_q3_exp_miller_loop]

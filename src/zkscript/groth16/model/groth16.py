@@ -1,3 +1,5 @@
+"""Bitcoin scripts that perform Groth16 proof verification."""
+
 from math import log2
 
 from tx_engine import Script
@@ -14,12 +16,24 @@ from src.zkscript.util.utility_scripts import nums_to_script, roll
 
 
 class Groth16(PairingModel):
+    """Groth16 class.
+
+    Attributes:
+        pairing_model: Pairing model used to instantiate Groth16.
+        curve_a (int): A coefficient of the base curve over which Groth16 is instantiated.
+        r (int): The order of G1/G2/GT.
+    """
+
     def __init__(self, pairing_model, curve_a: int, r: int):
-        # Pairing model used to instantiate Groth16
+        """Initialise the Groth16 class.
+
+        Args:
+            pairing_model: Pairing model used to instantiate Groth16.
+            curve_a (int): A coefficient of the base curve over which Groth16 is instantiated.
+            r (int): The order of G1/G2/GT.
+        """
         self.pairing_model = pairing_model
-        # A coefficient of the base curve over which Groth16 is instantiated
         self.curve_a = curve_a
-        # The order of G1/G2/GT
         self.r = r
 
     def groth16_verifier(
@@ -33,38 +47,44 @@ class Groth16(PairingModel):
         check_constant: bool | None = None,
         clean_constant: bool | None = None,
     ) -> Script:
-        """Groth16 implementation.
+        """Groth16 verifier.
 
-        - gamma_abc is the list of points given in the Common Reference String.
-        - max_multipliers[i] is the max value of the i-th public statement
+        Stack input:
+            - stack:    [q, ..., inverse_miller_loop_triple_pairing, lambdas_pairing, A, B, C,
+                lambda[sum_(i=0)^(l-1), a_i * gamma_abc[i], a_l * gamma_abc[l]], ..., lambda[gamma_abc[0],
+                a_1 * gamma_abc[1]], a_1, lambdas[a_1,gamma_abc[1]], ..., a_l, lambdas[a_l,gamma_abc[l]]]
 
-        The verification equation is:
+                where:
+                 - a_i lambdas[a_i,gamma_abc[i]] is the input required to execute unrolled_multiplication from
+                    EllipticCurveFqUnrolled (except for gamma_abc[i], which is hard coded into the script)
+                - lambda[sum_(i=0)^(j-1) a_i * gamma_abc[i], a_j * gamma_abc[j]] is the gradient through
+                    a_j * gamma_abc[j] and sum_(i=0)^(j-1) a_i * gamma_abc[i] to compute their sum
+                - lambdas_pairing are the lambdas needed to execute the function self.triple_pairing() (from the Pairing
+                    class) to compute the triple pairing
+            - altstack: []
 
-            e(A,B) = alpha_beta * e(sum_(i=0)^(l) a_i * gamma_abc[i], gamma) * e(C, delta)
+        Stack output:
+            - stack:    [q, ..., True/False]
+            - altstack: []
 
-        which we turn into:
+        Args:
+            modulo_threshold (int): Bit-length threshold. Values whose bit-length exceeds it are reduced modulo `q`.
+            alpha_beta (list[int]): List of integers representing the alpha and beta coefficients for the computation.
+            minus_gamma (list[int]): List of integers representing the negated gamma values for the computation.
+            minus_delta (list[int]): List of integers representing the negated delta values for the computation
+            gamma_abc (list[list[int]]): List of points given in the Common Reference String.
+            max_multipliers (list[int]): List where each element max_multipliers[i] is the max value of the i-th public
+                statement.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
 
-            e(A,B) * e(sum_(i=0)^(l) a_i * gamma_abc[i], - gamma) * e(C, - delta) = alpha_beta			(*)
+        Returns:
+            Script to verify the equation e(A,B) = alpha_beta * e(sum_(i=0)^(l) a_i * gamma_abc[i], gamma) * e(C, delta)
+            which we turn into  e(A,B) * e(sum_(i=0)^(l) a_i * gamma_abc[i], - gamma) * e(C, - delta) = alpha_beta.
+            The LHS of the equation is a triple pairing defined in bilinear_pairings/model/triple_pairing.py
 
-        These are parts of the Common Reference String obtained at setup.
-        Recall that a_0 = 1.
-
-        Input:
-            Stack: q inverse_miller_loop_triple_pairing lambdas_pairing A B C
-            lambda[sum_(i=0)^(l-1) a_i * gamma_abc[i], a_l * gamma_abc[l]] ..
-            lambda[gamma_abc[0], a_1 * gamma_abc[1]] a_1 lambdas[a_1,gamma_abc[1]] ..
-            a_l lambdas[a_l,gamma_abc[l]]
-            Altstack: []
-        Output:
-            Verify ZKP equation
-
-        Here:
-            - a_i lambdas[a_i,gamma_abc[i]] is the input required to execute unrolled_multiplication from
-            EllipticCurveFqUnrolled (except for gamma_abc[i], which is hard coded into the script)
-            - lambda[sum_(i=0)^(j-1) a_i * gamma_abc[i], a_j * gamma_abc[j]] is the gradient through a_j * gamma_abc[j]
-            and sum_(i=0)^(j-1) a_i * gamma_abc[i] to compute their sum
-            - lambdas_pairing are the lambdas needed to execute the function self.triple_pairing() (from the Pairing
-            class) to compute the triple pairing on the LHS of equation (*)
+        Notes:
+            a_0 = 1.
         """
         q = self.pairing_model.MODULUS
         N_POINTS_CURVE = self.pairing_model.N_POINTS_CURVE
@@ -151,26 +171,31 @@ class Groth16(PairingModel):
         lambdas_minus_gamma_exp_miller_loop: list[list[list[int]]],
         lambdas_minus_delta_exp_miller_loop: list[list[list[int]]],
         inverse_miller_loop: list[int],
-        lamdbas_partial_sums: list[int],
+        lambdas_partial_sums: list[int],
         lambdas_multiplications: list[int],
         max_multipliers: list[int] | None = None,
         load_q=True,
     ) -> Script:
-        r"""Generate unlocking script for groth16_verifier.
+        r"""Generate the unlocking script for the Groth16 verifier.
 
-        - pub: list of public statements
-        - (A,B,C): zk-proof, elements passed as their list of coordinates
-        - lambdas_B_exp_miller_loop: gradients needed to compute val * B, see also unrolled_multiplication in
-        EllipticCurveFqUnrolled (val is the value over which we compute the Miller loop)
-        - lambdas_minus_gamma_exp_miller_loop: gradients needed to compute val * (-gamma)
-        - lambdas_minus_delta_exp_miller_loop: gradients needed to compute val * (-delta)
-        - inverse_miller_loop: inverse of miller_loop(A,B) * miller_loop(C,-gamma) * miller_loop(sum_gamma_abc,-delta),
-        where gamma_abc is taken from the vk
-        - lamdbas_partial_sums: list of gradients, the element at position n_pub - i - 1 is the list of gradients to
-        compute a_(i+1) * gamma_abc[i] and \sum_(j=0)^(i) a_j * gamma_abc[j], 0 <= i <= n_pub - 1
-        - lambdas_multiplications: list of gradients, the element at position i is the list of gradients to compute
-        pub[i] * gamma_abc[i], 0 <= i <= n_pub - 1
-        - max_multipliers[i]: upper bound for public statement pub[i]
+        Args:
+            pub (list[int]): List of public statements.
+            A (list[int]): Point A of the zk-proof. Specified as a list of coordinates.
+            B (list[int]): Point B of the zk-proof. Specified as a list of coordinates.
+            C (list[int]): Point C of the zk-proof. Specified as a list of coordinates.
+            lambdas_B_exp_miller_loop (list[list[list[int]]]): Gradients needed to compute val * B, see also
+                unrolled_multiplication in EllipticCurveFqUnrolled (val is the value over which we compute the Miller
+                loop).
+            lambdas_minus_gamma_exp_miller_loop (list[list[list[int]]]): Gradients needed to compute val * (-gamma).
+            lambdas_minus_delta_exp_miller_loop (list[list[list[int]]]): Gradients needed to compute val * (-delta).
+            inverse_miller_loop (list[int]): Inverse of miller_loop(A,B) * miller_loop(C,-delta) *
+                miller_loop(sum_gamma_abc,-gamma), where gamma_abc is taken from the vk.
+            lambdas_partial_sums (list[int]): List of gradients, the element at position n_pub - i - 1 is the list of
+                gradients to compute a_(i+1) * gamma_abc[i] and \sum_(j=0)^(i) a_j * gamma_abc[j], 0 <= i <= n_pub - 1.
+            lambdas_multiplications (list[int]): List of gradients, the element at position i is the list of gradients
+                to compute pub[i] * gamma_abc[i], 0 <= i <= n_pub - 1.
+            max_multipliers (list[int] | None): Upper bound for public statement pub[i]. Defaults to `None`.
+            load_q (bool): If `True`, load the modulus `q` on the stack. Defaults to `True`.
         """
         q = self.pairing_model.MODULUS
         r = self.r
@@ -200,7 +225,7 @@ class Groth16(PairingModel):
 
         # Partial sums
         for i in range(n_pub):
-            out += nums_to_script(lamdbas_partial_sums[i])
+            out += nums_to_script(lambdas_partial_sums[i])
 
         # Multiplications pub[i] * gamma_abc[i]
         for i in range(n_pub):

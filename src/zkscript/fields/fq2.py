@@ -1,10 +1,12 @@
+"""Bitcoin scripts that perform arithmetic operations in a quadratic extension of F_q."""
+
 from tx_engine import Script
 
 from src.zkscript.util.utility_scripts import mod, nums_to_script, verify_bottom_constant
 
 
 def fq2_for_towering(mul_by_non_residue):
-    """Export Fq2 class with a mul_by_non_residue method which is used to construct towering extensions."""
+    """Export Fq2 class with a mul_by_non_residue method to construct towering extensions."""
 
     class Fq2ForTowering(Fq2):
         pass
@@ -15,33 +17,25 @@ def fq2_for_towering(mul_by_non_residue):
 
 
 class Fq2:
-    """Implementation of Quadratic Extension of base field.
+    """Construct Bitcoin scripts that perform arithmetic operations in F_q^2 = F_q[x] / (x^2 - non_residue).
 
-    The modulus and the non_residue are specified when instantiating an object of this class.
+    F_q^2 = F_q[u] / (u^2 - non_residue) is a quadratic extension of a base field F_q.
 
-    - MODULUS: an integer
-    - NON_RESIDUE: an integer
+    Elements in F_q^2 are of the form `x0 + x1 * u`, where `x0` and `x1` are elements of F_q, and `u^2` is equal to
+    some `non_residue` in F_q.
 
-    Fq2 = Fq[x] / (x^2 - NON_RESIDUE)
-
-    Note:
-    ----
-    Each function has a take_modulo boolean variable that lets us choose whether the coordinates of the result should be
-    taken modulo q.
-
-    This variable is introduced for future flexibility: it will allows us to reduce the number of opcodes.
-    By looking at the number of multiplications in each formula, e.g. a * b + c * d requires only a final OP_MOD if a,b,
-    c,d belong to Z_q;
-    on the other hand, a * b * c * d requires three modulo operations to avoid going above the limit for stack numbers:
-    { [(a*b) % q] * [(c*d) % q] } % q.
-
-    check_constant -> Check if constant supplied is the one it is supposed to be
-    clean_constant -> Remove constant from bottom of the stack?
-    is_constant_reused -> Will we need q again after modulo operations have been carried out?
-
+    Attributes:
+        MODULUS: The characteristic of the base field F_q.
+        NON_RESIDUE: The non-residue element used to define the quadratic extension.
     """
 
     def __init__(self, q: int, non_residue: int):
+        """Initialise F_q^2, the quadratic extension of F_q.
+
+        Args:
+            q: The characteristic of the base field F_q.
+            non_residue: The non-residue element used to define the quadratic extension.
+        """
         self.MODULUS = q
         self.NON_RESIDUE = non_residue
 
@@ -54,24 +48,23 @@ class Fq2:
     ) -> Script:
         """Addition in F_q^2.
 
-        Input parameters:
-            - Stack: q .. X Y
-            - Altstack: []
-        Output:
-            - X + Y
-        Assumption on data:
-            - X and Y are passed as couples of integers: minimally encoded, little endian
-        Variables:
-            - If take_modulo is set to True, then the coordinates of the result are in Z_q; otherwise, the coordinates
-            are not taken modulo q.
+        Stack input:
+            - stack:    [q, ..., x := (x0, x1), y := (y0, y1)]
+            - altstack: []
 
-        Example:
-        -------
-            take_modulo = False:
-                x_0 x_1 y_0 y_1 [add] --> (x_0 + y_0) (x_1 + y_1)				where X = x_0 + x_1 u, Y = y_0 + y_1 u
-            take_modulo = True:
-                x_0 x_1 y_0 y_1 [add] --> [(x_0 + y_0) % q] [(x_1 + y_1) % q]	where X = x_0 + x_1 u, Y = y_0 + y_1 u
+        Stack output:
+            - stack:    [q, ..., x + y := (x0 + y0, x1 + y1)]
+            - altstack: []
 
+        Args:
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
+            is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
+                after execution. Defaults to `None`.
+
+        Returns:
+            Script to add two elements in F_q^2.
         """
         out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
@@ -113,24 +106,23 @@ class Fq2:
     ) -> Script:
         """Subtraction in F_q^2.
 
-        Input parameters:
-            - Stack: q .. X Y
-            - Altstack: []
-        Output:
-            - X - Y
-        Assumption on data:
-            - X and Y are passed as couples of integers: minimally encoded, little endian
-        Variables:
-            - If take_modulo is set to True, then the coordinates of the result are in Z_q; otherwise, the coordinates
-            are not taken modulo q.
+        Stack input:
+            - stack:    [q, ..., x := (x0, x1), y := (y0, y1)]
+            - altstack: []
 
-        Example:
-        -------
-            take_modulo = False:
-                x_0 x_1 y_0 y_1 [sub] --> (x_0 - y_0) (x_1 - y_1)				where X = x_0 + x_1 u, Y = y_0 + y_1 u
-            take_modulo = True:
-                x_0 x_1 y_0 y_1 [sub] --> [(x_0 - y_0) % q] [(x_1 - y_1) % q]	where X = x_0 + x_1 u, Y = y_0 + y_1 u
+        Stack output:
+            - stack:    [q, ..., x - y := (x0 - y0, x1 - y1)]
+            - altstack: []
 
+        Args:
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
+            is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
+                after execution. Defaults to `None`.
+
+        Returns:
+            Script to subtract two elements in F_q^2.
         """
         out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
@@ -171,25 +163,23 @@ class Fq2:
     ) -> Script:
         """Negation in F_q^2.
 
-        Input parameters:
-            - Stack: q .. X
-            - Altstack: []
-        Output:
-            - -X
-        Assumption on data:
-            - X is passed as a couple of integers: minimally encoded, little endian
-        Variables:
-            - If take_modulo is set to True, then the coordinates of the result are in Z_q; otherwise, the coordinates
-            are not taken modulo q.
+        Stack input:
+            - stack:    [q, ..., x := (x0, x1)]
+            - altstack: []
 
-        Example:
-        -------
-            take_modulo = False:
-                x_0 x_1 [neg] --> -x_0 -x_1					where X = x_0 + x_1 u
-            take_modulo = True:
-                x_0 x_1 [neg] --> (-x_0 % q) (-x_1 % q)		where X = x_0 + x_1 u
-        REMARK: OP_0 OP_NEGATE returns OP_0
+        Stack output:
+            - stack:    [q, ..., -x := (-x0, -x1)]
+            - altstack: []
 
+        Args:
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
+            is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
+                after execution. Defaults to `None`.
+
+        Returns:
+            Script to negate an element in F_q^2.
         """
         out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
@@ -229,25 +219,23 @@ class Fq2:
     ) -> Script:
         """Scalar multiplication in F_q^2.
 
-        Input parameters:
-            - Stack: q .. X <lambda>
-            - Altstack: []
-        Output:
-            - lambda * X
-        Assumption on data:
-            - X is passed as a couple of integers: minimally encoded, little endian
-            - lambda is passed as a positive integer: minimally encoded, little endian
-        Variables:
-            - If take_modulo is set to True, then the coordinates of the result are in Z_q; otherwise, the coordinates
-            are not taken modulo q.
+        Stack input:
+            - stack:    [q, ..., x := (x0, x1), lambda]
+            - altstack: []
 
-        Example:
-        -------
-            take_modulo = False:
-                x_0 x_1 lambda [scalarMul] --> (lambda * x_0) (lambda * x_1)					where X = x_0 + x_1 u
-            take_modulo = True:
-                x_0 x_1 lambda [scalarMul] --> [(lambda * x_0) % q] [(lambda * x_1) % q]	where X = x_0 + x_1 u
+        Stack output:
+            - stack:    [q, ..., lambda * x := (lambda * x0, lambda * x1)]
+            - altstack: []
 
+        Args:
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
+            is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
+                after execution. Defaults to `None`.
+
+        Returns:
+            Script to multiply an element by a scalar `lambda` in F_q^2.
         """
         out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
@@ -289,26 +277,23 @@ class Fq2:
     ) -> Script:
         """Multiplication in F_q^2.
 
-        Input parameters:
-            - Stack: q .. X Y
-            - Altstack: []
-        Output:
-            - X * Y
-        Assumption on data:
-            - X and Y are passed as couples of integers: minimally encoded, little endian
-        Variables:
-            - If take_modulo is set to True, then the coordinates of the result are in Z_q; otherwise, the coordinates
-            are not taken modulo q.
+        Stack input:
+            - stack:    [q, ..., x := (x0, x1), y := (y0, y1)]
+            - altstack: []
 
-        Example:
-        -------
-            take_modulo = False:
-                x_0 x_1 y_0 y_1 [mul] --> (x_0 * y_0 - x_1 * y_1) (x_0 * y_1 + x_1 * y_0)
-                where X = x_0 + x_1 u, Y = y_0 + y_1 u
-            take_modulo = True:
-                x_0 x_1 y_0 y_1 [mul] --> [(x_0 * y_0 - x_1 * y_1) % q] [(x_0 * y_1 + x_1 * y_0) % q]
-                where X = x_0 + x_1 u, Y = y_0 + y_1 u
+        Stack output:
+            - stack:    [q, ..., x * y := (x_0 * y_0 + x_1 * y_1 * self.NON_RESIDUE, x_0 * y_1 + x_1 * y_0)]
+            - altstack: []
 
+        Args:
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
+            is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
+                after execution. Defaults to `None`.
+
+        Returns:
+            Script to multiply two elements in F_q^2.
         """
         out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
@@ -362,26 +347,23 @@ class Fq2:
     ) -> Script:
         """Squaring in F_q^2.
 
-        Input parameters:
-            - Stack: q .. X
-            - Altstack: []
-        Output:
-            - X**2
-        Assumption on data:
-            - X is passed as a couple of integers: minimally encoded, little endian
-        Variables:
-            - If take_modulo is set to True, then the coordinates of the result are in Z_q; otherwise, the coordinates
-            are not taken modulo q.
+        Stack input:
+            - stack:    [q, ..., x := (x0, x1)]
+            - altstack: []
 
-        Example:
-        -------
-            take_modulo = False:
-                x_0 x_1 [square] --> (x_0^2 - x_1^2) (2 * x_0 * x_1)
-                where X = x_0 + x_1 u, Y = y_0 + y_1 u
-            take_modulo = True:
-                x_0 x_1 [square] --> [(x_0^2 - x_1^2) % q] [(2 * x_0 * x_1) % q]
-                where X = x_0 + x_1 u, Y = y_0 + y_1 u
+        Stack output:
+            - stack:    [q, ..., x^2 := (x0^2 + x1^2 * self.NON_RESIDUE, 2 * x0 * x1)]
+            - altstack: []
 
+        Args:
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
+            is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
+                after execution. Defaults to `None`.
+
+        Returns:
+            Script to square an element in F_q^2.
         """
         out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
@@ -454,27 +436,26 @@ class Fq2:
     ) -> Script:
         """Addition of three elements in F_q^2.
 
-        Input parameters:
-            - Stack: q .. X Y Z
-            - Altstack: []
-        Output:
-            - X + Y + Z
-        Assumption on data:
-            - X, Y and Z are passed as couples of integers: minimally encoded, little endian
-            - If take_modulo is set to True, then the coordinates of X, Y and Z **** MUST BE **** positive
-        Variables:
-            - If take_modulo is set to True, then the coordinates of the result are in Z_q; otherwise, the coordinates
-            are not taken modulo q.
+        Stack input:
+            - stack:    [q, ..., x := (x0, x1), y := (y0, y1), z := (z0, z1)]
+            - altstack: []
 
-        Example:
-        -------
-            take_modulo = False:
-                x_0 x_1 y_0 y_1 z_0 z_1 [add] --> (x_0 + y_0 + z_0) (x_1 + y_1 + z_1)
-                where X = x_0 + x_1 u, Y = y_0 + y_1 u, Z = z_0 + z_1 u
-            take_modulo = True:
-                x_0 x_1 y_0 y_1 z_0 z_1 [add] --> [(x_0 + y_0 + z_0) % q] [(x_1 + y_1 + z_1) % q]
-                where X = x_0 + x_1 u, Y = y_0 + y_1 u, Z = z_0 + z_1 u
+        Stack output:
+            - stack:    [q, ..., x + y + z := (x0 + y0 + z0, x1 + y1 + z1)]
+            - altstack: []
 
+        Args:
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
+            is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
+                after execution. Defaults to `None`.
+
+        Returns:
+            Script to add three elements in F_q^2.
+
+        Preconditions:
+            - If take_modulo is `True`, then the coordinates of x, y and z must be positive.
         """
         out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
@@ -514,16 +495,23 @@ class Fq2:
     ) -> Script:
         """Conjugation in F_q^2.
 
-        Input parameters:
-            - Stack: q .. X
-            - Altstack: []
-        Output:
-            - Conjugate(X)
-        Assumption on data:
-            - X is passed as a couple of integers: minimally encoded, little endian
-        Variables:
-            - If take_modulo is set to True, then the coordinates of the result are in Z_q; otherwise, the coordinates
-            are not taken modulo q.
+        Stack input:
+            - stack:    [q, ..., x := (x0, x1)]
+            - altstack: []
+
+        Stack output:
+            - stack:    [q, ..., conjugate(x) := (x0, -x1)]
+            - altstack: []
+
+        Args:
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
+            is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
+                after execution. Defaults to `None`.
+
+        Returns:
+            Script to conjugate an element in F_q^2.
         """
         out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
@@ -559,16 +547,23 @@ class Fq2:
     ) -> Script:
         """Multiplication by u in F_q^2.
 
-        Input parameters:
-            - Stack: q .. X
-            - Altstack:
-        Output:
-            - X * u
-        Assumption on data:
-            - X is passed as a couple of integers: minimally encoded, little endian
-        Variables:
-            - If take_modulo is set to True, then the coordinates of the result are in Z_q; otherwise, the coordinates
-            are not taken modulo q.
+        Stack input:
+            - stack:    [q, ..., x := (x0, x1)]
+            - altstack: []
+
+        Stack output:
+            - stack:    [q, ..., x * u := (x1 * self.NON_RESIDUE, x0)]
+            - altstack: []
+
+        Args:
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
+            is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
+                after execution. Defaults to `None`.
+
+        Returns:
+            A script to multiply an element by u in F_q^2.
         """
         out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
@@ -606,18 +601,25 @@ class Fq2:
         clean_constant: bool | None = None,
         is_constant_reused: bool | None = None,
     ) -> Script:
-        """Multiplication by 1+u in F_q^2.
+        """Multiplication by 1 + u in F_q^2.
 
-        Input parameters:
-            - Stack: q .. X
-            - Altstack:
-        Output:
-            - X * (1+ u)
-        Assumption on data:
-            - X is passed as a couple of integers: minimally encoded, little endian
-        Variables:
-            - If take_modulo is set to True, then the coordinates of the result are in Z_q; otherwise, the coordinates
-            are not taken modulo q.
+        Stack input:
+            - stack:    [q, ..., x := (x0, x1)]
+            - altstack: []
+
+        Stack output:
+            - stack:    [q, ..., x * (1 + u) := (x0 + x1 * NON_RESIDUE, x0 + x1)]
+            - altstack: []
+
+        Args:
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
+            is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
+                after execution. Defaults to `None`.
+
+        Returns:
+            A script to multiply an element by 1 + u in F_q^2.
         """
         out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 

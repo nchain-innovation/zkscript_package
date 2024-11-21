@@ -1,22 +1,38 @@
+"""Bitcoin scripts that perform arithmetic operations in a cubic extension of F_q^4."""
+
 from tx_engine import Script
 
 from src.zkscript.util.utility_scripts import mod, pick, roll, verify_bottom_constant
 
 
 class Fq12Cubic:
-    r"""F_q^12 as cubic extension of F_q^4, which is built as a quadratic extension of F_q^2.
+    """Construct Bitcoin scripts that perform arithmetic operations in F_q^12 = F_q^4[v] / v^3 - non_residue_over_fq4.
 
-    The NON_RESIDUE_OVER_FQ4 is specified by defining the method self.FQ4.mul_by_non_residue
+    F_q^12 = F_q^4[v] / v^3 - non_residue_over_fq4 is a cubic extension of F_q^4 = F_q^2[u] / u^2 -
+    non_residue_over_fq2.
 
-    F_q^12 = F_q^4[v] / v^3 - NON_RESIDUE_OVER_FQ4, F_q^4 = F_q^2[u] / u^2 - NON_RESIDUE_OVER_FQ2
+    Elements in F_q^12 are of the form `a + b * v + c * v^2`, where `a`, `b`, `c` are elements of F_q^4, `v^3` is equal
+    to the cubic non_residue_over_fq4, and the arithmetic operations `+` and `*` are derived from the operations in
+    F_q^4.
+
+    The non_residue_over_fq4 is specified by defining the method self.FQ4.mul_by_non_residue.
+
+    Attributes:
+        MODULUS: The characteristic of the field F_q.
+        FQ2 (Fq2): Bitcoin script instance to perform arithmetic operations in F_q^2.
+        FQ4 (Fq4): Bitcoin script instance to perform arithmetic operations in F_q^4.
     """
 
     def __init__(self, q: int, fq2, fq4):
-        # Characteristic of the field
+        """Initialise F_q^12, the cubic extension of F_q^4.
+
+        Args:
+            q: The characteristic of the field F_q.
+            fq2 (Fq2): Bitcoin script instance to perform arithmetic operations in F_q^2.
+            fq4 (Fq4): Bitcoin script instance to perform arithmetic operations in F_q^4.
+        """
         self.MODULUS = q
-        # FQ2
         self.FQ2 = fq2
-        # FQ4
         self.FQ4 = fq4
 
     def mul(
@@ -26,18 +42,26 @@ class Fq12Cubic:
         clean_constant: bool | None = None,
         is_constant_reused: bool | None = None,
     ) -> Script:
-        """Multiplication in F_q^12 as cubic extension.
+        """Multiplication in F_q^12.
 
-        Input parameters:
-            - Stack: q .. X Y
-            - Altstack: []
-        Output:
-            - X * Y
-        Assumption on data:
-            - X and Y are passed as triplets of elements of Fq4
-        Variables:
-            - If take_modulo is set to True, then the coordinates of the result are in Z_q; otherwise, the coordinates
-            are not taken modulo q.
+        Stack input:
+            - stack:    [q, ..., x := (x0, x1, ..., x11), y := (y0, y1, ..., y11)], `x`, `y` are triplets of elements of
+                F_q^4
+            - altstack: []
+
+        Stack output:
+            - stack:    [q, ..., x * y]
+            - altstack: []
+
+        Args:
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
+            is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
+                after execution. Defaults to `None`.
+
+        Returns:
+            Script to multiply two elements in F_q^12.
         """
         # Fq4 implementation
         fq4 = self.FQ4
@@ -134,18 +158,25 @@ class Fq12Cubic:
         clean_constant: bool | None = None,
         is_constant_reused: bool | None = None,
     ) -> Script:
-        """Squaring in F_q^12 as cubic extension.
+        """Squaring in F_q^12.
 
-        Input parameters:
-            - Stack: q .. X
-            - Altstack: []
-        Output:
-            - X**2
-        Assumption on data:
-            - X is passed as as a triplet of elements of Fq4
-        Variables:
-            - If take_modulo is set to True, then the coordinates of the result are in Z_q; otherwise, the coordinates
-            are not taken modulo q.
+        Stack input:
+            - stack:    [q, ..., x := (x0, x1, ..., x11)], `x` is a triplet of elements of F_q^4
+            - altstack: []
+
+        Stack output:
+            - stack:    [q, ..., x^2]
+            - altstack: []
+
+        Args:
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
+            is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
+                after execution. Defaults to `None`.
+
+        Returns:
+            Script to square an element in F_q^12.
         """
         # Fq2 implementation
         fq4 = self.FQ4

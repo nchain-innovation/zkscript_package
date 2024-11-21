@@ -1,23 +1,41 @@
+"""Bitcoin scripts that perform arithmetic operations in a quadratic extension of F_q^6."""
+
 from tx_engine import Script
 
 from src.zkscript.util.utility_scripts import mod, nums_to_script, pick, roll, verify_bottom_constant
 
 
 class Fq12:
-    r"""F_q^12 as quadratic extension of F_q^6, which is built as cubic extension of F_q^2.
+    """Construct Bitcoin scripts that perform arithmetic operations in F_q^12 = F_q^6[u] / u^2 - v.
 
-    F_q^12 = F_q^6[u] / u^2 - v, F_q^6 = F_q^2[v] / v^3 - NON_RESIDUE_OVER_FQ2
+    F_q^12 = F_q^6[u] / u^2 - v is a quadratic extension of F_q^6 = F_q^2[v] / v^3 - non_residue_over_fq2.
+
+    Elements in F_q^12 are of the form `a + b * u`, where `a`, `b` are elements of F_q^6, `u^2` is equal
+    to `v`, and the arithmetic operations `+` and `*` are derived from the operations in F_q^6.
+
+    Attributes:
+        MODULUS: The characteristic of the field F_q.
+        FQ2 (Fq2): Bitcoin script instance to perform arithmetic operations in F_q^2.
+        FQ6 (Fq6): Bitcoin script instance to perform arithmetic operations in F_q^6.
+        GAMMAS_FROBENIUS: The list of [gamma1,gamma2,...,gamma11] for the Frobenius where
+            gammai = [gammai1, .., gammai6] with gammaij = list of coefficients of
+            NON_RESIDUE_OVER_FQ2.power(j * (q**i-1)//6)
     """
 
     def __init__(self, q: int, fq2, fq6, gammas_frobenius: list[list[int]] | None = None):
-        # Characteristic of the field
+        """Initialise F_q^12, the quadratic extension of F_q^6.
+
+        Args:
+            q: The characteristic of the field F_q.
+            fq2 (Fq2): Bitcoin script instance to perform arithmetic operations in F_q^2.
+            fq6 (Fq6): Bitcoin script instance to perform arithmetic operations in F_q^6.
+            gammas_frobenius: The list of [gamma1,gamma2,...,gamma11] for the Frobenius where
+                gammai = [gammai1, .., gammai6] with gammaij = list of coefficients of
+                NON_RESIDUE_OVER_FQ2.power(j * (q**i-1)//6)
+        """
         self.MODULUS = q
-        # Fq2 implementation
         self.FQ2 = fq2
-        # Fq6 implementation
         self.FQ6 = fq6
-        # Gammas for the Frobenius - list of [gamma1,gamma2,...,gamma11] where gammai = [gammai1, .., gammai6],
-        # with gammaij = list of coefficients of NON_RESIDUE_OVER_FQ2.power(j * (q**i-1)//6)
         self.GAMMAS_FROBENIUS = gammas_frobenius
 
     def mul(
@@ -29,16 +47,24 @@ class Fq12:
     ) -> Script:
         """Multiplication in F_q^12.
 
-        Input parameters:
-            - Stack: q .. X Y
-            - Altstack: []
-        Output:
-            - X * Y
-        Assumption on data:
-            - X and Y are passed as couples of elements of Fq6
-        Variables:
-            - If take_modulo is set to True, then the coordinates of the result are in Z_q; otherwise, the coordinates
-            are not taken modulo q.
+        Stack input:
+            - stack:    [q, ..., x := (x0, x1, ..., x11), y := (y0, y1, ..., y11)], `x`, `y` are couples of elements of
+                F_q^6
+            - altstack: []
+
+        Stack output:
+            - stack:    [q, ..., x * y]
+            - altstack: []
+
+        Args:
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
+            is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
+                after execution. Defaults to `None`.
+
+        Returns:
+            Script to multiply two elements in F_q^12.
         """
         # Fq6 implementation
         fq6 = self.FQ6
@@ -112,16 +138,26 @@ class Fq12:
     ) -> Script:
         """Squaring in F_q^12.
 
-        Input parameters:
-            - Stack: q .. X
-            - Altstack: []
-        Output:
-            - X**2
-        Assumption on data:
-            - X is passed as as a couple of elements of Fq6: X = x0 x1, x0 = a b c, x1 = d e f
-        Variables:
-            - If take_modulo is set to True, then the coordinates of the result are in Z_q; otherwise, the coordinates
-            are not taken modulo q.
+        Stack input:
+            - stack:    [q, ..., x := (x0, x1, ..., x11)], `x` is a couple of elements of F_q^6
+            - altstack: []
+
+        Stack output:
+            - stack:    [q, ..., x^2]
+            - altstack: []
+
+        Args:
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
+            is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
+                after execution. Defaults to `None`.
+
+        Returns:
+            Script to square an element in F_q^12.
+
+        Notes:
+            This script works for F_q^12 = F_q^6[w] / (w^2 - v) = F_q^2[w,v] / (w^2 - v, v^3 - non_residue_fq2)
         """
         # Fq6 implementation
         fq2 = self.FQ2
@@ -326,18 +362,25 @@ class Fq12:
         clean_constant: bool | None = None,
         is_constant_reused: bool | None = None,
     ) -> Script:
-        """Conjugate in F_q^12.
+        """Conjugation in F_q^12.
 
-        Input parameters:
-            - Stack: q .. X
-            - Altstack: []
-        Output:
-            - Conjugate(X)
-        Assumption on data:
-            - X is passed as as a couple of elements of Fq6 (see Fq6.py)
-        Variables:
-            - If take_modulo is set to True, then the coordinates of the result are in Z_q; otherwise, the coordinates
-            are not taken modulo q.
+        Stack input:
+            - stack:    [q, ..., x := (x0, x1, ..., x11)], `x` is a couple of elements of F_q^6
+            - altstack: []
+
+        Stack output:
+            - stack:    [q, ..., conjugate(x)]
+            - altstack: []
+
+        Args:
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
+            is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
+                after execution. Defaults to `None`.
+
+        Returns:
+            Script to conjugate an element in F_q^12.
         """
         # Fq6 implementation
         fq6 = self.FQ6
@@ -376,21 +419,32 @@ class Fq12:
         clean_constant: bool | None = None,
         is_constant_reused: bool | None = None,
     ) -> Script:
-        r"""Frobenius for odd powers n = 2k + 1 in F_q^12.
+        """Frobenius for odd powers n = 2k + 1 in F_q^12.
 
-        Then, Frobenius is computed via the isomorphism: F_q^12 \sim F_q^2[u,v] / (u^2 - v, v^3 - NON_RESIDUE_OVER_FQ2)
-        \sim F_q^2[t] / (t^6 - NON_RESIDUE_OVER_FQ2)
+        Frobenius is computed via the isomorphism:
+        F_q^12 ~ F_q^2[u,v] / (u^2 - v, v^3 - non_residue_over_fq2)
+            ~ F_q^2[t] / (t^6 - non_residue_over_fq2)
 
-        Input parameters:
-            - Stack: q .. X
-            - Altstack:
-        Output:
-            - X**q**(n)
-        Assumption on data:
-            - X is passed as as a sixtuple of elements of Fq2. Namely, X = a b c d e f
+        Stack input:
+            - stack:    [q, ..., x := (x0, x1, ..., x11)], `x` is a sixtuple of elements of F_q^2
+            - altstack: []
+
+        Stack output:
+            - stack:    [q, ..., x^(q^n)]
+            - altstack: []
+
+        Args:
+            n (int): Frobenius odd power.
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
+            is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
+                after execution. Defaults to `None`.
+
+        Returns:
+            Script to compute the Frobenius endomorphism for odd powers of an element in F_q^12.
         """
         assert n % 2 == 1
-        assert n % 12 != 0
 
         # Fq6 implementation
         fq2 = self.FQ2
@@ -484,18 +538,30 @@ class Fq12:
         clean_constant: bool | None = None,
         is_constant_reused: bool | None = None,
     ) -> Script:
-        r"""Frobenius for even power n = 2k in F_q^12.
+        """Frobenius for even power n = 2k in F_q^12.
 
-        Then, Frobenius is computed via the isomorphism: F_q^12 \sim F_q^2[u,v] / (u^2 - v, v^3 - NON_RESIDUE_OVER_FQ2)
-        \sim F_q^2[t] / (t^6 - NON_RESIDUE_OVER_FQ2)
+        Frobenius is computed via the isomorphism:
+        F_q^12 ~ F_q^2[u,v] / (u^2 - v, v^3 - non_residue_over_fq2)
+            ~ F_q^2[t] / (t^6 - non_residue_over_fq2)
 
-        Input parameters:
-            - Stack: q .. X
-            - Altstack:
-        Output:
-            - X**q**n
-        Assumption on data:
-            - X is passed as as a sixtuple of elements of Fq2. Namely, X = a b c d e f
+        Stack input:
+            - stack:    [q, ..., x := (x0, x1, ..., x11)], `x` is a sixtuple of elements of F_q^2
+            - altstack: []
+
+        Stack output:
+            - stack:    [q, ..., x^(q^n)]
+            - altstack: []
+
+        Args:
+            n (int): Frobenius even power.
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
+            is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
+                after execution. Defaults to `None`.
+
+        Returns:
+            Script to compute the Frobenius endomorphism for even powers of an element in F_q^12.
         """
         assert n % 2 == 0
         assert n % 12 != 0

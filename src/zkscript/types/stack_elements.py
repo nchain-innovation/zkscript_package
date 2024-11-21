@@ -1,3 +1,5 @@
+"""Classes defining types of elements manipulated on the stack."""
+
 from copy import deepcopy
 from dataclasses import dataclass
 from typing import Self, Tuple, Union
@@ -5,7 +7,11 @@ from typing import Self, Tuple, Union
 
 @dataclass(init=False)
 class StackBaseElement:
-    """Class representing a stack element."""
+    """Base element on the stack.
+
+    Attributes:
+        position (int): the position of StackBaseElement on the stack.
+    """
 
     position: int
 
@@ -14,7 +20,6 @@ class StackBaseElement:
 
         Args:
             position (int): the position of StackBaseElement on the stack.
-
         """
         self.position = position
 
@@ -47,18 +52,22 @@ class StackBaseElement:
 
 @dataclass(init=False)
 class StackNumber(StackBaseElement):
-    """Class representing a stack number (integer)."""
+    """Number on the stack.
+
+    Attributes:
+        position (int): the position of StackNumber on the stack.
+        negate (bool): whether the number should be negated when used in a script.
+    """
 
     position: int
     negate: bool
 
     def __init__(self, position: int, negate: bool):
-        """Initiliase StackNumber, representing a number (integer) on the stack.
+        """Initialise StackNumber, representing a number (integer) on the stack.
 
         Args:
             position (int): the position of StackNumber on the stack.
             negate (bool): whether the number should be negated when used in a script.
-
         """
         super().__init__(position)
         self.negate = negate
@@ -70,20 +79,25 @@ class StackNumber(StackBaseElement):
 
 @dataclass(init=False)
 class StackFiniteFieldElement(StackNumber):
-    """Class representing a finite field element on the stack."""
+    """Finite field element on the stack.
+
+    Attributes:
+        position (int): the position of StackNumber on the stack.
+        negate (bool): whether the number should be negated when used in a script.
+        extension_degree (int): the extension degree of the finite field over Fq.
+    """
 
     position: int
     negate: bool
     extension_degree: int
 
     def __init__(self, position: int, negate: bool, extension_degree: int):
-        """Initialiase StackFiniteFieldElement, representing an element of a finite field on the stack.
+        """Initialise StackFiniteFieldElement, representing an element of a finite field on the stack.
 
         Args:
             position (int): the position of StackNumber on the stack.
             negate (bool): whether the number should be negated when used in a script.
             extension_degree (int): the extension degree of the finite field over Fq.
-
         """
         if extension_degree <= 0:
             msg = "The extension_degree must be a positive integer: "
@@ -114,6 +128,15 @@ class StackFiniteFieldElement(StackNumber):
 
 @dataclass(init=False)
 class StackEllipticCurvePoint:
+    """Elliptic curve point on the stack comprising two finite field elements.
+
+    Attributes:
+        x (StackFiniteFieldElement): the x coordinate of the point.
+        y (StackFiniteFieldElement): the y coordinate of the point.
+        position (int): the position of the point in the stack (equal to x.position).
+        negate (bool): whether the point should be negated when used in a script (equal to y.negate).
+    """
+
     x: StackFiniteFieldElement
     y: StackFiniteFieldElement
     position: int
@@ -123,11 +146,8 @@ class StackEllipticCurvePoint:
         """Initialise StackEllipticCurvePoint, representing an elliptic curve point on the stack.
 
         Args:
-            x (StackFiniteFieldElement): the StackFiniteFieldElement representing the x coordinate of the point.
-            y (StackFiniteFieldElement): the StackFiniteFieldElement representing the y coordinate of the point.
-            position (int): the position of the point in the stack (equal to x.position).
-            negate (bool): whether the point should be negated when used in a script (equal to y.negate).
-
+            x (StackFiniteFieldElement): the x coordinate of the point.
+            y (StackFiniteFieldElement): the y coordinate of the point.
         """
         different_lengths = False
 
@@ -151,7 +171,7 @@ class StackEllipticCurvePoint:
 
         The method checks whether all the elements: (self[0], .., self[self.length-1]) are before the elements
         (other[0], .., other[other.length-1]) in the stack. If other is StackEllipticCurvePoint, then the function
-        subtitutes other with other.x.
+        substitutes other with other.x.
         """
         return self.y.overlaps_on_the_right(other)
 
@@ -160,7 +180,7 @@ class StackEllipticCurvePoint:
 
         The method checks whether all the elements: (self.y[0], .., self.y[self.length-1]) are before the elements
         (other[0], .., other[other.length-1]) in the stack. If other is StackEllipticCurvePoint, then the function
-        subtitutes other with other.x.
+        substitutes other with other.x.
         """
         return self.y.is_before(other)
 
