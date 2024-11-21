@@ -30,6 +30,7 @@ class FinalExponentiation(CyclotomicExponentiation):
     def easy_exponentiation_with_inverse_check(
         self,
         take_modulo: bool,
+        positive_modulo: bool = True,
         check_constant: bool | None = None,
         clean_constant: bool | None = None,
         is_constant_reused: bool | None = None,
@@ -46,6 +47,10 @@ class FinalExponentiation(CyclotomicExponentiation):
 
         Args:
             take_modulo (bool): If `True`, the result is reduced modulo `q`.
+<<<<<<< Updated upstream
+=======
+            positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
+>>>>>>> Stashed changes
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
@@ -65,7 +70,7 @@ class FinalExponentiation(CyclotomicExponentiation):
         check_f_inverse = pick(position=7, n_elements=4)  # Bring Inverse(f) on top of the stack
         check_f_inverse += pick(position=7, n_elements=4)  # Bring f on top of the stack
         check_f_inverse += fq4.mul(
-            take_modulo=True, check_constant=False, clean_constant=False, is_constant_reused=False
+            take_modulo=True, positive_modulo=True, check_constant=False, clean_constant=False, is_constant_reused=False
         )  # Multiply
         check_f_inverse += Script.parse_string(" ".join(["OP_0", "OP_EQUALVERIFY"] * 3))
         check_f_inverse += Script.parse_string("OP_1 OP_EQUALVERIFY")
@@ -76,6 +81,7 @@ class FinalExponentiation(CyclotomicExponentiation):
         )  # Compute f^(q^2)
         easy_exponentiation += fq4.mul(
             take_modulo=take_modulo,
+            positive_modulo=positive_modulo,
             check_constant=False,
             clean_constant=clean_constant,
             is_constant_reused=is_constant_reused,
@@ -89,6 +95,7 @@ class FinalExponentiation(CyclotomicExponentiation):
         self,
         take_modulo: bool,
         modulo_threshold: int,
+        positive_modulo: bool = True,
         check_constant: bool | None = None,
         clean_constant: bool | None = None,
     ) -> Script:
@@ -104,6 +111,10 @@ class FinalExponentiation(CyclotomicExponentiation):
 
         Args:
             take_modulo (bool): If `True`, the result is reduced modulo `q`.
+<<<<<<< Updated upstream
+=======
+            positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
+>>>>>>> Stashed changes
             modulo_threshold (int): Bit-length threshold. Values whose bit-length exceeds it are reduced modulo `q`.
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
@@ -128,6 +139,7 @@ class FinalExponentiation(CyclotomicExponentiation):
         out += self.cyclotomic_exponentiation(
             exp_e=exp_miller_loop,
             take_modulo=True,
+            positive_modulo=False,
             modulo_threshold=modulo_threshold,
             check_constant=False,
             clean_constant=False,
@@ -135,9 +147,19 @@ class FinalExponentiation(CyclotomicExponentiation):
 
         # After this, the stack is: g^[q + u + 1]
         out += Script.parse_string(" ".join(["OP_FROMALTSTACK"] * 4))
-        out += fq4.mul(take_modulo=False, check_constant=False, clean_constant=False, is_constant_reused=False)
         out += fq4.mul(
-            take_modulo=take_modulo, check_constant=False, clean_constant=clean_constant, is_constant_reused=False
+            take_modulo=False,
+            check_constant=False,
+            clean_constant=False,
+            is_constant_reused=False,
+            positive_modulo=False,
+        )
+        out += fq4.mul(
+            take_modulo=take_modulo,
+            check_constant=False,
+            clean_constant=clean_constant,
+            is_constant_reused=False,
+            positive_modulo=positive_modulo,
         )
 
         return out

@@ -41,6 +41,7 @@ class Fq12:
     def mul(
         self,
         take_modulo: bool,
+        positive_modulo: bool = True,
         check_constant: bool | None = None,
         clean_constant: bool | None = None,
         is_constant_reused: bool | None = None,
@@ -58,6 +59,10 @@ class Fq12:
 
         Args:
             take_modulo (bool): If `True`, the result is reduced modulo `q`.
+<<<<<<< Updated upstream
+=======
+            positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
+>>>>>>> Stashed changes
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
@@ -110,7 +115,11 @@ class Fq12:
         compute_first_component += Script.parse_string(" ".join(["OP_FROMALTSTACK"] * 6))
         if take_modulo:
             compute_first_component += fq6.add(
-                take_modulo=True, check_constant=False, clean_constant=clean_constant, is_constant_reused=True
+                take_modulo=True,
+                positive_modulo=positive_modulo,
+                check_constant=False,
+                clean_constant=clean_constant,
+                is_constant_reused=True,
             )
         else:
             compute_first_component += fq6.add(take_modulo=False, check_constant=False, clean_constant=False)
@@ -122,8 +131,8 @@ class Fq12:
         if take_modulo:
             # Batched modulo operations: pull from altstack, rotate, mod out, repeat
             for _ in range(5):
-                out += mod()
-            out += mod(is_constant_reused=is_constant_reused)
+                out += mod(is_positive=positive_modulo)
+            out += mod(is_positive=positive_modulo, is_constant_reused=is_constant_reused)
         else:
             out += Script.parse_string(" ".join(["OP_FROMALTSTACK"] * 6))
 
@@ -132,6 +141,7 @@ class Fq12:
     def square(
         self,
         take_modulo: bool,
+        positive_modulo: bool = True,
         check_constant: bool | None = None,
         clean_constant: bool | None = None,
         is_constant_reused: bool | None = None,
@@ -148,6 +158,10 @@ class Fq12:
 
         Args:
             take_modulo (bool): If `True`, the result is reduced modulo `q`.
+<<<<<<< Updated upstream
+=======
+            positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
+>>>>>>> Stashed changes
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
@@ -318,7 +332,11 @@ class Fq12:
         compute_first_component += fq2.square(take_modulo=False, check_constant=False, clean_constant=False)
         if take_modulo:
             compute_first_component += fq2.add(
-                take_modulo=True, check_constant=False, clean_constant=clean_constant, is_constant_reused=True
+                take_modulo=True,
+                positive_modulo=positive_modulo,
+                check_constant=False,
+                clean_constant=clean_constant,
+                is_constant_reused=True,
             )
         else:
             compute_first_component += fq2.add(take_modulo=False, check_constant=False, clean_constant=False)
@@ -337,13 +355,16 @@ class Fq12:
         if take_modulo:
             # Batched modulo operations: pull from altstack, rotate, mod out, repeat
             for _ in range(4):
-                out += mod()
+                out += mod(is_positive=positive_modulo)
             for _ in range(5):
-                out += Script.parse_string("OP_FROMALTSTACK OP_2 OP_MUL OP_ROT")
-                out += mod(stack_preparation="")
+                out += Script.parse_string("")
+                out += mod(stack_preparation="OP_FROMALTSTACK OP_2 OP_MUL OP_ROT", is_positive=positive_modulo)
 
-            out += Script.parse_string("OP_FROMALTSTACK OP_2 OP_MUL OP_ROT")
-            out += mod(stack_preparation="", is_constant_reused=is_constant_reused)
+            out += mod(
+                stack_preparation="OP_FROMALTSTACK OP_2 OP_MUL OP_ROT",
+                is_constant_reused=is_constant_reused,
+                is_positive=positive_modulo,
+            )
         else:
             out += Script.parse_string(" ".join(["OP_FROMALTSTACK"] * 4))
             out += Script.parse_string(
@@ -358,6 +379,7 @@ class Fq12:
     def conjugate(
         self,
         take_modulo: bool,
+        positive_modulo: bool = True,
         check_constant: bool | None = None,
         clean_constant: bool | None = None,
         is_constant_reused: bool | None = None,
@@ -374,6 +396,10 @@ class Fq12:
 
         Args:
             take_modulo (bool): If `True`, the result is reduced modulo `q`.
+<<<<<<< Updated upstream
+=======
+            positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
+>>>>>>> Stashed changes
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
@@ -402,12 +428,12 @@ class Fq12:
 
             # Mod out x00
             out += fetch_q
-            out += mod(stack_preparation="")
+            out += mod(stack_preparation="", is_positive=positive_modulo)
 
             # Batched modulo operations: pull from altstack, rotate, mod out, repeat
             for _ in range(10):
-                out += mod()
-            out += mod(is_constant_reused=is_constant_reused)
+                out += mod(is_positive=positive_modulo)
+            out += mod(is_constant_reused=is_constant_reused, is_positive=positive_modulo)
 
         return out
 
@@ -415,6 +441,7 @@ class Fq12:
         self,
         n: int,
         take_modulo: bool,
+        positive_modulo: bool = True,
         check_constant: bool | None = None,
         clean_constant: bool | None = None,
         is_constant_reused: bool | None = None,
@@ -436,6 +463,10 @@ class Fq12:
         Args:
             n (int): Frobenius odd power.
             take_modulo (bool): If `True`, the result is reduced modulo `q`.
+<<<<<<< Updated upstream
+=======
+            positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
+>>>>>>> Stashed changes
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
@@ -456,7 +487,11 @@ class Fq12:
         # After this, the stack is: b c d Conjugate(a) e f
         a_conjugate = roll(position=11, n_elements=2)  # Bring a on top of the stack
         a_conjugate += fq2.conjugate(
-            take_modulo=take_modulo, check_constant=False, clean_constant=False, is_constant_reused=False
+            take_modulo=take_modulo,
+            positive_modulo=positive_modulo,
+            check_constant=False,
+            clean_constant=False,
+            is_constant_reused=False,
         )  # Conjugate a
         a_conjugate += Script.parse_string("OP_2ROT OP_2ROT")  # Bring e and f on top of the stack
 
@@ -467,7 +502,11 @@ class Fq12:
         )  # Conjugate b
         b_conjugate_times_gamma12 += nums_to_script(gammas[1])  # gamma12
         b_conjugate_times_gamma12 += fq2.mul(
-            take_modulo=take_modulo, check_constant=False, clean_constant=False, is_constant_reused=False
+            take_modulo=take_modulo,
+            positive_modulo=positive_modulo,
+            check_constant=False,
+            clean_constant=False,
+            is_constant_reused=False,
         )  # Multiply
         b_conjugate_times_gamma12 += Script.parse_string("OP_2ROT OP_2ROT")  # Bring e and f on top of the stack
 
@@ -478,7 +517,11 @@ class Fq12:
         )  # Conjugate c
         c_conjugate_gamma14 += nums_to_script(gammas[3])  # gamma14
         c_conjugate_gamma14 += fq2.mul(
-            take_modulo=take_modulo, check_constant=False, clean_constant=False, is_constant_reused=False
+            take_modulo=take_modulo,
+            positive_modulo=positive_modulo,
+            check_constant=False,
+            clean_constant=False,
+            is_constant_reused=False,
         )  # Multiply
         c_conjugate_gamma14 += Script.parse_string("OP_2ROT OP_2ROT")  # Bring e and f on top of the stack
 
@@ -490,7 +533,11 @@ class Fq12:
         )  # Conjugate d
         d_conjugate_gamma11 += nums_to_script(gammas[0])  # gamma11
         d_conjugate_gamma11 += fq2.mul(
-            take_modulo=take_modulo, check_constant=False, clean_constant=False, is_constant_reused=False
+            take_modulo=take_modulo,
+            positive_modulo=positive_modulo,
+            check_constant=False,
+            clean_constant=False,
+            is_constant_reused=False,
         )  # Multiply
         d_conjugate_gamma11 += Script.parse_string("OP_2ROT OP_2ROT")  # Bring e and f on top of the stack
 
@@ -502,7 +549,11 @@ class Fq12:
         )  # Conjugate e
         e_conjugate_gamma13 += nums_to_script(gammas[2])  # gamma13
         e_conjugate_gamma13 += fq2.mul(
-            take_modulo=take_modulo, check_constant=False, clean_constant=False, is_constant_reused=False
+            take_modulo=take_modulo,
+            positive_modulo=positive_modulo,
+            check_constant=False,
+            clean_constant=False,
+            is_constant_reused=False,
         )  # Multiply
         e_conjugate_gamma13 += Script.parse_string("OP_2SWAP")  # Bring f on top of the stack
 
@@ -514,7 +565,7 @@ class Fq12:
         f_conjugate_gamma15 += nums_to_script(gammas[4])  # gamma15
         f_conjugate_gamma15 += fq2.mul(
             take_modulo=take_modulo,
-            check_constant=False,
+            check_constant=positive_modulo,
             clean_constant=clean_constant,
             is_constant_reused=is_constant_reused,
         )  # Multiply
@@ -534,6 +585,7 @@ class Fq12:
         self,
         n: int,
         take_modulo: bool,
+        positive_modulo: bool = True,
         check_constant: bool | None = None,
         clean_constant: bool | None = None,
         is_constant_reused: bool | None = None,
@@ -555,6 +607,10 @@ class Fq12:
         Args:
             n (int): Frobenius even power.
             take_modulo (bool): If `True`, the result is reduced modulo `q`.
+<<<<<<< Updated upstream
+=======
+            positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
+>>>>>>> Stashed changes
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
@@ -576,18 +632,24 @@ class Fq12:
         # After this, the stack is: b c d a e f
         a = roll(position=11, n_elements=2)  # Bring a on top of the stack
         if take_modulo:
-            a += Script.parse_string("OP_SWAP")
-            a += Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
-            a += mod(stack_preparation="")
-            a += Script.parse_string("OP_SWAP OP_ROT")
-            a += mod(stack_preparation="", is_mod_on_top=False, is_constant_reused=False)
+            a += mod(stack_preparation="OP_SWAP OP_DEPTH OP_1SUB OP_PICK", is_positive=positive_modulo)
+            a += mod(
+                stack_preparation="OP_SWAP OP_ROT",
+                is_mod_on_top=False,
+                is_constant_reused=False,
+                is_positive=positive_modulo,
+            )
         a += Script.parse_string("OP_2ROT OP_2ROT")  # Bring e and f on top of the stack
 
         # After this, the stack is: c d a [b * gamma22] e f
         b_gamma22 = roll(position=11, n_elements=2)  # Bring b on top of the stack
         b_gamma22 += nums_to_script(gammas[1])  # gamma22
         b_gamma22 += fq2.mul(
-            take_modulo=take_modulo, check_constant=False, clean_constant=False, is_constant_reused=False
+            take_modulo=take_modulo,
+            positive_modulo=positive_modulo,
+            check_constant=False,
+            clean_constant=False,
+            is_constant_reused=False,
         )  # Multiply
         b_gamma22 += Script.parse_string("OP_2ROT OP_2ROT")  # Bring e and f on top of the stack
 
@@ -595,7 +657,11 @@ class Fq12:
         c_gamma24 = roll(position=11, n_elements=2)  # Bring c on top of the stack
         c_gamma24 += nums_to_script(gammas[3])  # gamma24
         c_gamma24 += fq2.mul(
-            take_modulo=take_modulo, check_constant=False, clean_constant=False, is_constant_reused=False
+            take_modulo=take_modulo,
+            positive_modulo=positive_modulo,
+            check_constant=False,
+            clean_constant=False,
+            is_constant_reused=False,
         )  # Multiply
         c_gamma24 += Script.parse_string("OP_2ROT OP_2ROT")  # Bring e and f on top of the stack
 
@@ -603,7 +669,11 @@ class Fq12:
         d_gamma21 = roll(position=11, n_elements=2)  # Bring d on top of the stack
         d_gamma21 += nums_to_script(gammas[0])  # gamma21
         d_gamma21 += fq2.mul(
-            take_modulo=take_modulo, check_constant=False, clean_constant=False, is_constant_reused=False
+            take_modulo=take_modulo,
+            positive_modulo=positive_modulo,
+            check_constant=False,
+            clean_constant=False,
+            is_constant_reused=False,
         )  # Multiply
         d_gamma21 += Script.parse_string("OP_2ROT OP_2ROT")  # Bring e and f on top of the stack
 
@@ -611,7 +681,11 @@ class Fq12:
         e_gamma23 = Script.parse_string("OP_2SWAP")  # Bring e on top of the stack
         e_gamma23 += nums_to_script(gammas[2])  # gamma23
         e_gamma23 += fq2.mul(
-            take_modulo=take_modulo, check_constant=False, clean_constant=False, is_constant_reused=False
+            take_modulo=take_modulo,
+            positive_modulo=positive_modulo,
+            check_constant=False,
+            clean_constant=False,
+            is_constant_reused=False,
         )  # Multiply
         e_gamma23 += Script.parse_string("OP_2SWAP")  # Bring f on top of the stack
 
@@ -619,6 +693,7 @@ class Fq12:
         f_gamma25 = nums_to_script(gammas[4])  # gamma25
         f_gamma25 += fq2.mul(
             take_modulo=take_modulo,
+            positive_modulo=positive_modulo,
             check_constant=False,
             clean_constant=clean_constant,
             is_constant_reused=is_constant_reused,

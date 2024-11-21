@@ -36,6 +36,7 @@ class EllipticCurveFqUnrolled:
         modulo_threshold: int,
         check_constant: bool | None = None,
         clean_constant: bool | None = None,
+        positive_modulo: bool = True,
     ) -> Script:
         """Unrolled double-and-add scalar multiplication loop in E(F_q).
 
@@ -54,6 +55,10 @@ class EllipticCurveFqUnrolled:
             modulo_threshold (int): Bit-length threshold. Values whose bit-length exceeds it are reduced modulo `q`.
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
+<<<<<<< Updated upstream
+=======
+            positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
+>>>>>>> Stashed changes
 
         Returns:
             Script to multiply a point on E(F_q) using double-and-add scalar multiplication.
@@ -92,9 +97,12 @@ class EllipticCurveFqUnrolled:
             # We always have to take into account both operations
             # because we don't know which ones are going to be executed.
             size_after_operations = 2 * 4 * current_size
+            positive_modulo_i = False
+
             if size_after_operations > modulo_threshold or i == 0:
                 take_modulo = True
                 current_size = size_q
+                positive_modulo_i = positive_modulo
             else:
                 take_modulo = False
                 current_size = size_after_operations
@@ -134,6 +142,7 @@ class EllipticCurveFqUnrolled:
                 check_constant=False,
                 clean_constant=False,
                 verify_gradient=True,
+                positive_modulo=positive_modulo_i,
                 gradient=StackFiniteFieldElement(4, False, 1),
                 P=StackEllipticCurvePoint(
                     StackFiniteFieldElement(3, False, 1),

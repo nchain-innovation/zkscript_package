@@ -32,6 +32,7 @@ class CyclotomicExponentiation:
         exp_e: list[int],
         take_modulo: bool,
         modulo_threshold: int,
+        positive_modulo: bool = True,
         check_constant: bool | None = None,
         clean_constant: bool | None = None,
     ) -> Script:
@@ -52,6 +53,10 @@ class CyclotomicExponentiation:
                 - `e_(l-1) different from 0`
             take_modulo (bool): If `True`, the result is reduced modulo `q`.
             modulo_threshold (int): Bit-length threshold. Values whose bit-length exceeds it are reduced modulo `q`.
+<<<<<<< Updated upstream
+=======
+            positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
+>>>>>>> Stashed changes
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
 
@@ -138,6 +143,7 @@ class CyclotomicExponentiation:
         # --------------------------------------------------------------------------------------------------------------
 
         current_size = BIT_SIZE_Q
+        positive_modulo_i = False
         for i in range(len(exp_e) - 2, -1, -1):
             modulo_square = False
             modulo_multiplication = False
@@ -165,7 +171,7 @@ class CyclotomicExponentiation:
 
             if i == 0:
                 clean_constant_final = clean_constant
-
+                positive_modulo_i = positive_modulo
             if i == 0 and take_modulo:
                 modulo_square = True
                 if exp_e[0] != 0:
@@ -197,10 +203,15 @@ class CyclotomicExponentiation:
             if exp_e[i] != 0:
                 # After this, the stack is: f Conjugate(f) g^2
                 out += square(
-                    take_modulo=modulo_square, check_constant=False, clean_constant=False, is_constant_reused=False
+                    take_modulo=modulo_square,
+                    positive_modulo=positive_modulo_i,
+                    check_constant=False,
+                    clean_constant=False,
+                    is_constant_reused=False,
                 )
                 out += mul(
                     take_modulo=modulo_multiplication,
+                    positive_modulo=positive_modulo_i,
                     check_constant=False,
                     clean_constant=clean_constant_final,
                     is_constant_reused=False,
@@ -209,6 +220,7 @@ class CyclotomicExponentiation:
                 # After this, the stack is: f g^2
                 out += square(
                     take_modulo=modulo_square,
+                    positive_modulo=positive_modulo_i,
                     check_constant=False,
                     clean_constant=clean_constant_final,
                     is_constant_reused=False,

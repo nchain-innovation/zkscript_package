@@ -24,6 +24,7 @@ class MillerOutputOperations(Fq12CubicScriptModel):
     def line_eval_times_eval(
         self,
         take_modulo: bool,
+        positive_modulo: bool = True,
         check_constant: bool | None = None,
         clean_constant: bool | None = None,
         is_constant_reused: bool | None = None,
@@ -40,6 +41,10 @@ class MillerOutputOperations(Fq12CubicScriptModel):
 
         Args:
             take_modulo (bool): If `True`, the result is reduced modulo `q`.
+<<<<<<< Updated upstream
+=======
+            positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
+>>>>>>> Stashed changes
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
@@ -132,8 +137,8 @@ class MillerOutputOperations(Fq12CubicScriptModel):
                 fetch_q = Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
 
             compute_first_component += fetch_q
-            compute_first_component += mod(stack_preparation="")
-            compute_first_component += mod()
+            compute_first_component += mod(stack_preparation="", is_positive=positive_modulo)
+            compute_first_component += mod(is_positive=positive_modulo)
         else:
             compute_first_component += Script.parse_string("OP_FROMALTSTACK")
 
@@ -150,8 +155,8 @@ class MillerOutputOperations(Fq12CubicScriptModel):
         if take_modulo:
             # Batched modulo operations: pull from altstack, rotate, mod out, repeat
             for _ in range(7):
-                out += mod()
-            out += mod(is_constant_reused=is_constant_reused)
+                out += mod(is_positive=positive_modulo)
+            out += mod(is_constant_reused=is_constant_reused, is_positive=positive_modulo)
         else:
             out += Script.parse_string(" ".join(["OP_FROMALTSTACK"] * 8))
 
@@ -160,6 +165,7 @@ class MillerOutputOperations(Fq12CubicScriptModel):
     def miller_loop_output_times_eval(
         self,
         take_modulo: bool,
+        positive_modulo: bool = True,
         check_constant: bool | None = None,
         clean_constant: bool | None = None,
         is_constant_reused: bool | None = None,
@@ -177,6 +183,10 @@ class MillerOutputOperations(Fq12CubicScriptModel):
 
         Args:
             take_modulo (bool): If `True`, the result is reduced modulo `q`.
+<<<<<<< Updated upstream
+=======
+            positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
+>>>>>>> Stashed changes
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
@@ -329,7 +339,11 @@ class MillerOutputOperations(Fq12CubicScriptModel):
         compute_first_component += fq2.mul(take_modulo=False, check_constant=False, clean_constant=False)
         if take_modulo:
             compute_first_component += fq2.add(
-                take_modulo=True, check_constant=False, clean_constant=clean_constant, is_constant_reused=True
+                take_modulo=True,
+                positive_modulo=positive_modulo,
+                check_constant=False,
+                clean_constant=clean_constant,
+                is_constant_reused=True,
             )
         else:
             compute_first_component += fq2.add(take_modulo=False, check_constant=False, clean_constant=False)
@@ -348,8 +362,8 @@ class MillerOutputOperations(Fq12CubicScriptModel):
         if take_modulo:
             # Batched modulo operations: pull from altstack, rotate, mod out, repeat
             for _ in range(9):
-                out += mod()
-            out += mod(is_constant_reused=is_constant_reused)
+                out += mod(is_positive=positive_modulo)
+            out += mod(is_positive=positive_modulo, is_constant_reused=is_constant_reused)
         else:
             out += Script.parse_string(" ".join(["OP_FROMALTSTACK"] * 10))
 
@@ -358,6 +372,7 @@ class MillerOutputOperations(Fq12CubicScriptModel):
     def line_eval_times_eval_times_eval(
         self,
         take_modulo: bool,
+        positive_modulo: bool = True,
         check_constant: bool | None = None,
         clean_constant: bool | None = None,
         is_constant_reused: bool | None = None,
@@ -375,6 +390,10 @@ class MillerOutputOperations(Fq12CubicScriptModel):
 
         Args:
             take_modulo (bool): If `True`, the result is reduced modulo `q`.
+<<<<<<< Updated upstream
+=======
+            positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
+>>>>>>> Stashed changes
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
@@ -505,7 +524,11 @@ class MillerOutputOperations(Fq12CubicScriptModel):
         compute_first_component += fq2.mul(take_modulo=False, check_constant=False, clean_constant=False)
         if take_modulo:
             compute_first_component += fq2.add(
-                take_modulo=True, check_constant=False, clean_constant=clean_constant, is_constant_reused=True
+                take_modulo=True,
+                positive_modulo=positive_modulo,
+                check_constant=False,
+                clean_constant=clean_constant,
+                is_constant_reused=True,
             )
         else:
             compute_first_component += fq2.add(take_modulo=False, check_constant=False, clean_constant=False)
@@ -524,8 +547,8 @@ class MillerOutputOperations(Fq12CubicScriptModel):
         if take_modulo:
             # Batched modulo operations: pull from altstack, rotate, mod out, repeat
             for _ in range(9):
-                out += mod()
-            out += mod(is_constant_reused=is_constant_reused)
+                out += mod(is_positive=positive_modulo)
+            out += mod(is_positive=positive_modulo, is_constant_reused=is_constant_reused)
         else:
             out += Script.parse_string(" ".join(["OP_FROMALTSTACK"] * 10))
 
@@ -534,6 +557,7 @@ class MillerOutputOperations(Fq12CubicScriptModel):
     def line_eval_times_eval_times_eval_times_eval(
         self,
         take_modulo: bool,
+        positive_modulo: bool = True,
         check_constant: bool | None = None,
         clean_constant: bool | None = None,
         is_constant_reused: bool | None = None,
@@ -551,6 +575,10 @@ class MillerOutputOperations(Fq12CubicScriptModel):
 
         Args:
             take_modulo (bool): If `True`, the result is reduced modulo `q`.
+<<<<<<< Updated upstream
+=======
+            positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
+>>>>>>> Stashed changes
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
@@ -770,7 +798,11 @@ class MillerOutputOperations(Fq12CubicScriptModel):
         compute_first_component += fq2.mul(take_modulo=False, check_constant=False, clean_constant=False)
         if take_modulo:
             compute_first_component += fq2.add(
-                take_modulo=True, check_constant=False, clean_constant=clean_constant, is_constant_reused=True
+                take_modulo=True,
+                positive_modulo=positive_modulo,
+                check_constant=False,
+                clean_constant=clean_constant,
+                is_constant_reused=True,
             )
         else:
             compute_first_component += fq2.add(take_modulo=False, check_constant=False, clean_constant=False)
@@ -789,8 +821,8 @@ class MillerOutputOperations(Fq12CubicScriptModel):
         if take_modulo:
             # Batched modulo operations: pull from altstack, rotate, mod out, repeat
             for _ in range(9):
-                out += mod()
-            out += mod(is_constant_reused=is_constant_reused)
+                out += mod(is_positive=positive_modulo)
+            out += mod(is_positive=positive_modulo, is_constant_reused=is_constant_reused)
         else:
             out += Script.parse_string(" ".join(["OP_FROMALTSTACK"] * 10))
 
@@ -799,6 +831,7 @@ class MillerOutputOperations(Fq12CubicScriptModel):
     def line_eval_times_eval_times_eval_times_eval_times_eval_times_eval(
         self,
         take_modulo: bool,
+        positive_modulo: bool = True,
         check_constant: bool | None = None,
         clean_constant: bool | None = None,
         is_constant_reused: bool | None = None,
@@ -816,6 +849,10 @@ class MillerOutputOperations(Fq12CubicScriptModel):
 
         Args:
             take_modulo (bool): If `True`, the result is reduced modulo `q`.
+<<<<<<< Updated upstream
+=======
+            positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
+>>>>>>> Stashed changes
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
@@ -1069,7 +1106,11 @@ class MillerOutputOperations(Fq12CubicScriptModel):
         compute_first_component += fq2.mul(take_modulo=False, check_constant=False, clean_constant=False)
         if take_modulo:
             compute_first_component += fq2.add(
-                take_modulo=True, check_constant=False, clean_constant=clean_constant, is_constant_reused=True
+                take_modulo=True,
+                positive_modulo=positive_modulo,
+                check_constant=False,
+                clean_constant=clean_constant,
+                is_constant_reused=True,
             )
         else:
             compute_first_component += fq2.add(take_modulo=False, check_constant=False, clean_constant=False)
@@ -1088,8 +1129,8 @@ class MillerOutputOperations(Fq12CubicScriptModel):
         if take_modulo:
             # Batched modulo operations: pull from altstack, rotate, mod out, repeat
             for _ in range(9):
-                out += mod()
-            out += mod(is_constant_reused=is_constant_reused)
+                out += mod(is_positive=positive_modulo)
+            out += mod(is_positive=positive_modulo, is_constant_reused=is_constant_reused)
         else:
             out += Script.parse_string(" ".join(["OP_FROMALTSTACK"] * 10))
 
@@ -1098,6 +1139,7 @@ class MillerOutputOperations(Fq12CubicScriptModel):
     def miller_loop_output_square(
         self,
         take_modulo: bool,
+        positive_modulo: bool = True,
         check_constant: bool | None = None,
         clean_constant: bool | None = None,
         is_constant_reused: bool | None = None,
@@ -1106,6 +1148,7 @@ class MillerOutputOperations(Fq12CubicScriptModel):
         return MillerOutputOperations.square(
             self,
             take_modulo=take_modulo,
+            positive_modulo=positive_modulo,
             check_constant=check_constant,
             clean_constant=clean_constant,
             is_constant_reused=is_constant_reused,
@@ -1114,6 +1157,7 @@ class MillerOutputOperations(Fq12CubicScriptModel):
     def miller_loop_output_mul(
         self,
         take_modulo: bool,
+        positive_modulo: bool = True,
         check_constant: bool | None = None,
         clean_constant: bool | None = None,
         is_constant_reused: bool | None = None,
@@ -1122,6 +1166,7 @@ class MillerOutputOperations(Fq12CubicScriptModel):
         return MillerOutputOperations.mul(
             self,
             take_modulo=take_modulo,
+            positive_modulo=positive_modulo,
             check_constant=check_constant,
             clean_constant=clean_constant,
             is_constant_reused=is_constant_reused,
@@ -1130,6 +1175,7 @@ class MillerOutputOperations(Fq12CubicScriptModel):
     def line_eval_times_eval_times_miller_loop_output(
         self,
         take_modulo: bool,
+        positive_modulo: bool = True,
         check_constant: bool | None = None,
         clean_constant: bool | None = None,
         is_constant_reused: bool | None = None,
@@ -1137,6 +1183,7 @@ class MillerOutputOperations(Fq12CubicScriptModel):
         """Multiplication of somewhat sparse element by dense element in F_q^12 as a cubic extension of F_q^4."""
         return self.line_eval_times_eval_times_eval_times_eval_times_eval_times_eval(
             take_modulo=take_modulo,
+            positive_modulo=positive_modulo,
             check_constant=check_constant,
             clean_constant=clean_constant,
             is_constant_reused=is_constant_reused,
@@ -1145,6 +1192,7 @@ class MillerOutputOperations(Fq12CubicScriptModel):
     def miller_loop_output_times_eval_times_eval_times_eval(
         self,
         take_modulo: bool,
+        positive_modulo: bool = True,
         check_constant: bool | None = None,
         clean_constant: bool | None = None,
         is_constant_reused: bool | None = None,
@@ -1153,6 +1201,7 @@ class MillerOutputOperations(Fq12CubicScriptModel):
         return MillerOutputOperations.mul(
             self,
             take_modulo=take_modulo,
+            positive_modulo=positive_modulo,
             check_constant=check_constant,
             clean_constant=clean_constant,
             is_constant_reused=is_constant_reused,
@@ -1161,6 +1210,7 @@ class MillerOutputOperations(Fq12CubicScriptModel):
     def miller_loop_output_times_eval_times_eval_times_eval_times_eval(
         self,
         take_modulo: bool,
+        positive_modulo: bool = True,
         check_constant: bool | None = None,
         clean_constant: bool | None = None,
         is_constant_reused: bool | None = None,
@@ -1169,6 +1219,7 @@ class MillerOutputOperations(Fq12CubicScriptModel):
         return MillerOutputOperations.mul(
             self,
             take_modulo=take_modulo,
+            positive_modulo=positive_modulo,
             check_constant=check_constant,
             clean_constant=clean_constant,
             is_constant_reused=is_constant_reused,
@@ -1177,6 +1228,7 @@ class MillerOutputOperations(Fq12CubicScriptModel):
     def miller_loop_output_times_eval_times_eval_times_eval_times_eval_times_eval_times_eval(
         self,
         take_modulo: bool,
+        positive_modulo: bool = True,
         check_constant: bool | None = None,
         clean_constant: bool | None = None,
         is_constant_reused: bool | None = None,
@@ -1185,6 +1237,7 @@ class MillerOutputOperations(Fq12CubicScriptModel):
         return MillerOutputOperations.mul(
             self,
             take_modulo=take_modulo,
+            positive_modulo=positive_modulo,
             check_constant=check_constant,
             clean_constant=clean_constant,
             is_constant_reused=is_constant_reused,

@@ -126,6 +126,7 @@ class Groth16(PairingModel):
                     modulo_threshold=modulo_threshold,
                     check_constant=False,
                     clean_constant=False,
+                    positive_modulo=False,
                 )
                 out += Script.parse_string("OP_2SWAP OP_2DROP")  # Drop gamma_abc[i]
                 out += Script.parse_string(" ".join(["OP_TOALTSTACK"] * N_POINTS_CURVE))
@@ -135,7 +136,7 @@ class Groth16(PairingModel):
         for _i in range(n_pub):
             out += Script.parse_string(" ".join(["OP_FROMALTSTACK"] * N_POINTS_CURVE))
             out += ec_fq.point_addition_with_unknown_points(
-                take_modulo=True, check_constant=False, clean_constant=False
+                take_modulo=True, positive_modulo=False, check_constant=False, clean_constant=False
             )
 
         # After this, the stack is: q .. lambdas_pairing inverse_miller_loop_triple_pairing A

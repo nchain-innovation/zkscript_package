@@ -28,6 +28,7 @@ class FinalExponentiation(CyclotomicExponentiation):
     def easy_exponentiation_with_inverse_check(
         self,
         take_modulo: bool,
+        positive_modulo: bool = True,
         check_constant: bool | None = None,
         clean_constant: bool | None = None,
         is_constant_reused: bool | None = None,
@@ -46,6 +47,10 @@ class FinalExponentiation(CyclotomicExponentiation):
 
         Args:
             take_modulo (bool): If `True`, the result is reduced modulo `q`.
+<<<<<<< Updated upstream
+=======
+            positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
+>>>>>>> Stashed changes
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
@@ -67,7 +72,7 @@ class FinalExponentiation(CyclotomicExponentiation):
         check_f_inverse = pick(position=23, n_elements=12)  # Bring Inverse(f_quadratic) on top of the stack
         check_f_inverse += pick(position=23, n_elements=12)  # Bring f_quadratic on top of the stack
         check_f_inverse += fq12.mul(
-            take_modulo=True, check_constant=False, clean_constant=False, is_constant_reused=False
+            take_modulo=True, positive_modulo=True, check_constant=False, clean_constant=False, is_constant_reused=False
         )  # Multiply
         check_f_inverse += Script.parse_string(" ".join(["OP_0", "OP_EQUALVERIFY"] * 11))
         check_f_inverse += Script.parse_string("OP_1 OP_EQUALVERIFY")
@@ -83,6 +88,7 @@ class FinalExponentiation(CyclotomicExponentiation):
         easy_exponentiation += fq12.frobenius_even(n=2, take_modulo=False, check_constant=False, clean_constant=False)
         easy_exponentiation += fq12.mul(
             take_modulo=take_modulo,
+            positive_modulo=positive_modulo,
             check_constant=False,
             clean_constant=clean_constant,
             is_constant_reused=is_constant_reused,
@@ -99,6 +105,7 @@ class FinalExponentiation(CyclotomicExponentiation):
         self,
         take_modulo: bool,
         modulo_threshold: int,
+        positive_modulo: bool = True,
         check_constant: bool | None = None,
         clean_constant: bool | None = None,
     ) -> Script:
@@ -115,6 +122,10 @@ class FinalExponentiation(CyclotomicExponentiation):
         Args:
             take_modulo (bool): If `True`, the result is reduced modulo `q`.
             modulo_threshold (int): Bit-length threshold. Values whose bit-length exceeds it are reduced modulo `q`.
+<<<<<<< Updated upstream
+=======
+            positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
+>>>>>>> Stashed changes
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
 
@@ -133,7 +144,13 @@ class FinalExponentiation(CyclotomicExponentiation):
         # Step 1
         # After this, the stack is g t0
         out += pick(position=11, n_elements=12)
-        out += fq12.square(take_modulo=True, check_constant=False, clean_constant=False, is_constant_reused=False)
+        out += fq12.square(
+            take_modulo=True,
+            positive_modulo=False,
+            check_constant=False,
+            clean_constant=False,
+            is_constant_reused=False,
+        )
 
         # Step 2
         # After this, the stack is g t0 t1
@@ -141,6 +158,7 @@ class FinalExponentiation(CyclotomicExponentiation):
         out += self.cyclotomic_exponentiation(
             exp_e=exp_miller_loop,
             take_modulo=True,
+            positive_modulo=False,
             modulo_threshold=modulo_threshold,
             check_constant=False,
             clean_constant=False,
@@ -152,6 +170,7 @@ class FinalExponentiation(CyclotomicExponentiation):
         out += self.cyclotomic_exponentiation(
             exp_e=exp_miller_loop[1:],
             take_modulo=True,
+            positive_modulo=False,
             modulo_threshold=modulo_threshold,
             check_constant=False,
             clean_constant=False,
@@ -173,7 +192,11 @@ class FinalExponentiation(CyclotomicExponentiation):
         # Step 7
         # After this, the stack is g t0 t1
         out += fq12.mul(
-            take_modulo=True, check_constant=False, clean_constant=False, is_constant_reused=False
+            take_modulo=True,
+            positive_modulo=False,
+            check_constant=False,
+            clean_constant=False,
+            is_constant_reused=False,
         )  # Compute t1 * t2
 
         # Step 8
@@ -182,6 +205,7 @@ class FinalExponentiation(CyclotomicExponentiation):
         out += self.cyclotomic_exponentiation(
             exp_e=exp_miller_loop,
             take_modulo=True,
+            positive_modulo=False,
             modulo_threshold=modulo_threshold,
             check_constant=False,
             clean_constant=False,
@@ -193,6 +217,7 @@ class FinalExponentiation(CyclotomicExponentiation):
         out += self.cyclotomic_exponentiation(
             exp_e=exp_miller_loop,
             take_modulo=True,
+            positive_modulo=False,
             modulo_threshold=modulo_threshold,
             check_constant=False,
             clean_constant=False,
@@ -206,7 +231,11 @@ class FinalExponentiation(CyclotomicExponentiation):
         # Step 11
         # After this, the stack is g t0 t1 t2 t3
         out += fq12.mul(
-            take_modulo=True, check_constant=False, clean_constant=False, is_constant_reused=False
+            take_modulo=True,
+            positive_modulo=False,
+            check_constant=False,
+            clean_constant=False,
+            is_constant_reused=False,
         )  # Compute t3 * Conjugate(t1)
 
         # Step 12 - 13
@@ -233,6 +262,7 @@ class FinalExponentiation(CyclotomicExponentiation):
         out += self.cyclotomic_exponentiation(
             exp_e=exp_miller_loop,
             take_modulo=True,
+            positive_modulo=False,
             modulo_threshold=modulo_threshold,
             check_constant=False,
             clean_constant=False,
@@ -260,7 +290,11 @@ class FinalExponentiation(CyclotomicExponentiation):
         # Step 21
         # After this, the stack is: g^[(q^4 - q^2 + 1)/r]
         out += fq12.mul(
-            take_modulo=take_modulo, check_constant=False, clean_constant=clean_constant, is_constant_reused=False
+            take_modulo=take_modulo,
+            positive_modulo=positive_modulo,
+            check_constant=False,
+            clean_constant=clean_constant,
+            is_constant_reused=False,
         )
 
         return out

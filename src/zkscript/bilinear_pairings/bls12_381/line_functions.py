@@ -21,6 +21,7 @@ class LineFunctions:
     def line_evaluation(
         self,
         take_modulo: bool,
+        positive_modulo: bool = True,
         check_constant: bool | None = None,
         clean_constant: bool | None = None,
         is_constant_reused: bool | None = None,
@@ -39,6 +40,10 @@ class LineFunctions:
 
         Args:
             take_modulo (bool): If `True`, the result is reduced modulo `q`.
+<<<<<<< Updated upstream
+=======
+            positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
+>>>>>>> Stashed changes
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
@@ -79,7 +84,11 @@ class LineFunctions:
         first_component += Script.parse_string("OP_2SWAP")  # Roll yQ
         if take_modulo:
             first_component += fq2.subtract(
-                take_modulo=take_modulo, check_constant=False, clean_constant=clean_constant, is_constant_reused=True
+                take_modulo=take_modulo,
+                positive_modulo=positive_modulo,
+                check_constant=False,
+                clean_constant=clean_constant,
+                is_constant_reused=True,
             )
         else:
             first_component += fq2.subtract(take_modulo=False, check_constant=False, clean_constant=False)
@@ -88,9 +97,9 @@ class LineFunctions:
 
         if take_modulo:
             # Batched modulo operations: pull from altstack, rotate, mod out, repeat
-            out += mod()
-            out += mod()
-            out += mod(is_constant_reused=is_constant_reused)
+            out += mod(is_positive=positive_modulo)
+            out += mod(is_positive=positive_modulo)
+            out += mod(is_positive=positive_modulo, is_constant_reused=is_constant_reused)
         else:
             out += Script.parse_string(" ".join(["OP_FROMALTSTACK"] * 3))
 

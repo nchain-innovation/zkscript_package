@@ -34,6 +34,7 @@ class EllipticCurveFq2:
         check_constant: bool | None,
         clean_constant: bool | None,
         verify_gradient: bool = True,
+        positive_modulo: bool = True,
         gradient: StackFiniteFieldElement = StackFiniteFieldElement(9, False, 2),  # noqa: B008
         P: StackEllipticCurvePoint = StackEllipticCurvePoint(  # noqa: B008, N803
             StackFiniteFieldElement(7, False, 2),  # noqa: B008
@@ -68,6 +69,7 @@ class EllipticCurveFq2:
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             verify_gradient (bool): If `True`, the validity of the gradient provided is checked.
+            positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
             gradient (StackFiniteFieldElement): The position of gradient through P_ and Q_ in the stack,
                 its length, whether it should be negated, and whether it should be rolled or picked.
                 Defaults to: StackFiniteFieldElement(9, False, 2)
@@ -102,11 +104,11 @@ class EllipticCurveFq2:
         """
         return (
             self.point_algebraic_addition_verifying_gradient(
-                take_modulo, check_constant, clean_constant, gradient, P, Q, rolling_options
+                take_modulo, check_constant, clean_constant, positive_modulo, gradient, P, Q, rolling_options
             )
             if verify_gradient
             else self.point_algebraic_addition_without_verifying_gradient(
-                take_modulo, check_constant, clean_constant, gradient, P, Q, rolling_options
+                take_modulo, check_constant, clean_constant, positive_modulo, gradient, P, Q, rolling_options
             )
         )
 
@@ -116,6 +118,7 @@ class EllipticCurveFq2:
         check_constant: bool | None,
         clean_constant: bool | None,
         verify_gradient: bool = True,
+        positive_modulo: bool = True,
         gradient: StackFiniteFieldElement = StackFiniteFieldElement(5, False, 2),  # noqa: B008
         P: StackEllipticCurvePoint = StackEllipticCurvePoint(  # noqa: B008, N803
             StackFiniteFieldElement(3, False, 2),  # noqa: B008
@@ -145,6 +148,7 @@ class EllipticCurveFq2:
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             verify_gradient (bool): If `True`, the validity of the gradient provided is checked.
+            positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
             gradient (StackFiniteFieldElement): The position of gradient of the line tangent at P_ in the stack,
                     its length, whether it should be negated, and whether it should be rolled or picked.
                     Defaults to: StackFiniteFieldElement(5,False,2).
@@ -172,17 +176,18 @@ class EllipticCurveFq2:
         """
         return (
             self.point_algebraic_doubling_verifying_gradient(
-                take_modulo, check_constant, clean_constant, gradient, P, rolling_options
+                take_modulo, check_constant, clean_constant, positive_modulo, gradient, P, rolling_options
             )
             if verify_gradient
             else self.point_algebraic_doubling_without_verifying_gradient(
-                take_modulo, check_constant, clean_constant, gradient, P, rolling_options
+                take_modulo, check_constant, clean_constant, positive_modulo, gradient, P, rolling_options
             )
         )
 
     def point_negation(
         self,
         take_modulo: bool,
+        positive_modulo: bool = True,
         check_constant: bool | None = None,
         clean_constant: bool | None = None,
         is_constant_reused: bool | None = None,
@@ -199,6 +204,10 @@ class EllipticCurveFq2:
 
         Args:
             take_modulo (bool): If `True`, the result is reduced modulo `q`.
+<<<<<<< Updated upstream
+=======
+            positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
+>>>>>>> Stashed changes
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
@@ -232,10 +241,10 @@ class EllipticCurveFq2:
 
             fetch_q = Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
 
-            batched_modulo = mod(stack_preparation="")
-            batched_modulo += mod()
-            batched_modulo += mod()
-            batched_modulo += mod(is_constant_reused=is_constant_reused)
+            batched_modulo = mod(stack_preparation="", is_positive=positive_modulo)
+            batched_modulo += mod(is_positive=positive_modulo)
+            batched_modulo += mod(is_positive=positive_modulo)
+            batched_modulo += mod(is_constant_reused=is_constant_reused, is_positive=positive_modulo)
 
             out += fetch_q + batched_modulo
 
@@ -249,6 +258,7 @@ class EllipticCurveFq2:
         take_modulo: bool,
         check_constant: bool | None,
         clean_constant: bool | None,
+        positive_modulo: bool = True,
         gradient: StackFiniteFieldElement = StackFiniteFieldElement(9, False, 2),  # noqa: B008
         P: StackEllipticCurvePoint = StackEllipticCurvePoint(  # noqa: B008, N803
             StackFiniteFieldElement(7, False, 2),  # noqa: B008
@@ -281,6 +291,10 @@ class EllipticCurveFq2:
             take_modulo (bool): If `True`, the result is reduced modulo `q`.
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
+<<<<<<< Updated upstream
+=======
+            positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
+>>>>>>> Stashed changes
             gradient (StackFiniteFieldElement): The position of gradient through P_ and Q_ in the stack,
                 its length, whether it should be negated, and whether it should be rolled or picked.
                 Defaults to: StackFiniteFieldElement(9, False, 2)
@@ -391,7 +405,11 @@ class EllipticCurveFq2:
         x_coordinate += fq2.square(take_modulo=False, check_constant=False, clean_constant=False)  # Compute gradient^2
         x_coordinate += Script.parse_string("OP_2SWAP")  # Swap gradient^2 and (xP + xQ)
         x_coordinate += fq2.subtract(
-            take_modulo=take_modulo, check_constant=False, clean_constant=False, is_constant_reused=False
+            take_modulo=take_modulo,
+            check_constant=False,
+            clean_constant=False,
+            is_constant_reused=False,
+            positive_modulo=positive_modulo,
         )  # Compute gradient^2 - (xP + xQ)
 
         # Compute y-coordinate of P_ + Q_
@@ -412,13 +430,15 @@ class EllipticCurveFq2:
         )  # Compute [gradient * (xP - x(P_+Q_))]_1 - (yP_)_1
         if take_modulo:
             y_coordinate += roll(position=-1, n_elements=1) if clean_constant else pick(position=-1, n_elements=1)
-            y_coordinate += mod(stack_preparation="")  # Compute {[gradient * (xP - x(P_+Q_))]_1 - (yP_)_1} % q
+            y_coordinate += mod(
+                stack_preparation="", is_positive=positive_modulo
+            )  # Compute {[gradient * (xP - x(P_+Q_))]_1 - (yP_)_1} % q
             y_coordinate += roll(position=2, n_elements=1)  # Bring [gradient * (xP - x(P_+Q_))]_0 on top
             y_coordinate += Script.parse_string(
                 "OP_FROMALTSTACK OP_SUB"
             )  # Compute [gradient * (xP - x(P_+Q_))]_0 - (yP_)_0
             y_coordinate += roll(position=2, n_elements=1) + mod(
-                stack_preparation="", is_constant_reused=False
+                stack_preparation="", is_constant_reused=False, is_positive=positive_modulo
             )  # Compute {[gradient * (xP - x(P_+Q_))]_0 - (yP_)_0} % q
         else:
             y_coordinate += roll(position=1, n_elements=1)  # Bring gradient * (xP - x(P_+Q_))]_0 on top
@@ -437,6 +457,7 @@ class EllipticCurveFq2:
         take_modulo: bool,
         check_constant: bool | None,
         clean_constant: bool | None,
+        positive_modulo: bool = True,
         gradient: StackFiniteFieldElement = StackFiniteFieldElement(9, False, 2),  # noqa: B008
         P: StackEllipticCurvePoint = StackEllipticCurvePoint(  # noqa: B008, N803
             StackFiniteFieldElement(7, False, 2),  # noqa: B008
@@ -470,6 +491,10 @@ class EllipticCurveFq2:
             take_modulo (bool): If `True`, the result is reduced modulo `q`.
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
+<<<<<<< Updated upstream
+=======
+            positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
+>>>>>>> Stashed changes
             gradient (StackFiniteFieldElement): The position of gradient through P_ and Q_ in the stack,
                 its length, whether it should be negated, and whether it should be rolled or picked.
                 Defaults to: StackFiniteFieldElement(9, False, 2)
@@ -529,7 +554,11 @@ class EllipticCurveFq2:
         x_coordinate += roll(position=5, n_elements=2)  # Bring gradient^2 on top
         x_coordinate += roll(position=3, n_elements=2)  # Bring (xP + xQ) on top
         x_coordinate += fq2.subtract(
-            take_modulo=take_modulo, check_constant=False, clean_constant=False, is_constant_reused=False
+            take_modulo=take_modulo,
+            check_constant=False,
+            clean_constant=False,
+            is_constant_reused=False,
+            positive_modulo=positive_modulo,
         )  # Compute gradient^2 - (xP + xQ)
 
         # Compute y-coordinate of P_ + Q_
@@ -550,7 +579,7 @@ class EllipticCurveFq2:
         y_coordinate += Script.parse_string("OP_ADD" if P.negate else "OP_SUB")
         if take_modulo:
             y_coordinate += roll(position=-1, n_elements=1) if clean_constant else pick(position=-1, n_elements=1)
-            y_coordinate += mod(stack_preparation="")
+            y_coordinate += mod(stack_preparation="", is_positive=positive_modulo)
         y_coordinate += Script.parse_string("OP_FROMALTSTACK")
         y_coordinate += move(
             P.y.shift(4 - 2 * is_q_rolled + 1 * take_modulo),
@@ -560,7 +589,9 @@ class EllipticCurveFq2:
         )  # Move yP_1
         y_coordinate += Script.parse_string("OP_ADD" if P.negate else "OP_SUB")
         if take_modulo:
-            y_coordinate += roll(position=2, n_elements=1) + mod(stack_preparation="", is_constant_reused=False)
+            y_coordinate += roll(position=2, n_elements=1) + mod(
+                stack_preparation="", is_constant_reused=False, is_positive=positive_modulo
+            )
 
         drop_yq = move(Q.y.shift(4), bool_to_moving_function(is_q_rolled))  # Move yQ
         drop_yq += Script.parse_string("OP_2DROP")
@@ -578,6 +609,7 @@ class EllipticCurveFq2:
         take_modulo: bool,
         check_constant: bool | None,
         clean_constant: bool | None,
+        positive_modulo: bool = True,
         gradient: StackFiniteFieldElement = StackFiniteFieldElement(5, False, 2),  # noqa: B008
         P: StackEllipticCurvePoint = StackEllipticCurvePoint(  # noqa: B008, N803
             StackFiniteFieldElement(3, False, 2),  # noqa: B008
@@ -605,6 +637,10 @@ class EllipticCurveFq2:
             take_modulo (bool): If `True`, the result is reduced modulo `q`.
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
+<<<<<<< Updated upstream
+=======
+            positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
+>>>>>>> Stashed changes
             gradient (StackFiniteFieldElement): The position of gradient of the line tangent at P_ in the stack,
                     its length, whether it should be negated, and whether it should be rolled or picked.
                     Defaults to: StackFiniteFieldElement(5,False,2).
@@ -689,7 +725,11 @@ class EllipticCurveFq2:
         x_coordinate += Script.parse_string("OP_2")
         x_coordinate += fq2.scalar_mul(take_modulo=False, check_constant=False, clean_constant=False)  # Compute 2 * xP
         x_coordinate += fq2.subtract(
-            take_modulo=take_modulo, check_constant=False, clean_constant=False, is_constant_reused=False
+            take_modulo=take_modulo,
+            check_constant=False,
+            clean_constant=False,
+            is_constant_reused=False,
+            positive_modulo=positive_modulo,
         )  # Compute gradient^2 - 2*xP
 
         # Compute y-coordinate of 2P_
@@ -707,11 +747,19 @@ class EllipticCurveFq2:
         y_coordinate += roll(position=5, n_elements=2)  # Bring yP on top
         y_coordinate += (
             fq2.add(
-                take_modulo=take_modulo, check_constant=False, clean_constant=clean_constant, is_constant_reused=False
+                take_modulo=take_modulo,
+                check_constant=False,
+                clean_constant=clean_constant,
+                is_constant_reused=False,
+                positive_modulo=positive_modulo,
             )
             if P.y.negate
             else fq2.subtract(
-                take_modulo=take_modulo, check_constant=False, clean_constant=clean_constant, is_constant_reused=False
+                take_modulo=take_modulo,
+                check_constant=False,
+                clean_constant=clean_constant,
+                is_constant_reused=False,
+                positive_modulo=positive_modulo,
             )
         )  # Compute y_(2P)
 
@@ -723,6 +771,7 @@ class EllipticCurveFq2:
         take_modulo: bool,
         check_constant: bool | None,
         clean_constant: bool | None,
+        positive_modulo: bool = True,
         gradient: StackFiniteFieldElement = StackFiniteFieldElement(5, False, 2),  # noqa: B008
         P: StackEllipticCurvePoint = StackEllipticCurvePoint(  # noqa: B008, N803
             StackFiniteFieldElement(3, False, 2),  # noqa: B008
@@ -751,6 +800,10 @@ class EllipticCurveFq2:
             take_modulo (bool): If `True`, the result is reduced modulo `q`.
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
+<<<<<<< Updated upstream
+=======
+            positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
+>>>>>>> Stashed changes
             gradient (StackFiniteFieldElement): The position of gradient of the line tangent at P_ in the stack,
                     its length, whether it should be negated, and whether it should be rolled or picked.
                     Defaults to: StackFiniteFieldElement(5,False,2).
@@ -803,7 +856,11 @@ class EllipticCurveFq2:
         x_coordinate += roll(position=5, n_elements=2)  # Bring gradient^2 on top
         x_coordinate += roll(position=3, n_elements=2)  # Swap 2xP and gradient^2
         x_coordinate += fq2.subtract(
-            take_modulo=take_modulo, check_constant=False, clean_constant=False, is_constant_reused=False
+            take_modulo=take_modulo,
+            check_constant=False,
+            clean_constant=False,
+            is_constant_reused=False,
+            positive_modulo=positive_modulo,
         )  # Compute gradient^2 - 2*xP
 
         # Compute y-coordinate of 2P_
@@ -821,11 +878,19 @@ class EllipticCurveFq2:
         y_coordinate += move(P.y.shift(4), bool_to_moving_function(is_p_rolled))  # Bring yP on top
         y_coordinate += (
             fq2.add(
-                take_modulo=take_modulo, check_constant=False, clean_constant=clean_constant, is_constant_reused=False
+                take_modulo=take_modulo,
+                check_constant=False,
+                clean_constant=clean_constant,
+                is_constant_reused=False,
+                positive_modulo=positive_modulo,
             )
             if P.negate
             else fq2.subtract(
-                take_modulo=take_modulo, check_constant=False, clean_constant=clean_constant, is_constant_reused=False
+                take_modulo=take_modulo,
+                check_constant=False,
+                clean_constant=clean_constant,
+                is_constant_reused=False,
+                positive_modulo=positive_modulo,
             )
         )  # Compute y_(2P)
 
