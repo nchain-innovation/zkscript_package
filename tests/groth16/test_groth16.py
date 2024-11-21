@@ -1,4 +1,5 @@
 import json
+import secrets
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -163,6 +164,54 @@ class Mnt4753:
     filename = "mnt4_753"
 
 
+def generate_random_tests(curve, groth16, filename, test_length):
+    A = curve.g1.multiply(secrets.randbelow(curve.r - 1) + 1)
+    B = curve.g2.multiply(secrets.randbelow(curve.r - 1) + 1)
+    C = curve.g1.multiply(secrets.randbelow(curve.r - 1) + 1)
+
+    alpha = curve.g1.multiply(secrets.randbelow(curve.r - 1) + 1)
+    beta = curve.g2.multiply(secrets.randbelow(curve.r - 1) + 1)
+    gamma = curve.g2.multiply(secrets.randbelow(curve.r - 1) + 1)
+    delta = curve.g2.multiply(secrets.randbelow(curve.r - 1) + 1)
+
+    if test_length:
+        dlog_gamma_abc = [15, 23, 11] if filename == "bls12_381" else [7, 19]
+        pub_statement = [1, 5, 4] if filename == "bls12_381" else [1, 2]
+    else:
+        dlog_gamma_abc = [secrets.randbelow(curve.r - 1) + 1 for _ in range(6)]
+        # First two are fixed, next three are random, last one test case in which sum_gamma_abc is the point at infinity
+        pub_statement = [1, 0] + [secrets.randbelow(curve.r - 1) + 1 for _ in range(3)] + [0]
+
+    gamma_abc = []
+    for i in range(len(dlog_gamma_abc)):
+        gamma_abc.append(curve.g1.multiply(dlog_gamma_abc[i]))
+
+    sum_gamma_abc = curve.g1.multiply(0)
+    for i in range(len(gamma_abc)):
+        sum_gamma_abc += gamma_abc[i].multiply(pub_statement[i])
+
+    vk = {"alpha": alpha, "beta": beta, "gamma": gamma, "delta": delta, "gamma_abc": gamma_abc}
+
+    groth16_proof = curve.prepare_groth16_proof(
+        pub=pub_statement[1:],
+        proof={"a": A, "b": B, "c": C},
+        vk=vk,
+        miller_loop_type="twisted_curve",
+        denominator_elimination="quadratic",
+    )
+
+    alpha_beta = curve.triple_pairing(A, sum_gamma_abc, C, B, -gamma, -delta)
+
+    return (alpha_beta, vk, groth16_proof, groth16, filename)
+
+
+def generate_test_cases(test_num, test_lenght=False):
+    # Parse and return config and the test_data for each config
+    return [generate_random_tests(bls12_381_curve, bls12_381, "bls12_381", test_lenght) for _ in range(test_num)] + [
+        generate_random_tests(mnt4_753_curve, mnt4_753, "mnt4_753", test_lenght) for _ in range(test_num)
+    ]
+
+
 def save_scripts(lock, unlock, save_to_json_folder, filename, test_name):
     if save_to_json_folder:
         output_dir = Path("data") / save_to_json_folder / "groth16"
@@ -205,6 +254,63 @@ def test_groth16(test_script, vk, alpha_beta, groth16_proof, filename, save_to_j
     )
 
     context = Context(script=unlock + lock)
+    assert context.evaluate()
+    assert len(context.get_stack()) == 1
+    assert len(context.get_altstack()) == 0
+
+    if save_to_json_folder:
+        save_scripts(str(lock), str(unlock), save_to_json_folder, filename, "groth16")
+
+
+@pytest.mark.slow
+@pytest.mark.parametrize(("alpha_beta", "vk", "groth16_proof", "test_script", "filename"), generate_test_cases(1))
+def test_groth16_slow(alpha_beta, vk, groth16_proof, test_script, filename, save_to_json_folder):
+    groth16_proof = {
+        "lambdas_partial_sums" if key == "lamdbas_partial_sums" else key: value for key, value in groth16_proof.items()
+    }  # Temporary fix
+    unlock = test_script.groth16_verifier_unlock(**groth16_proof)
+
+    lock = test_script.groth16_verifier(
+        modulo_threshold=1,
+        alpha_beta=alpha_beta.to_list(),
+        minus_gamma=(-vk["gamma"]).to_list(),
+        minus_delta=(-vk["delta"]).to_list(),
+        gamma_abc=[s.to_list() for s in vk["gamma_abc"]],
+        check_constant=True,
+        clean_constant=True,
+    )
+
+    context = Context(script=unlock + lock)
+    assert context.evaluate()
+    assert len(context.get_stack()) == 1
+    assert len(context.get_altstack()) == 0
+
+    if save_to_json_folder:
+        save_scripts(str(lock), str(unlock), save_to_json_folder, filename, "groth16")
+
+
+@pytest.mark.slow
+@pytest.mark.parametrize(("alpha_beta", "vk", "groth16_proof", "test_script", "filename"), generate_test_cases(1, True))
+def test_groth16_print(alpha_beta, vk, groth16_proof, test_script, filename, save_to_json_folder):
+    groth16_proof = {
+        "lambdas_partial_sums" if key == "lamdbas_partial_sums" else key: value for key, value in groth16_proof.items()
+    }  # Temporary fix
+    unlock = test_script.groth16_verifier_unlock(**groth16_proof)
+
+    lock = test_script.groth16_verifier(
+        modulo_threshold=200 * 8,
+        alpha_beta=alpha_beta.to_list(),
+        minus_gamma=(-vk["gamma"]).to_list(),
+        minus_delta=(-vk["delta"]).to_list(),
+        gamma_abc=[s.to_list() for s in vk["gamma_abc"]],
+        check_constant=True,
+        clean_constant=True,
+    )
+
+    context = Context(script=unlock + lock)
+
+    print("\nThe locking script size for Groth16 for the curve ", filename, " is ", len(lock.raw_serialize()))
+
     assert context.evaluate()
     assert len(context.get_stack()) == 1
     assert len(context.get_altstack()) == 0

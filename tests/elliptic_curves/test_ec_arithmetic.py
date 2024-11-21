@@ -17,6 +17,7 @@ from tests.elliptic_curves.util import (
     generate_test_data,
     generate_unlock,
     generate_verify_point,
+    modify_verify_modulo_check,
     save_scripts,
 )
 
@@ -585,10 +586,12 @@ def test_addition(
 ):
     unlock = unlocking_script
 
+    clean_constant = verify_gradient
+
     lock = config.test_script.point_algebraic_addition(
         take_modulo=True,
         check_constant=True,
-        clean_constant=True,
+        clean_constant=clean_constant,
         verify_gradient=verify_gradient,
         gradient=stack_elements["gradient"],
         P=stack_elements["P"],
@@ -596,7 +599,9 @@ def test_addition(
         rolling_options=rolling_options,
     )
 
-    lock += expected
+    lock += (
+        expected if verify_gradient else modify_verify_modulo_check(expected) + Script.parse_string("OP_SWAP OP_DROP")
+    )
 
     context = Context(script=unlock + lock)
     assert context.evaluate()
@@ -616,18 +621,21 @@ def test_doubling(
     config, unlocking_script, expected, stack_elements, rolling_options, verify_gradient, save_to_json_folder
 ):
     unlock = unlocking_script
+    clean_constant = verify_gradient
 
     lock = config.test_script.point_algebraic_doubling(
         take_modulo=True,
         check_constant=True,
-        clean_constant=True,
+        clean_constant=clean_constant,
         verify_gradient=verify_gradient,
         gradient=stack_elements["gradient"],
         P=stack_elements["P"],
         rolling_options=rolling_options,
     )
 
-    lock += expected
+    lock += (
+        expected if verify_gradient else modify_verify_modulo_check(expected) + Script.parse_string("OP_SWAP OP_DROP")
+    )
 
     context = Context(script=unlock + lock)
     assert context.evaluate()
@@ -648,11 +656,12 @@ def test_addition_slow(
     config, unlocking_script, expected, stack_elements, rolling_options, verify_gradient, save_to_json_folder
 ):
     unlock = unlocking_script
+    clean_constant = verify_gradient
 
     lock = config.test_script.point_algebraic_addition(
         take_modulo=True,
         check_constant=True,
-        clean_constant=True,
+        clean_constant=clean_constant,
         verify_gradient=verify_gradient,
         gradient=stack_elements["gradient"],
         P=stack_elements["P"],
@@ -660,7 +669,9 @@ def test_addition_slow(
         rolling_options=rolling_options,
     )
 
-    lock += expected
+    lock += (
+        expected if verify_gradient else modify_verify_modulo_check(expected) + Script.parse_string("OP_SWAP OP_DROP")
+    )
 
     context = Context(script=unlock + lock)
     assert context.evaluate()
@@ -681,18 +692,21 @@ def test_doubling_slow(
     config, unlocking_script, expected, stack_elements, rolling_options, verify_gradient, save_to_json_folder
 ):
     unlock = unlocking_script
+    clean_constant = verify_gradient
 
     lock = config.test_script.point_algebraic_doubling(
         take_modulo=True,
         check_constant=True,
-        clean_constant=True,
+        clean_constant=clean_constant,
         verify_gradient=verify_gradient,
         gradient=stack_elements["gradient"],
         P=stack_elements["P"],
         rolling_options=rolling_options,
     )
 
-    lock += expected
+    lock += (
+        expected if verify_gradient else modify_verify_modulo_check(expected) + Script.parse_string("OP_SWAP OP_DROP")
+    )
 
     context = Context(script=unlock + lock)
     assert context.evaluate()
@@ -703,10 +717,12 @@ def test_doubling_slow(
         save_scripts(str(lock), str(unlock), save_to_json_folder, config.filename, "point doubling slow")
 
 
+@pytest.mark.parametrize("positive_modulo", [True, False])
 @pytest.mark.parametrize(("config", "P", "Q", "expected"), generate_test_cases("test_addition_unknown_points"))
-def test_addition_unknown_points(config, P, Q, expected, save_to_json_folder):  # noqa: N803
+def test_addition_unknown_points(config, P, Q, positive_modulo, expected, save_to_json_folder):  # noqa: N803
     unlock = nums_to_script([config.modulus])
-
+    # if the modulo is positive or the point is at infinity, we need the modulo for the modified verification script
+    clean_constant = positive_modulo or (expected.x is None and expected.y is None)
     # if config.point_at_infinity not in {P, Q, expected}:
     #     lam = P.get_lambda(Q)
     #     unlock += nums_to_script(lam.to_list())
@@ -715,9 +731,15 @@ def test_addition_unknown_points(config, P, Q, expected, save_to_json_folder):  
     unlock += generate_unlock(Q, degree=config.degree)
 
     lock = config.test_script.point_addition_with_unknown_points(
-        take_modulo=True, check_constant=True, clean_constant=True
+        take_modulo=True, positive_modulo=positive_modulo, check_constant=True, clean_constant=clean_constant
     )
-    lock += generate_verify_point(expected, degree=config.degree)
+
+    verification_script = generate_verify_point(expected, degree=config.degree)
+    lock += (
+        verification_script
+        if clean_constant
+        else modify_verify_modulo_check(verification_script) + Script.parse_string("OP_SWAP OP_DROP")
+    )
 
     context = Context(script=unlock + lock)
     assert context.evaluate()
@@ -756,12 +778,17 @@ def test_multiplication_unrolled(config, P, a, expected, save_to_json_folder):  
 
 
 @pytest.mark.parametrize(("config", "P", "expected"), generate_test_cases("test_negation"))
-def test_negation(config, P, expected, save_to_json_folder):  # noqa: N803
+@pytest.mark.parametrize("positive_modulo", [True, False])
+def test_negation(config, P, expected, positive_modulo, save_to_json_folder):  # noqa: N803
     unlock = nums_to_script([config.modulus])
     unlock += generate_unlock(P, degree=config.degree)
+    lock = config.test_script.point_negation(
+        take_modulo=True, check_constant=True, is_constant_reused=False, positive_modulo=positive_modulo
+    )
 
-    lock = config.test_script.point_negation(take_modulo=True, check_constant=True, is_constant_reused=False)
-    lock += generate_verify_point(expected, degree=config.degree)
+    verify = generate_verify_point(expected, degree=config.degree)
+
+    lock += verify if positive_modulo or (P.x is None and P.y is None) else modify_verify_modulo_check(verify)
 
     context = Context(script=unlock + lock)
     assert context.evaluate()

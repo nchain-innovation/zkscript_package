@@ -8,9 +8,9 @@ from src.zkscript.util.utility_scripts import nums_to_script
 
 def generate_verify(z) -> Script:
     out = Script()
-    for ix, el in enumerate(z.to_list()[::-1]):
+    for ix, el in enumerate(z[::-1]):
         out += nums_to_script([el])
-        if ix != len(z.to_list()) - 1:
+        if ix != len(z) - 1:
             out += Script.parse_string("OP_EQUALVERIFY")
         else:
             out += Script.parse_string("OP_EQUAL")
@@ -19,7 +19,7 @@ def generate_verify(z) -> Script:
 
 
 def generate_unlock(z) -> Script:
-    return nums_to_script(z.to_list())
+    return nums_to_script(z)
 
 
 def check_constant(q) -> Script:

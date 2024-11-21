@@ -44,6 +44,22 @@ def generate_verify_point(P, degree: int) -> Script:  # noqa: N803
     return out
 
 
+def modify_verify_modulo_check(old_verification_script):
+    """Modify the verification script to take the positive modulo of the results before checking the equalities.
+
+    Args:
+        old_verification_script: the original verification script
+    """
+
+    op_equalverify_with_modulo = "OP_SWAP OP_DEPTH OP_1SUB OP_PICK OP_TUCK OP_ADD OP_SWAP OP_MOD OP_EQUALVERIFY"
+    op_equal_with_modulo = op_equalverify_with_modulo.replace("OP_EQUALVERIFY", "OP_EQUAL")
+    return Script.parse_string(
+        str(old_verification_script)
+        .replace("OP_EQUALVERIFY", op_equalverify_with_modulo)
+        .replace("OP_EQUAL", op_equal_with_modulo)
+    )
+
+
 def generate_extended_list(elements: List[List[int]], positions_elements: List[int], filler: int = 1) -> List[int]:
     """Take a list of element a fills it with the filler element.
 

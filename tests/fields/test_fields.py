@@ -35,21 +35,45 @@ class Fq2ResidueMinusOne:
     filename = "fq2_non_residue_is_minus_one"
 
     test_data = {
-        "test_addition": [{"x": Fq2(Fq(5), Fq(10)), "y": Fq2(Fq(2), Fq(10)), "expected": Fq2(Fq(7), Fq(1))}],
-        "test_subtraction": [{"x": Fq2(Fq(5), Fq(10)), "y": Fq2(Fq(2), Fq(10)), "expected": Fq2(Fq(3), Fq(0))}],
-        "test_negation": [{"x": Fq2(Fq(5), Fq(10)), "expected": Fq2(Fq(-5), Fq(-10))}],
-        "test_scalar_mul": [{"x": Fq2(Fq(5), Fq(10)), "y": Fq(2), "expected": Fq2(Fq(10), Fq(1))}],
+        "test_addition": [
+            {"x": [5, 10], "y": [2, -11], "expected": [7, 18], "positive_modulo": True},
+            {"x": [5, 10], "y": [2, -11], "expected": [7, -1], "positive_modulo": False},
+        ],
+        "test_subtraction": [
+            {"x": [5, 10], "y": [2, 11], "expected": [3, 18], "positive_modulo": True},
+            {"x": [5, 10], "y": [2, 11], "expected": [3, -1], "positive_modulo": False},
+        ],
+        "test_negation": [
+            {"x": [5, 10], "expected": [14, 9], "positive_modulo": True},
+            {"x": [5, 10], "expected": [-5, -10], "positive_modulo": False},
+        ],
+        "test_scalar_mul": [
+            {"x": [5, -10], "y": [2], "expected": [10, 18], "positive_modulo": True},
+            {"x": [5, -10], "y": [2], "expected": [10, -1], "positive_modulo": False},
+        ],
         "test_mul": [
-            {"x": Fq2(Fq(5), Fq(10)), "y": Fq2(Fq(2), Fq(10)), "expected": Fq2(Fq(5), Fq(10)) * Fq2(Fq(2), Fq(10))}
+            {"x": [3, 2], "y": [-6, 7], "expected": [6, 9], "positive_modulo": True},
+            {"x": [3, 2], "y": [6, -7], "expected": [-6, -9], "positive_modulo": False},
         ],
-        "test_square": [{"x": Fq2(Fq(5), Fq(10)), "expected": Fq2(Fq(5), Fq(10)).power(2)}],
+        "test_square": [
+            {"x": [1, -1], "expected": [0, 17], "positive_modulo": True},
+            {"x": [1, -1], "expected": [0, -2], "positive_modulo": False},
+        ],
         "test_add_three": [
-            {"x": Fq2(Fq(5), Fq(10)), "y": Fq2(Fq(2), Fq(10)), "z": Fq2(Fq(7), Fq(4)), "expected": Fq2(Fq(14), Fq(5))}
+            {"x": [1, 2], "y": [-12, -3], "z": [18, -5], "expected": [7, 13], "positive_modulo": True},
+            {"x": [1, 2], "y": [-12, -3], "z": [18, -5], "expected": [7, -6], "positive_modulo": False},
         ],
-        "test_conjugate": [{"x": Fq2(Fq(5), Fq(10)), "expected": Fq2(Fq(5), Fq(9))}],
-        "test_mul_by_u": [{"x": Fq2(Fq(5), Fq(10)), "expected": Fq2(Fq(5), Fq(10)) * Fq2.u()}],
+        "test_conjugate": [
+            {"x": [5, 10], "expected": [5, 9], "positive_modulo": True},
+            {"x": [5, 10], "expected": [5, -10], "positive_modulo": False},
+        ],
+        "test_mul_by_u": [
+            {"x": [5, -10], "expected": [10, 5], "positive_modulo": True},
+            {"x": [5, -10], "expected": [-9, 5], "positive_modulo": False},
+        ],
         "test_mul_by_one_plus_u": [
-            {"x": Fq2(Fq(5), Fq(10)), "expected": Fq2(Fq(5), Fq(10)) * (Fq2.identity() + Fq2.u())}
+            {"x": [5, -10], "expected": [15, 14], "positive_modulo": True},
+            {"x": [5, -10], "expected": [-4, -5], "positive_modulo": False},
         ],
     }
 
@@ -67,21 +91,45 @@ class Fq2ResidueNotMinusOne:
     filename = "fq2_non_residue_is_not_minus_one"
 
     test_data = {
-        "test_addition": [{"x": Fq2(Fq(5), Fq(10)), "y": Fq2(Fq(2), Fq(10)), "expected": Fq2(Fq(7), Fq(1))}],
-        "test_subtraction": [{"x": Fq2(Fq(5), Fq(10)), "y": Fq2(Fq(2), Fq(10)), "expected": Fq2(Fq(3), Fq(0))}],
-        "test_negation": [{"x": Fq2(Fq(5), Fq(10)), "expected": Fq2(Fq(-5), Fq(-10))}],
-        "test_scalar_mul": [{"x": Fq2(Fq(5), Fq(10)), "y": Fq(2), "expected": Fq2(Fq(10), Fq(1))}],
+        "test_addition": [
+            {"x": [5, 10], "y": [2, -11], "expected": [7, 18], "positive_modulo": True},
+            {"x": [5, 10], "y": [2, -11], "expected": [7, -1], "positive_modulo": False},
+        ],
+        "test_subtraction": [
+            {"x": [5, 10], "y": [2, 11], "expected": [3, 18], "positive_modulo": True},
+            {"x": [5, 10], "y": [2, 11], "expected": [3, -1], "positive_modulo": False},
+        ],
+        "test_negation": [
+            {"x": [5, 10], "expected": [14, 9], "positive_modulo": True},
+            {"x": [5, 10], "expected": [-5, -10], "positive_modulo": False},
+        ],
+        "test_scalar_mul": [
+            {"x": [5, -10], "y": [2], "expected": [10, 18], "positive_modulo": True},
+            {"x": [5, -10], "y": [2], "expected": [10, -1], "positive_modulo": False},
+        ],
         "test_mul": [
-            {"x": Fq2(Fq(5), Fq(10)), "y": Fq2(Fq(2), Fq(10)), "expected": Fq2(Fq(5), Fq(10)) * Fq2(Fq(2), Fq(10))}
+            {"x": [3, 2], "y": [-6, 7], "expected": [5, 9], "positive_modulo": True},
+            {"x": [3, 2], "y": [6, -7], "expected": [-5, -9], "positive_modulo": False},
         ],
-        "test_square": [{"x": Fq2(Fq(5), Fq(10)), "expected": Fq2(Fq(5), Fq(10)).power(2)}],
+        "test_square": [
+            {"x": [1, -1], "expected": [4, 17], "positive_modulo": True},
+            {"x": [1, -1], "expected": [4, -2], "positive_modulo": False},
+        ],
         "test_add_three": [
-            {"x": Fq2(Fq(5), Fq(10)), "y": Fq2(Fq(2), Fq(10)), "z": Fq2(Fq(7), Fq(4)), "expected": Fq2(Fq(14), Fq(5))}
+            {"x": [1, 2], "y": [-12, -3], "z": [18, -5], "expected": [7, 13], "positive_modulo": True},
+            {"x": [1, 2], "y": [-12, -3], "z": [18, -5], "expected": [7, -6], "positive_modulo": False},
         ],
-        "test_conjugate": [{"x": Fq2(Fq(5), Fq(10)), "expected": Fq2(Fq(5), Fq(9))}],
-        "test_mul_by_u": [{"x": Fq2(Fq(5), Fq(10)), "expected": Fq2(Fq(5), Fq(10)) * Fq2.u()}],
+        "test_conjugate": [
+            {"x": [5, 10], "expected": [5, 9], "positive_modulo": True},
+            {"x": [5, 10], "expected": [5, -10], "positive_modulo": False},
+        ],
+        "test_mul_by_u": [
+            {"x": [5, -10], "expected": [8, 5], "positive_modulo": True},
+            {"x": [5, -10], "expected": [-11, 5], "positive_modulo": False},
+        ],
         "test_mul_by_one_plus_u": [
-            {"x": Fq2(Fq(5), Fq(10)), "expected": Fq2(Fq(5), Fq(10)) * (Fq2.identity() + Fq2.u())}
+            {"x": [5, -10], "expected": [13, 14], "positive_modulo": True},
+            {"x": [5, -10], "expected": [-6, -5], "positive_modulo": False},
         ],
     }
 
@@ -110,75 +158,137 @@ class Fq4:
     test_data = {
         "test_addition": [
             {
-                "x": Fq4(Fq2(Fq(1), Fq(1)), Fq2(Fq(2), Fq(3))),
-                "y": Fq4(Fq2(Fq(1), Fq(2)), Fq2(Fq(3), Fq(4))),
-                "expected": Fq4(Fq2(Fq(2), Fq(3)), Fq2(Fq(5), Fq(7))),
-            }
+                "x": [1, 1, 2, 3],
+                "y": [1, 2, 3, -4],
+                "expected": [2, 3, 5, 18],
+                "positive_modulo": True,
+            },
+            {
+                "x": [1, 1, 2, 3],
+                "y": [1, 2, 3, -4],
+                "expected": [2, 3, 5, -1],
+                "positive_modulo": False,
+            },
         ],
         "test_scalar_mul_fq": [
-            {
-                "x": Fq4(Fq2(Fq(1), Fq(1)), Fq2(Fq(2), Fq(3))),
-                "lam": Fq(10),
-                "expected": Fq4(Fq2(Fq(10), Fq(10)), Fq2(Fq(1), Fq(11))),
-            }
+            {"x": [1, 2, -2, -1], "lam": [10], "expected": [10, 1, 18, 9], "positive_modulo": True},
+            {"x": [1, 2, -2, -1], "lam": [10], "expected": [10, 1, -1, -10], "positive_modulo": False},
         ],
         "test_scalar_mul_fq2": [
             {
-                "x": Fq4(Fq2(Fq(1), Fq(1)), Fq2(Fq(2), Fq(3))),
-                "lam": Fq2(Fq(2), Fq(3)),
-                "expected": Fq2(Fq(2), Fq(3)) * Fq4(Fq2(Fq(1), Fq(1)), Fq2(Fq(2), Fq(3))),
-            }
+                "x": [1, 2, -1, -2],
+                "lam": [1, -1],
+                "expected": [16, 1, 3, 18],
+                "positive_modulo": True,
+            },
+            {
+                "x": [1, 2, -1, -2],
+                "lam": [1, -1],
+                "expected": [-3, 1, 3, -1],
+                "positive_modulo": False,
+            },
         ],
         "test_mul": [
             {
-                "x": Fq4(Fq2(Fq(1), Fq(1)), Fq2(Fq(2), Fq(3))),
-                "y": Fq4(Fq2(Fq(1), Fq(2)), Fq2(Fq(3), Fq(4))),
-                "expected": Fq4(Fq2(Fq(1), Fq(1)), Fq2(Fq(2), Fq(3))) * Fq4(Fq2(Fq(1), Fq(2)), Fq2(Fq(3), Fq(4))),
-            }
+                "x": [8, 8, 8, -8],
+                "y": [-2, 2, 2, 2],
+                "expected": [0, 3, 0, 7],
+                "positive_modulo": True,
+            },
+            {
+                "x": [8, 8, 8, -8],
+                "y": [-2, 2, 2, 2],
+                "expected": [0, -16, 0, 7],
+                "positive_modulo": False,
+            },
         ],
         "test_square": [
             {
-                "x": Fq4(Fq2(Fq(1), Fq(1)), Fq2(Fq(2), Fq(3))),
-                "expected": Fq4(Fq2(Fq(1), Fq(1)), Fq2(Fq(2), Fq(3))) * Fq4(Fq2(Fq(1), Fq(1)), Fq2(Fq(2), Fq(3))),
-            }
+                "x": [1, -1, 2, -3],
+                "expected": [1, 8, 16, 9],
+                "positive_modulo": True,
+            },
+            {
+                "x": [1, -1, 2, -3],
+                "expected": [1, 8, 16, -10],
+                "positive_modulo": False,
+            },
         ],
         "test_add_three": [
             {
-                "x": Fq4(Fq2(Fq(1), Fq(1)), Fq2(Fq(2), Fq(3))),
-                "y": Fq4(Fq2(Fq(1), Fq(2)), Fq2(Fq(3), Fq(4))),
-                "z": Fq4(Fq2(Fq(4), Fq(7)), Fq2(Fq(1), Fq(2))),
-                "expected": Fq4(Fq2(Fq(6), Fq(10)), Fq2(Fq(6), Fq(9))),
-            }
+                "x": [1, 2, 4, 8],
+                "y": [1, 2, -9, -18],
+                "z": [-3, 2, 4, 5],
+                "expected": [18, 6, 18, 14],
+                "positive_modulo": True,
+            },
+            {
+                "x": [1, 2, 4, 8],
+                "y": [1, 2, -9, -18],
+                "z": [-3, 2, 4, 5],
+                "expected": [-1, 6, -1, -5],
+                "positive_modulo": False,
+            },
         ],
         "test_frobenius": [
             {
-                "x": Fq4(Fq2(Fq(1), Fq(1)), Fq2(Fq(2), Fq(3))),
-                "expected": Fq4(Fq2(Fq(1), Fq(1)), Fq2(Fq(2), Fq(3))).frobenius(1),
-            }
+                "x": [1, 1, 2, 3],
+                "expected": [1, 18, 11, 14],
+                "positive_modulo": True,
+            },
+            {
+                "x": [1, 1, 2, 3],
+                "expected": [1, -1, -8, 14],
+                "positive_modulo": False,
+            },
         ],
         "test_frobenius_square": [
             {
-                "x": Fq4(Fq2(Fq(1), Fq(1)), Fq2(Fq(2), Fq(3))),
-                "expected": Fq4(Fq2(Fq(1), Fq(1)), Fq2(Fq(2), Fq(3))).frobenius(2),
-            }
+                "x": [-10, -3, 5, 6],
+                "expected": [9, 16, 14, 13],
+                "positive_modulo": True,
+            },
+            {
+                "x": [-10, -3, 5, 6],
+                "expected": [-10, -3, 14, 13],
+                "positive_modulo": False,
+            },
         ],
         "test_frobenius_cube": [
             {
-                "x": Fq4(Fq2(Fq(1), Fq(1)), Fq2(Fq(2), Fq(3))),
-                "expected": Fq4(Fq2(Fq(1), Fq(1)), Fq2(Fq(2), Fq(3))).frobenius(3),
-            }
+                "x": [-10, -3, 5, 6],
+                "expected": [9, 3, 10, 13],
+                "positive_modulo": True,
+            },
+            {
+                "x": [-10, -3, 5, 6],
+                "expected": [-10, 3, 10, -6],
+                "positive_modulo": False,
+            },
         ],
         "test_mul_by_u": [
             {
-                "x": Fq4(Fq2(Fq(1), Fq(1)), Fq2(Fq(2), Fq(3))),
-                "expected": Fq4(Fq2(Fq(1), Fq(1)), Fq2(Fq(2), Fq(3))) * Fq4.u(),
-            }
+                "x": [-1, -2, 3, 4],
+                "expected": [11, 7, 18, 17],
+                "positive_modulo": True,
+            },
+            {
+                "x": [-1, -2, 3, 4],
+                "expected": [11, 7, -1, -2],
+                "positive_modulo": False,
+            },
         ],
         "test_conjugate": [
             {
-                "x": Fq4(Fq2(Fq(1), Fq(1)), Fq2(Fq(2), Fq(3))),
-                "expected": Fq4(Fq2(Fq(1), Fq(1)), Fq2(Fq(2), Fq(3))).conjugate(),
-            }
+                "x": [-1, -2, 3, 4],
+                "expected": [18, 17, 16, 15],
+                "positive_modulo": True,
+            },
+            {
+                "x": [-1, -2, 3, 4],
+                "expected": [-1, -2, -3, -4],
+                "positive_modulo": False,
+            },
         ],
     }
 
@@ -209,73 +319,55 @@ class Fq2Over2ResidueEqualU:
     test_data = {
         "test_square": [
             {
-                "x": Fq2Over2ResidueEqualU(Fq2(Fq(1), Fq(1)), Fq2(Fq(2), Fq(3))),
-                "expected": Fq2Over2ResidueEqualU(Fq2(Fq(1), Fq(1)), Fq2(Fq(2), Fq(3)))
-                * Fq2Over2ResidueEqualU(Fq2(Fq(1), Fq(1)), Fq2(Fq(2), Fq(3))),
+                "x": [1, -2, 3, -4],
+                "expected": [18, 18, 0, 18],
+                "positive_modulo": True,
             },
             {
-                "x": Fq2Over2ResidueEqualU(Fq2(Fq(18), Fq(18)), Fq2(Fq(12), Fq(13))),
-                "expected": Fq2Over2ResidueEqualU(Fq2(Fq(18), Fq(18)), Fq2(Fq(12), Fq(13)))
-                * Fq2Over2ResidueEqualU(Fq2(Fq(18), Fq(18)), Fq2(Fq(12), Fq(13))),
+                "x": [4, -2, -1, -3],
+                "expected": [17, 3, 16, -1],
+                "positive_modulo": False,
             },
             {
-                "x": Fq2Over2ResidueEqualU.identity(),
-                "expected": Fq2Over2ResidueEqualU.identity(),
+                "x": [1, 0, 0, 0],
+                "expected": [1, 0, 0, 0],
+                "positive_modulo": True,
             },
             {
-                "x": Fq2Over2ResidueEqualU.zero(),
-                "expected": Fq2Over2ResidueEqualU.zero(),
+                "x": [1, -1, -1, 1],
+                "expected": [18, 1, 13, 4],
+                "positive_modulo": True,
             },
             {
-                "x": Fq2Over2ResidueEqualU.u(),
-                "expected": Fq2Over2ResidueEqualU.u() * Fq2Over2ResidueEqualU.u(),
+                "x": [1, -1, -1, 1],
+                "expected": [-1, 1, -6, 4],
+                "positive_modulo": False,
             },
         ],
         "test_mul": [
             {
-                "x": Fq2Over2ResidueEqualU(Fq2(Fq(1), Fq(2)), Fq2(Fq(3), Fq(4))),
-                "y": Fq2Over2ResidueEqualU(Fq2(Fq(2), Fq(1)), Fq2(Fq(4), Fq(3))),
-                "expected": Fq2Over2ResidueEqualU(Fq2(Fq(1), Fq(2)), Fq2(Fq(3), Fq(4)))
-                * Fq2Over2ResidueEqualU(Fq2(Fq(2), Fq(1)), Fq2(Fq(4), Fq(3))),
+                "x": [1, -2, 3, -4],
+                "y": [5, 6, -3, -4],
+                "expected": [0, 0, 18, 0],
+                "positive_modulo": True,
             },
             {
-                "x": Fq2Over2ResidueEqualU(Fq2(Fq(0), Fq(3)), Fq2(Fq(5), Fq(0))),
-                "y": Fq2Over2ResidueEqualU(Fq2(Fq(2), Fq(7)), Fq2(Fq(11), Fq(13))),
-                "expected": Fq2Over2ResidueEqualU(Fq2(Fq(0), Fq(3)), Fq2(Fq(5), Fq(0)))
-                * Fq2Over2ResidueEqualU(Fq2(Fq(2), Fq(7)), Fq2(Fq(11), Fq(13))),
+                "x": [1, -2, 3, -4],
+                "y": [5, 6, -3, -4],
+                "expected": [0, 0, -1, 0],
+                "positive_modulo": False,
             },
             {
-                "x": Fq2Over2ResidueEqualU(Fq2(Fq(4), Fq(1)), Fq2(Fq(3), Fq(0))),
-                "y": Fq2Over2ResidueEqualU(Fq2(Fq(2), Fq(0)), Fq2(Fq(11), Fq(13))),
-                "expected": Fq2Over2ResidueEqualU(Fq2(Fq(4), Fq(1)), Fq2(Fq(3), Fq(0)))
-                * Fq2Over2ResidueEqualU(Fq2(Fq(2), Fq(0)), Fq2(Fq(11), Fq(13))),
+                "x": [4, -2, -1, -3],
+                "y": [5, 3, -3, -4],
+                "expected": [15, 10, 0, 10],
+                "positive_modulo": True,
             },
             {
-                "x": Fq2Over2ResidueEqualU.identity(),
-                "y": Fq2Over2ResidueEqualU(Fq2(Fq(2), Fq(7)), Fq2(Fq(11), Fq(13))),
-                "expected": Fq2Over2ResidueEqualU(Fq2(Fq(2), Fq(7)), Fq2(Fq(11), Fq(13))),
-            },
-            {
-                "x": Fq2Over2ResidueEqualU(Fq2(Fq(2), Fq(7)), Fq2(Fq(11), Fq(13))),
-                "y": Fq2Over2ResidueEqualU.u(),
-                "expected": Fq2Over2ResidueEqualU.u() * Fq2Over2ResidueEqualU(Fq2(Fq(2), Fq(7)), Fq2(Fq(11), Fq(13))),
-            },
-            {
-                "x": Fq2Over2ResidueEqualU.zero(),
-                "y": Fq2Over2ResidueEqualU(Fq2(Fq(2), Fq(7)), Fq2(Fq(11), Fq(13))),
-                "expected": Fq2Over2ResidueEqualU.zero(),
-            },
-            {
-                "x": Fq2Over2ResidueEqualU(Fq2(Fq(7), Fq(5)), Fq2.zero()),
-                "y": Fq2Over2ResidueEqualU(Fq2(Fq(2), Fq(1)), Fq2(Fq(11), Fq(3))),
-                "expected": Fq2Over2ResidueEqualU(Fq2(Fq(7), Fq(5)), Fq2.zero())
-                * Fq2Over2ResidueEqualU(Fq2(Fq(2), Fq(1)), Fq2(Fq(11), Fq(3))),
-            },
-            {
-                "x": Fq2Over2ResidueEqualU(Fq2.zero(), Fq2(Fq(3), Fq(0))),
-                "y": Fq2Over2ResidueEqualU(Fq2(Fq(2), Fq(0)), Fq2.identity()),
-                "expected": Fq2Over2ResidueEqualU(Fq2.zero(), Fq2(Fq(3), Fq(0)))
-                * Fq2Over2ResidueEqualU(Fq2(Fq(2), Fq(0)), Fq2.identity()),
+                "x": [4, -2, -1, -3],
+                "y": [5, 3, -3, -4],
+                "expected": [15, 10, 0, -9],
+                "positive_modulo": False,
             },
         ],
     }
@@ -302,57 +394,101 @@ class Fq6ThreeOverTwo:
     test_data = {
         "test_addition": [
             {
-                "x": Fq6(Fq2(Fq(1), Fq(1)), Fq2(Fq(2), Fq(3)), Fq2(Fq(7), Fq(11))),
-                "y": Fq6(Fq2(Fq(1), Fq(2)), Fq2(Fq(3), Fq(4)), Fq2(Fq(8), Fq(12))),
-                "expected": Fq6(Fq2(Fq(2), Fq(3)), Fq2(Fq(5), Fq(7)), Fq2(Fq(15), Fq(4))),
-            }
+                "x": [1, -3, 10, 18, -8, -1],
+                "y": [4, 5, -13, -5, 8, 2],
+                "expected": [5, 2, 16, 13, 0, 1],
+                "positive_modulo": True,
+            },
+            {
+                "x": [1, -3, 10, 18, -8, -1],
+                "y": [4, 5, -13, -5, 8, 2],
+                "expected": [5, 2, -3, 13, 0, 1],
+                "positive_modulo": False,
+            },
         ],
         "test_subtraction": [
             {
-                "x": Fq6(Fq2(Fq(1), Fq(1)), Fq2(Fq(2), Fq(3)), Fq2(Fq(7), Fq(11))),
-                "y": Fq6(Fq2(Fq(1), Fq(2)), Fq2(Fq(3), Fq(9)), Fq2(Fq(2), Fq(4))),
-                "expected": Fq6(Fq2(Fq(0), Fq(18)), Fq2(Fq(18), Fq(13)), Fq2(Fq(5), Fq(7))),
-            }
+                "x": [1, -3, 10, 18, -8, -1],
+                "y": [4, 5, -13, -5, 8, 2],
+                "expected": [16, 11, 4, 4, 3, 16],
+                "positive_modulo": True,
+            },
+            {
+                "x": [1, -3, 10, 18, -8, -1],
+                "y": [4, 5, -13, -5, 8, 2],
+                "expected": [-3, -8, 4, 4, -16, -3],
+                "positive_modulo": False,
+            },
         ],
         "test_negation": [
-            {
-                "x": Fq6(Fq2(Fq(1), Fq(1)), Fq2(Fq(2), Fq(3)), Fq2(Fq(7), Fq(11))),
-                "expected": Fq6(Fq2(Fq(18), Fq(18)), Fq2(Fq(17), Fq(16)), Fq2(Fq(12), Fq(8))),
-            }
+            {"x": [1, -3, 10, 18, -8, -1], "expected": [18, 3, 9, 1, 8, 1], "positive_modulo": True},
+            {"x": [1, -3, 10, 18, -8, -1], "expected": [-1, 3, -10, -18, 8, 1], "positive_modulo": False},
         ],
         "test_scalar_mul_fq": [
             {
-                "x": Fq6(Fq2(Fq(1), Fq(1)), Fq2(Fq(2), Fq(3)), Fq2(Fq(7), Fq(11))),
-                "lam": Fq(10),
-                "expected": Fq6(Fq2(Fq(10), Fq(10)), Fq2(Fq(1), Fq(11)), Fq2(Fq(13), Fq(15))),
-            }
+                "x": [1, -2, -3, 4, 5, -6],
+                "lam": [4],
+                "expected": [4, 11, 7, 16, 1, 14],
+                "positive_modulo": True,
+            },
+            {
+                "x": [1, -2, -3, 4, 5, -6],
+                "lam": [4],
+                "expected": [4, -8, -12, 16, 1, -5],
+                "positive_modulo": False,
+            },
         ],
         "test_scalar_mul_fq2": [
             {
-                "x": Fq6(Fq2(Fq(1), Fq(1)), Fq2(Fq(2), Fq(3)), Fq2(Fq(7), Fq(11))),
-                "lam": Fq2(Fq(2), Fq(3)),
-                "expected": Fq2(Fq(2), Fq(3)) * Fq6(Fq2(Fq(1), Fq(1)), Fq2(Fq(2), Fq(3)), Fq2(Fq(7), Fq(11))),
-            }
+                "x": [1, -2, -3, 4, 5, -6],
+                "lam": [1, 3],
+                "expected": (2, 1, 14, 14, 8, 9),
+                "positive_modulo": True,
+            },
+            {
+                "x": [1, -2, -3, 4, 5, -6],
+                "lam": [1, 3],
+                "expected": (-17, 1, 14, -5, -11, 9),
+                "positive_modulo": False,
+            },
         ],
         "test_mul": [
             {
-                "x": Fq6(Fq2(Fq(1), Fq(1)), Fq2(Fq(2), Fq(3)), Fq2(Fq(7), Fq(11))),
-                "y": Fq6(Fq2(Fq(1), Fq(2)), Fq2(Fq(3), Fq(4)), Fq2(Fq(8), Fq(12))),
-                "expected": Fq6(Fq2(Fq(1), Fq(1)), Fq2(Fq(2), Fq(3)), Fq2(Fq(7), Fq(11)))
-                * Fq6(Fq2(Fq(1), Fq(2)), Fq2(Fq(3), Fq(4)), Fq2(Fq(8), Fq(12))),
-            }
+                "x": [1, 3, -4, 5, -11, 9],
+                "y": [0, 3, 9, -5, -10, 7],
+                "expected": [17, 10, 16, 9, 4, 9],
+                "positive_modulo": True,
+            },
+            {
+                "x": [1, 3, -4, 5, -11, 9],
+                "y": [0, 3, 9, -5, -10, 7],
+                "expected": [17, -9, -3, 9, 4, 9],
+                "positive_modulo": False,
+            },
+            {
+                "x": [1, -1, -3, -4, 5, -6],
+                "y": [0, 0, 1, 0, 0, 0],
+                "expected": [6, 18, 1, 18, 16, 15],
+                "positive_modulo": True,
+            },
+            {
+                "x": [1, -1, -3, -4, 5, -6],
+                "y": [0, 0, 1, 0, 0, 0],
+                "expected": [-13, -1, 1, -1, -3, -4],
+                "positive_modulo": False,
+            },
         ],
         "test_square": [
             {
-                "x": Fq6(Fq2(Fq(1), Fq(1)), Fq2(Fq(2), Fq(3)), Fq2(Fq(7), Fq(11))),
-                "expected": Fq6(Fq2(Fq(1), Fq(1)), Fq2(Fq(2), Fq(3)), Fq2(Fq(7), Fq(11))).power(2),
-            }
-        ],
-        "test_mul_by_v": [
+                "x": [1, 3, -5, -6, -9, 4],
+                "expected": [7, 1, 4, 15, 16, 14],
+                "positive_modulo": True,
+            },
             {
-                "x": Fq6(Fq2(Fq(1), Fq(1)), Fq2(Fq(2), Fq(3)), Fq2(Fq(7), Fq(11))),
-                "expected": Fq6(Fq2(Fq(1), Fq(1)), Fq2(Fq(2), Fq(3)), Fq2(Fq(7), Fq(11))) * Fq6.v(),
-            }
+                "x": [1, 3, -5, -6, -9, 4],
+                "expected": [7, 1, -15, 15, 16, 14],
+                "positive_modulo": False,
+            },
         ],
     }
 
@@ -391,83 +527,77 @@ class Fq12TwoOverThreeOverTwo:
     test_data = {
         "test_mul": [
             {
-                "x": Fq12(
-                    Fq6(Fq2(Fq(1), Fq(1)), Fq2(Fq(2), Fq(3)), Fq2(Fq(7), Fq(11))),
-                    Fq6(Fq2(Fq(5), Fq(3)), Fq2(Fq(8), Fq(17)), Fq2(Fq(15), Fq(6))),
-                ),
-                "y": Fq12(
-                    Fq6(Fq2(Fq(1), Fq(2)), Fq2(Fq(3), Fq(4)), Fq2(Fq(8), Fq(12))),
-                    Fq6(Fq2(Fq(1), Fq(10)), Fq2(Fq(5), Fq(16)), Fq2(Fq(11), Fq(12))),
-                ),
-                "expected": Fq12(
-                    Fq6(Fq2(Fq(1), Fq(1)), Fq2(Fq(2), Fq(3)), Fq2(Fq(7), Fq(11))),
-                    Fq6(Fq2(Fq(5), Fq(3)), Fq2(Fq(8), Fq(17)), Fq2(Fq(15), Fq(6))),
-                )
-                * Fq12(
-                    Fq6(Fq2(Fq(1), Fq(2)), Fq2(Fq(3), Fq(4)), Fq2(Fq(8), Fq(12))),
-                    Fq6(Fq2(Fq(1), Fq(10)), Fq2(Fq(5), Fq(16)), Fq2(Fq(11), Fq(12))),
-                ),
-            }
+                "x": [1, 1, 2, 3, 7, 11, 5, 3, 8, -2, 15, 6],
+                "y": [1, 2, 3, 4, 8, -7, 1, -9, 5, -3, 11, -7],
+                "expected": [0, 13, 1, 8, 8, 7, 7, 11, 1, 18, 15, 12],
+                "positive_modulo": True,
+            },
+            {
+                "x": [1, 1, 2, 3, 7, 11, 5, 3, 8, -2, 15, 6],
+                "y": [1, 2, 3, 4, 8, -7, 1, -9, 5, -3, 11, -7],
+                "expected": [0, -6, -18, -11, 8, -12, 7, 11, -18, -1, -4, 12],
+                "positive_modulo": False,
+            },
         ],
         "test_square": [
             {
-                "x": Fq12(
-                    Fq6(Fq2(Fq(1), Fq(1)), Fq2(Fq(2), Fq(3)), Fq2(Fq(7), Fq(11))),
-                    Fq6(Fq2(Fq(5), Fq(3)), Fq2(Fq(8), Fq(17)), Fq2(Fq(15), Fq(6))),
-                ),
-                "expected": Fq12(
-                    Fq6(Fq2(Fq(1), Fq(1)), Fq2(Fq(2), Fq(3)), Fq2(Fq(7), Fq(11))),
-                    Fq6(Fq2(Fq(5), Fq(3)), Fq2(Fq(8), Fq(17)), Fq2(Fq(15), Fq(6))),
-                ).power(2),
-            }
+                "x": [1, 1, 2, 3, 7, -8, 5, 3, 8, -2, -4, 6],
+                "expected": [17, 6, 8, 12, 2, 0, 12, 8, 7, 10, 7, 6],
+                "positive_modulo": True,
+            },
+            {
+                "x": [1, 1, 2, 3, 7, -8, 5, 3, 8, -2, -4, 6],
+                "expected": [17, 6, 8, 12, 2, 0, -7, 8, 7, -9, -12, 6],
+                "positive_modulo": False,
+            },
         ],
         "test_conjugate": [
             {
-                "x": Fq12(
-                    Fq6(Fq2(Fq(1), Fq(1)), Fq2(Fq(2), Fq(3)), Fq2(Fq(7), Fq(11))),
-                    Fq6(Fq2(Fq(5), Fq(3)), Fq2(Fq(8), Fq(17)), Fq2(Fq(15), Fq(6))),
-                ),
-                "expected": Fq12(
-                    Fq6(Fq2(Fq(1), Fq(1)), Fq2(Fq(2), Fq(3)), Fq2(Fq(7), Fq(11))),
-                    Fq6(Fq2(Fq(5), Fq(3)), Fq2(Fq(8), Fq(17)), Fq2(Fq(15), Fq(6))),
-                ).conjugate(),
-            }
+                "x": [1, 1, 2, 3, 7, 11, 5, 3, 8, 17, 15, 6],
+                "expected": [1, 1, 2, 3, 7, 11, 14, 16, 11, 2, 4, 13],
+                "positive_modulo": True,
+            },
+            {
+                "x": [1, 1, 2, 3, 7, 11, 5, 3, 8, 17, 15, 6],
+                "expected": [1, 1, 2, 3, 7, 11, -5, -3, -8, -17, -15, -6],
+                "positive_modulo": False,
+            },
         ],
         "test_frobenius": [
             {
-                "x": Fq12(
-                    Fq6(Fq2(Fq(1), Fq(1)), Fq2(Fq(2), Fq(3)), Fq2(Fq(7), Fq(11))),
-                    Fq6(Fq2(Fq(5), Fq(3)), Fq2(Fq(8), Fq(17)), Fq2(Fq(15), Fq(6))),
-                ),
-                "expected": Fq12(
-                    Fq6(Fq2(Fq(1), Fq(1)), Fq2(Fq(2), Fq(3)), Fq2(Fq(7), Fq(11))),
-                    Fq6(Fq2(Fq(5), Fq(3)), Fq2(Fq(8), Fq(17)), Fq2(Fq(15), Fq(6))),
-                ).frobenius(1),
-            }
+                "x": [1, 1, 2, 3, 7, 11, -14, -16, -12, -2, -4, -13],
+                "expected": [1, 18, 1, 15, 0, 9, 15, 0, 3, 4, 2, 11],
+                "positive_modulo": True,
+            },
+            {
+                "x": [1, 1, 2, 3, 7, 11, -14, -16, -12, -2, -4, -13],
+                "expected": [1, -1, -18, -4, 0, -10, 15, 0, 3, -15, 2, 11],
+                "positive_modulo": False,
+            },
         ],
         "test_frobenius_square": [
             {
-                "x": Fq12(
-                    Fq6(Fq2(Fq(1), Fq(1)), Fq2(Fq(2), Fq(3)), Fq2(Fq(7), Fq(11))),
-                    Fq6(Fq2(Fq(5), Fq(3)), Fq2(Fq(8), Fq(17)), Fq2(Fq(15), Fq(6))),
-                ),
-                "expected": Fq12(
-                    Fq6(Fq2(Fq(1), Fq(1)), Fq2(Fq(2), Fq(3)), Fq2(Fq(7), Fq(11))),
-                    Fq6(Fq2(Fq(5), Fq(3)), Fq2(Fq(8), Fq(17)), Fq2(Fq(15), Fq(6))),
-                ).frobenius(2),
-            }
+                "x": [1, 1, 2, 3, 7, 11, -14, -16, -12, -2, -4, -13],
+                "expected": [1, 1, 14, 2, 1, 7, 17, 14, 7, 17, 10, 4],
+                "positive_modulo": True,
+            },
+            {
+                "x": [1, 1, 2, 3, 7, 11, -14, -16, -12, -2, -4, -13],
+                "expected": [1, 1, 14, 2, 1, 7, -2, -5, -12, -2, -9, -15],
+                "positive_modulo": False,
+            },
         ],
         "test_frobenius_cube": [
             {
-                "x": Fq12(
-                    Fq6(Fq2(Fq(1), Fq(1)), Fq2(Fq(2), Fq(3)), Fq2(Fq(7), Fq(11))),
-                    Fq6(Fq2(Fq(5), Fq(3)), Fq2(Fq(8), Fq(17)), Fq2(Fq(15), Fq(6))),
-                ),
-                "expected": Fq12(
-                    Fq6(Fq2(Fq(1), Fq(1)), Fq2(Fq(2), Fq(3)), Fq2(Fq(7), Fq(11))),
-                    Fq6(Fq2(Fq(5), Fq(3)), Fq2(Fq(8), Fq(17)), Fq2(Fq(15), Fq(6))),
-                ).frobenius(3),
-            }
+                "x": [1, 1, 2, 3, 7, 11, -14, -16, -12, -2, -4, -13],
+                "expected": [1, 18, 7, 10, 0, 4, 13, 0, 3, 4, 14, 1],
+                "positive_modulo": True,
+            },
+            {
+                "x": [1, 1, 2, 3, 7, 11, -14, -16, -12, -2, -4, -13],
+                "expected": [1, -1, -12, -9, 0, -15, 13, 0, 3, -15, 14, 1],
+                "positive_modulo": False,
+            },
         ],
     }
 
@@ -499,41 +629,29 @@ class Fq12ThreeOverTwoOverTwo:
     test_data = {
         "test_mul": [
             {
-                "x": Fq12(
-                    x0=Fq4(Fq2(Fq(1), Fq(1)), Fq2(Fq(2), Fq(3))),
-                    x1=Fq4(Fq2(Fq(7), Fq(11)), Fq2(Fq(5), Fq(3))),
-                    x2=Fq4(Fq2(Fq(8), Fq(17)), Fq2(Fq(15), Fq(6))),
-                ),
-                "y": Fq12(
-                    x0=Fq4(Fq2(Fq(1), Fq(2)), Fq2(Fq(3), Fq(4))),
-                    x1=Fq4(Fq2(Fq(8), Fq(12)), Fq2(Fq(1), Fq(10))),
-                    x2=Fq4(Fq2(Fq(5), Fq(16)), Fq2(Fq(11), Fq(12))),
-                ),
-                "expected": Fq12(
-                    x0=Fq4(Fq2(Fq(1), Fq(1)), Fq2(Fq(2), Fq(3))),
-                    x1=Fq4(Fq2(Fq(7), Fq(11)), Fq2(Fq(5), Fq(3))),
-                    x2=Fq4(Fq2(Fq(8), Fq(17)), Fq2(Fq(15), Fq(6))),
-                )
-                * Fq12(
-                    x0=Fq4(Fq2(Fq(1), Fq(2)), Fq2(Fq(3), Fq(4))),
-                    x1=Fq4(Fq2(Fq(8), Fq(12)), Fq2(Fq(1), Fq(10))),
-                    x2=Fq4(Fq2(Fq(5), Fq(16)), Fq2(Fq(11), Fq(12))),
-                ),
-            }
+                "x": [1, 1, 2, 4, 8, 12, -18, -9, -14, -3, 11, 12],
+                "y": [1, 1, 2, 3, 7, 11, -14, -16, 8, -2, -4, 6],
+                "expected": [8, 14, 3, 9, 15, 17, 11, 11, 12, 10, 13, 18],
+                "positive_modulo": True,
+            },
+            {
+                "x": [1, 1, 2, 4, 8, 12, -18, -9, -14, -3, 11, 12],
+                "y": [1, 1, 2, 3, 7, 11, -14, -16, 8, -2, -4, 6],
+                "expected": [8, 14, -16, -10, -4, -2, 11, 11, 12, 10, -6, -1],
+                "positive_modulo": False,
+            },
         ],
         "test_square": [
             {
-                "x": Fq12(
-                    Fq4(Fq2(Fq(1), Fq(1)), Fq2(Fq(2), Fq(3))),
-                    Fq4(Fq2(Fq(7), Fq(11)), Fq2(Fq(5), Fq(3))),
-                    Fq4(Fq2(Fq(8), Fq(17)), Fq2(Fq(15), Fq(6))),
-                ),
-                "expected": Fq12(
-                    Fq4(Fq2(Fq(1), Fq(1)), Fq2(Fq(2), Fq(3))),
-                    Fq4(Fq2(Fq(7), Fq(11)), Fq2(Fq(5), Fq(3))),
-                    Fq4(Fq2(Fq(8), Fq(17)), Fq2(Fq(15), Fq(6))),
-                ).power(2),
-            }
+                "x": [1, 1, 2, 3, -12, -8, -14, -16, 8, 17, -4, -13],
+                "expected": [0, 1, 11, 17, 6, 1, 18, 15, 2, 10, 17, 6],
+                "positive_modulo": True,
+            },
+            {
+                "x": [1, 1, 2, 3, -12, -8, -14, -16, 8, 17, -4, -13],
+                "expected": [0, -18, 11, 17, -13, -18, 18, 15, 2, 10, 17, 6],
+                "positive_modulo": False,
+            },
         ],
     }
 
@@ -547,13 +665,13 @@ def extract_test_case(config, data):
     test = None
 
     if x_in_data and not y_in_data and not z_in_data and not lam_in_data:
-        test = (config, data["x"], data["expected"])
+        test = (config, data["positive_modulo"], data["x"], data["expected"])
     elif x_in_data and y_in_data and not z_in_data and not lam_in_data:
-        test = (config, data["x"], data["y"], data["expected"])
+        test = (config, data["positive_modulo"], data["x"], data["y"], data["expected"])
     elif x_in_data and y_in_data and z_in_data and not lam_in_data:
-        test = (config, data["x"], data["y"], data["z"], data["expected"])
+        test = (config, data["positive_modulo"], data["x"], data["y"], data["z"], data["expected"])
     elif x_in_data and not y_in_data and not z_in_data and lam_in_data:
-        test = (config, data["x"], data["lam"], data["expected"])
+        test = (config, data["positive_modulo"], data["x"], data["lam"], data["expected"])
 
     return test
 
@@ -595,14 +713,18 @@ def verify_script(lock, unlock, clean_constant):
 
 @pytest.mark.parametrize("clean_constant", [True, False])
 @pytest.mark.parametrize("is_constant_reused", [True, False])
-@pytest.mark.parametrize(("config", "x", "y", "expected"), generate_test_cases("test_addition"))
-def test_addition(config, x, y, expected, clean_constant, is_constant_reused, save_to_json_folder):
+@pytest.mark.parametrize(("config", "positive_modulo", "x", "y", "expected"), generate_test_cases("test_addition"))
+def test_addition(config, positive_modulo, x, y, expected, clean_constant, is_constant_reused, save_to_json_folder):
     unlock = nums_to_script([config.q])
     unlock += generate_unlock(x)
     unlock += generate_unlock(y)
 
     lock = config.test_script.add(
-        take_modulo=True, check_constant=True, clean_constant=clean_constant, is_constant_reused=is_constant_reused
+        take_modulo=True,
+        positive_modulo=positive_modulo,
+        check_constant=True,
+        clean_constant=clean_constant,
+        is_constant_reused=is_constant_reused,
     )
     if is_constant_reused:
         lock += check_constant(config.q)
@@ -616,14 +738,18 @@ def test_addition(config, x, y, expected, clean_constant, is_constant_reused, sa
 
 @pytest.mark.parametrize("clean_constant", [True, False])
 @pytest.mark.parametrize("is_constant_reused", [True, False])
-@pytest.mark.parametrize(("config", "x", "y", "expected"), generate_test_cases("test_subtraction"))
-def test_subtraction(config, x, y, expected, clean_constant, is_constant_reused, save_to_json_folder):
+@pytest.mark.parametrize(("config", "positive_modulo", "x", "y", "expected"), generate_test_cases("test_subtraction"))
+def test_subtraction(config, positive_modulo, x, y, expected, clean_constant, is_constant_reused, save_to_json_folder):
     unlock = nums_to_script([config.q])
     unlock += generate_unlock(x)
     unlock += generate_unlock(y)
 
     lock = config.test_script.subtract(
-        take_modulo=True, check_constant=True, clean_constant=clean_constant, is_constant_reused=is_constant_reused
+        take_modulo=True,
+        positive_modulo=positive_modulo,
+        check_constant=True,
+        clean_constant=clean_constant,
+        is_constant_reused=is_constant_reused,
     )
     if is_constant_reused:
         lock += check_constant(config.q)
@@ -637,13 +763,17 @@ def test_subtraction(config, x, y, expected, clean_constant, is_constant_reused,
 
 @pytest.mark.parametrize("clean_constant", [True, False])
 @pytest.mark.parametrize("is_constant_reused", [True, False])
-@pytest.mark.parametrize(("config", "x", "expected"), generate_test_cases("test_negation"))
-def test_negation(config, x, expected, clean_constant, is_constant_reused, save_to_json_folder):
+@pytest.mark.parametrize(("config", "positive_modulo", "x", "expected"), generate_test_cases("test_negation"))
+def test_negation(config, positive_modulo, x, expected, clean_constant, is_constant_reused, save_to_json_folder):
     unlock = nums_to_script([config.q])
     unlock += generate_unlock(x)
 
     lock = config.test_script.negate(
-        take_modulo=True, check_constant=True, clean_constant=clean_constant, is_constant_reused=is_constant_reused
+        take_modulo=True,
+        positive_modulo=positive_modulo,
+        check_constant=True,
+        clean_constant=clean_constant,
+        is_constant_reused=is_constant_reused,
     )
     if is_constant_reused:
         lock += check_constant(config.q)
@@ -657,14 +787,18 @@ def test_negation(config, x, expected, clean_constant, is_constant_reused, save_
 
 @pytest.mark.parametrize("clean_constant", [True, False])
 @pytest.mark.parametrize("is_constant_reused", [True, False])
-@pytest.mark.parametrize(("config", "x", "y", "expected"), generate_test_cases("test_scalar_mul"))
-def test_scalar_mul(config, x, y, expected, clean_constant, is_constant_reused, save_to_json_folder):
+@pytest.mark.parametrize(("config", "positive_modulo", "x", "y", "expected"), generate_test_cases("test_scalar_mul"))
+def test_scalar_mul(config, positive_modulo, x, y, expected, clean_constant, is_constant_reused, save_to_json_folder):
     unlock = nums_to_script([config.q])
     unlock += generate_unlock(x)
     unlock += generate_unlock(y)
 
     lock = config.test_script.scalar_mul(
-        take_modulo=True, check_constant=True, clean_constant=clean_constant, is_constant_reused=is_constant_reused
+        take_modulo=True,
+        positive_modulo=positive_modulo,
+        check_constant=True,
+        clean_constant=clean_constant,
+        is_constant_reused=is_constant_reused,
     )
     if is_constant_reused:
         lock += check_constant(config.q)
@@ -678,14 +812,18 @@ def test_scalar_mul(config, x, y, expected, clean_constant, is_constant_reused, 
 
 @pytest.mark.parametrize("clean_constant", [True, False])
 @pytest.mark.parametrize("is_constant_reused", [True, False])
-@pytest.mark.parametrize(("config", "x", "y", "expected"), generate_test_cases("test_mul"))
-def test_mul(config, x, y, expected, clean_constant, is_constant_reused, save_to_json_folder):
+@pytest.mark.parametrize(("config", "positive_modulo", "x", "y", "expected"), generate_test_cases("test_mul"))
+def test_mul(config, positive_modulo, x, y, expected, clean_constant, is_constant_reused, save_to_json_folder):
     unlock = nums_to_script([config.q])
     unlock += generate_unlock(x)
     unlock += generate_unlock(y)
 
     lock = config.test_script.mul(
-        take_modulo=True, check_constant=True, clean_constant=clean_constant, is_constant_reused=is_constant_reused
+        take_modulo=True,
+        positive_modulo=positive_modulo,
+        check_constant=True,
+        clean_constant=clean_constant,
+        is_constant_reused=is_constant_reused,
     )
     if is_constant_reused:
         lock += check_constant(config.q)
@@ -699,13 +837,17 @@ def test_mul(config, x, y, expected, clean_constant, is_constant_reused, save_to
 
 @pytest.mark.parametrize("clean_constant", [True, False])
 @pytest.mark.parametrize("is_constant_reused", [True, False])
-@pytest.mark.parametrize(("config", "x", "expected"), generate_test_cases("test_square"))
-def test_square(config, x, expected, clean_constant, is_constant_reused, save_to_json_folder):
+@pytest.mark.parametrize(("config", "positive_modulo", "x", "expected"), generate_test_cases("test_square"))
+def test_square(config, positive_modulo, x, expected, clean_constant, is_constant_reused, save_to_json_folder):
     unlock = nums_to_script([config.q])
     unlock += generate_unlock(x)
 
     lock = config.test_script.square(
-        take_modulo=True, check_constant=True, clean_constant=clean_constant, is_constant_reused=is_constant_reused
+        take_modulo=True,
+        positive_modulo=positive_modulo,
+        check_constant=True,
+        clean_constant=clean_constant,
+        is_constant_reused=is_constant_reused,
     )
     if is_constant_reused:
         lock += check_constant(config.q)
@@ -719,15 +861,20 @@ def test_square(config, x, expected, clean_constant, is_constant_reused, save_to
 
 @pytest.mark.parametrize("clean_constant", [True, False])
 @pytest.mark.parametrize("is_constant_reused", [True, False])
-@pytest.mark.parametrize(("config", "x", "y", "z", "expected"), generate_test_cases("test_add_three"))
-def test_add_three(config, x, y, z, expected, clean_constant, is_constant_reused, save_to_json_folder):
+@pytest.mark.parametrize(
+    ("config", "positive_modulo", "x", "y", "z", "expected"), generate_test_cases("test_add_three")
+)
+def test_add_three(config, positive_modulo, x, y, z, expected, clean_constant, is_constant_reused, save_to_json_folder):
     unlock = nums_to_script([config.q])
     unlock += generate_unlock(x)
     unlock += generate_unlock(y)
     unlock += generate_unlock(z)
-
     lock = config.test_script.add_three(
-        take_modulo=True, check_constant=True, clean_constant=clean_constant, is_constant_reused=is_constant_reused
+        take_modulo=True,
+        positive_modulo=positive_modulo,
+        check_constant=True,
+        clean_constant=clean_constant,
+        is_constant_reused=is_constant_reused,
     )
     if is_constant_reused:
         lock += check_constant(config.q)
@@ -741,13 +888,17 @@ def test_add_three(config, x, y, z, expected, clean_constant, is_constant_reused
 
 @pytest.mark.parametrize("clean_constant", [True, False])
 @pytest.mark.parametrize("is_constant_reused", [True, False])
-@pytest.mark.parametrize(("config", "x", "expected"), generate_test_cases("test_conjugate"))
-def test_conjugate(config, x, expected, clean_constant, is_constant_reused, save_to_json_folder):
+@pytest.mark.parametrize(("config", "positive_modulo", "x", "expected"), generate_test_cases("test_conjugate"))
+def test_conjugate(config, positive_modulo, x, expected, clean_constant, is_constant_reused, save_to_json_folder):
     unlock = nums_to_script([config.q])
     unlock += generate_unlock(x)
 
     lock = config.test_script.conjugate(
-        take_modulo=True, check_constant=True, clean_constant=clean_constant, is_constant_reused=is_constant_reused
+        take_modulo=True,
+        positive_modulo=positive_modulo,
+        check_constant=True,
+        clean_constant=clean_constant,
+        is_constant_reused=is_constant_reused,
     )
     if is_constant_reused:
         lock += check_constant(config.q)
@@ -761,13 +912,17 @@ def test_conjugate(config, x, expected, clean_constant, is_constant_reused, save
 
 @pytest.mark.parametrize("clean_constant", [True, False])
 @pytest.mark.parametrize("is_constant_reused", [True, False])
-@pytest.mark.parametrize(("config", "x", "expected"), generate_test_cases("test_mul_by_u"))
-def test_mul_by_u(config, x, expected, clean_constant, is_constant_reused, save_to_json_folder):
+@pytest.mark.parametrize(("config", "positive_modulo", "x", "expected"), generate_test_cases("test_mul_by_u"))
+def test_mul_by_u(config, positive_modulo, x, expected, clean_constant, is_constant_reused, save_to_json_folder):
     unlock = nums_to_script([config.q])
     unlock += generate_unlock(x)
 
     lock = config.test_script.mul_by_u(
-        take_modulo=True, check_constant=True, clean_constant=clean_constant, is_constant_reused=is_constant_reused
+        take_modulo=True,
+        positive_modulo=positive_modulo,
+        check_constant=True,
+        clean_constant=clean_constant,
+        is_constant_reused=is_constant_reused,
     )
     if is_constant_reused:
         lock += check_constant(config.q)
@@ -781,13 +936,19 @@ def test_mul_by_u(config, x, expected, clean_constant, is_constant_reused, save_
 
 @pytest.mark.parametrize("clean_constant", [True, False])
 @pytest.mark.parametrize("is_constant_reused", [True, False])
-@pytest.mark.parametrize(("config", "x", "expected"), generate_test_cases("test_mul_by_one_plus_u"))
-def test_mul_by_one_plus_u(config, x, expected, clean_constant, is_constant_reused, save_to_json_folder):
+@pytest.mark.parametrize(("config", "positive_modulo", "x", "expected"), generate_test_cases("test_mul_by_one_plus_u"))
+def test_mul_by_one_plus_u(
+    config, positive_modulo, x, expected, clean_constant, is_constant_reused, save_to_json_folder
+):
     unlock = nums_to_script([config.q])
     unlock += generate_unlock(x)
 
     lock = config.test_script.mul_by_one_plus_u(
-        take_modulo=True, check_constant=True, clean_constant=clean_constant, is_constant_reused=is_constant_reused
+        take_modulo=True,
+        positive_modulo=positive_modulo,
+        check_constant=True,
+        clean_constant=clean_constant,
+        is_constant_reused=is_constant_reused,
     )
     if is_constant_reused:
         lock += check_constant(config.q)
@@ -801,14 +962,22 @@ def test_mul_by_one_plus_u(config, x, expected, clean_constant, is_constant_reus
 
 @pytest.mark.parametrize("clean_constant", [True, False])
 @pytest.mark.parametrize("is_constant_reused", [True, False])
-@pytest.mark.parametrize(("config", "x", "lam", "expected"), generate_test_cases("test_scalar_mul_fq"))
-def test_scalar_mul_fq(config, x, lam, expected, clean_constant, is_constant_reused, save_to_json_folder):
+@pytest.mark.parametrize(
+    ("config", "positive_modulo", "x", "lam", "expected"), generate_test_cases("test_scalar_mul_fq")
+)
+def test_scalar_mul_fq(
+    config, positive_modulo, x, lam, expected, clean_constant, is_constant_reused, save_to_json_folder
+):
     unlock = nums_to_script([config.q])
     unlock += generate_unlock(x)
     unlock += generate_unlock(lam)
 
     lock = config.test_script.fq_scalar_mul(
-        take_modulo=True, check_constant=True, clean_constant=clean_constant, is_constant_reused=is_constant_reused
+        take_modulo=True,
+        positive_modulo=positive_modulo,
+        check_constant=True,
+        clean_constant=clean_constant,
+        is_constant_reused=is_constant_reused,
     )
     if is_constant_reused:
         lock += check_constant(config.q)
@@ -822,14 +991,21 @@ def test_scalar_mul_fq(config, x, lam, expected, clean_constant, is_constant_reu
 
 @pytest.mark.parametrize("clean_constant", [True, False])
 @pytest.mark.parametrize("is_constant_reused", [True, False])
-@pytest.mark.parametrize(("config", "x", "lam", "expected"), generate_test_cases("test_scalar_mul_fq2"))
-def test_scalar_mul_fq2(config, x, lam, expected, clean_constant, is_constant_reused, save_to_json_folder):
+@pytest.mark.parametrize(
+    ("config", "positive_modulo", "x", "lam", "expected"), generate_test_cases("test_scalar_mul_fq2")
+)
+def test_scalar_mul_fq2(
+    config, positive_modulo, x, lam, expected, clean_constant, is_constant_reused, save_to_json_folder
+):
     unlock = nums_to_script([config.q])
     unlock += generate_unlock(x)
     unlock += generate_unlock(lam)
-
     lock = config.test_script.scalar_mul(
-        take_modulo=True, check_constant=True, clean_constant=clean_constant, is_constant_reused=is_constant_reused
+        take_modulo=True,
+        positive_modulo=positive_modulo,
+        check_constant=True,
+        clean_constant=clean_constant,
+        is_constant_reused=is_constant_reused,
     )
     if is_constant_reused:
         lock += check_constant(config.q)
@@ -843,13 +1019,18 @@ def test_scalar_mul_fq2(config, x, lam, expected, clean_constant, is_constant_re
 
 @pytest.mark.parametrize("clean_constant", [True, False])
 @pytest.mark.parametrize("is_constant_reused", [True, False])
-@pytest.mark.parametrize(("config", "x", "expected"), generate_test_cases("test_frobenius"))
-def test_frobenius(config, x, expected, clean_constant, is_constant_reused, save_to_json_folder):
+@pytest.mark.parametrize(("config", "positive_modulo", "x", "expected"), generate_test_cases("test_frobenius"))
+def test_frobenius(config, positive_modulo, x, expected, clean_constant, is_constant_reused, save_to_json_folder):
     unlock = nums_to_script([config.q])
     unlock += generate_unlock(x)
 
     lock = config.test_script.frobenius_odd(
-        n=1, take_modulo=True, check_constant=True, clean_constant=clean_constant, is_constant_reused=is_constant_reused
+        n=1,
+        take_modulo=True,
+        positive_modulo=positive_modulo,
+        check_constant=True,
+        clean_constant=clean_constant,
+        is_constant_reused=is_constant_reused,
     )
     if is_constant_reused:
         lock += check_constant(config.q)
@@ -863,13 +1044,20 @@ def test_frobenius(config, x, expected, clean_constant, is_constant_reused, save
 
 @pytest.mark.parametrize("clean_constant", [True, False])
 @pytest.mark.parametrize("is_constant_reused", [True, False])
-@pytest.mark.parametrize(("config", "x", "expected"), generate_test_cases("test_frobenius_square"))
-def test_frobenius_square(config, x, expected, clean_constant, is_constant_reused, save_to_json_folder):
+@pytest.mark.parametrize(("config", "positive_modulo", "x", "expected"), generate_test_cases("test_frobenius_square"))
+def test_frobenius_square(
+    config, positive_modulo, x, expected, clean_constant, is_constant_reused, save_to_json_folder
+):
     unlock = nums_to_script([config.q])
     unlock += generate_unlock(x)
 
     lock = config.test_script.frobenius_even(
-        n=2, take_modulo=True, check_constant=True, clean_constant=clean_constant, is_constant_reused=is_constant_reused
+        n=2,
+        take_modulo=True,
+        positive_modulo=positive_modulo,
+        check_constant=True,
+        clean_constant=clean_constant,
+        is_constant_reused=is_constant_reused,
     )
     if is_constant_reused:
         lock += check_constant(config.q)
@@ -883,13 +1071,18 @@ def test_frobenius_square(config, x, expected, clean_constant, is_constant_reuse
 
 @pytest.mark.parametrize("clean_constant", [True, False])
 @pytest.mark.parametrize("is_constant_reused", [True, False])
-@pytest.mark.parametrize(("config", "x", "expected"), generate_test_cases("test_frobenius_cube"))
-def test_frobenius_cube(config, x, expected, clean_constant, is_constant_reused, save_to_json_folder):
+@pytest.mark.parametrize(("config", "positive_modulo", "x", "expected"), generate_test_cases("test_frobenius_cube"))
+def test_frobenius_cube(config, positive_modulo, x, expected, clean_constant, is_constant_reused, save_to_json_folder):
     unlock = nums_to_script([config.q])
     unlock += generate_unlock(x)
 
     lock = config.test_script.frobenius_odd(
-        n=3, take_modulo=True, check_constant=True, clean_constant=clean_constant, is_constant_reused=is_constant_reused
+        n=3,
+        take_modulo=True,
+        positive_modulo=positive_modulo,
+        check_constant=True,
+        clean_constant=clean_constant,
+        is_constant_reused=is_constant_reused,
     )
     if is_constant_reused:
         lock += check_constant(config.q)
