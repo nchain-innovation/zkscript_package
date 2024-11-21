@@ -86,8 +86,8 @@ class Fq2Over2ResidueEqualU(Fq4):
         out += Script.parse_string("OP_ADD")
         out += Script.parse_string("OP_TOALTSTACK")
 
-        # Compute the zero term in (x0 + x1*u + x2*v + x3*uv)^2
-        # stack out:    [..., zero term := x0^2 + (x1^2 + 2*x2*x3)*NON_RESIDUE]
+        # Compute the zeroth term in (x0 + x1*u + x2*v + x3*uv)^2
+        # stack out:    [..., zeroth term := x0^2 + (x1^2 + 2*x2*x3)*NON_RESIDUE]
         # altstack out: [uv coefficient, v coefficient, u coefficient]
         out += Script.parse_string("OP_2 OP_MUL OP_MUL")
         out += Script.parse_string("OP_SWAP")
@@ -199,8 +199,8 @@ class Fq2Over2ResidueEqualU(Fq4):
         out += pick(position=8, n_elements=1)
         out += Script.parse_string("OP_MUL OP_ADD OP_TOALTSTACK")
 
-        # Compute the zero term in (x0 + x1*u + x2*v + x3*uv)*(y0 + y1*u + y2*v + y3*uv)
-        # stack out:    [..., zero term := x0*y0 + (x1*y1 + x2*y3 + x3*y2)*NON_RESIDUE]
+        # Compute the zeroth term in (x0 + x1*u + x2*v + x3*uv)*(y0 + y1*u + y2*v + y3*uv)
+        # stack out:    [..., zeroth term := x0*y0 + (x1*y1 + x2*y3 + x3*y2)*NON_RESIDUE]
         # altstack out: [uv coefficient, v coefficient, u coefficient]
         out += Script.parse_string("OP_2ROT OP_TOALTSTACK OP_MUL OP_SWAP OP_FROMALTSTACK OP_MUL OP_ADD OP_TOALTSTACK")
         out += Script.parse_string("OP_ROT OP_MUL OP_TOALTSTACK OP_MUL")

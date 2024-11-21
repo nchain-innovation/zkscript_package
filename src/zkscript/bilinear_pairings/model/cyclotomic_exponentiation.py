@@ -17,7 +17,7 @@ class CyclotomicExponentiation:
             q: The characteristic of the base field F_q.
             cyclotomic_inverse: Script to compute the cyclotomic inverse.
             square: Script to compute the square in the field over which we compute the cyclotomic exponentiation.
-            mul: Script to compute the square in the field over which we compute the cyclotomic exponentiation.
+            mul: Script to compute the multiplication in the field over which we compute the cyclotomic exponentiation.
             extension_degree: Extension degree (over F_q) of the field over which we compute the cyclotomic
                 exponentiation.
         """

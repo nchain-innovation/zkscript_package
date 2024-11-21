@@ -62,7 +62,7 @@ patterns_to_roll = {
     (5, 4): [OP_2ROT, OP_2ROT],
 }
 op_range = range(-1, 17)
-op_range_to_opccode = {
+op_range_to_opcode = {
     -1: OP_1NEGATE,
     0: OP_0,
     1: OP_1,
@@ -118,7 +118,7 @@ def pick(position: int, n_elements: int) -> Script:
     if (position, n_elements) in patterns_to_pick:
         out += Script(patterns_to_pick[(position, n_elements)])
     elif position in op_range[1:]:
-        out += Script([op_range_to_opccode[position], OP_PICK] * n_elements)
+        out += Script([op_range_to_opcode[position], OP_PICK] * n_elements)
     elif position < 0:
         ix_to_pick = position
         for _ in range(n_elements):
@@ -176,7 +176,7 @@ def roll(position: int, n_elements: int) -> Script:
     if (position, n_elements) in patterns_to_roll:
         out += Script(patterns_to_roll[(position, n_elements)])
     elif position in op_range[2:]:
-        out += Script([op_range_to_opccode[position], OP_ROLL] * n_elements)
+        out += Script([op_range_to_opcode[position], OP_ROLL] * n_elements)
     elif position < 0:
         for _ in range(n_elements):
             out += Script.parse_string("OP_DEPTH")
@@ -211,7 +211,7 @@ def nums_to_script(nums: list[int]) -> Script:
     out = Script()
     for n in nums:
         if n in op_range:
-            out += Script([op_range_to_opccode[n]])
+            out += Script([op_range_to_opcode[n]])
         else:
             out.append_pushdata(encode_num(n))
 

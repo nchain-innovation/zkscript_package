@@ -1,4 +1,4 @@
-"""Operations between Miller output (in F_q^12) and line evaluations for BLS12-381."""
+"""Operations between Miller output (in F_q^12 as cubic extension of F_q^4) and line evaluations for BLS12-381."""
 
 from tx_engine import Script
 
@@ -13,9 +13,9 @@ class MillerOutputOperations(Fq12CubicScriptModel):
     Operations are performed in Fq12Cubic, Fq^12 = Fq^4[r] / (r^3 - s) = F_q^2[s,r] / (r^3 - s, s^2 - xi).
 
     We call:
-        - `sparse` elements of the form: a + bs + cr^2, with a, c in F_q^2, and b in F_q.
+        - `sparse` elements of the form: a + b s + c r^2, with a, c in F_q^2, and b in F_q.
         - `somewhat sparse` elements of the form: a + b s + c rs + d r^2 + e r^2s, with a, b, c, d, e in F_q^2.
-        - `dense` elements of the form: a + bs + cr + drs + er^2 + f r^2s, with a, b, c, d, e, f in F_q^2.
+        - `dense` elements of the form: a + b s + c r + d rs + e r^2 + f r^2s, with a, b, c, d, e, f in F_q^2.
 
     The output of line evaluations are sparse elements.
     The product of two line evaluations are somewhat sparse elements.
@@ -1165,7 +1165,7 @@ class MillerOutputOperations(Fq12CubicScriptModel):
         clean_constant: bool | None = None,
         is_constant_reused: bool | None = None,
     ) -> Script:
-        """Multiplication in F_q^12 as a cubic extension of F_q^4.."""
+        """Multiplication in F_q^12 as a cubic extension of F_q^4."""
         return MillerOutputOperations.mul(
             self,
             take_modulo=take_modulo,

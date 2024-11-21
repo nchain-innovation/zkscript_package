@@ -8,5 +8,5 @@ Modules:
     - line_functions: Line evaluation for MNT4-753.
     - miller_output_operations: Operations between Miller output (of type Fq4) and line evaluations.
     - bls12_381: Build pairing model for MNT4-753.
-    - parameters: BLS12-MNT4-753 curve parameters.
+    - parameters: MNT4-753 curve parameters.
 """

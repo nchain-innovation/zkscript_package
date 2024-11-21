@@ -1,4 +1,4 @@
-"""Bitcoin scripts that compute bilinear pairing."""
+"""Bitcoin scripts that compute bilinear pairings."""
 
 from tx_engine import Script
 

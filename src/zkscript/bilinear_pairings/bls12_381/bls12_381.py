@@ -24,7 +24,16 @@ twisted_curve_operations = EllipticCurveFq2(q=q, curve_a=twisted_a, fq2=fq2_scri
 
 
 def pad_eval_times_eval_to_miller_output() -> Script:
-    """Pad a number with two zeros on the left."""
+    """Pad the product of two lines evaluations to a full Miller output (element in F_q^12 as cubic extension of F_q^4).
+
+    Stack input:
+        - stack:    [x := (a,b,d,e,f)], `x` is a tuple of elements in F_q^2
+        - altstack: []
+
+    Stack output:
+        - stack:    [x := ((a,b),(0,d),(e,f))], 'x' is a triplet of elements in F_q^4
+        - altstack: []
+    """
     out = Script()
     out += Script.parse_string(" ".join(["OP_TOALTSTACK"] * 6))
     out += Script.parse_string("OP_0 OP_0")

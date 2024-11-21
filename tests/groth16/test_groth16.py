@@ -189,6 +189,9 @@ def save_scripts(lock, unlock, save_to_json_folder, filename, test_name):
     ],
 )
 def test_groth16(test_script, vk, alpha_beta, groth16_proof, filename, save_to_json_folder):
+    groth16_proof = {
+        "lambdas_partial_sums" if key == "lamdbas_partial_sums" else key: value for key, value in groth16_proof.items()
+    }  # Temporary fix
     unlock = test_script.groth16_verifier_unlock(**groth16_proof)
 
     lock = test_script.groth16_verifier(

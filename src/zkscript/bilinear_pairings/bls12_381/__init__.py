@@ -7,6 +7,6 @@ Modules:
     - fields: Finite field arithmetic for BLS12-381.
     - final_exponentiation: Final exponentiation for BLS12-381.
     - line_functions: Line evaluation for BLS12-381.
-    - miller_output_operations: Operations between Miller output (of type Fq4) and line evaluations.
+    - miller_output_operations: Operations between Miller output and line evaluations.
     - parameters: BLS12-381 curve parameters.
 """

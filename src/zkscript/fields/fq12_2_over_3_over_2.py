@@ -155,6 +155,9 @@ class Fq12:
 
         Returns:
             Script to square an element in F_q^12.
+
+        Notes:
+            This script works for F_q^12 = F_q^6[w] / (w^2 - v) = F_q^2[w,v] / (w^2 - v, v^3 - non_residue_fq2)
         """
         # Fq6 implementation
         fq2 = self.FQ2
@@ -362,7 +365,7 @@ class Fq12:
         """Conjugation in F_q^12.
 
         Stack input:
-            - stack:    [q, ..., x := (x0, x1, ..., x12)], `x` is a couple of elements of F_q^6
+            - stack:    [q, ..., x := (x0, x1, ..., x11)], `x` is a couple of elements of F_q^6
             - altstack: []
 
         Stack output:
@@ -427,7 +430,7 @@ class Fq12:
             - altstack: []
 
         Stack output:
-            - stack:    [q, ..., x^q^n]
+            - stack:    [q, ..., x^(q^n)]
             - altstack: []
 
         Args:
@@ -546,7 +549,7 @@ class Fq12:
             - altstack: []
 
         Stack output:
-            - stack:    [q, ..., x^q^n]
+            - stack:    [q, ..., x^(q^n)]
             - altstack: []
 
         Args:

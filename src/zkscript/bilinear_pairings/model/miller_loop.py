@@ -22,7 +22,7 @@ class MillerLoop:
             - altstack: []
 
         Stack output:
-            - stack:    [q, ..., (t-1)Q, miller(P,Q)], `miller(P,Q)` is in F_q^k
+            - stack:    [q, ..., wQ, miller(P,Q)], `miller(P,Q) = f_(w,Q)(P)` is in F_q^k
             - altstack: []
 
         Args:
@@ -102,7 +102,8 @@ class MillerLoop:
         elif exp_miller_loop[-1] == -1:
             set_T += pick(position=N_POINTS_TWIST - 1, n_elements=N_POINTS_TWIST)  # Pick -Q
         else:
-            raise ValueError("Last element of exp_miller_loop must be non-zero.")
+            msg = "Last element of exp_miller_loop must be non-zero."
+            raise ValueError(msg)
         out += set_T
 
         clean_final = False
@@ -429,7 +430,7 @@ class MillerLoop:
         Args:
             point_p (list[int]): Point `P` at which the Miller loop is evaluated.
             point_q (list[int]): Point `Q` at which the Miller loop is evaluated.
-            lambdas_q_exp_miller_loop (list[list[list[int]]]): lambdas needed to compute the multiplication (t-1)Q. See
+            lambdas_q_exp_miller_loop (list[list[list[int]]]): lambdas needed to compute the multiplication wQ. See
                 unrolled_multiplication_input.
 
         Returns:

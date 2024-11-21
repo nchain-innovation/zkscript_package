@@ -19,7 +19,7 @@ def fq2_for_towering(mul_by_non_residue):
 class Fq2:
     """Construct Bitcoin scripts that perform arithmetic operations in F_q^2 = F_q[x] / (x^2 - non_residue).
 
-    F_q^2 = F_q[x] / (x^2 - non_residue) is a quadratic extension of a base field F_q.
+    F_q^2 = F_q[u] / (u^2 - non_residue) is a quadratic extension of a base field F_q.
 
     Elements in F_q^2 are of the form `x0 + x1 * u`, where `x0` and `x1` are elements of F_q, and `u^2` is equal to
     some `non_residue` in F_q.
@@ -236,9 +236,6 @@ class Fq2:
 
         Returns:
             Script to multiply an element by a scalar `lambda` in F_q^2.
-
-        Preconditions:
-            - `lambda` is a positive integer.
         """
         out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 

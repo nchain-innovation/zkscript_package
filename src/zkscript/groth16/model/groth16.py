@@ -188,8 +188,8 @@ class Groth16(PairingModel):
                 loop).
             lambdas_minus_gamma_exp_miller_loop (list[list[list[int]]]): Gradients needed to compute val * (-gamma).
             lambdas_minus_delta_exp_miller_loop (list[list[list[int]]]): Gradients needed to compute val * (-delta).
-            inverse_miller_loop (list[int]): Inverse of miller_loop(A,B) * miller_loop(C,-gamma) *
-                miller_loop(sum_gamma_abc,-delta), where gamma_abc is taken from the vk.
+            inverse_miller_loop (list[int]): Inverse of miller_loop(A,B) * miller_loop(C,-delta) *
+                miller_loop(sum_gamma_abc,-gamma), where gamma_abc is taken from the vk.
             lambdas_partial_sums (list[int]): List of gradients, the element at position n_pub - i - 1 is the list of
                 gradients to compute a_(i+1) * gamma_abc[i] and \sum_(j=0)^(i) a_j * gamma_abc[j], 0 <= i <= n_pub - 1.
             lambdas_multiplications (list[int]): List of gradients, the element at position i is the list of gradients

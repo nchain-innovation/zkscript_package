@@ -42,10 +42,10 @@ class PairingModel(MillerLoop, TripleMillerLoop, Pairing):
 
         Args:
             q: Characteristic of the field over which the pairing is defined.
-            exp_miller_loop: Expansion of trace - 1 to carry out the Miller loop.
+            exp_miller_loop: Expansion of value over which the Miller loop is carried out.
             extension_degree: Extension degree.
-            n_points_curve: Number integers needed to define a point on the base curve.
-            n_points_twist: Number integers needed to define a point on the twisted curve.
+            n_points_curve: Number of integers needed to define a point on the base curve.
+            n_points_twist: Number of integers needed to define a point on the twisted curve.
             n_elements_miller_output: Number of integers needed to write the Miller output.
             n_elements_evaluation_output: Number of integers needed to write the result of a line evaluation.
             n_elements_evaluation_times_evaluation: Number of integers needed to write the result of the product of two
@@ -66,7 +66,7 @@ class PairingModel(MillerLoop, TripleMillerLoop, Pairing):
                 line evaluations and the Miller output: the script computes t1 * t2, where
                 t1 = ev * ev, t2 = miller_output.
             miller_loop_output_square: Script to compute the square of the Miller output.
-            miller_loop_output_mul: Script to compute the multiplication of th e Miller output with another elements in
+            miller_loop_output_mul: Script to compute the multiplication of the Miller output with another element in
                 F_q^k.
             miller_loop_output_times_eval: Script to compute the multiplication of the Miller output with a line
                 evaluation.
@@ -76,12 +76,12 @@ class PairingModel(MillerLoop, TripleMillerLoop, Pairing):
             miller_loop_output_times_eval_times_eval_times_eval_times_eval_times_eval_times_eval: Script to compute
                 the multiplication of the Miller output with a product of six line evaluations: the script computes
                 t1 * t2, where t1 = miller_output, t2 = ev * ev * ev * ev * ev * ev.
-            pad_eval_times_eval_to_miller_output: Script to pad a product of two line evaluations to a miller_output.
+            pad_eval_times_eval_to_miller_output: Script to pad a product of two line evaluations to a Miller output.
             pad_eval_times_eval_times_eval_times_eval_to_miller_output: Script to pad a product of four line evaluations
-                to a miller_output.
+                to a Miller output.
             cyclotomic_inverse: Script to compute the inverse of an element in the cyclotomic subgroup.
             easy_exponentiation_with_inverse_check: Script to compute easy exponentiation with inverse check.
-            hard_exponentiation: Script to compute hard exponentation.
+            hard_exponentiation: Script to compute hard exponentiation.
         """
         self.MODULUS = q
         self.exp_miller_loop = exp_miller_loop

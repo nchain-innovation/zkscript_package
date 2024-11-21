@@ -47,10 +47,10 @@ def to_quadratic(self) -> Script:
 
     Notes:
         The isomorphism is:
-            Fq12Cubic = F_q^4[w] / (w^3 - xi)
-                = F_q^2[u,r,w] / (u^2 + 1, r^2 - xi, w^3 - r)
-                = F_q^2[t] / (t^6 - xi)
-                = F_q^2[u,v,w] / (u^2 + 1, v^3 - xi, w^2 - v)
+            Fq12Cubic = F_q^4[r] / (r^3 - s)
+                = F_q[u,s,r] / (u^2 + 1, s^2 - xi, r^3 - s), xi = 1 + u
+                = F_q[u,t] / (t^6 - xi)
+                = F_q[u,v,w] / (u^2 + 1, v^3 - xi, w^2 - v)
                 = F_q^6[w] / (w^2 - v)
                 = Fq12
         Hence, we convert as follows: ((a,b),(c,d),(e,f)) --> ((a,e,d),(c,b,f))

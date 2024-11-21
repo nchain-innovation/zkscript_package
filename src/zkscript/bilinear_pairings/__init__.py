@@ -5,7 +5,7 @@ This package provides subpackages for constructing Bitcoin scripts that perform 
 Subpackages:
     - bls12_381: Contains modules for constructing Bitcoin scripts that perform bilinear pairings over BLS12-381.
     - mnt4_753: Contains modules for constructing Bitcoin scripts that perform bilinear pairings over MNT4-753.
-    - model: Contains modules for constructing Bitcoin scripts that perform bilinear pairings and miller loop
+    - model: Contains modules for constructing Bitcoin scripts that perform bilinear pairings and Miller loop
     computations.
 
 Usage example:
@@ -18,7 +18,7 @@ Usage example:
     ...     clean_constant = True,
     ... )
     >>>
-    >>> # Script that, taken two points P1, P2, P3, Q1, Q2, Q3, and some additional data, compute the product of the
+    >>> # Script that, taken two points P1, P2, P3, Q1, Q2, Q3, and some additional data, computes the product of the
     >>> # three pairings e(P1,Q1) * e(P2,Q2) * e(P3,Q3)
     >>> bls12_381_triple_pairing = bls12_381.triple_pairing(
     ...     modulo_threshold = 1,

@@ -99,7 +99,7 @@ class EllipticCurveFqUnrolled:
                 take_modulo = False
                 current_size = size_after_operations
 
-            # Roll marker to decide whether to excute the loop and the auxiliary data
+            # Roll marker to decide whether to execute the loop and the auxiliary data
             # stack in:  [auxiliary_data, marker_doubling, P, T]
             # stack out: [auxiliary_data, P, T, marker_doubling]
             out += roll(position=4, n_elements=1)

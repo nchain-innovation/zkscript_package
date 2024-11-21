@@ -418,7 +418,7 @@ class Fq4:
             - altstack: []
 
         Stack output:
-            - stack:    [q, ..., x^q^n]
+            - stack:    [q, ..., x^(q^n)]
             - altstack: []
 
         Args:
@@ -433,7 +433,6 @@ class Fq4:
             Script to compute the Frobenius endomorphism for odd powers of an element in F_q^4.
         """
         assert n % 2 == 1
-        assert n % 4 != 0
 
         # Fq2 implementation
         fq2 = self.BASE_FIELD
@@ -480,7 +479,7 @@ class Fq4:
             - altstack: []
 
         Stack output:
-            - stack:    [q, ..., x^q^2]
+            - stack:    [q, ..., x^(q^2)]
             - altstack: []
 
         Args:
