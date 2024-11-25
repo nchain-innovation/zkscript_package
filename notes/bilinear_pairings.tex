@@ -1,0 +1,666 @@
+\documentclass{article}
+
+% Some notation
+\newcommand{\gOne}{\mathbb{G}_1}
+\newcommand{\gTwo}{\mathbb{G}_2}
+\newcommand{\gT}{\mathbb{G}_T}
+\newcommand{\ee}{e \colon \mathbb{G}_1 \times \mathbb{G}_2 \rightarrow \mathbb{G}_T}
+\newcommand{\ev}{\mathrm{ev}}
+\newcommand{\cyclotomic}[2]{\Phi_{#1}(#2)}
+\newcommand{\fq}[1]{\mathbb{F}_{q^{#1}}}
+\newcommand{\cO}{\mathcal{O}}  
+\newcommand{\frob}{\pi_q}
+
+% Stuff to do
+\newcommand{\red}[1]{\color{red}#1\color{black}}
+
+% Languages
+\usepackage[english]{babel}
+
+% Math-related
+\usepackage{amsmath}
+\usepackage{amsfonts} % mathbb
+\usepackage{amsthm} % remark environment
+\usepackage{amssymb}
+
+% Hyperlinks
+\usepackage{hyperref}
+
+% Diagrams
+\usepackage{tikz-cd}
+
+% Comments
+\usepackage{verbatim}
+
+% Algorithms
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+
+% Environments
+\theoremstyle{remark}
+\newtheorem{remark}{Remark}[section]
+
+\theoremstyle{plain}
+\newtheorem{lemma}{Lemma}[section]
+
+\title{Notes on bilinear pairings}
+\author{Federico Barbacovi \\ \href{mailto:f.barbacovi@nchain.com}{\texttt{f.barbacovi@nchain.com}}}
+
+
+\begin{document}
+
+\maketitle
+\tableofcontents
+
+\section{Introduction}
+
+These notes are meant to be a companion to the Github repository \href{https://github.com/nchain-innovation/zkscript_package}{zkscript}.
+In the notes we present the material which is turned into code in the repository.
+
+The notes are based on various references that are cited throughout.
+We also carry out some explicit calculations that we were not able to find in the literature.
+If you spot any mistake, please reach out to \href{mailto:f.barbacovi@nchain.com}{\texttt{f.barbacovi@nchain.com}} or \href{mailto:research.enquiries@nchain.com}{\texttt{research.enquiries@nchain.com}}.
+
+\section{Recollections on elliptic curves}
+
+\subsection{Torsion points and embedding degree}
+
+Let $E$ be an elliptic curve over a field $\fq{}$ of order $n = \vert E(\fq{}) \vert$.
+Let $r$ be a prime number, we define the group of $r$-torsion points on $E$ as
+\[
+E[r] := \{ P \in E(\overline{\fq{}}): r \cdot P = \cO \}
+\]
+where $\cO$ is the point at infinity.
+
+If $r$ is a prime divisor of $n$ such that $\gcd(r,q) = 1$, then $E[r] \simeq (\mathbb{Z}/r\mathbb{Z})^2$ \cite{ADC-handbook-ECC}.
+In general, $E[r]$ might be completely formed by points with coordinates in $\fq{}$.
+However, this is not always the case, and to find $E[r]$ we often need to take an extension $\fq{k}$ of $\fq{}$.
+
+Define the \emph{embedding} degree of $E$ to be the smallest $k$ such that $r \nmid q^k - 1$.
+Then, under the assumption $r \nmid q - 1$ (i.e., $k > 1$), $\fq{k}$ is the smallest field such that $E[r] \subset E(\fq{k})$, \cite[Thm. 1]{BK-improbability-ec-subexp-dlog}.
+
+From now on, we assume the elliptic curve $E$ has embedding degree $k > 1$.
+
+\subsection{Frobenius morphism}
+
+The Frobenius morphism for the curve $E$ is defined as $\frob \colon E \rightarrow E, (x,y) \mapsto (x^q,y^q)$.
+Considering $\frob \in \mathrm{End}(E)$, its minimal polynomial is
+\[
+    \chi(X) = X^2 - tX + q
+\]
+where $t$ is called the \emph{trace} of the Frobenius.\footnote{We have that $n = q - t + 1$ and that $\vert t \vert \leq 2 \sqrt{q}$.}
+
+Looking at the constant term of $\chi$, we see that the eigenvalues of $\frob$ are $1, q$.
+Indeed, $\frob \vert_{E(\fq{})} = \mathrm{id}$, and therefore the remaining eigenvalue is $q$.
+
+We define
+\[
+\gOne = \ker (\frob - id) \cap E[r] \quad \quad \gTwo = \ker (\frob - q \cdot \mathrm{id}) \cap E[r]
+\]
+Under the assumption that the embedding degree of $E$ is $k > 1$, we have $\gOne, \gTwo \subset E(\fq{k})$.
+
+\subsection{Line functions}
+
+Let $E$ be an elliptic curve over a field $\fq{m}$.
+This means that $E \subset \fq{} \times \fq{m}$.
+
+For a couple of points $Q,T \in E$, let us consider the line $\ell_{Q,T}$ through $Q$ and $T$ (where $\ell_{Q,T}$ is the tangent line to $Q$ if $Q = T$, and it is the vertical line through $Q$ and $T$ if $Q = -T$) and $\lambda_{Q,T}$ the gradient of this line.
+Then, we define the evaluation of $\ell_{Q,T}$ at $P \in E$ as follows:
+\begin{itemize}
+    \item If $Q \neq -T$, $\ell_{Q,T}$ is given by the equation $y - y_Q = \lambda_{Q,T} (x - x_Q)$. Then
+    \[
+        \ev_{\ell_{Q,T}}(P) := y_P - y_Q - \lambda_{Q,T} (x_P - x_Q) = y_P - y_T - \lambda_{Q,T} (x_P - x_T)
+    \]
+    \item If $Q = -T$, $\ell_{Q,T}$ is given by the equation $x = x_Q$. Then
+    \[
+        \ev_{\ell_{Q,T}}(P) := x_P - x_Q = x_P - x_T
+    \]
+\end{itemize}
+
+\section{Bilinear pairings}
+
+For certain curves $E$ and primes $r$, one can define an efficiently computable bilinear map
+\[
+\ee
+\]
+Namely, a map such that
+\[
+    e(P + P', Q) = e(P,Q) \cdot e(P',Q) \quad \quad e(P, Q + Q') = e(P, Q) \cdot e(P, Q')
+\]
+
+There exists various types of pairings (\href{https://en.wikipedia.org/wiki/Weil_pairing}{Weil's}, \href{https://en.wikipedia.org/wiki/Tate_pairing}{Tate's}, and (Optimal) Ate's \cite{HSV-Eta-pairing-revisited}, \cite{V-optimal-ate-pairings}), which differ for their definition and efficiency characteristics.
+
+\subsection{Structure of a pairing}
+
+Let $P \in \gOne, Q \in \gTwo$, then pairings are we are interested in have the following form
+\[
+e(P,Q) = f_{w,Q}(P)^{\frac{q^k-1}{r}}
+\]
+where:
+\begin{enumerate}
+    \item $t$ is the trace of the Frobenius morphism
+    \item $k$ is the embedding degree of $E$, i.e., the smallest positive $k$ such that $r \mid q^k - 1$
+    \item $r$ is the order of $P$ and $Q$
+    \item $f_{w,Q}$ is the \emph{Miller function} defined as the (unique up to scalar multiple) rational function on $E$ with divisor $div(f_{w,Q}) = w [Q] - [wQ] - (w-1)[\cO]$.
+\end{enumerate}
+
+\begin{remark}
+    When $w = r$, we get the definition of the reduced Tate pairing, while for $w = t-1$ we get the Ate pairing \cite[Thm. 1]{HSV-Eta-pairing-revisited}
+\end{remark}
+
+The computation of the pairing is divided in two parts: the computation of $f_{w,Q}(P)$, and the final exponentiation $f_{w,Q}(P) \mapsto f_{w,Q}(P)^{\frac{q^k-1}{r}}$.
+
+\subsection{The Miller loop}
+
+To compute $f_{w,Q}$, in \cite{M-Weil-pairing} Miller introduced a square-and-multiply algorithm that works as follows.
+Define $f_{0,Q} = 1$ and the functions $f_{i,Q}$, $i \geq 1$, as the unique ones, up to scalar multiple, that satisfy
+\[
+div(f_{i,Q}) = i [Q] - [iQ] - (i-1)[\cO]
+\]
+
+Miller noticed that 
+\begin{equation}
+    \label{eqn:relationsMillerLoop}
+    f_{i+j,Q} = f_{i,Q} f_{j,Q} \frac{\ell_{iQ,jQ}}{\ell_{(i+j)Q,(i+j)Q}}
+\end{equation}
+which can be used to compute $f_{w,Q}$ via square-and-multiply.
+Before describing the algorithm, let us notice that \eqref{eqn:relationsMillerLoop} passes on to the evaluations of the function.
+Hence, \eqref{eqn:relationsMillerLoop} can be used to directly compute $f_{w,Q}(P)$, see algorithm \ref{alg:millerAlgorithm}.
+
+\begin{algorithm}
+    \caption{\small Miller's algorithm}\label{alg:millerAlgorithm}
+    \textbf{Inputs:} $P \in \gOne$, $Q \in \gTwo$, $w = \sum_{i=0}^n w_i 2^i$, $w_i \in \{-1,0,1\}$, $w_n \neq 0$
+
+    \textbf{Output}: $f_{w,Q}(P) \in \gT$
+    \begin{algorithmic}
+        \State $out \gets 1$
+        \If{$w_n = 1$}
+            \State $T \gets Q$
+        \Else
+            \State $T \gets -Q$
+        \EndIf
+
+        \For{$i=n-1, \dots, 0$}
+        \State $out \gets out^2$
+        \State $out \gets out \cdot \frac{\ev_{\ell_{T,T}}(P)}{\ev_{\ell_{2T,2T}}(P)}$
+        \State $T \gets 2T$
+        \If{$w_i = 1$}
+            \State $out \gets out \cdot \frac{\ev_{\ell_{T,Q}}(P)}{\ev_{\ell_{T+Q,T+Q}}(P)}$
+            \State $T \gets T + Q$
+        \Else
+            \State $out \gets out \cdot \frac{\ev_{\ell_{T,-Q}}(P)}{\ev_{\ell_{T-Q,T-Q}}(P)}$
+            \State $T \gets T - Q$
+        \EndIf
+        \EndFor
+    \end{algorithmic}
+\end{algorithm}
+
+\subsection{Twists}
+
+The problem with using Miller's algorithm straightaway is that it requires $P$ and $Q$ to belong to $E(\fq{m})$ for the same $m$, which means that the cost to carry out the calculations might be high if $m$ is large.
+In our case, we have $P, Q \in E(\fq{k})$.
+
+To reduce the cost of the calculations in the Miller loop we use a twist of the elliptic curve $E$.
+That is, we find another elliptic curve $E'$ such that:
+\begin{itemize}
+    \item $E'$ is defined over $\fq{k/d}$
+    \item $E'(\fq{k}) \simeq E(\fq{k})$
+\end{itemize}
+Then, we carry out the computations of the Miller loop in $\fq{k/d}$, and we reduce their cost.
+
+\subsubsection{Types of twists and their equations}
+Below are the equation of $E$ and $E'$ in short Weierstrass
+\[
+    E : y^2 = x^3 + ax + b \quad \quad E': y^2 = x^3 + \omega^4 a x + \omega^6 b
+\]
+where $\omega \in \fq{k}$.
+The isomorphism between $E$ and $E'$ (over $\fq{k}$) is given by:
+\[
+    \Psi^{-1} \colon E' \rightarrow E: (x,y) \mapsto (\omega^2 x, \omega^3 y)
+\]
+
+The twists differ depending on the characteristics of $\omega$ \cite[Sec. 4.3]{C-pairings}:
+\begin{itemize}
+    \item Quadratic twists: in this case $d=2$, $\omega^2 \in \fq{k/2}$. Then, $E'$ is defined over $\fq{k/2}$.
+    \item Cubic twists: possible only when $a = 0$; in this case $d=3$, $\omega^3 \in \fq{k/3}$, $\omega^2 \in \fq{k} \setminus \fq{k/3}$. Then, $E'$ is defined over $\fq{k/3}$.
+    \item Quartic twists: possible only when $b = 0$; in this case $d=4$, $\omega^4 \in \fq{k/4}$, $\omega^2 \in \fq{k/2}$, $\omega^2 \in \fq{k} \setminus \fq{k/2}$. Then, $E'$ is defined over $\fq{k/4}$.
+    \item Sextic twists: possible only when $a = 0$; in this case $d=6$, $\omega^6 \in \fq{k/6}$, $\omega^3 \in \fq{k/3}$, $\omega^2 \in \fq{k/2}$. Then, $E'$ is defined over $\fq{k/6}$.
+\end{itemize}
+
+For any twist, the isomorphism $\Psi$ maps:
+\[
+    E(\fq{k}) \supset \gTwo \overset{\Psi^{-1}}{\longrightarrow} \Psi^{-1}(\gTwo) \subset E'(\fq{k/d})
+\]
+and therefore points of $\gTwo$ can be thought as being defined over $\fq{k/d}$.
+From now on, we will conflate $\gTwo$ and its image under $\Psi^{-1}$.
+
+\subsubsection{Using the twist in Miller's algorithm}
+
+Fix $E$ and its twist $E'$.
+Then, $\gOne \subset E(\fq{})$ and $\gTwo \subset E'(\fq{k/d})$, where $d$ is the degree of the twist.
+To carry out the calculations of the Miller loop, we can proceed in two ways.
+Either we perform the computations in the twisted curve, or in the base curve.
+Namely, we either compute
+\[
+    \ev_{\ell_{T,Q}}(\Psi^{-1}(P))
+\]
+or
+\[
+    \ev_{\ell_{\Psi(T),\Psi(Q)}}(P)
+\]
+The fact that we obtain the same result in either case is a consequence of the following lemmas.
+
+\begin{lemma}
+    $\Psi$ sends the line $\ell_{T,Q}$ to the line $\ell_{\Psi(T),\Psi(Q)}$.
+\end{lemma}
+
+\begin{proof}
+    Assume $T \neq -Q$.
+    If $(x,y) \in \ell_{T,Q}$, then $(x',y') = \Psi(x,y)$ satisfies
+    \[
+        y' - \frac{y_Q}{\omega^3} = \frac{\lambda_{T,Q}}{\omega} \left( x' - \frac{x_Q}{\omega^2} \right)
+    \]
+    An easy calculation shows $\lambda_{T,Q} = \omega \cdot \lambda_{\Psi(T),\Psi(Q)}$, and therefore $\Psi(x,y) \in \ell_{\Psi(Q),\Psi(T)}$.
+    
+    If $T = -Q$, then $(x,y) \in \ell_{T,Q}$ means $x = x_T$, and therefore $x / \omega^2 = x_{\Psi(T)}$, which means $\Psi(x,y) \in \ell_{\Psi(T),\Psi(Q)}$.
+\end{proof}
+
+\begin{lemma}
+    \label{lem:relationBwBaseAndTwistedEval}
+    Let $P \in \gOne$. Then, we have
+    \[
+        \ev_{\ell_{T,Q}}(\Psi^{-1}(P)) = \omega^{3 - \delta(T,-Q)} \ev_{\ell_{\Psi(T),\Psi(Q)}}(P)
+    \]
+    where $\delta(T,-Q) = 1$ if $T = -Q$ and $0$ otherwise.
+\end{lemma}
+
+\begin{proof}
+    We focus on the case $T \neq -Q$, the case $T = -Q$ is similar.
+    From the above lemma, we know that $\ell_{\Psi(T),\Psi(Q)}$ has equation $y - y_Q / \omega^3 = \lambda_{TQ} / \omega \cdot (x - x_Q / \omega^3)$.
+    Hence, we have
+    \[
+        \ev_{\ell_{T,Q}}(\Psi^{-1}(P)) = y_P \omega^3 - y_Q - \lambda_{T,Q} (x_P \omega^2 - x_Q)
+    \]
+    and
+    \[
+        \ev_{\ell_{\Psi(T),\Psi(Q)}}(P) = y_P - y_Q / \omega^3 - \lambda_{T,Q} / \omega \cdot (x_P - x_Q / \omega^2)
+    \]
+\end{proof}
+
+Hence, when implementing Miller's algorithm, we are free to choose the curve that makes the computations more efficient: $E$ or its twist $E'$.
+Below is the Miller's algorithm when $Q$ is considered as a point in $E'(\fq{k/d})$ with the calculations carried out on the twisted curve
+
+\begin{algorithm}
+    \label{alg:millerOnTwistedCurve}
+    \caption{\small Miller's algorithm on twisted curve}\label{alg:millerAlgorithWithTwistedCurve}
+    \textbf{Inputs:} $P \in \gOne \subset E(\fq{})$, $Q \in \gTwo \subset E'(\fq{k/d})$, $w = \sum_{i=0}^n w_i 2^i$, $w_i \in \{-1,0,1\}$, $w_n \neq 0$
+
+    \textbf{Output}: $f_{w,Q}(P) \in \gT$
+    \begin{algorithmic}
+        \State $out \gets 1$
+        \If{$w_n = 1$}
+            \State $T \gets Q$
+        \Else
+            \State $T \gets -Q$
+        \EndIf
+
+        \For{$i=n-1, \dots, 0$}
+        \State $out \gets out^2$
+        \State $out \gets out \cdot \frac{\ev_{\ell_{T,T}}(\Psi^{-1}(P))}{\ev_{\ell_{2T,2T}}(\Psi^{-1}(P))}$
+        \State $T \gets 2T$
+        \If{$w_i = 1$}
+            \State $out \gets out \cdot \frac{\ev_{\ell_{T,Q}}(\Psi^{-1}(P))}{\ev_{\ell_{T+Q,T+Q}}(\Psi^{-1}(P))}$
+            \State $T \gets T + Q$
+        \Else
+            \State $out \gets out \cdot \frac{\ev_{\ell_{T,-Q}}(\Psi^{-1}(P))}{\ev_{\ell_{T-Q,T-Q}}(\Psi^{-1}(P))}$
+            \State $T \gets T - Q$
+        \EndIf
+        \EndFor
+    \end{algorithmic}
+\end{algorithm}
+
+\subsection{Denominator elimination}
+
+One drawback of Miller's algorithm as we have described it is that it requires dividing by $\ev_{\ell_{2T, 2T}}(\Psi^{-1}(P))$ and $\ev_{\ell_{T \pm Q, T \pm Q}}(\Psi^{-1}(P))$.
+As dividing is an expensive operation, it would be nice if we could get rid of it.
+
+The solution is to use a technique known as \emph{denominator elimination}.
+The idea is the following: if $\ev_{\ell_{2T, 2T}}(\Psi^{-1}(P))$ and $\ev_{\ell_{T \pm Q, T \pm Q}}(\Psi^{-1}(P))$ belong to a subfield of $\fq{k}$ such that their $(q^k - 1)/r$-th power is $1$, then we can avoid computing them, as they will be mapped to $1$ by the final exponentiation and will not affect the value of the pairing.
+
+The technique of denominator elimination has been described for all types of twists:
+\begin{itemize}
+    \item Quadratic, quartic, sextic twists: $\omega^2 \in \fq{k/2}$; as $(k/2) \mid k$ and $r \nmid q^m - 1$ for $m < k$, $q^{k/2} - 1 \mid \frac{q^k - 1}{r}$ (see also subsection \ref{subsect:finalexponentiation}). Hence\footnote{A similar calculation holds for $\ev_{\ell_{2T,2T}}(\Psi^{-1}(P))$.}
+    \begin{equation}
+        \label{eqn:den-elim}
+        \ev_{\ell_{T \pm Q, T \pm Q}}(\Psi^{-1}(P)) = x_{T \pm Q} - \omega^2 x_P \in \fq{k/2}
+    \end{equation}
+    and
+    \[
+        \ev_{\ell_{T \pm Q, T \pm Q}}(\Psi^{-1}(P))^{\frac{q^k-1}{r}} = \ev_{\ell_{T \pm Q, T \pm Q}}(\Psi^{-1}(P))^{(q^{k/2}-1)\frac{q^k-1}{(q^{k/2}-1)r}} = 1
+    \]
+    \item Cubic twists: see \cite[Lem. 1]{LZZW-cubic-den-elim}.
+\end{itemize}
+
+\begin{remark}
+    Note that a similar calculation to \eqref{eqn:den-elim} holds for $\ev_{\ell_{\Psi(T \pm Q), \Psi(T \pm Q)}}(P)$:
+    \[
+        \ev_{\ell_{\Psi(T \pm Q), \Psi(T \pm Q)}}(P) = \frac{x_{T \pm Q}}{\omega^2} - x_P \in \fq{k/2}
+    \]
+\end{remark}
+
+Below is Miller's algorithm \eqref{alg:millerAlgorithmDenElim} on the twisted curve, leveraging denominator elimination for a quadratic, quartic or sextic twist.
+\begin{algorithm}
+    \caption{\small Miller's algorithm on twisted curve with denominator elimination}\label{alg:millerAlgorithmDenElim}
+    \textbf{Inputs:} $P \in \gOne \subset E(\fq{})$, $Q \in \gTwo \subset E'(\fq{k/d})$, $w = \sum_{i=0}^n w_i 2^i$, $w_i \in \{-1,0,1\}$, $w_n \neq 0$
+
+    \textbf{Output}: $f_{w,Q}(P) \in \gT$
+    \begin{algorithmic}
+        \State $out \gets 1$
+        \If{$w_n = 1$}
+            \State $T \gets Q$
+        \Else
+            \State $T \gets -Q$
+        \EndIf
+
+        \For{$i=n-1, \dots, 0$}
+        \State $out \gets out^2$
+        \State $out \gets out \cdot \ev_{\ell_{T,T}}(\Psi^{-1}(P))$
+        \State $T \gets 2T$
+        \If{$w_i = 1$}
+            \State $out \gets out \cdot \ev_{\ell_{T,Q}}(\Psi^{-1}(P))$
+            \State $T \gets T + Q$
+        \Else
+            \State $out \gets out \cdot \ev_{\ell_{T,-Q}}(\Psi^{-1}(P))$
+            \State $T \gets T - Q$
+        \EndIf
+        \EndFor
+    \end{algorithmic}
+\end{algorithm}
+
+Now that we do not divide by $\ev_{\ell_{T+Q,T+Q}}(\Psi^{-1}(P))$, it is not clear whether Miller's algorithm can be carried out both on the base curve and on the twisted curve.
+The following lemma shows this is the case in the case of quadratic, quartic, and sextic twists.
+
+\begin{lemma}
+    Let $P \in \gOne$ and $Q \in \gTwo$.
+    Write $\mathrm{miller}_{base}(-,-)$ for Miller's algorithm with denominator elimination on the base curve, and $\mathrm{miller}_{twisted}(-,-)$ for the one on the twisted curve.
+    Then, $\mathrm{miller}_{twisted}(P,Q) = u \cdot \mathrm{miller}_{base}(P,Q)$ for $u \in \fq{k}$ such that $u^{\frac{q^k-1}{r}} = 1$.
+\end{lemma}
+
+\begin{proof}
+    We present the proof for the case of quadratic, quartic and sextic twists, but it easy to adapt it to the case of cubic twists using the results of \cite{LZZW-cubic-den-elim}.
+
+    Recall that by Lemma \ref{lem:relationBwBaseAndTwistedEval} evaluations on the base and twisted curve differ by a power of $\omega$.
+    Hence, $\mathrm{miller}_{twisted}(P,Q)$ and $\mathrm{miller}_{base}(P,Q)$ differ by a power of $\omega$, and it is enough to show that such a power is mapped to $1$ by the final exponentiation.
+    As we are dealing with quadratic, quartic, or sextic twists, we have $\omega^2 \in \fq{k/2}$.
+    Now, $(k/2) \mid k$ and $r \nmid q^m - 1$ for $m < k$, $q^{k/2} - 1 \mid \frac{q^k - 1}{r}$ (see also subsection \ref{subsect:finalexponentiation}) imply
+    \[
+        \omega^{\frac{q^k-1}{r}} = \left( \omega^2 \right)^{\frac{(q^{k/2}-1)(q^{k/2}+1)}{2r}} = 1
+    \]
+\end{proof}
+
+\begin{remark}
+    It is easy to adapt the previous proof to the case of cubic twists with $q = 1 \mod 3$.
+\end{remark}
+
+\subsection{Final exponentiation}
+\label{subsect:finalexponentiation}
+
+The last part of the computation of the pairing requires computing the $(q^k - 1)/r$-th power of the output of Miller's algorithm.
+We write $\Phi_n(x)$ for the \href{https://en.wikipedia.org/wiki/Cyclotomic_polynomial}{$n$-cyclotomic polynomial}.
+It holds that
+\[
+    x^n - 1 = \prod_{d \mid n} \Phi_d(x)
+\]
+Moreover, it is easy to show by induction that $\Phi_n(0) = 1$ for all $n > 1$ ($\Phi_1(x) = x - 1$).
+
+As $r \mid q^k - 1$, and $k$ is the smallest positive integer for which this relation holds, it follows that $r \mid \Phi_k(q)$.
+Indeed, if $r \mid \Phi_m(q)$ with $m < k$, then $r \mid q^m - 1$, which is in contrast with the definition of $k$.
+
+Hence, the final exponentiation can be divided in two parts:
+\[
+    \frac{q^k-1}{r} = \frac{q^k-1}{\Phi_k(q)} \frac{\Phi_k(q)}{r}
+\]
+The term
+\begin{equation}
+    \label{eqn:easyExponentiation}
+    f_{w,Q}(P)^{\frac{q^k-1}{\Phi_k(q)}}
+\end{equation}
+is easy to compute because $\frac{q^k-1}{\Phi_k(q)} + 1$ is a sum of powers of $q$, which can be easily computed using the Frobenius.
+The only difficult bit of \eqref{eqn:easyExponentiation} is that it requires the inversion of $f_{w,Q}(P)$ (this is because the polynomial $\frac{x^k-1}{\Phi_k(x)}$ has constant term equal to $-1$).
+
+Once the easy part of the exponentiation has been computed, then one is left to compute the hard part:
+\[
+    \left( f_{w,Q}(P)^{\frac{q^k-1}{\Phi_k(q)}} \right)^{\frac{\Phi_k(q)}{r}}
+\]
+Each curve has a different implementation of the hard exponentiation.
+The only characteristic that is common to all curves is that \eqref{eqn:easyExponentiation} lies in the cyclotomic subgroup, i.e., $\eqref{eqn:easyExponentiation}^{\Phi_k(q)} = 1$.
+This is helpful because, as $\Phi_k(x)$ has constant term equal to $1$, it means that the inverse of \eqref{eqn:easyExponentiation} can be computed by means of the Frobenius morphism.
+
+\section{Optimisations}
+
+\subsection{Parallel execution of multiple Miller loops}
+
+When computing $\prod f_{w,Q_j}(P_j)$ for many couples $(P_j,Q_j)$, the most efficient thing to do is to compute the Miller loops\footnote{With the term Miller loop we refer to the loop in Miller's algorithm.} in parallel.
+Indeed, as the Miller loop is a square-and-multiply loop, by executing various loops in parallel we can reuse the squarings.
+Algorithm \ref{alg:multiMillerAlgorithm} is the description of a multi Miller loop on the twisted curve with denominator elimination for a quadratic, quartic or sextic twist.
+
+\begin{algorithm}
+    \caption{\small Multi Miller's algorithm on twisted curve with denominator elimination}\label{alg:multiMillerAlgorithm}
+    \textbf{Inputs:} $P_j \in \gOne$, $Q_j \in \gTwo$, $j=1, \dots, m$, $w = \sum_{i=0}^n w_i 2^i$, $w_i \in \{-1,0,1\}$, $w_n \neq 0$
+
+    \textbf{Output}: $\prod_j f_{w,Q_j}(P_j) \in \gT$
+    \begin{algorithmic}
+        \State $out \gets 1$
+        \If{$w_n = 1$}
+            \State $T_j \gets Q_j$
+        \Else
+            \State $T_j \gets -Q_j$
+        \EndIf
+
+        \For{$i=n-1, \dots, 0$}
+        \State $out \gets out^2$
+        \State $out \gets out \cdot \prod_j \ev_{\ell_{T_j,T_j}}(\Psi^{-1}(P_j))$
+        \State $T_j \gets 2T_j$
+        \If{$w_i = 1$}
+            \State $out \gets out \cdot \prod_j \ev_{\ell_{T_j,Q_j}}(\Psi^{-1}(P_j))$
+            \State $T_j \gets T_j+ Q_j$
+        \Else
+            \State $out \gets out \cdot \prod_j \ev_{\ell_{T_j,-Q_j}}(\Psi^{-1}(P_j))$
+            \State $T_j \gets T_j - Q_j$
+        \EndIf
+        \EndFor
+    \end{algorithmic}
+\end{algorithm}
+
+As noted by \cite{S-pairing-impl-revisited}, the parallel execution of various Miller loops permits leveraging the structure of line evaluations.
+Indeed, line evaluations live in $\fq{k}$, but it is not necessarily true that all the coefficients in their representation are non-zero.
+It is often the case that the elements $\ev_{\ell_{T,T}}(\Psi^{-1}(P))$ and $\ev_{\ell_{T,Q}}(\Psi^{-1}(P))$ are sparse (they have many zero coefficients) and therefore computing the products
+\[
+    \prod_j \ev_{\ell_{T_j,T_j}}(\Psi^{-1}(P_j))
+\]
+is more efficient than computing products between elements in $\fq{k}$ (because it requires fewer operations).
+
+\subsection{Removing the final exponentiation}
+
+It is often the case that the heaviest part of the calculation of a pairing is the final exponentiation.
+In \cite{NE-on-proving-pairings}, the authors explain how to get rid of the final exponentiation when the goal is to verify an equality of the from
+\[
+    \prod_j e(P_j,Q_j) = 1
+\]
+rather than an explicit calculation of the pairings $e(P_j,Q_j)$.
+
+The idea is the following.
+The final exponentiation in the definition of a pairing is required to make the value of the pairing unambiguous.
+Namely, the value of the pairing is only defined in $f_{w,Q}(P) \in \fq{k} / (\fq{k}^\ast)^r$, and to avoid considering equivalence classes, we remove ambiguity by raising the output of the Miller loop to $(q^k-1)/r$.
+However, if our goal is to show $e(P,Q) = 1$, then it is enough to produce a value $c \in \fq{k}$ such that
+\[
+    f_{w,Q}(P) = c^r \implies e(P,Q) = (c^r)^{\frac{q^k-1}{r}} = 1
+\]
+
+The story is not so easy because computing the $r$-th power of $c$ is not much more efficient than computing the $\frac{q^k-1}{r}$-th power of $f_{w,Q}(P)$.
+To address this inefficiency, the authors of \cite{NE-on-proving-pairings} employ Optimal Ate pairings \cite{V-optimal-ate-pairings}.
+In a nutshell, they replace $w$ with a multiple $\lambda$ of $r$ for which $f_{\lambda,Q}(P)$ is efficient to compute and for which one can embed the calculation of $c^{\lambda}$ inside the Miller loop.
+We refer to \cite{NE-on-proving-pairings} for more details.
+
+Presently, we do not implement the removal of the final exponentiation in the \href{https://github.com/nchain-innovation/zkscript_package}{zkscript} codebase.
+
+\subsection{Verifying instead of computing}
+
+As our goal is to implement bilinear pairings on-chain to verify a Groth16 proof, we do not need to carry out all the computations on-chain.
+We can delegate some computations off-chain, as long as we \emph{verify} on-chain that the data we use is correct.
+
+\subsubsection{Inverse of the Miller output}
+\label{subsubsect:inverseMillerOutput}
+
+As we remarked in subsection \ref{subsect:finalexponentiation}, the final exponentiation can be split in two parts.
+The most cumbersome bit of the easy part is the fact that we need the inverse of $f_{w,Q}(P)$.
+Instead of computing the inverse on-chain, we get it as an input $z'$ and on-chain we verify $z' \cdot f_{w,Q}(P) = 1 \in \fq{k}$, to ensure $z' = f_{w,Q}(P)^{-1}$.
+
+\subsubsection{Gradients}
+
+To calculate $f_{w,Q}(P)$, we must calculate $w Q$.
+Each step in the calculation of $wQ$ requires computing the gradient of the line between two points in $E'(\fq{k/d})$, which in turn requires inverting an element in $\fq{k/d}$.
+Instead of computing the gradients, we get them as input and we verify their correctness.
+The verification can take two forms according to whether $Q$ is fixed or not:
+\begin{itemize}
+    \item If $Q$ is not fixed, given the gradient, we verify that is correct by replacing the inversion with a multiplication (similarly to what we did in subsubsection \ref{subsubsect:inverseMillerOutput})
+    \item If $Q$ is fixed, as suggested in \cite{NE-on-proving-pairings}, we construct a commitment to all the gradients needed for the calculation of $wQ$, and check that the gradients given as input reconstruct the commitment.\footnote{This way of verifying the correctness of the gradients has not yet been implemented in \href{https://github.com/nchain-innovation/zkscript_package}{zkscript}.}
+\end{itemize}
+
+\section{Examples}
+
+\subsection{BLS12}
+
+For BLS12 curves, see \cite{BLS-curves-with-prescribed-emb-degree}, \cite{FST-taxonomy}, and \href{https://hackmd.io/@benjaminion/bls12-381}{BLS12-381 for the rest of us}.
+
+BLS12 curves are defined by equations of the form $y^2 = x^3 + b$ where $b$ is a parameter of the specific BLS12 curve, and
+\[
+    q = \frac{(u-1)^2 (u^4 - u^2 + 1)}{3} + u
+\]
+is a prime dependent on a seed $u$.
+
+BLS12 curves have trace $t = u + 1$, embedding degree $12$, and $r = u^4 - u^2 + 1$.
+The Ate pairing for these curves is defined by:
+\[
+    e(P,Q) := f_{u,Q}(P)^{\frac{(q^{12}-1)}{r}}
+\]
+
+\begin{remark}
+    In \href{https://github.com/nchain-innovation/zkscript_package}{zkscript}, we have implemented the bilinear pairing for the \href{https://electriccoin.co/blog/new-snark-curve/}{BLS12-381} curve, whose parameters are:
+    \[
+        u = -(2^{63} + 2^{62} + 2^{60} + 2^{57} + 2^{48} + 2^{16}) \quad \quad b = 4
+    \]
+\end{remark}
+
+\subsection{Field extensions}
+
+Take $u = 3 \mod 8$.
+Then, the field extensions for BLS12 curves are defined as follows:
+\[
+    \renewcommand{\arraystretch}{1.2}
+    \begin{array}{l}
+        \fq{2} = \fq{}[u] / (u^2 + 1)\\
+        \fq{4} = \fq{2}[s] / (s^2 - \xi)\\
+        \fq{6} = \fq{2}[v] / (v^2 - \xi)\\
+        \fq{12} = \fq{6}[w] / (w^2 - v) = \fq{4}[r] / (r^3 - s)
+    \end{array}
+\]
+where $\xi = 1 + u$.
+
+Note we have an isomorphism
+\[
+    \varphi \colon \fq{6}[w] / (w^2 - v) \rightarrow \fq{4}[r] / (r^3 - s)
+\]
+mapping $\varphi(w) = r$.
+
+\subsubsection{Twists}
+
+Each BLS12 curve admits a sextic twists, but the twist can be of two types: a D-twist or an M-twist.
+A D-twist is defined by
+\[
+    E'_D: y^2 = x^3 + \omega^6 b \quad \quad \omega^{-1} = w
+\]
+while an M-twist is defined by
+\[
+    E'_M: y^2 = x^3 + \omega^6 b \quad \quad \omega = w
+\]
+
+\begin{lemma}
+    \label{lem:lineEvalBLS}
+    Let $E$ be a BLS12 curve with equation $y^2 = x^3 + b$ and $u = 3 \mod 8$.
+    Then, if $E$ admits a D-twist $E'_D$, we have
+    \[
+        \ev_{\ell_{\Psi(T)\Psi(Q)}}(P) = y_P + (\lambda_{T,Q} x_Q - y_Q) s + r (- \lambda_{T,Q} x_P) \in \fq{12} = \fq{4}[r] / (r^3 - s)
+    \]
+    while if $E$ admits an M-twist $E'_M$ we have
+    \[
+        \ev_{\ell_{TQ}}(\Psi^{-1}(P)) = - y_Q + \lambda_{T,Q} x_Q + y_P s + r^2 (-\lambda_{T,Q} x_P) \in \fq{12} = \fq{4}[r] / (r^3 - s)
+    \]
+\end{lemma}
+
+\begin{proof}
+    We show the calculation for M-twists, the one for D-twists being similar.
+    We have
+    \[
+        \begin{aligned}
+            \ev_{\ell_{T,Q}}(\Psi^{-1}(P)) & = y_P \omega^3 - y_Q - \lambda_{T,Q} (x_P \omega^2 - x_Q)\\
+            & = y_P w^3 - y_Q - \lambda_{T,Q} (x_P w^2 - x_Q)\\
+            & \overset{\varphi}{\mapsto} - y_Q + \lambda_{T,Q} x_Q + y_P s + r^2 (-\lambda_{T,Q} x_P)
+        \end{aligned}
+    \]
+    where we used $\varphi(\omega) = \varphi(w) = r$ and $\varphi(\omega^3) = r^3 =  s$.
+\end{proof}
+
+Note that the line evaluations in Lemma \ref{lem:lineEvalBLS} are sparse elements (only five $\fq{}$ elements are required to represent them, not $12$).
+Therefore, calculations in the Miller loop can be optimised by taking into account the structure of the line evaluations.
+This is what we do in out implementation.
+
+\subsection{MNT4}
+
+For MNT4 curves, see \cite{MNT-curves}.
+
+MNT4 curves $E$ are defined by a seed $u$ for which $E$ is defined over $\fq{}$ with $q = u^2 + u + 1$.
+The trace of the Frobenius can either be $t = -u$ or $t = u+1$, while the embedding degree is $4$.
+
+\subsubsection{MNT4-753}
+
+The MNT4-753 curve is defined by the seed $u$ found \href{https://github.com/arkworks-rs/algebra/blob/master/curves/mnt4_753/src/lib.rs}{here (arkworks)} and has trace $t = u + 1$, $r = u^2 + 1$.
+The curve equation is $E: y^2 = x^3 + ax + b$, with $a = 2$ coefficient $b$ found \href{https://github.com/arkworks-rs/algebra/blob/master/curves/mnt4_753/src/lib.rs}{here (arkworks)}.
+
+\paragraph{Twists}
+MNT4-753 admits a quadratic twists $E'$ defined over
+\[
+\fq{2} = \fq{}[u] / (u^2 - 13)
+\]
+whose equation is $E': y^2 = x^3 + Ax + B$, where
+\[
+    A = a \cdot 13 \in \fq{2} \quad \quad B = (b \cdot 13) u \in \fq{2}
+\]
+$E$ and $E'$ are isomorphic over $\fq{4} = \fq{2}[r] / (r^2 - u)$.
+Note that the element $\omega$ for which $E'$ has equation $y^2 = x^3 + a \omega^4 x + b \omega^6$ is $\omega = r$.
+
+\paragraph{Line functions}
+The formula for line evaluations in MNT4-753 is given below.
+
+\begin{lemma}
+    For MNT4-753, we have
+    \[
+        \ev_{\ell_{T,Q}}(\Psi^{-1}(P)) = -y_Q + \lambda_{T,Q} \cdot (x_Q - x_P \cdot u) + y_P \cdot ru \in \fq{4}
+    \]
+\end{lemma}
+
+\begin{proof}
+    \[
+        \begin{aligned}
+            \ev_{\ell_{T,Q}}(\Psi^{-1}(P)) & = y_P \omega^3 - y_Q - \lambda_{T,Q} (x_P \omega^2 - x_Q)\\
+            & = y_P r^3 - y_Q - \lambda_{T,Q} (x_P r^2 - x_Q)\\
+            & = -y_Q + \lambda_{T,Q} \cdot (x_Q - x_P \cdot u) + y_P \cdot ru
+        \end{aligned}
+    \]
+    where we used $r^2 = u$, $r^3 = ru$.
+\end{proof}
+
+\bibliography{bibliography}{}
+\bibliographystyle{alpha}
+
+\end{document}
