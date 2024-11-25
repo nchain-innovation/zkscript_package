@@ -53,10 +53,7 @@ class CyclotomicExponentiation:
                 - `e_(l-1) different from 0`
             take_modulo (bool): If `True`, the result is reduced modulo `q`.
             modulo_threshold (int): Bit-length threshold. Values whose bit-length exceeds it are reduced modulo `q`.
-<<<<<<< Updated upstream
-=======
             positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
->>>>>>> Stashed changes
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
 

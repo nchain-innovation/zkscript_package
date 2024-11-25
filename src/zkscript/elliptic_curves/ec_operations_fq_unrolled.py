@@ -55,10 +55,7 @@ class EllipticCurveFqUnrolled:
             modulo_threshold (int): Bit-length threshold. Values whose bit-length exceeds it are reduced modulo `q`.
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
-<<<<<<< Updated upstream
-=======
             positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
->>>>>>> Stashed changes
 
         Returns:
             Script to multiply a point on E(F_q) using double-and-add scalar multiplication.

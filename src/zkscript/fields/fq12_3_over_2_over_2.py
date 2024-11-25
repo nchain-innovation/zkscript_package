@@ -56,10 +56,7 @@ class Fq12Cubic:
 
         Args:
             take_modulo (bool): If `True`, the result is reduced modulo `q`.
-<<<<<<< Updated upstream
-=======
             positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
->>>>>>> Stashed changes
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
@@ -180,10 +177,7 @@ class Fq12Cubic:
 
         Args:
             take_modulo (bool): If `True`, the result is reduced modulo `q`.
-<<<<<<< Updated upstream
-=======
             positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
->>>>>>> Stashed changes
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack

@@ -17,12 +17,7 @@ The library currenly contains implementations of pairings and Groth16 for:
 - [MNT4-753](src/zkscript/groth16/mnt4_753/mnt4_753.py)
 
 ## Requirements
-<<<<<<< Updated upstream
 Make sure you are using Python 3.12 or later versions.
-=======
-
-Make sure you are using Python 3.11 or later versions.
->>>>>>> Stashed changes
 
 You can check your Python version with
 

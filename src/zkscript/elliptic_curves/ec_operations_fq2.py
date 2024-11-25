@@ -204,10 +204,7 @@ class EllipticCurveFq2:
 
         Args:
             take_modulo (bool): If `True`, the result is reduced modulo `q`.
-<<<<<<< Updated upstream
-=======
             positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
->>>>>>> Stashed changes
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
@@ -291,10 +288,7 @@ class EllipticCurveFq2:
             take_modulo (bool): If `True`, the result is reduced modulo `q`.
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
-<<<<<<< Updated upstream
-=======
             positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
->>>>>>> Stashed changes
             gradient (StackFiniteFieldElement): The position of gradient through P_ and Q_ in the stack,
                 its length, whether it should be negated, and whether it should be rolled or picked.
                 Defaults to: StackFiniteFieldElement(9, False, 2)
@@ -491,10 +485,7 @@ class EllipticCurveFq2:
             take_modulo (bool): If `True`, the result is reduced modulo `q`.
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
-<<<<<<< Updated upstream
-=======
             positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
->>>>>>> Stashed changes
             gradient (StackFiniteFieldElement): The position of gradient through P_ and Q_ in the stack,
                 its length, whether it should be negated, and whether it should be rolled or picked.
                 Defaults to: StackFiniteFieldElement(9, False, 2)
@@ -637,10 +628,7 @@ class EllipticCurveFq2:
             take_modulo (bool): If `True`, the result is reduced modulo `q`.
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
-<<<<<<< Updated upstream
-=======
             positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
->>>>>>> Stashed changes
             gradient (StackFiniteFieldElement): The position of gradient of the line tangent at P_ in the stack,
                     its length, whether it should be negated, and whether it should be rolled or picked.
                     Defaults to: StackFiniteFieldElement(5,False,2).
@@ -800,10 +788,7 @@ class EllipticCurveFq2:
             take_modulo (bool): If `True`, the result is reduced modulo `q`.
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
-<<<<<<< Updated upstream
-=======
             positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
->>>>>>> Stashed changes
             gradient (StackFiniteFieldElement): The position of gradient of the line tangent at P_ in the stack,
                     its length, whether it should be negated, and whether it should be rolled or picked.
                     Defaults to: StackFiniteFieldElement(5,False,2).
