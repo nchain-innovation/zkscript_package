@@ -553,7 +553,7 @@ class Fq12:
         f_conjugate_gamma15 += fq2.mul(
             take_modulo=take_modulo,
             positive_modulo=positive_modulo,
-            check_constant=check_constant,
+            check_constant=False,
             clean_constant=clean_constant,
             is_constant_reused=is_constant_reused,
         )  # Multiply

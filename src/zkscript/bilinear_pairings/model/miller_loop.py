@@ -430,7 +430,7 @@ class MillerLoop:
                         verify_gradient=True,
                         check_constant=False,
                         clean_constant=False,
-                        positive_modulo=False,
+                        positive_modulo=positive_modulo_i,
                     )
                     stack_length_added = 2 * N_POINTS_TWIST
                     # After this, the stack is: lambda_(2T \pm Q) P Q -Q 2T (2T \pm Q) ev_(l_(T,T))(P),

@@ -276,7 +276,7 @@ def test_groth16_slow(alpha_beta, vk, groth16_proof, test_script, filename, is_m
     unlock = test_script.groth16_verifier_unlock(**groth16_proof)
 
     lock = test_script.groth16_verifier(
-        modulo_threshold=1,
+        modulo_threshold=200*8 if is_minimal_example else 1,
         alpha_beta=alpha_beta.to_list(),
         minus_gamma=(-vk["gamma"]).to_list(),
         minus_delta=(-vk["delta"]).to_list(),
