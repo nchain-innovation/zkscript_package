@@ -266,7 +266,8 @@ def test_groth16(test_script, vk, alpha_beta, groth16_proof, filename, save_to_j
 @pytest.mark.slow
 @pytest.mark.parametrize(
     ("alpha_beta", "vk", "groth16_proof", "test_script", "filename", "is_minimal_example"),
-    generate_test_cases(test_num=1, is_minimal_example=False, rnd_seed=42) + generate_test_cases(test_num=1, is_minimal_example=True, rnd_seed=42),
+    generate_test_cases(test_num=1, is_minimal_example=False, rnd_seed=42)
+    + generate_test_cases(test_num=1, is_minimal_example=True, rnd_seed=42),
 )
 def test_groth16_slow(alpha_beta, vk, groth16_proof, test_script, filename, is_minimal_example, save_to_json_folder):
     groth16_proof = {
