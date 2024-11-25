@@ -77,9 +77,11 @@ class TransactionIntrospection:
         out = Script()
 
         if verify_constants:
-            out.append_pushdata(hash256d(Gx_bytes + encode_num(Gx) + encode_num(GROUP_ORDER_INT)))
+            out.append_pushdata(
+                hash256d(hash256d(Gx_bytes) + hash256d(encode_num(Gx)) + hash256d(encode_num(GROUP_ORDER_INT)))
+            )
             for i in range(3, 0, -1):
-                out += pick(position=-i, n_elements=1)
+                out += pick(position=-i, n_elements=1) + Script.parse_string("OP_HASH256")
             out += Script.parse_string("OP_CAT OP_CAT OP_HASH256 OP_EQUALVERIFY")
 
         # stack in:  [GROUP_ORDER_INT, Gx, Gx_bytes, .., sig_hash_preimage, ..]
