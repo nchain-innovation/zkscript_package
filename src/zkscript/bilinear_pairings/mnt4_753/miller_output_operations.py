@@ -200,19 +200,13 @@ class MillerOutputOperations(Fq4ScriptModel):
         compute_first_component += fq2.mul(
             take_modulo=False, check_constant=False, clean_constant=False, is_constant_reused=False
         )
-        if take_modulo:
-            compute_first_component += fq2.add(
-                take_modulo=True,
-                positive_modulo=positive_modulo,
-                check_constant=False,
-                clean_constant=clean_constant,
-                is_constant_reused=True,
-            )
-        else:
-            compute_first_component += fq2.add(
-                take_modulo=False, check_constant=False, clean_constant=False, is_constant_reused=False
-            )
-
+        compute_first_component += fq2.add(
+            take_modulo=take_modulo,
+            positive_modulo=positive_modulo and take_modulo,
+            check_constant=False,
+            clean_constant=clean_constant and take_modulo,
+            is_constant_reused=take_modulo,
+        )
         # End of computation of first component --------------------------------------------------
 
         out += compute_second_component + compute_first_component
@@ -303,22 +297,13 @@ class MillerOutputOperations(Fq4ScriptModel):
         compute_first_component += fq2.mul(
             take_modulo=False, check_constant=False, clean_constant=False, is_constant_reused=False
         )
-        if take_modulo:
-            compute_first_component += fq2.add(
-                take_modulo=True,
-                positive_modulo=positive_modulo,
-                check_constant=False,
-                clean_constant=clean_constant,
-                is_constant_reused=True,
-            )
-        else:
-            compute_first_component += fq2.add(
-                take_modulo=False,
-                positive_modulo=positive_modulo,
-                check_constant=False,
-                clean_constant=False,
-                is_constant_reused=False,
-            )
+        compute_first_component += fq2.add(
+            take_modulo=take_modulo,
+            positive_modulo=positive_modulo and take_modulo,
+            check_constant=False,
+            clean_constant=clean_constant and take_modulo,
+            is_constant_reused=take_modulo,
+        )
 
         # End of computation of first component --------------------------------------------------
 

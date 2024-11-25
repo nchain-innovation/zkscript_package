@@ -202,7 +202,7 @@ def generate_random_tests(curve, groth16, filename, is_minimal_example):
 
     alpha_beta = curve.triple_pairing(A, sum_gamma_abc, C, B, -gamma, -delta)
 
-    return (alpha_beta, vk, groth16_proof, groth16, filename)
+    return (alpha_beta, vk, groth16_proof, groth16, filename, is_minimal_example)
 
 
 def generate_test_cases(test_num, is_minimal_example=False, rnd_seed=42):
@@ -265,10 +265,10 @@ def test_groth16(test_script, vk, alpha_beta, groth16_proof, filename, save_to_j
 
 @pytest.mark.slow
 @pytest.mark.parametrize(
-    ("alpha_beta", "vk", "groth16_proof", "test_script", "filename"),
-    generate_test_cases(test_num=1, is_minimal_example=False, rnd_seed=42),
+    ("alpha_beta", "vk", "groth16_proof", "test_script", "filename", "is_minimal_example"),
+    generate_test_cases(test_num=1, is_minimal_example=False, rnd_seed=42) + generate_test_cases(test_num=1, is_minimal_example=True, rnd_seed=42),
 )
-def test_groth16_slow(alpha_beta, vk, groth16_proof, test_script, filename, save_to_json_folder):
+def test_groth16_slow(alpha_beta, vk, groth16_proof, test_script, filename, is_minimal_example, save_to_json_folder):
     groth16_proof = {
         "lambdas_partial_sums" if key == "lamdbas_partial_sums" else key: value for key, value in groth16_proof.items()
     }  # Temporary fix
@@ -289,48 +289,18 @@ def test_groth16_slow(alpha_beta, vk, groth16_proof, test_script, filename, save
     assert len(context.get_stack()) == 1
     assert len(context.get_altstack()) == 0
 
-    if save_to_json_folder:
-        save_scripts(str(lock), str(unlock), save_to_json_folder, filename, "groth16")
-
-
-@pytest.mark.slow
-@pytest.mark.parametrize(
-    ("alpha_beta", "vk", "groth16_proof", "test_script", "filename"),
-    generate_test_cases(test_num=1, is_minimal_example=True, rnd_seed=42),
-)
-def test_groth16_print(alpha_beta, vk, groth16_proof, test_script, filename, save_to_json_folder):
-    groth16_proof = {
-        "lambdas_partial_sums" if key == "lamdbas_partial_sums" else key: value for key, value in groth16_proof.items()
-    }  # Temporary fix
-    unlock = test_script.groth16_verifier_unlock(**groth16_proof)
-
-    lock = test_script.groth16_verifier(
-        modulo_threshold=200 * 8,
-        alpha_beta=alpha_beta.to_list(),
-        minus_gamma=(-vk["gamma"]).to_list(),
-        minus_delta=(-vk["delta"]).to_list(),
-        gamma_abc=[s.to_list() for s in vk["gamma_abc"]],
-        check_constant=True,
-        clean_constant=True,
-    )
-
-    context = Context(script=unlock + lock)
-
-    print(
-        "\nThe locking script size for Groth16 for the curve",
-        filename,
-        "with",
-        ("two" if filename == "bls12_381" else "one"),
-        "public",
-        ("inputs" if filename == "bls12_381" else "input"),
-        "is",
-        len(lock.raw_serialize()),
-        "bytes.",
-    )
-
-    assert context.evaluate()
-    assert len(context.get_stack()) == 1
-    assert len(context.get_altstack()) == 0
+    if is_minimal_example:
+        print(
+            "\nThe locking script size for Groth16 for the curve",
+            filename,
+            "with",
+            ("two" if filename == "bls12_381" else "one"),
+            "public",
+            ("inputs" if filename == "bls12_381" else "input"),
+            "is",
+            len(lock.raw_serialize()),
+            "bytes.",
+        )
 
     if save_to_json_folder:
         save_scripts(str(lock), str(unlock), save_to_json_folder, filename, "groth16")

@@ -99,7 +99,7 @@ class EllipticCurveFqUnrolled:
             if size_after_operations > modulo_threshold or i == 0:
                 take_modulo = True
                 current_size = size_q
-                positive_modulo_i = positive_modulo
+                positive_modulo_i = positive_modulo and i == 0
             else:
                 take_modulo = False
                 current_size = size_after_operations

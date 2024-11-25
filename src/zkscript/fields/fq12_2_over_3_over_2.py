@@ -351,7 +351,6 @@ class Fq12:
             for _ in range(4):
                 out += mod(is_positive=positive_modulo)
             for _ in range(5):
-                out += Script.parse_string("")
                 out += mod(stack_preparation="OP_FROMALTSTACK OP_2 OP_MUL OP_ROT", is_positive=positive_modulo)
 
             out += mod(
@@ -553,7 +552,8 @@ class Fq12:
         f_conjugate_gamma15 += nums_to_script(gammas[4])  # gamma15
         f_conjugate_gamma15 += fq2.mul(
             take_modulo=take_modulo,
-            check_constant=positive_modulo,
+            positive_modulo=positive_modulo,
+            check_constant=check_constant,
             clean_constant=clean_constant,
             is_constant_reused=is_constant_reused,
         )  # Multiply
