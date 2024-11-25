@@ -10,7 +10,11 @@ class Pairing:
     """Pairing class."""
 
     def single_pairing(
-        self, modulo_threshold: int, check_constant: bool | None = None, clean_constant: bool | None = None
+        self,
+        modulo_threshold: int,
+        check_constant: bool | None = None,
+        clean_constant: bool | None = None,
+        positive_modulo: bool = True,
     ) -> Script:
         """Bilinear pairing.
 
@@ -28,6 +32,7 @@ class Pairing:
             modulo_threshold (int): Bit-length threshold. Values whose bit-length exceeds it are reduced modulo `q`.
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
+            positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
 
         Returns:
             Script to evaluate the bilinear pairing e(P,Q).
@@ -64,16 +69,24 @@ class Pairing:
         # Execute pairing computation
 
         # After this, the stack is: miller(P,Q)^-1 (t-1)Q miller(P,Q)
-        out += self.miller_loop(modulo_threshold=modulo_threshold, check_constant=False, clean_constant=False)
+        out += self.miller_loop(
+            modulo_threshold=modulo_threshold, check_constant=False, clean_constant=False, positive_modulo=False
+        )
 
         # This is where one would perform subgroup membership checks if they were needed
         # For Groth16, they are not, so we simply drop uQ
         out += roll(position=N_ELEMENTS_MILLER_OUTPUT + N_POINTS_TWIST - 1, n_elements=N_POINTS_TWIST)
         out += Script.parse_string(" ".join(["OP_DROP"] * N_POINTS_TWIST))
 
-        out += easy_exponentiation_with_inverse_check(take_modulo=True, check_constant=False, clean_constant=False)
+        out += easy_exponentiation_with_inverse_check(
+            take_modulo=True, positive_modulo=False, check_constant=False, clean_constant=False
+        )
         out += hard_exponentiation(
-            take_modulo=True, modulo_threshold=modulo_threshold, check_constant=False, clean_constant=clean_constant
+            take_modulo=True,
+            modulo_threshold=modulo_threshold,
+            positive_modulo=positive_modulo,
+            check_constant=False,
+            clean_constant=clean_constant,
         )
 
         # Jump here if P is point at infinity
@@ -97,7 +110,11 @@ class Pairing:
         return optimise_script(out)
 
     def triple_pairing(
-        self, modulo_threshold: int, check_constant: bool | None = None, clean_constant: bool | None = None
+        self,
+        modulo_threshold: int,
+        check_constant: bool | None = None,
+        clean_constant: bool | None = None,
+        positive_modulo: bool = True,
     ) -> Script:
         """Product of three bilinear pairings.
 
@@ -116,6 +133,7 @@ class Pairing:
             modulo_threshold (int): Bit-length threshold. Values whose bit-length exceeds it are reduced modulo `q`.
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
+            positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
 
         Returns:
             Script to compute the product of three bilinear pairings e(P1,Q1) * e(P2,Q2) * e(P3,Q3).
@@ -136,9 +154,15 @@ class Pairing:
         # quadratic([miller(P1,Q1) * miller(P2,Q2) * miller(P3,Q3)])
         out += self.triple_miller_loop(modulo_threshold=modulo_threshold, check_constant=False, clean_constant=False)
 
-        out += easy_exponentiation_with_inverse_check(take_modulo=True, check_constant=False, clean_constant=False)
+        out += easy_exponentiation_with_inverse_check(
+            take_modulo=True, positive_modulo=False, check_constant=False, clean_constant=False
+        )
         out += hard_exponentiation(
-            take_modulo=True, modulo_threshold=modulo_threshold, check_constant=False, clean_constant=clean_constant
+            take_modulo=True,
+            modulo_threshold=modulo_threshold,
+            positive_modulo=positive_modulo,
+            check_constant=False,
+            clean_constant=clean_constant,
         )
 
         return optimise_script(out)

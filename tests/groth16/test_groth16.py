@@ -1,6 +1,7 @@
 import json
 from dataclasses import dataclass
 from pathlib import Path
+from random import randint, seed
 
 import pytest
 from elliptic_curves.instantiations.bls12_381.bls12_381 import bls12_381 as bls12_381_curve
@@ -163,6 +164,55 @@ class Mnt4753:
     filename = "mnt4_753"
 
 
+def generate_random_tests(curve, groth16, filename, is_minimal_example):
+    A = curve.g1.multiply(randint(1, curve.r - 1))  # noqa: S311
+    B = curve.g2.multiply(randint(1, curve.r - 1))  # noqa: S311
+    C = curve.g1.multiply(randint(1, curve.r - 1))  # noqa: S311
+
+    alpha = curve.g1.multiply(randint(1, curve.r - 1))  # noqa: S311
+    beta = curve.g2.multiply(randint(1, curve.r - 1))  # noqa: S311
+    gamma = curve.g2.multiply(randint(1, curve.r - 1))  # noqa: S311
+    delta = curve.g2.multiply(randint(1, curve.r - 1))  # noqa: S311
+
+    if is_minimal_example:
+        dlog_gamma_abc = [15, 23, 11] if filename == "bls12_381" else [7, 19]
+        pub_statement = [1, 5, 4] if filename == "bls12_381" else [1, 2]
+    else:
+        dlog_gamma_abc = [randint(1, curve.r - 1) for _ in range(6)]  # noqa: S311
+        # First two are fixed, next three are random, last one test case in which sum_gamma_abc is the point at infinity
+        pub_statement = [1, 0] + [randint(1, curve.r - 1) for _ in range(3)] + [0]  # noqa: S311
+
+    gamma_abc = []
+    for i in range(len(dlog_gamma_abc)):
+        gamma_abc.append(curve.g1.multiply(dlog_gamma_abc[i]))
+
+    sum_gamma_abc = curve.g1.multiply(0)
+    for i in range(len(gamma_abc)):
+        sum_gamma_abc += gamma_abc[i].multiply(pub_statement[i])
+
+    vk = {"alpha": alpha, "beta": beta, "gamma": gamma, "delta": delta, "gamma_abc": gamma_abc}
+
+    groth16_proof = curve.prepare_groth16_proof(
+        pub=pub_statement[1:],
+        proof={"a": A, "b": B, "c": C},
+        vk=vk,
+        miller_loop_type="twisted_curve",
+        denominator_elimination="quadratic",
+    )
+
+    alpha_beta = curve.triple_pairing(A, sum_gamma_abc, C, B, -gamma, -delta)
+
+    return (alpha_beta, vk, groth16_proof, groth16, filename, is_minimal_example)
+
+
+def generate_test_cases(test_num, is_minimal_example=False, rnd_seed=42):
+    # Parse and return config and the test_data for each config
+    seed(rnd_seed)
+    return [
+        generate_random_tests(bls12_381_curve, bls12_381, "bls12_381", is_minimal_example) for _ in range(test_num)
+    ] + [generate_random_tests(mnt4_753_curve, mnt4_753, "mnt4_753", is_minimal_example) for _ in range(test_num)]
+
+
 def save_scripts(lock, unlock, save_to_json_folder, filename, test_name):
     if save_to_json_folder:
         output_dir = Path("data") / save_to_json_folder / "groth16"
@@ -208,6 +258,50 @@ def test_groth16(test_script, vk, alpha_beta, groth16_proof, filename, save_to_j
     assert context.evaluate()
     assert len(context.get_stack()) == 1
     assert len(context.get_altstack()) == 0
+
+    if save_to_json_folder:
+        save_scripts(str(lock), str(unlock), save_to_json_folder, filename, "groth16")
+
+
+@pytest.mark.slow
+@pytest.mark.parametrize(
+    ("alpha_beta", "vk", "groth16_proof", "test_script", "filename", "is_minimal_example"),
+    generate_test_cases(test_num=1, is_minimal_example=False, rnd_seed=42)
+    + generate_test_cases(test_num=1, is_minimal_example=True, rnd_seed=42),
+)
+def test_groth16_slow(alpha_beta, vk, groth16_proof, test_script, filename, is_minimal_example, save_to_json_folder):
+    groth16_proof = {
+        "lambdas_partial_sums" if key == "lamdbas_partial_sums" else key: value for key, value in groth16_proof.items()
+    }  # Temporary fix
+    unlock = test_script.groth16_verifier_unlock(**groth16_proof)
+
+    lock = test_script.groth16_verifier(
+        modulo_threshold=200 * 8 if is_minimal_example else 1,
+        alpha_beta=alpha_beta.to_list(),
+        minus_gamma=(-vk["gamma"]).to_list(),
+        minus_delta=(-vk["delta"]).to_list(),
+        gamma_abc=[s.to_list() for s in vk["gamma_abc"]],
+        check_constant=True,
+        clean_constant=True,
+    )
+
+    context = Context(script=unlock + lock)
+    assert context.evaluate()
+    assert len(context.get_stack()) == 1
+    assert len(context.get_altstack()) == 0
+
+    if is_minimal_example:
+        print(
+            "\nThe locking script size for Groth16 for the curve",
+            filename,
+            "with",
+            ("two" if filename == "bls12_381" else "one"),
+            "public",
+            ("inputs" if filename == "bls12_381" else "input"),
+            "is",
+            len(lock.raw_serialize()),
+            "bytes.",
+        )
 
     if save_to_json_folder:
         save_scripts(str(lock), str(unlock), save_to_json_folder, filename, "groth16")

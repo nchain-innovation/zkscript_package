@@ -12,7 +12,11 @@ class TripleMillerLoop:
     """Triple miller loop operation."""
 
     def triple_miller_loop(
-        self, modulo_threshold: int, check_constant: bool | None = None, clean_constant: bool | None = None
+        self,
+        modulo_threshold: int,
+        check_constant: bool | None = None,
+        clean_constant: bool | None = None,
+        positive_modulo: bool = True,
     ) -> Script:
         """Evaluation of the product of three Miller loops.
 
@@ -29,6 +33,7 @@ class TripleMillerLoop:
             modulo_threshold (int): Bit-length threshold. Values whose bit-length exceeds it are reduced modulo `q`.
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
+            positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
 
         Returns:
             Script to evaluate the product of three Miller loops.
@@ -101,11 +106,17 @@ class TripleMillerLoop:
 
         # After this, the stack is: xP1 yP1 xP2 yP2 xP3 yP3 xQ1 yQ1 xQ2 yQ2 xQ3 yQ3 xQ1 -yQ1 xQ2 -yQ2 xQ3 -yQ3
         set_Qs = pick(position=3 * N_POINTS_TWIST - 1, n_elements=N_POINTS_TWIST)
-        set_Qs += point_negation_twisted_curve(take_modulo=False, check_constant=False, clean_constant=False)
+        set_Qs += point_negation_twisted_curve(
+            take_modulo=False, positive_modulo=False, check_constant=False, clean_constant=False
+        )
         set_Qs += pick(position=3 * N_POINTS_TWIST - 1, n_elements=N_POINTS_TWIST)
-        set_Qs += point_negation_twisted_curve(take_modulo=False, check_constant=False, clean_constant=False)
+        set_Qs += point_negation_twisted_curve(
+            take_modulo=False, positive_modulo=False, check_constant=False, clean_constant=False
+        )
         set_Qs += pick(position=3 * N_POINTS_TWIST - 1, n_elements=N_POINTS_TWIST)
-        set_Qs += point_negation_twisted_curve(take_modulo=False, check_constant=False, clean_constant=False)
+        set_Qs += point_negation_twisted_curve(
+            take_modulo=False, positive_modulo=False, check_constant=False, clean_constant=False
+        )
 
         # After this, the stack is: xP1 yP1 xP2 yP2 xP3 yP3 xQ1 yQ1 xQ2 yQ2 xQ3 yQ3 xQ1 -yQ1 xQ2 -yQ2 xQ3 -yQ3 xT1 yT1
         # xT2 yT2 xT3 yT3
@@ -128,12 +139,13 @@ class TripleMillerLoop:
         for i in range(len(exp_miller_loop) - 2, -1, -1):
             take_modulo_F = False
             take_modulo_T = False
-
+            positive_modulo_i = False
             # Constants set up
             if i == 0:
                 clean_final = clean_constant
                 take_modulo_F = True
                 take_modulo_T = True
+                positive_modulo_i = positive_modulo
             else:
                 # Next iteration will have: f <-- f^2 * Dense and T_i <-- 2T_i or T_i <-- 2T_i pm Q_i.
                 multiplier = 3 if exp_miller_loop[i] == 0 else 6
@@ -177,7 +189,11 @@ class TripleMillerLoop:
                     )  # Pick P1
                     stack_length_added += N_POINTS_CURVE
                     out += line_eval(
-                        take_modulo=True, check_constant=False, clean_constant=False, is_constant_reused=False
+                        take_modulo=True,
+                        positive_modulo=False,
+                        check_constant=False,
+                        clean_constant=False,
+                        is_constant_reused=False,
                     )  # Compute t_1 = ev_(l_(T1,T1))(P_1)
                     # After this, the stack is: lambda_(2*T1) lambda_(2*T2) lambda_(2*T3) P1 P2 P3 Q1 Q2 Q3 -Q1 -Q2 -Q3
                     # T1 T2 T3 t_1 t_2
@@ -207,7 +223,11 @@ class TripleMillerLoop:
                     )  # Pick P2
                     stack_length_added += N_POINTS_CURVE
                     out += line_eval(
-                        take_modulo=True, check_constant=False, clean_constant=False, is_constant_reused=False
+                        take_modulo=True,
+                        positive_modulo=False,
+                        check_constant=False,
+                        clean_constant=False,
+                        is_constant_reused=False,
                     )  # Compute t_2 = ev_(l_(T2,T2))(P_2)
                     # After this, the stack is: lambda_(2*T1) lambda_(2*T2) lambda_(2*T3) P1 P2 P3 Q1 Q2 Q3 -Q1 -Q2 -Q3
                     # T1 T2 T3 t_1 t_2 t_3
@@ -237,7 +257,11 @@ class TripleMillerLoop:
                     )  # Pick P3
                     stack_length_added += N_POINTS_CURVE
                     out += line_eval(
-                        take_modulo=True, check_constant=False, clean_constant=False, is_constant_reused=False
+                        take_modulo=True,
+                        positive_modulo=False,
+                        check_constant=False,
+                        clean_constant=False,
+                        is_constant_reused=False,
                     )  # Compute t_3 = ev_(l_(T3,T3))(P_3)
                     # After this, the stack is: lambda_(2*T1) lambda_(2*T2) lambda_(2*T3) P1 P2 P3 Q1 Q2 Q3 -Q1 -Q2 -Q3
                     # T1 T2 T3 (t_1 * t_2 * t_3)
@@ -267,7 +291,11 @@ class TripleMillerLoop:
                     )  # Roll T1
                     stack_length_added += N_POINTS_TWIST
                     out += point_doubling_twisted_curve(
-                        take_modulo=take_modulo_T, check_constant=False, clean_constant=False
+                        take_modulo=take_modulo_T,
+                        verify_gradient=False,
+                        check_constant=False,
+                        clean_constant=False,
+                        positive_modulo=False,
                     )  # Compute 2*T1
                     # After this, the stack is: lambda_(2*T3) P1 P2 P3 Q1 Q2 Q3 -Q1 -Q2 -Q3 T3 (2*T1) (2*T2),
                     # altstack = [(t_1 * t_2 * t_3)]
@@ -286,7 +314,11 @@ class TripleMillerLoop:
                     )  # Roll T2
                     stack_length_added += N_POINTS_TWIST
                     out += point_doubling_twisted_curve(
-                        take_modulo=take_modulo_T, check_constant=False, clean_constant=False
+                        take_modulo=take_modulo_T,
+                        verify_gradient=False,
+                        check_constant=False,
+                        clean_constant=False,
+                        positive_modulo=False,
                     )  # Compute 2*T2
                     # After this, the stack is: P1 P2 P3 Q1 Q2 Q3 -Q1 -Q2 -Q3 (2*T1) (2*T2) (2*T3),
                     # altstack = [(t_1 * t_2 * t_3)]
@@ -301,7 +333,11 @@ class TripleMillerLoop:
                     )  # Roll T3
                     stack_length_added += N_POINTS_TWIST
                     out += point_doubling_twisted_curve(
-                        take_modulo=take_modulo_T, check_constant=False, clean_constant=clean_final
+                        take_modulo=take_modulo_T,
+                        verify_gradient=False,
+                        check_constant=False,
+                        clean_constant=clean_final,
+                        positive_modulo=False,
                     )  # Compute 2*T3
                     # After this, the stack is: P1 P2 P3 Q1 Q2 Q3 -Q1 -Q2 -Q3 (2*T1) (2*T2) (2*T3) (t_1 * t_2 * t_3)
                     out += Script.parse_string(" ".join(["OP_FROMALTSTACK"] * N_ELEMENTS_MILLER_OUTPUT))
@@ -328,7 +364,11 @@ class TripleMillerLoop:
                     )  # Pick P1
                     stack_length_added += N_POINTS_CURVE
                     out += line_eval(
-                        take_modulo=True, check_constant=False, clean_constant=False, is_constant_reused=False
+                        take_modulo=True,
+                        positive_modulo=False,
+                        check_constant=False,
+                        clean_constant=False,
+                        is_constant_reused=False,
                     )  # Compute t_1 = ev_(l_(T1,T1))(P_1)
                     # After this, the stack is: lambda_(2* T1 pm Q1) lambda_(2* T2 pm Q2) lambda_(2* T3 pm Q3)
                     # lambda_(2*T1) lambda_(2*T2) lambda_(2*T3) P1 P2 P3 Q1 Q2 Q3 -Q1 -Q2 -Q3 T1 T2 T3 (t_1 * t_2)
@@ -358,7 +398,11 @@ class TripleMillerLoop:
                     )  # Pick P2
                     stack_length_added += N_POINTS_CURVE
                     out += line_eval(
-                        take_modulo=True, check_constant=False, clean_constant=False, is_constant_reused=False
+                        take_modulo=True,
+                        positive_modulo=False,
+                        check_constant=False,
+                        clean_constant=False,
+                        is_constant_reused=False,
                     )  # Compute t_2 = ev_(l_(T2,T2))(P_2)
                     out += line_eval_times_eval(
                         take_modulo=False, check_constant=False, clean_constant=False
@@ -391,7 +435,11 @@ class TripleMillerLoop:
                     )  # Pick P3
                     stack_length_added += N_POINTS_CURVE
                     out += line_eval(
-                        take_modulo=True, check_constant=False, clean_constant=False, is_constant_reused=False
+                        take_modulo=True,
+                        positive_modulo=False,
+                        check_constant=False,
+                        clean_constant=False,
+                        is_constant_reused=False,
                     )  # Compute t_3 = ev_(l_(T3,T3))(P_3)
                     # After this, the stack is: lambda_(2* T1 pm Q1) lambda_(2* T2 pm Q2) lambda_(2* T3 pm Q3)
                     # lambda_(2*T1) lambda_(2*T2) lambda_(2*T3) P1 P2 P3 Q1 Q2 Q3 -Q1 -Q2 -Q3 T1 T2 T3
@@ -441,7 +489,11 @@ class TripleMillerLoop:
                     )  # Pick P1
                     stack_length_added += N_POINTS_CURVE
                     out += line_eval(
-                        take_modulo=True, check_constant=False, clean_constant=False, is_constant_reused=False
+                        take_modulo=True,
+                        positive_modulo=False,
+                        check_constant=False,
+                        clean_constant=False,
+                        is_constant_reused=False,
                     )  # Compute t'_1 = ev_(l_(2*T1,pm Q1))(P_1)
                     out += line_eval_times_eval(
                         take_modulo=False, check_constant=False, clean_constant=False
@@ -490,7 +542,11 @@ class TripleMillerLoop:
                     )  # Pick P2
                     stack_length_added += N_POINTS_CURVE
                     out += line_eval(
-                        take_modulo=True, check_constant=False, clean_constant=False, is_constant_reused=False
+                        take_modulo=True,
+                        positive_modulo=False,
+                        check_constant=False,
+                        clean_constant=False,
+                        is_constant_reused=False,
                     )  # Compute t'_2 = ev_(l_(2*T2,pm Q2))(P_2)
                     # After this, the stack is: lambda_(2* T1 pm Q1) lambda_(2* T2 pm Q2) lambda_(2* T3 pm Q3)
                     # lambda_(2*T1) lambda_(2*T2) lambda_(2*T3) P1 P2 P3 Q1 Q2 Q3 -Q1 -Q2 -Q3 T1 T2 T3
@@ -540,7 +596,11 @@ class TripleMillerLoop:
                     )  # Pick P3
                     stack_length_added += N_POINTS_CURVE
                     out += line_eval(
-                        take_modulo=True, check_constant=False, clean_constant=False, is_constant_reused=False
+                        take_modulo=True,
+                        positive_modulo=False,
+                        check_constant=False,
+                        clean_constant=False,
+                        is_constant_reused=False,
                     )  # Compute t'_3 = ev_(l_(2*T3,pm Q3))(P_3)
                     out += line_eval_times_eval(
                         take_modulo=False, check_constant=False, clean_constant=False
@@ -578,7 +638,11 @@ class TripleMillerLoop:
                     )  # Roll T1
                     stack_length_added += 0
                     out += point_doubling_twisted_curve(
-                        take_modulo=take_modulo_T, check_constant=False, clean_constant=False
+                        take_modulo=take_modulo_T,
+                        verify_gradient=False,
+                        check_constant=False,
+                        clean_constant=False,
+                        positive_modulo=False,
                     )  # Compute 2 * T1
                     stack_length_added = 0
                     out += roll(
@@ -606,7 +670,11 @@ class TripleMillerLoop:
                     else:
                         raise ValueError
                     out += point_addition_twisted_curve(
-                        take_modulo=take_modulo_T, check_constant=False, clean_constant=False
+                        take_modulo=take_modulo_T,
+                        verify_gradient=False,
+                        check_constant=False,
+                        clean_constant=False,
+                        positive_modulo=False,
                     )
                     # After this, the stack is: lambda_(2* T3 pm Q3) lambda_(2*T3) P1 P2 P3 Q1 Q2 Q3 -Q1 -Q2 -Q3 T3
                     # (2*T1 pm Q1) (2*T2 pm Q2),
@@ -626,7 +694,11 @@ class TripleMillerLoop:
                     )  # Roll T2
                     stack_length_added += 0
                     out += point_doubling_twisted_curve(
-                        take_modulo=take_modulo_T, check_constant=False, clean_constant=False
+                        take_modulo=take_modulo_T,
+                        verify_gradient=False,
+                        check_constant=False,
+                        clean_constant=False,
+                        positive_modulo=False,
                     )  # Compute 2 * T2
                     stack_length_added = 0
                     out += roll(
@@ -654,7 +726,11 @@ class TripleMillerLoop:
                     else:
                         raise ValueError
                     out += point_addition_twisted_curve(
-                        take_modulo=take_modulo_T, check_constant=False, clean_constant=False
+                        take_modulo=take_modulo_T,
+                        verify_gradient=False,
+                        check_constant=False,
+                        clean_constant=False,
+                        positive_modulo=False,
                     )
                     # After this, the stack is: P1 P2 P3 Q1 Q2 Q3 -Q1 -Q2 -Q3 (2*T1 pm Q1) (2*T2 pm Q2) (2*T3 pm Q3),
                     # altstack = [(t_1 * t_2) * (t_3 * t'_1) * (t'_2 * t'_3)]
@@ -669,7 +745,11 @@ class TripleMillerLoop:
                     )  # Roll T3
                     stack_length_added += 0
                     out += point_doubling_twisted_curve(
-                        take_modulo=take_modulo_T, check_constant=False, clean_constant=False
+                        take_modulo=take_modulo_T,
+                        verify_gradient=False,
+                        check_constant=False,
+                        clean_constant=False,
+                        positive_modulo=False,
                     )  # Compute 2 * T3
                     stack_length_added = 0
                     out += roll(
@@ -693,7 +773,11 @@ class TripleMillerLoop:
                     else:
                         raise ValueError
                     out += point_addition_twisted_curve(
-                        take_modulo=take_modulo_T, check_constant=False, clean_constant=False
+                        take_modulo=take_modulo_T,
+                        verify_gradient=False,
+                        check_constant=False,
+                        clean_constant=False,
+                        positive_modulo=False,
                     )
                     # After this, the stack is: P1 P2 P3 Q1 Q2 Q3 -Q1 -Q2 -Q3 T2 T3
                     # (2*T1 pm Q1) (2*T2 pm Q2) (2*T3 pm Q3) [(t_1 * t_2) * (t_3 * t'_1) * (t'_2 * t'_3)]
@@ -731,7 +815,11 @@ class TripleMillerLoop:
                 )  # Pick P1
                 stack_length_added += N_POINTS_TWIST
                 out += line_eval(
-                    take_modulo=True, check_constant=False, clean_constant=False, is_constant_reused=False
+                    take_modulo=True,
+                    positive_modulo=False,
+                    check_constant=False,
+                    clean_constant=False,
+                    is_constant_reused=False,
                 )  # Compute t_1 = ev_(l_(T1,T1))(P_1)
                 # After this, the stack is: lambda_(2*T1) lambda_(2*T2) lambda_(2*T3) P1 P2 P3 Q1 Q2 Q3 -Q1 -Q2 -Q3
                 # T1 T2 T3 f_i^2 t_1 t_2
@@ -767,7 +855,11 @@ class TripleMillerLoop:
                 )  # Pick P2
                 stack_length_added += N_POINTS_CURVE
                 out += line_eval(
-                    take_modulo=True, check_constant=False, clean_constant=False, is_constant_reused=False
+                    take_modulo=True,
+                    positive_modulo=False,
+                    check_constant=False,
+                    clean_constant=False,
+                    is_constant_reused=False,
                 )  # Compute t_2 = ev_(l_(T2,T2))(P_2)
                 # After this, the stack is: lambda_(2*T1) lambda_(2*T2) lambda_(2*T3) P1 P2 P3 Q1 Q2 Q3 -Q1 -Q2 -Q3
                 # T1 T2 T3 f_i^2 t_1 t_2 t_3
@@ -803,19 +895,27 @@ class TripleMillerLoop:
                 )  # Pick P3
                 stack_length_added += N_POINTS_CURVE
                 out += line_eval(
-                    take_modulo=True, check_constant=False, clean_constant=False, is_constant_reused=False
+                    take_modulo=True,
+                    positive_modulo=False,
+                    check_constant=False,
+                    clean_constant=False,
+                    is_constant_reused=False,
                 )  # Compute t_3 = ev_(l_(T3,T3))(P_3)
                 # After this, the stack is: lambda_(2*T1) lambda_(2*T2) lambda_(2*T3) P1 P2 P3 Q1 Q2 Q3 -Q1 -Q2 -Q3
                 # T1 T2 T3 (f_i^2 * t_1 * t_2 * t_3)
                 out += line_eval_times_eval(
-                    take_modulo=False, check_constant=False, clean_constant=False
+                    take_modulo=False, check_constant=False, clean_constant=False, positive_modulo=False
                 )  # Compute t2 * t3
                 out += line_eval_times_eval_times_eval(
-                    take_modulo=False, check_constant=False, clean_constant=False
+                    take_modulo=False, check_constant=False, clean_constant=False, positive_modulo=False
                 )  # Compute t1 * (t2 * t3)
                 # Compute f_i * (t1 * t2 * t3)
                 out += miller_loop_output_times_eval_times_eval_times_eval(
-                    take_modulo=take_modulo_F, check_constant=False, clean_constant=False, is_constant_reused=False
+                    take_modulo=take_modulo_F,
+                    positive_modulo=False,
+                    check_constant=False,
+                    clean_constant=False,
+                    is_constant_reused=False,
                 )
                 # After this, the stack is: lambda_(2*T1) lambda_(2*T2) lambda_(2*T3) P1 P2 P3 Q1 Q2 Q3 -Q1 -Q2 -Q3
                 # T1 T2 T3, altstack = [(f_i^2 * t_1 * t_2 * t_3)]
@@ -831,7 +931,11 @@ class TripleMillerLoop:
                 out += roll(position=3 * N_POINTS_TWIST + stack_length_added - 1, n_elements=N_POINTS_TWIST)  # Roll T1
                 stack_length_added += N_POINTS_TWIST
                 out += point_doubling_twisted_curve(
-                    take_modulo=take_modulo_T, check_constant=False, clean_constant=False
+                    take_modulo=take_modulo_T,
+                    verify_gradient=False,
+                    check_constant=False,
+                    clean_constant=False,
+                    positive_modulo=False,
                 )  # Compute 2*T1
                 # After this, the stack is: lambda_(2*T3) P1 P2 P3 Q1 Q2 Q3 -Q1 -Q2 -Q3 T3 (2*T1) (2*T2),
                 # altstack = [(f_i^2 * t_1 * t_2 * t_3)]
@@ -844,7 +948,11 @@ class TripleMillerLoop:
                 out += roll(position=3 * N_POINTS_TWIST + stack_length_added - 1, n_elements=N_POINTS_TWIST)  # Roll T2
                 stack_length_added += N_POINTS_TWIST
                 out += point_doubling_twisted_curve(
-                    take_modulo=take_modulo_T, check_constant=False, clean_constant=False
+                    take_modulo=take_modulo_T,
+                    verify_gradient=False,
+                    check_constant=False,
+                    clean_constant=False,
+                    positive_modulo=False,
                 )  # Compute 2*T2
                 # After this, the stack is: P1 P2 P3 Q1 Q2 Q3 -Q1 -Q2 -Q3 (2*T1) (2*T2) (2*T3),
                 # altstack = [(f_i^2 * t_1 * t_2 * t_3)]
@@ -857,14 +965,20 @@ class TripleMillerLoop:
                 out += roll(position=3 * N_POINTS_TWIST + stack_length_added - 1, n_elements=N_POINTS_TWIST)  # Roll T3
                 stack_length_added += N_POINTS_TWIST
                 out += point_doubling_twisted_curve(
-                    take_modulo=take_modulo_T, check_constant=False, clean_constant=clean_final
+                    take_modulo=take_modulo_T,
+                    verify_gradient=False,
+                    check_constant=False,
+                    clean_constant=clean_final,
+                    positive_modulo=positive_modulo_i,
                 )  # Compute 2*T3
                 # After this, the stack is: P1 P2 P3 Q1 Q2 Q3 -Q1 -Q2 -Q3 (2*T1) (2*T2) (2*T3) (f_i^2 * t_1 * t_2 * t_3)
                 out += Script.parse_string(" ".join(["OP_FROMALTSTACK"] * N_ELEMENTS_MILLER_OUTPUT))
             else:
                 # After this, the stack is: lambda_(2*T1) lambda_(2*T2) lambda_(2*T3) P1 P2 P3 Q1 Q2 Q3 -Q1 -Q2 -Q3
                 # T1 T2 T3 f_i^2
-                out += miller_loop_output_square(take_modulo=False, check_constant=False, clean_constant=False)
+                out += miller_loop_output_square(
+                    take_modulo=False, positive_modulo=False, check_constant=False, clean_constant=False
+                )
                 # After this, the stack is: lambda_(2* T1 pm Q1) lambda_(2* T2 pm Q2) lambda_(2* T3 pm Q3) lambda_(2*T1)
                 # lambda_(2*T2) lambda_(2*T3) P1 P2 P3 Q1 Q2 Q3 -Q1 -Q2 -Q3 T1 T2 T3 f_i^2 t_1
                 stack_length_added = 0
@@ -893,7 +1007,11 @@ class TripleMillerLoop:
                 )  # Pick P1
                 stack_length_added += N_POINTS_TWIST
                 out += line_eval(
-                    take_modulo=True, check_constant=False, clean_constant=False, is_constant_reused=False
+                    take_modulo=True,
+                    positive_modulo=False,
+                    check_constant=False,
+                    clean_constant=False,
+                    is_constant_reused=False,
                 )  # Compute t_1 = ev_(l_(T1,T1))(P_1)
                 # After this, the stack is: lambda_(2* T1 pm Q1) lambda_(2* T2 pm Q2) lambda_(2* T3 pm Q3) lambda_(2*T1)
                 # lambda_(2*T2) lambda_(2*T3) P1 P2 P3 Q1 Q2 Q3 -Q1 -Q2 -Q3 T1 T2 T3 f_i^2 (t_1 * t_2)
@@ -929,7 +1047,11 @@ class TripleMillerLoop:
                 )  # Pick P2
                 stack_length_added += N_POINTS_CURVE
                 out += line_eval(
-                    take_modulo=True, check_constant=False, clean_constant=False, is_constant_reused=False
+                    take_modulo=True,
+                    positive_modulo=False,
+                    check_constant=False,
+                    clean_constant=False,
+                    is_constant_reused=False,
                 )  # Compute t_2 = ev_(l_(T2,T2))(P_2)
                 out += line_eval_times_eval(
                     take_modulo=False, check_constant=False, clean_constant=False
@@ -968,7 +1090,11 @@ class TripleMillerLoop:
                 )  # Pick P3
                 stack_length_added += N_POINTS_CURVE
                 out += line_eval(
-                    take_modulo=True, check_constant=False, clean_constant=False, is_constant_reused=False
+                    take_modulo=True,
+                    positive_modulo=False,
+                    check_constant=False,
+                    clean_constant=False,
+                    is_constant_reused=False,
                 )  # Compute t_3 = ev_(l_(T3,T3))(P_3)
                 # After this, the stack is: lambda_(2* T1 pm Q1) lambda_(2* T2 pm Q2) lambda_(2* T3 pm Q3) lambda_(2*T1)
                 # lambda_(2*T2) lambda_(2*T3) P1 P2 P3 Q1 Q2 Q3 -Q1 -Q2 -Q3 T1 T2 T3 f_i^2 (t_1 * t_2) (t_3 * t'_1)
@@ -1021,7 +1147,11 @@ class TripleMillerLoop:
                 )  # Pick P1
                 stack_length_added += N_POINTS_CURVE
                 out += line_eval(
-                    take_modulo=True, check_constant=False, clean_constant=False, is_constant_reused=False
+                    take_modulo=True,
+                    positive_modulo=False,
+                    check_constant=False,
+                    clean_constant=False,
+                    is_constant_reused=False,
                 )  # Compute t'_1 = ev_(l_(2*T1,pm Q1))(P_1)
                 out += line_eval_times_eval(
                     take_modulo=False, check_constant=False, clean_constant=False
@@ -1073,7 +1203,11 @@ class TripleMillerLoop:
                 )  # Pick P2
                 stack_length_added += N_POINTS_CURVE
                 out += line_eval(
-                    take_modulo=True, check_constant=False, clean_constant=False, is_constant_reused=False
+                    take_modulo=True,
+                    positive_modulo=False,
+                    check_constant=False,
+                    clean_constant=False,
+                    is_constant_reused=False,
                 )  # Compute t'_2 = ev_(l_(2*T2,pm Q2))(P_2)
                 # After this, the stack is: lambda_(2* T1 pm Q1) lambda_(2* T2 pm Q2) lambda_(2* T3 pm Q3) lambda_(2*T1)
                 # lambda_(2*T2) lambda_(2*T3) P1 P2 P3 Q1 Q2 Q3 -Q1 -Q2 -Q3 T1 T2 T3 f_i^2
@@ -1127,7 +1261,11 @@ class TripleMillerLoop:
                 )  # Pick P3
                 stack_length_added += N_POINTS_CURVE
                 out += line_eval(
-                    take_modulo=True, check_constant=False, clean_constant=False, is_constant_reused=False
+                    take_modulo=True,
+                    positive_modulo=False,
+                    check_constant=False,
+                    clean_constant=False,
+                    is_constant_reused=False,
                 )  # Compute t'_3 = ev_(l_(2*T3,pm Q3))(P_3)
                 out += line_eval_times_eval(
                     take_modulo=False, check_constant=False, clean_constant=False
@@ -1144,7 +1282,11 @@ class TripleMillerLoop:
                     take_modulo=False, check_constant=False, clean_constant=False
                 )
                 out += miller_loop_output_times_eval_times_eval_times_eval_times_eval_times_eval_times_eval(
-                    take_modulo=take_modulo_F, check_constant=False, clean_constant=False, is_constant_reused=False
+                    take_modulo=take_modulo_F,
+                    positive_modulo=False,
+                    check_constant=False,
+                    clean_constant=False,
+                    is_constant_reused=False,
                 )  # Compute [f_i * (t_1 * t_2) * (t_3 * t'_1) * (t'_2 * t'_3)]
                 # After this, the stack is: lambda_(2* T1 pm Q1) lambda_(2* T2 pm Q2) lambda_(2* T3 pm Q3) lambda_(2*T1)
                 # lambda_(2*T2) lambda_(2*T3) P1 P2 P3 Q1 Q2 Q3 -Q1 -Q2 -Q3 T1 T2 T3,
@@ -1162,7 +1304,11 @@ class TripleMillerLoop:
                 out += roll(position=3 * N_POINTS_TWIST + stack_length_added - 1, n_elements=N_POINTS_TWIST)  # Roll T1
                 stack_length_added += 0
                 out += point_doubling_twisted_curve(
-                    take_modulo=take_modulo_T, check_constant=False, clean_constant=False
+                    take_modulo=take_modulo_T,
+                    verify_gradient=False,
+                    check_constant=False,
+                    clean_constant=False,
+                    positive_modulo=False,
                 )  # Compute 2 * T1
                 stack_length_added = 0
                 out += roll(
@@ -1186,7 +1332,11 @@ class TripleMillerLoop:
                 else:
                     raise ValueError
                 out += point_addition_twisted_curve(
-                    take_modulo=take_modulo_T, check_constant=False, clean_constant=False
+                    take_modulo=take_modulo_T,
+                    verify_gradient=False,
+                    check_constant=False,
+                    clean_constant=False,
+                    positive_modulo=False,
                 )
                 # After this, the stack is: lambda_(2* T3 pm Q3) lambda_(2*T3) P1 P2 P3 Q1 Q2 Q3 -Q1 -Q2 -Q3 T3
                 # (2*T1 pm Q1) (2*T2 pm Q2),
@@ -1200,7 +1350,11 @@ class TripleMillerLoop:
                 out += roll(position=3 * N_POINTS_TWIST + stack_length_added - 1, n_elements=N_POINTS_TWIST)  # Roll T2
                 stack_length_added += 0
                 out += point_doubling_twisted_curve(
-                    take_modulo=take_modulo_T, check_constant=False, clean_constant=False
+                    take_modulo=take_modulo_T,
+                    verify_gradient=False,
+                    check_constant=False,
+                    clean_constant=False,
+                    positive_modulo=False,
                 )  # Compute 2 * T2
                 stack_length_added = 0
                 out += roll(
@@ -1224,7 +1378,11 @@ class TripleMillerLoop:
                 else:
                     raise ValueError
                 out += point_addition_twisted_curve(
-                    take_modulo=take_modulo_T, check_constant=False, clean_constant=False
+                    take_modulo=take_modulo_T,
+                    verify_gradient=False,
+                    check_constant=False,
+                    clean_constant=False,
+                    positive_modulo=False,
                 )
                 # After this, the stack is: P1 P2 P3 Q1 Q2 Q3 -Q1 -Q2 -Q3 (2*T1 pm Q1) (2*T2 pm Q2) (2*T3 pm Q3),
                 # altstack = [f_i^2 * (t_1 * t_2) * (t_3 * t'_1) * (t'_2 * t'_3)]
@@ -1237,7 +1395,11 @@ class TripleMillerLoop:
                 out += roll(position=3 * N_POINTS_TWIST + stack_length_added - 1, n_elements=N_POINTS_TWIST)  # Roll T3
                 stack_length_added += 0
                 out += point_doubling_twisted_curve(
-                    take_modulo=take_modulo_T, check_constant=False, clean_constant=False
+                    take_modulo=take_modulo_T,
+                    verify_gradient=False,
+                    check_constant=False,
+                    clean_constant=False,
+                    positive_modulo=False,
                 )  # Compute 2 * T3
                 stack_length_added = 0
                 out += roll(
@@ -1261,7 +1423,11 @@ class TripleMillerLoop:
                 else:
                     raise ValueError
                 out += point_addition_twisted_curve(
-                    take_modulo=take_modulo_T, check_constant=False, clean_constant=clean_final
+                    take_modulo=take_modulo_T,
+                    verify_gradient=False,
+                    check_constant=False,
+                    clean_constant=clean_final,
+                    positive_modulo=positive_modulo_i,
                 )
                 # After this, the stack is: P1 P2 P3 Q1 Q2 Q3 -Q1 -Q2 -Q3 T2 T3 (2*T1 pm Q1) (2*T2 pm Q2) (2*T3 pm Q3)
                 # [f_i^2 * (t_1 * t_2) * (t_3 * t'_1) * (t'_2 * t'_3)]

@@ -38,6 +38,7 @@ class Fq12Cubic:
     def mul(
         self,
         take_modulo: bool,
+        positive_modulo: bool = True,
         check_constant: bool | None = None,
         clean_constant: bool | None = None,
         is_constant_reused: bool | None = None,
@@ -55,6 +56,7 @@ class Fq12Cubic:
 
         Args:
             take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
@@ -132,7 +134,11 @@ class Fq12Cubic:
         compute_first_component += Script.parse_string(" ".join(["OP_FROMALTSTACK"] * 4))
         if take_modulo:
             compute_first_component += fq4.add(
-                take_modulo=True, check_constant=False, clean_constant=clean_constant, is_constant_reused=True
+                take_modulo=True,
+                positive_modulo=positive_modulo,
+                check_constant=False,
+                clean_constant=clean_constant,
+                is_constant_reused=True,
             )
         else:
             compute_first_component += fq4.add(take_modulo=False, check_constant=False, clean_constant=False)
@@ -144,8 +150,8 @@ class Fq12Cubic:
         if take_modulo:
             # Batched modulo operations: pull from altstack, rotate, mod out, repeat
             for _ in range(7):
-                out += mod()
-            out += mod(is_constant_reused=is_constant_reused)
+                out += mod(is_positive=positive_modulo)
+            out += mod(is_constant_reused=is_constant_reused, is_positive=positive_modulo)
         else:
             out += Script.parse_string(" ".join(["OP_FROMALTSTACK"] * 8))
 
@@ -154,6 +160,7 @@ class Fq12Cubic:
     def square(
         self,
         take_modulo: bool,
+        positive_modulo: bool = True,
         check_constant: bool | None = None,
         clean_constant: bool | None = None,
         is_constant_reused: bool | None = None,
@@ -170,6 +177,7 @@ class Fq12Cubic:
 
         Args:
             take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
@@ -231,7 +239,11 @@ class Fq12Cubic:
         compute_first_component += Script.parse_string(" ".join(["OP_FROMALTSTACK"] * 4))
         if take_modulo:
             compute_first_component += fq4.add(
-                take_modulo=True, check_constant=False, clean_constant=clean_constant, is_constant_reused=True
+                take_modulo=True,
+                positive_modulo=positive_modulo,
+                check_constant=False,
+                clean_constant=clean_constant,
+                is_constant_reused=True,
             )
         else:
             compute_first_component += fq4.add(take_modulo=False, check_constant=False, clean_constant=False)
@@ -243,8 +255,8 @@ class Fq12Cubic:
         if take_modulo:
             # Batched modulo operations: pull from altstack, rotate, mod out, repeat
             for _ in range(7):
-                out += mod()
-            out += mod(is_constant_reused=is_constant_reused)
+                out += mod(is_positive=positive_modulo)
+            out += mod(is_positive=positive_modulo, is_constant_reused=is_constant_reused)
         else:
             out += Script.parse_string(" ".join(["OP_FROMALTSTACK"] * 8))
 

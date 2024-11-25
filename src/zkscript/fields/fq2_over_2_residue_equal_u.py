@@ -19,8 +19,9 @@ class Fq2Over2ResidueEqualU(Fq4):
     def square(
         self,
         take_modulo: bool,
-        check_constant: bool | None,
-        clean_constant: bool | None,
+        positive_modulo: bool = True,
+        check_constant: bool | None = None,
+        clean_constant: bool | None = None,
         is_constant_reused: bool | None = None,
     ) -> Script:
         """Squaring in F_q^4 = F_q^2[v] / (v^2 - u).
@@ -35,6 +36,7 @@ class Fq2Over2ResidueEqualU(Fq4):
 
         Args:
             take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
@@ -110,10 +112,10 @@ class Fq2Over2ResidueEqualU(Fq4):
             else:
                 fetch_q = Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
 
-            batched_modulo += mod(stack_preparation="")
-            batched_modulo += mod()
-            batched_modulo += mod()
-            batched_modulo += mod(is_constant_reused=is_constant_reused)
+            batched_modulo += mod(stack_preparation="", is_positive=positive_modulo)
+            batched_modulo += mod(is_positive=positive_modulo)
+            batched_modulo += mod(is_positive=positive_modulo)
+            batched_modulo += mod(is_constant_reused=is_constant_reused, is_positive=positive_modulo)
 
             out += fetch_q + batched_modulo
         else:
@@ -124,8 +126,9 @@ class Fq2Over2ResidueEqualU(Fq4):
     def mul(
         self,
         take_modulo: bool,
-        check_constant: bool | None,
-        clean_constant: bool | None,
+        positive_modulo: bool = True,
+        check_constant: bool | None = None,
+        clean_constant: bool | None = None,
         is_constant_reused: bool | None = None,
     ) -> Script:
         """Multiplication in Fq4 = F_q^2[v] / (v^2 - u).
@@ -141,6 +144,7 @@ class Fq2Over2ResidueEqualU(Fq4):
 
         Args:
             take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
@@ -224,10 +228,10 @@ class Fq2Over2ResidueEqualU(Fq4):
             else:
                 fetch_q = Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
 
-            batched_modulo += mod(stack_preparation="")
-            batched_modulo += mod()
-            batched_modulo += mod()
-            batched_modulo += mod(is_constant_reused=is_constant_reused)
+            batched_modulo += mod(stack_preparation="", is_positive=positive_modulo)
+            batched_modulo += mod(is_positive=positive_modulo)
+            batched_modulo += mod(is_positive=positive_modulo)
+            batched_modulo += mod(is_constant_reused=is_constant_reused, is_positive=positive_modulo)
 
             out += fetch_q + batched_modulo
 

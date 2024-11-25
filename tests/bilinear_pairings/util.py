@@ -25,6 +25,27 @@ def generate_verify(z, elements_to_select: Optional[list[int]] = None) -> Script
     return out
 
 
+def modify_verify_modulo_check(old_verification_script, clean_constant):
+    """Modify the verification script to take the positive modulo of the results before checking the equalities.
+
+    Args:
+        old_verification_script: the original verification script
+        clean_constant: a boolean value determining if the modulo should be removed from the stack or not
+    """
+
+    op_equalverify_with_modulo = "OP_SWAP OP_DEPTH OP_1SUB OP_PICK OP_TUCK OP_ADD OP_SWAP OP_MOD OP_EQUALVERIFY"
+    op_equal_with_modulo = op_equalverify_with_modulo.replace("OP_EQUALVERIFY", "OP_EQUAL")
+    new_verification_script = Script.parse_string(
+        str(old_verification_script)
+        .replace("OP_EQUALVERIFY", op_equalverify_with_modulo)
+        .replace("OP_EQUAL", op_equal_with_modulo)
+    )
+
+    if clean_constant:
+        new_verification_script += Script.parse_string("OP_SWAP OP_DROP")
+    return new_verification_script
+
+
 def generate_unlock(z, elements_to_select: Optional[list[int]] = None) -> Script:
     if elements_to_select is None:
         return nums_to_script(z.to_list())

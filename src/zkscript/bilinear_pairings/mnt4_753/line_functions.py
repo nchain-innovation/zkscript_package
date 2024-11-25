@@ -21,6 +21,7 @@ class LineFunctions:
     def line_evaluation(
         self,
         take_modulo: bool,
+        positive_modulo: bool = True,
         check_constant: bool | None = None,
         clean_constant: bool | None = None,
         is_constant_reused: bool | None = None,
@@ -38,6 +39,7 @@ class LineFunctions:
 
         Args:
             take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
@@ -84,19 +86,18 @@ class LineFunctions:
             batched_modulo = Script()
 
             if clean_constant is None and is_constant_reused is None:
-                raise ValueError(
-                    f"If take_modulo is set, both clean_constant: {clean_constant} \
+                msg = f"If take_modulo is set, both clean_constant: {clean_constant} \
                         and is_constant_reused: {is_constant_reused} must be set."
-                )
+                raise ValueError(msg)
 
             if clean_constant:
                 fetch_q = Script.parse_string("OP_DEPTH OP_1SUB OP_ROLL")
             else:
                 fetch_q = Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
 
-            batched_modulo += mod(stack_preparation="")
-            batched_modulo += mod()
-            batched_modulo += mod(is_constant_reused=is_constant_reused)
+            batched_modulo += mod(stack_preparation="", is_positive=positive_modulo)
+            batched_modulo += mod(is_positive=positive_modulo)
+            batched_modulo += mod(is_constant_reused=is_constant_reused, is_positive=positive_modulo)
 
             out += fetch_q + batched_modulo
         else:

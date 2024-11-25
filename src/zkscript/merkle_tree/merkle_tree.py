@@ -59,7 +59,6 @@ class MerkleTree:
             - `self.root` should be set to the expected Merkle root.
 
         """
-
         out = Script()
 
         # stack in: [..., aux_i, bit_i, ..., d]

@@ -38,7 +38,13 @@ from src.zkscript.bilinear_pairings.mnt4_753.miller_output_operations import (
 )
 from src.zkscript.bilinear_pairings.mnt4_753.mnt4_753 import mnt4_753
 from src.zkscript.util.utility_scripts import nums_to_script
-from tests.bilinear_pairings.util import check_constant, generate_unlock, generate_verify, save_scripts
+from tests.bilinear_pairings.util import (
+    check_constant,
+    generate_unlock,
+    generate_verify,
+    modify_verify_modulo_check,
+    save_scripts,
+)
 
 
 @dataclass
@@ -3022,24 +3028,31 @@ def test_cubic_to_quadratic(config, x, expected, save_to_json_folder):
 
 @pytest.mark.parametrize("clean_constant", [True, False])
 @pytest.mark.parametrize("is_constant_reused", [True, False])
+@pytest.mark.parametrize("positive_modulo", [True, False])
 @pytest.mark.parametrize(
     ("config", "point_p", "point_q", "lam", "expected"), generate_test_cases("test_line_evaluation")
 )
 def test_line_evaluation(
-    config, point_p, point_q, lam, expected, clean_constant, is_constant_reused, save_to_json_folder
+    config, positive_modulo, point_p, point_q, lam, expected, clean_constant, is_constant_reused, save_to_json_folder
 ):
     unlock = nums_to_script([config.q])
     unlock += generate_unlock(lam)
     unlock += generate_unlock(point_q)
     unlock += generate_unlock(point_p)
 
-    # Check correct evaluation
+    # Check correct evaluation, if positive_modulo is negative, we do not clean the modulo constant q
     lock = config.test_script_line_functions.line_evaluation(
-        take_modulo=True, check_constant=True, clean_constant=clean_constant, is_constant_reused=is_constant_reused
+        take_modulo=True,
+        positive_modulo=positive_modulo,
+        check_constant=True,
+        clean_constant=clean_constant and positive_modulo,
+        is_constant_reused=is_constant_reused,
     )
     if is_constant_reused:
         lock += check_constant(config.q)
-    lock += generate_verify(expected, config.ix_line_evaluation)
+
+    verification = generate_verify(expected, config.ix_line_evaluation)
+    lock += verification if positive_modulo else modify_verify_modulo_check(verification, clean_constant)
 
     verify_script(lock, unlock, clean_constant)
 
@@ -3049,19 +3062,27 @@ def test_line_evaluation(
 
 @pytest.mark.parametrize("clean_constant", [True, False])
 @pytest.mark.parametrize("is_constant_reused", [True, False])
+@pytest.mark.parametrize("positive_modulo", [True, False])
 @pytest.mark.parametrize(("config", "x", "y", "expected"), generate_test_cases("test_line_eval_times_eval"))
-def test_line_eval_times_eval(config, x, y, expected, clean_constant, is_constant_reused, save_to_json_folder):
+def test_line_eval_times_eval(
+    config, positive_modulo, x, y, expected, clean_constant, is_constant_reused, save_to_json_folder
+):
     unlock = nums_to_script([config.q])
     unlock += generate_unlock(x, config.ix_line_evaluation)
     unlock += generate_unlock(y, config.ix_line_evaluation)
 
-    # Check correct evaluation
+    # Check correct evaluation, if positive_modulo is negative, we do not clean the modulo constant q
     lock = config.test_script_miller_output_ops.line_eval_times_eval(
-        take_modulo=True, check_constant=True, clean_constant=clean_constant, is_constant_reused=is_constant_reused
+        take_modulo=True,
+        positive_modulo=positive_modulo,
+        check_constant=True,
+        clean_constant=clean_constant and positive_modulo,
+        is_constant_reused=is_constant_reused,
     )
     if is_constant_reused:
         lock += check_constant(config.q)
-    lock += generate_verify(expected, config.ix_line_eval_times_eval)
+    verification = generate_verify(expected, config.ix_line_eval_times_eval)
+    lock += verification if positive_modulo else modify_verify_modulo_check(verification, clean_constant)
 
     verify_script(lock, unlock, clean_constant)
 
@@ -3071,21 +3092,27 @@ def test_line_eval_times_eval(config, x, y, expected, clean_constant, is_constan
 
 @pytest.mark.parametrize("clean_constant", [True, False])
 @pytest.mark.parametrize("is_constant_reused", [True, False])
+@pytest.mark.parametrize("positive_modulo", [True, False])
 @pytest.mark.parametrize(("config", "x", "y", "expected"), generate_test_cases("test_line_eval_times_eval_times_eval"))
 def test_line_eval_times_eval_times_eval(
-    config, x, y, expected, clean_constant, is_constant_reused, save_to_json_folder
+    config, positive_modulo, x, y, expected, clean_constant, is_constant_reused, save_to_json_folder
 ):
     unlock = nums_to_script([config.q])
     unlock += generate_unlock(x, config.ix_line_evaluation)
     unlock += generate_unlock(y, config.ix_line_eval_times_eval)
 
-    # Check correct evaluation
+    # Check correct evaluation, if positive_modulo is negative, we do not clean the modulo constant q
     lock = config.test_script_miller_output_ops.line_eval_times_eval_times_eval(
-        take_modulo=True, check_constant=True, clean_constant=clean_constant, is_constant_reused=is_constant_reused
+        take_modulo=True,
+        positive_modulo=positive_modulo,
+        check_constant=True,
+        clean_constant=clean_constant and positive_modulo,
+        is_constant_reused=is_constant_reused,
     )
     if is_constant_reused:
         lock += check_constant(config.q)
-    lock += generate_verify(expected, config.ix_line_eval_times_eval_times_eval)
+    verification = generate_verify(expected, config.ix_line_eval_times_eval_times_eval)
+    lock += verification if positive_modulo else modify_verify_modulo_check(verification, clean_constant)
 
     verify_script(lock, unlock, clean_constant)
 
@@ -3097,23 +3124,29 @@ def test_line_eval_times_eval_times_eval(
 
 @pytest.mark.parametrize("clean_constant", [True, False])
 @pytest.mark.parametrize("is_constant_reused", [True, False])
+@pytest.mark.parametrize("positive_modulo", [True, False])
 @pytest.mark.parametrize(
     ("config", "x", "y", "expected"), generate_test_cases("test_line_eval_times_eval_times_eval_times_eval")
 )
 def test_line_eval_times_eval_times_eval_times_eval(
-    config, x, y, expected, clean_constant, is_constant_reused, save_to_json_folder
+    config, positive_modulo, x, y, expected, clean_constant, is_constant_reused, save_to_json_folder
 ):
     unlock = nums_to_script([config.q])
     unlock += generate_unlock(x, config.ix_line_eval_times_eval)
     unlock += generate_unlock(y, config.ix_line_eval_times_eval)
 
-    # Check correct evaluation
+    # Check correct evaluation, if positive_modulo is negative, we do not clean the modulo constant q
     lock = config.test_script_miller_output_ops.line_eval_times_eval_times_eval_times_eval(
-        take_modulo=True, check_constant=True, clean_constant=clean_constant, is_constant_reused=is_constant_reused
+        take_modulo=True,
+        positive_modulo=positive_modulo,
+        check_constant=True,
+        clean_constant=clean_constant and positive_modulo,
+        is_constant_reused=is_constant_reused,
     )
     if is_constant_reused:
         lock += check_constant(config.q)
-    lock += generate_verify(expected)
+    verification = generate_verify(expected)
+    lock += verification if positive_modulo else modify_verify_modulo_check(verification, clean_constant)
 
     verify_script(lock, unlock, clean_constant)
 
@@ -3129,24 +3162,30 @@ def test_line_eval_times_eval_times_eval_times_eval(
 
 @pytest.mark.parametrize("clean_constant", [True, False])
 @pytest.mark.parametrize("is_constant_reused", [True, False])
+@pytest.mark.parametrize("positive_modulo", [True, False])
 @pytest.mark.parametrize(
     ("config", "x", "y", "expected"),
     generate_test_cases("test_line_eval_times_eval_times_eval_times_eval_times_eval_times_eval"),
 )
 def test_line_eval_times_eval_times_eval_times_eval_times_eval_times_eval(
-    config, x, y, expected, clean_constant, is_constant_reused, save_to_json_folder
+    config, positive_modulo, x, y, expected, clean_constant, is_constant_reused, save_to_json_folder
 ):
     unlock = nums_to_script([config.q])
     unlock += generate_unlock(x, config.ix_line_eval_times_eval)
     unlock += generate_unlock(y, config.ix_line_eval_times_eval_times_eval_times_eval)
 
-    # Check correct evaluation
+    # Check correct evaluation, if positive_modulo is negative, we do not clean the modulo constant q
     lock = config.test_script_miller_output_ops.line_eval_times_eval_times_eval_times_eval_times_eval_times_eval(
-        take_modulo=True, check_constant=True, clean_constant=clean_constant, is_constant_reused=is_constant_reused
+        take_modulo=True,
+        positive_modulo=positive_modulo,
+        check_constant=True,
+        clean_constant=clean_constant and positive_modulo,
+        is_constant_reused=is_constant_reused,
     )
     if is_constant_reused:
         lock += check_constant(config.q)
-    lock += generate_verify(expected)
+    verification = generate_verify(expected)
+    lock += verification if positive_modulo else modify_verify_modulo_check(verification, clean_constant)
 
     verify_script(lock, unlock, clean_constant)
 
@@ -3162,19 +3201,27 @@ def test_line_eval_times_eval_times_eval_times_eval_times_eval_times_eval(
 
 @pytest.mark.parametrize("clean_constant", [True, False])
 @pytest.mark.parametrize("is_constant_reused", [True, False])
+@pytest.mark.parametrize("positive_modulo", [True, False])
 @pytest.mark.parametrize(("config", "x", "y", "expected"), generate_test_cases("test_miller_output_times_eval"))
-def test_miller_output_times_eval(config, x, y, expected, clean_constant, is_constant_reused, save_to_json_folder):
+def test_miller_output_times_eval(
+    config, positive_modulo, x, y, expected, clean_constant, is_constant_reused, save_to_json_folder
+):
     unlock = nums_to_script([config.q])
     unlock += generate_unlock(x, config.ix_miller_output)
     unlock += generate_unlock(y, config.ix_line_evaluation)
 
-    # Check correct evaluation
+    # Check correct evaluation, if positive_modulo is negative, we do not clean the modulo constant q
     lock = config.test_script_miller_output_ops.miller_loop_output_times_eval(
-        take_modulo=True, check_constant=True, clean_constant=clean_constant, is_constant_reused=is_constant_reused
+        take_modulo=True,
+        positive_modulo=positive_modulo,
+        check_constant=True,
+        clean_constant=clean_constant and positive_modulo,
+        is_constant_reused=is_constant_reused,
     )
     if is_constant_reused:
         lock += check_constant(config.q)
-    lock += generate_verify(expected)
+    verification = generate_verify(expected)
+    lock += verification if positive_modulo else modify_verify_modulo_check(verification, clean_constant)
 
     verify_script(lock, unlock, clean_constant)
 
@@ -3184,23 +3231,29 @@ def test_miller_output_times_eval(config, x, y, expected, clean_constant, is_con
 
 @pytest.mark.parametrize("clean_constant", [True, False])
 @pytest.mark.parametrize("is_constant_reused", [True, False])
+@pytest.mark.parametrize("positive_modulo", [True, False])
 @pytest.mark.parametrize(
     ("config", "x", "y", "expected"), generate_test_cases("test_line_eval_times_eval_times_miller_output")
 )
 def test_line_eval_times_eval_times_miller_output(
-    config, x, y, expected, clean_constant, is_constant_reused, save_to_json_folder
+    config, positive_modulo, x, y, expected, clean_constant, is_constant_reused, save_to_json_folder
 ):
     unlock = nums_to_script([config.q])
     unlock += generate_unlock(x, config.ix_line_eval_times_eval)
     unlock += generate_unlock(y, config.ix_miller_output)
 
-    # Check correct evaluation
+    # Check correct evaluation, if positive_modulo is negative, we do not clean the modulo constant q
     lock = config.test_script_miller_output_ops.line_eval_times_eval_times_miller_loop_output(
-        take_modulo=True, check_constant=True, clean_constant=clean_constant, is_constant_reused=is_constant_reused
+        take_modulo=True,
+        positive_modulo=positive_modulo,
+        check_constant=True,
+        clean_constant=clean_constant and positive_modulo,
+        is_constant_reused=is_constant_reused,
     )
     if is_constant_reused:
         lock += check_constant(config.q)
-    lock += generate_verify(expected)
+    verification = generate_verify(expected)
+    lock += verification if positive_modulo else modify_verify_modulo_check(verification, clean_constant)
 
     verify_script(lock, unlock, clean_constant)
 
@@ -3216,23 +3269,29 @@ def test_line_eval_times_eval_times_miller_output(
 
 @pytest.mark.parametrize("clean_constant", [True, False])
 @pytest.mark.parametrize("is_constant_reused", [True, False])
+@pytest.mark.parametrize("positive_modulo", [True, False])
 @pytest.mark.parametrize(
     ("config", "f", "f_inverse", "expected"), generate_test_cases("test_easy_exponentiation_with_inverse_check")
 )
 def test_easy_exponentiation_with_inverse_check(
-    config, f, f_inverse, expected, clean_constant, is_constant_reused, save_to_json_folder
+    config, positive_modulo, f, f_inverse, expected, clean_constant, is_constant_reused, save_to_json_folder
 ):
     unlock = nums_to_script([config.q])
     unlock += generate_unlock(f_inverse, config.ix_miller_output)
     unlock += generate_unlock(f, config.ix_miller_output)
 
-    # Check correct evaluation
+    # Check correct evaluation, if positive_modulo is negative, we do not clean the modulo constant q
     lock = config.test_script_final_exponentiation.easy_exponentiation_with_inverse_check(
-        take_modulo=True, check_constant=True, clean_constant=clean_constant, is_constant_reused=is_constant_reused
+        take_modulo=True,
+        positive_modulo=positive_modulo,
+        check_constant=True,
+        clean_constant=clean_constant and positive_modulo,
+        is_constant_reused=is_constant_reused,
     )
     if is_constant_reused:
         lock += check_constant(config.q)
-    lock += generate_verify(expected, config.ix_miller_output)
+    verification = generate_verify(expected, config.ix_miller_output)
+    lock += verification if positive_modulo else modify_verify_modulo_check(verification, clean_constant)
 
     verify_script(lock, unlock, clean_constant)
 
@@ -3243,16 +3302,22 @@ def test_easy_exponentiation_with_inverse_check(
 
 
 @pytest.mark.parametrize("clean_constant", [True, False])
+@pytest.mark.parametrize("positive_modulo", [True, False])
 @pytest.mark.parametrize(("config", "f", "expected"), generate_test_cases("test_hard_exponentiation"))
-def test_hard_exponentiation(config, f, expected, clean_constant, save_to_json_folder):
+def test_hard_exponentiation(config, positive_modulo, f, expected, clean_constant, save_to_json_folder):
     unlock = nums_to_script([config.q])
     unlock += generate_unlock(f, config.ix_miller_output)
 
-    # Check correct evaluation
+    # Check correct evaluation, if positive_modulo is negative, we do not clean the modulo constant q
     lock = config.test_script_final_exponentiation.hard_exponentiation(
-        take_modulo=True, modulo_threshold=1, check_constant=True, clean_constant=clean_constant
+        take_modulo=True,
+        positive_modulo=positive_modulo,
+        modulo_threshold=1,
+        check_constant=True,
+        clean_constant=clean_constant and positive_modulo,
     )
-    lock += generate_verify(expected, config.ix_miller_output)
+    verification = generate_verify(expected, config.ix_miller_output)
+    lock += verification if positive_modulo else modify_verify_modulo_check(verification, clean_constant)
 
     verify_script(lock, unlock, clean_constant)
 
@@ -3272,12 +3337,11 @@ def test_miller_loop(config, point_p, point_q, q_times_val_miller_loop, expected
     )
 
     # Check correct evaluation
-    lock = config.test_script_pairing.miller_loop(
-        modulo_threshold=1, check_constant=True, clean_constant=clean_constant
-    )
-    lock += generate_verify(expected, config.ix_miller_output)
-    lock += Script.parse_string("OP_VERIFY")
-    lock += generate_verify(q_times_val_miller_loop)
+    lock = config.test_script_pairing.miller_loop(modulo_threshold=1, check_constant=True, clean_constant=False)
+
+    lock += modify_verify_modulo_check(generate_verify(expected, config.ix_miller_output), False)
+    lock += modify_verify_modulo_check(Script.parse_string("OP_VERIFY"), False)
+    lock += modify_verify_modulo_check(generate_verify(q_times_val_miller_loop), clean_constant)
 
     verify_script(lock, unlock, clean_constant)
 
@@ -3307,10 +3371,8 @@ def test_single_pairing(config, point_p, point_q, miller_output_inverse, expecte
     )
 
     # Check correct evaluation
-    lock = config.test_script_pairing.single_pairing(
-        modulo_threshold=1, check_constant=True, clean_constant=clean_constant
-    )
-    lock += generate_verify(expected)
+    lock = config.test_script_pairing.single_pairing(modulo_threshold=1, check_constant=True, clean_constant=False)
+    lock += modify_verify_modulo_check(generate_verify(expected), clean_constant)
 
     verify_script(lock, unlock, clean_constant)
 
@@ -3336,10 +3398,8 @@ def test_triple_miller_loop(config, point_p, point_q, expected, clean_constant, 
     )
 
     # Check correct evaluation
-    lock = config.test_script_pairing.triple_miller_loop(
-        modulo_threshold=1, check_constant=True, clean_constant=clean_constant
-    )
-    lock += generate_verify(expected)
+    lock = config.test_script_pairing.triple_miller_loop(modulo_threshold=1, check_constant=True, clean_constant=False)
+    lock += modify_verify_modulo_check(generate_verify(expected), clean_constant)
 
     verify_script(lock, unlock, clean_constant)
 
@@ -3368,10 +3428,8 @@ def test_triple_pairing(config, point_p, point_q, miller_output_inverse, expecte
     )
 
     # Check correct evaluation
-    lock = config.test_script_pairing.triple_pairing(
-        modulo_threshold=1, check_constant=True, clean_constant=clean_constant
-    )
-    lock += generate_verify(expected)
+    lock = config.test_script_pairing.triple_pairing(modulo_threshold=1, check_constant=True, clean_constant=False)
+    lock += modify_verify_modulo_check(generate_verify(expected), clean_constant)
 
     verify_script(lock, unlock, clean_constant)
 

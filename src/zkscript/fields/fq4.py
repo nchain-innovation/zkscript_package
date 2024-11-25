@@ -49,6 +49,7 @@ class Fq4:
     def add(
         self,
         take_modulo: bool,
+        positive_modulo: bool = True,
         check_constant: bool | None = None,
         clean_constant: bool | None = None,
         is_constant_reused: bool | None = None,
@@ -66,6 +67,7 @@ class Fq4:
 
         Args:
             take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
@@ -87,11 +89,15 @@ class Fq4:
         if take_modulo:
             # After this, base stack is: (x_0 + y_0)_0 q (x_0 + y_0)_1 altstack = (x1 + y1)
             out += fq2.add(
-                take_modulo=True, check_constant=False, clean_constant=clean_constant, is_constant_reused=True
+                take_modulo=True,
+                positive_modulo=positive_modulo,
+                check_constant=False,
+                clean_constant=clean_constant,
+                is_constant_reused=True,
             )  # Compute (x_0 + y_0)
             # Batched modulo operations: pull from altstack, rotate, mod out, repeat
-            out += mod()
-            out += mod(is_constant_reused=is_constant_reused)
+            out += mod(is_positive=positive_modulo)
+            out += mod(is_positive=positive_modulo, is_constant_reused=is_constant_reused)
         else:
             # After this, base stack is: (x_0 + y_0) (x_1 + y_1)
             out += fq2.add(take_modulo=False)  # Compute (x_0 + y_0)
@@ -102,6 +108,7 @@ class Fq4:
     def fq_scalar_mul(
         self,
         take_modulo: bool,
+        positive_modulo: bool = True,
         check_constant: bool | None = None,
         clean_constant: bool | None = None,
         is_constant_reused: bool | None = None,
@@ -119,6 +126,7 @@ class Fq4:
 
         Args:
             take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
@@ -139,11 +147,15 @@ class Fq4:
         if take_modulo:
             # After this, base stack is: x_00 * lambda q x_01 * lambda altstack = (x_1 * lambda)
             out += fq2.scalar_mul(
-                take_modulo=True, check_constant=False, clean_constant=clean_constant, is_constant_reused=True
+                take_modulo=True,
+                positive_modulo=positive_modulo,
+                check_constant=False,
+                clean_constant=clean_constant,
+                is_constant_reused=True,
             )
             # Batched modulo operations: pull from altstack, rotate, mod out, repeat
-            out += mod()
-            out += mod(is_constant_reused=is_constant_reused)
+            out += mod(is_positive=positive_modulo)
+            out += mod(is_positive=positive_modulo, is_constant_reused=is_constant_reused)
         else:
             # After this, base stack is: (x_0 + y_0) (x_1 + y_1)
             out += fq2.scalar_mul(take_modulo=False)
@@ -154,6 +166,7 @@ class Fq4:
     def scalar_mul(
         self,
         take_modulo: bool,
+        positive_modulo: bool = True,
         check_constant: bool | None = None,
         clean_constant: bool | None = None,
         is_constant_reused: bool | None = None,
@@ -171,6 +184,7 @@ class Fq4:
 
         Args:
             take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
@@ -192,11 +206,15 @@ class Fq4:
             out += Script.parse_string("OP_TOALTSTACK OP_TOALTSTACK")
             # After this, the stack is: (x0 * lambda)_0 q (x0 * lambda)_1, altstack = (x1 * lambda)
             out += fq2.mul(
-                take_modulo=True, check_constant=False, clean_constant=clean_constant, is_constant_reused=True
+                take_modulo=True,
+                positive_modulo=positive_modulo,
+                check_constant=False,
+                clean_constant=clean_constant,
+                is_constant_reused=True,
             )
             # Batched modulo operations: pull from altstack, rotate, mod out, repeat
-            out += mod()
-            out += mod(is_constant_reused=is_constant_reused)
+            out += mod(is_positive=positive_modulo)
+            out += mod(is_positive=positive_modulo, is_constant_reused=is_constant_reused)
         else:
             # After this, the base stack is x_1 lambda x0 lambda
             out += Script.parse_string("OP_2ROT OP_2OVER")  # Prepare top of stack: x_0 lambda
@@ -211,6 +229,7 @@ class Fq4:
     def mul(
         self,
         take_modulo: bool,
+        positive_modulo: bool = True,
         check_constant: bool | None = None,
         clean_constant: bool | None = None,
         is_constant_reused: bool | None = None,
@@ -228,6 +247,7 @@ class Fq4:
 
         Args:
             take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
@@ -262,11 +282,15 @@ class Fq4:
 
         if take_modulo:
             out += fq2.add(
-                take_modulo=True, check_constant=False, clean_constant=clean_constant, is_constant_reused=True
+                take_modulo=True,
+                positive_modulo=positive_modulo,
+                check_constant=False,
+                clean_constant=clean_constant,
+                is_constant_reused=True,
             )
             # Batched modulo operations: pull from altstack, rotate, mod out, repeat
-            out += mod()
-            out += mod(is_constant_reused=is_constant_reused)
+            out += mod(is_positive=positive_modulo)
+            out += mod(is_positive=positive_modulo, is_constant_reused=is_constant_reused)
         else:
             out += fq2.add(take_modulo=False, check_constant=False, clean_constant=False)
             out += Script.parse_string("OP_FROMALTSTACK OP_FROMALTSTACK")
@@ -276,6 +300,7 @@ class Fq4:
     def square(
         self,
         take_modulo: bool,
+        positive_modulo: bool = True,
         check_constant: bool | None = None,
         clean_constant: bool | None = None,
         is_constant_reused: bool | None = None,
@@ -292,6 +317,7 @@ class Fq4:
 
         Args:
             take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
@@ -320,11 +346,15 @@ class Fq4:
             out += fq2.square(take_modulo=False, check_constant=False, clean_constant=False)
             # After this, the stack is: x1^2 * xi + x0^2, altstack = 2x0*x1
             out += fq2.add(
-                take_modulo=True, check_constant=False, clean_constant=clean_constant, is_constant_reused=True
+                take_modulo=True,
+                positive_modulo=positive_modulo,
+                check_constant=False,
+                clean_constant=clean_constant,
+                is_constant_reused=True,
             )
             # Batched modulo operations: pull from altstack, rotate, mod out, repeat
-            out += mod()
-            out += mod(is_constant_reused=is_constant_reused)
+            out += mod(is_positive=positive_modulo)
+            out += mod(is_positive=positive_modulo, is_constant_reused=is_constant_reused)
         else:
             # After this, the stack is: x_0 x_1 x_0 (x_1^2 * xi)
             out += Script.parse_string("OP_2OVER OP_2OVER")  # Prepare top of the stack with  x_1
@@ -351,6 +381,7 @@ class Fq4:
     def add_three(
         self,
         take_modulo: bool,
+        positive_modulo: bool = True,
         check_constant: bool | None = None,
         clean_constant: bool | None = None,
         is_constant_reused: bool | None = None,
@@ -368,6 +399,7 @@ class Fq4:
 
         Args:
             take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
@@ -390,11 +422,15 @@ class Fq4:
         if take_modulo:
             # After this, the stack is: x0 + y0 + z0, altstack = [x1 + y1 + z1]
             out += fq2.add_three(
-                take_modulo=True, check_constant=False, clean_constant=clean_constant, is_constant_reused=True
+                take_modulo=True,
+                positive_modulo=positive_modulo,
+                check_constant=False,
+                clean_constant=clean_constant,
+                is_constant_reused=True,
             )
             # Batched modulo operations: pull from altstack, rotate, mod out, repeat
-            out += mod()
-            out += mod(is_constant_reused=is_constant_reused)
+            out += mod(is_positive=positive_modulo)
+            out += mod(is_constant_reused=is_constant_reused, is_positive=positive_modulo)
         else:
             # After this, the stack is: x0 + y0 + z0, altstack = [x1 + y1 + z1]
             out += fq2.add_three(take_modulo=False, check_constant=False, clean_constant=False)
@@ -407,6 +443,7 @@ class Fq4:
         self,
         n: int,
         take_modulo: bool,
+        positive_modulo: bool = True,
         check_constant: bool | None = None,
         clean_constant: bool | None = None,
         is_constant_reused: bool | None = None,
@@ -424,6 +461,7 @@ class Fq4:
         Args:
             n (int): Frobenius odd power.
             take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
@@ -444,20 +482,34 @@ class Fq4:
         # After this, the stack is: a, altstack = [Conjugate(b)*gamma]
         out += fq2.conjugate(take_modulo=False, check_constant=False, clean_constant=False, is_constant_reused=False)
         out += nums_to_script(gammas)
-        out += fq2.mul(take_modulo=take_modulo, check_constant=False, clean_constant=False, is_constant_reused=False)
+        out += fq2.mul(
+            take_modulo=take_modulo,
+            positive_modulo=positive_modulo,
+            check_constant=False,
+            clean_constant=False,
+            is_constant_reused=False,
+        )
         out += Script.parse_string("OP_TOALTSTACK OP_TOALTSTACK")
 
         if is_constant_reused:
             # After this, the stack is: Conjugate(a)_0 q Conjugate(a)_1
             out += fq2.conjugate(
-                take_modulo=take_modulo, check_constant=False, clean_constant=clean_constant, is_constant_reused=True
+                take_modulo=take_modulo,
+                positive_modulo=positive_modulo,
+                check_constant=False,
+                clean_constant=clean_constant,
+                is_constant_reused=True,
             )
             # After this, the stack is: Conjugate(a) Conjugate(b)_0 q Conjugate(b)_1
             out += Script.parse_string("OP_FROMALTSTACK OP_ROT OP_FROMALTSTACK")
         else:
             # After this, the stack is: Conjugate(a)
             out += fq2.conjugate(
-                take_modulo=take_modulo, check_constant=False, clean_constant=clean_constant, is_constant_reused=False
+                take_modulo=take_modulo,
+                positive_modulo=positive_modulo,
+                check_constant=False,
+                clean_constant=clean_constant,
+                is_constant_reused=False,
             )
             # After this, the stack is: Conjugate(a) Conjugate(b)
             out += Script.parse_string("OP_FROMALTSTACK OP_FROMALTSTACK")
@@ -468,6 +520,7 @@ class Fq4:
         self,
         n: int,
         take_modulo: bool,
+        positive_modulo: bool = True,
         check_constant: bool | None = None,
         clean_constant: bool | None = None,
         is_constant_reused: bool | None = None,
@@ -485,6 +538,7 @@ class Fq4:
         Args:
             n (int): Frobenius even power.
             take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
@@ -505,7 +559,13 @@ class Fq4:
 
         # After this, the stack is: a, altstack = [b*gamma]
         out += nums_to_script(gammas)
-        out += fq2.mul(take_modulo=take_modulo, check_constant=False, clean_constant=False, is_constant_reused=False)
+        out += fq2.mul(
+            take_modulo=take_modulo,
+            positive_modulo=positive_modulo,
+            check_constant=False,
+            clean_constant=False,
+            is_constant_reused=False,
+        )
         out += Script.parse_string("OP_TOALTSTACK OP_TOALTSTACK")
 
         # After this, the stack is: a b*gamma
@@ -515,11 +575,11 @@ class Fq4:
             else:
                 fetch_q = Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
 
-            batched_modulo = Script()
             # After this, the stack is [a0, q],  altstack = [b*gamma, a1 % q]
-            batched_modulo += mod(stack_preparation="")
-            batched_modulo += Script.parse_string("OP_TOALTSTACK")
-            batched_modulo += mod(stack_preparation="", is_constant_reused=is_constant_reused)
+            batched_modulo = mod(stack_preparation="", is_positive=positive_modulo)
+            batched_modulo += mod(
+                stack_preparation="OP_TOALTSTACK", is_constant_reused=is_constant_reused, is_positive=positive_modulo
+            )
             batched_modulo += Script.parse_string(" ".join(["OP_FROMALTSTACK"] * 3))
             if is_constant_reused:
                 # After this, the stack is: [a, (b*gamma)_0, q, (b*gamma)_1]
@@ -535,6 +595,7 @@ class Fq4:
     def mul_by_u(
         self,
         take_modulo: bool,
+        positive_modulo: bool = True,
         check_constant: bool | None = None,
         clean_constant: bool | None = None,
         is_constant_reused: bool | None = None,
@@ -551,6 +612,7 @@ class Fq4:
 
         Args:
             take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
@@ -572,16 +634,26 @@ class Fq4:
 
             # After this, the stack is: (x_1 * NON_RESIDUE_OVER_FQ2) x_01 x00
             out += fq2.mul_by_non_residue(
-                take_modulo=True, check_constant=False, clean_constant=False, is_constant_reused=False
+                take_modulo=True,
+                positive_modulo=positive_modulo,
+                check_constant=False,
+                clean_constant=False,
+                is_constant_reused=False,
             )
             out += Script.parse_string("OP_2SWAP OP_SWAP")
             # After this, the stack is: (x_1 * NON_RESIDUE_OVER_FQ2) x_01 q (x00 % q)
-            out += fetch_q + mod(stack_preparation="")
-            out += Script.parse_string("OP_SWAP OP_ROT")
-            out += mod(stack_preparation="", is_mod_on_top=False, is_constant_reused=is_constant_reused)
+            out += fetch_q + mod(stack_preparation="", is_positive=positive_modulo)
+            out += mod(
+                stack_preparation="OP_SWAP OP_ROT",
+                is_mod_on_top=False,
+                is_constant_reused=is_constant_reused,
+                is_positive=positive_modulo,
+            )
         else:
             # After this, the stack is: x_0 (x_1 * NON_RESIDUE_OVER_FQ2)
-            out += fq2.mul_by_non_residue(take_modulo=False, check_constant=False, clean_constant=False)
+            out += fq2.mul_by_non_residue(
+                take_modulo=False, positive_modulo=positive_modulo, check_constant=False, clean_constant=False
+            )
             out += Script.parse_string("OP_2SWAP")
 
         return out
@@ -589,6 +661,7 @@ class Fq4:
     def conjugate(
         self,
         take_modulo: bool,
+        positive_modulo: bool = True,
         check_constant: bool | None = None,
         clean_constant: bool | None = None,
         is_constant_reused: bool | None = None,
@@ -605,6 +678,7 @@ class Fq4:
 
         Args:
             take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
@@ -633,11 +707,10 @@ class Fq4:
                 fetch_q = Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
 
             # Mod, pull from altstack, rotate, repeat
-            batched_modulo = Script()
-            batched_modulo += mod(stack_preparation="")
-            batched_modulo += mod()
-            batched_modulo += mod()
-            batched_modulo += mod(is_constant_reused=is_constant_reused)
+            batched_modulo = mod(stack_preparation="", is_positive=positive_modulo)
+            batched_modulo += mod(is_positive=positive_modulo)
+            batched_modulo += mod(is_positive=positive_modulo)
+            batched_modulo += mod(is_constant_reused=is_constant_reused, is_positive=positive_modulo)
 
             out += fetch_q + batched_modulo
 

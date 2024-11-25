@@ -69,7 +69,6 @@ class MerkleTreeBitFlagsUnlockingKey:
                 - the lengths of `self.path_data[0]` or `self.path_data[1]` do not match `merkle_tree.depth - 1`.
 
         """
-
         assert (
             len(self.path_data[0]) == merkle_tree.depth - 1
         ), f"{self.path_data[0]} must be of lenght {merkle_tree.depth - 1}."
@@ -156,7 +155,6 @@ class MerkleTreeTwoAuxUnlockingKey:
                 - the lengths of `self.path_data[0]` or `self.path_data[1]` do not match `merkle_tree.depth - 1`.
 
         """
-
         assert (
             len(self.path_data[0]) == merkle_tree.depth - 1
         ), f"{self.path_data[0]} must be of lenght {merkle_tree.depth - 1}."

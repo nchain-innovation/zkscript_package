@@ -12,7 +12,11 @@ class MillerLoop:
     """Miller loop operation."""
 
     def miller_loop(
-        self, modulo_threshold: int, check_constant: bool | None = None, clean_constant: bool | None = None
+        self,
+        modulo_threshold: int,
+        check_constant: bool | None = None,
+        clean_constant: bool | None = None,
+        positive_modulo: bool = True,
     ) -> Script:
         """Evaluation of the Miller loop at points `P` and `Q`.
 
@@ -29,6 +33,7 @@ class MillerLoop:
             modulo_threshold (int): Bit-length threshold. Values whose bit-length exceeds it are reduced modulo `q`.
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
+            positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
 
         Returns:
             Script to evaluate the Miller loop at points `P` and `Q`.
@@ -114,12 +119,14 @@ class MillerLoop:
         for i in range(len(exp_miller_loop) - 2, -1, -1):
             take_modulo_F = False
             take_modulo_T = False
+            positive_modulo_i = False
 
             # Constants set up
             if i == 0:
                 clean_final = clean_constant
                 take_modulo_F = True
                 take_modulo_T = True
+                positive_modulo_i = positive_modulo
             elif exp_miller_loop[i - 1] == 0:
                 # In this case, the next iteration will have: f <-- f^2 * lineEvaluation and T <-- 2T.
                 future_size_F = log2(13 * 3) + 2 * current_size_F + log2(13 * 3) + BIT_SIZE_Q
@@ -163,7 +170,11 @@ class MillerLoop:
                     out += pick(position=N_POINTS_TWIST + stack_length_added - 1, n_elements=N_POINTS_TWIST)  # Pick T
                     stack_length_added += N_POINTS_TWIST
                     out += point_doubling_twisted_curve(
-                        take_modulo=take_modulo_F, check_constant=False, clean_constant=False
+                        take_modulo=take_modulo_F,
+                        verify_gradient=True,
+                        check_constant=False,
+                        clean_constant=False,
+                        positive_modulo=False,
                     )  # Compute 2T
                     stack_length_added = N_POINTS_TWIST
                     # After this, the stack is: P Q -Q 2T lambda_2T T P
@@ -181,7 +192,11 @@ class MillerLoop:
                     stack_length_added += N_POINTS_CURVE
                     # After this, the stack is P Q -Q 2T ev_(l_(T,T))(P)
                     out += line_eval(
-                        take_modulo=True, check_constant=False, clean_constant=False, is_constant_reused=False
+                        take_modulo=True,
+                        positive_modulo=False,
+                        check_constant=False,
+                        clean_constant=False,
+                        is_constant_reused=False,
                     )
                     stack_length_added = N_ELEMENTS_EVALUATION_OUTPUT
                     # After this, the stack is: P Q -Q 2T ev_(l_(T,T))(P)^2
@@ -189,7 +204,11 @@ class MillerLoop:
                         position=N_ELEMENTS_EVALUATION_OUTPUT - 1, n_elements=N_ELEMENTS_EVALUATION_OUTPUT
                     )  # Duplicate ev_(l_(T,T))(P)
                     out += line_eval_times_eval(
-                        take_modulo=take_modulo_F, check_constant=False, clean_constant=False, is_constant_reused=False
+                        take_modulo=take_modulo_F,
+                        positive_modulo=False,
+                        check_constant=False,
+                        clean_constant=False,
+                        is_constant_reused=False,
                     )
                     # After this, the stack is: P Q -Q 2T Dense(ev_(l_(T,T))(P)^2)
                     out += pad_eval_times_eval_to_miller_output
@@ -204,7 +223,11 @@ class MillerLoop:
                     out += pick(position=N_POINTS_TWIST + stack_length_added - 1, n_elements=N_POINTS_TWIST)  # Pick T
                     stack_length_added += N_POINTS_TWIST
                     out += point_doubling_twisted_curve(
-                        take_modulo=take_modulo_F, check_constant=False, clean_constant=False
+                        take_modulo=take_modulo_F,
+                        verify_gradient=True,
+                        check_constant=False,
+                        clean_constant=False,
+                        positive_modulo=False,
                     )  # Compute 2T
                     stack_length_added = N_POINTS_TWIST
                     # After this, the stack is: lambda_(2T pm Q) P Q -Q 2T lambda_2T T P
@@ -222,7 +245,11 @@ class MillerLoop:
                     stack_length_added = N_POINTS_TWIST + EXTENSION_DEGREE + N_POINTS_CURVE
                     # After this, the stack is lambda_(2T pm Q) P Q -Q 2T ev_(l_(T,T))(P)
                     out += line_eval(
-                        take_modulo=True, check_constant=False, clean_constant=False, is_constant_reused=False
+                        take_modulo=True,
+                        positive_modulo=False,
+                        check_constant=False,
+                        clean_constant=False,
+                        is_constant_reused=False,
                     )
                     stack_length_added = N_ELEMENTS_EVALUATION_OUTPUT
                     # After this, the stack is: lambda_(2T pm Q) P Q -Q 2T, altstack = [ev_(l_(T,T))(P)]
@@ -245,7 +272,11 @@ class MillerLoop:
                         out += pick(2 * N_POINTS_TWIST + stack_length_added - 1, n_elements=N_POINTS_TWIST)  # Pick -Q
                         stack_length_added += N_POINTS_TWIST
                     out += point_addition_twisted_curve(
-                        take_modulo=take_modulo_T, check_constant=False, clean_constant=False
+                        take_modulo=take_modulo_T,
+                        verify_gradient=True,
+                        check_constant=False,
+                        clean_constant=False,
+                        positive_modulo=False,
                     )
                     stack_length_added = N_POINTS_TWIST
                     # After this, the stack is: P Q -Q (2T \pm Q) ev_(l_(2T,\pm Q))(P), altstack = [ev_(l_(T,T))(P)]
@@ -260,12 +291,18 @@ class MillerLoop:
                         position=3 * N_POINTS_TWIST + N_POINTS_CURVE + stack_length_added - 1, n_elements=N_POINTS_CURVE
                     )  # Pick P
                     out += line_eval(
-                        take_modulo=True, check_constant=False, clean_constant=False, is_constant_reused=False
+                        take_modulo=True,
+                        positive_modulo=False,
+                        check_constant=False,
+                        clean_constant=False,
+                        is_constant_reused=False,
                     )
                     stack_length_added = N_ELEMENTS_EVALUATION_OUTPUT
                     # After this, the stack is: P Q -Q (2T \pm Q) [ev_(l_(2T,\pm Q))(P) * ev_(l_(T,T))(P)]
                     out += Script.parse_string(" ".join(["OP_FROMALTSTACK"] * N_ELEMENTS_EVALUATION_OUTPUT))
-                    out += line_eval_times_eval(take_modulo=False, check_constant=False, clean_constant=False)
+                    out += line_eval_times_eval(
+                        take_modulo=False, check_constant=False, clean_constant=False, positive_modulo=False
+                    )
                     stack_length_added = N_ELEMENTS_EVALUATION_TIMES_EVALUATION
                     # After this, the stack is: P Q -Q (2T \pm Q) [ev_(l_(2T,\pm Q))(P) * ev_(l_(T,T))(P)]^2
                     # Duplicate ev_(l_(2T,\pm Q))(P) * ev_(l_(T,T))(P)
@@ -274,7 +311,11 @@ class MillerLoop:
                         n_elements=N_ELEMENTS_EVALUATION_TIMES_EVALUATION,
                     )
                     out += line_eval_times_eval_times_eval_times_eval(
-                        take_modulo=take_modulo_F, check_constant=False, clean_constant=False, is_constant_reused=False
+                        take_modulo=take_modulo_F,
+                        positive_modulo=False,
+                        check_constant=False,
+                        clean_constant=False,
+                        is_constant_reused=False,
                     )
                     # After this, the stack is: P Q -Q (2T \pm Q) Dense([ev_(l_(2T,\pm Q))(P) * ev_(l_(T,T))(P)]^2)
                     out += pad_eval_times_eval_times_eval_times_eval_to_miller_output
@@ -282,7 +323,9 @@ class MillerLoop:
                 # Only needed in this case, otherwise the squaring has already been computed
                 if i != len(exp_miller_loop) - 3:
                     # After this, the stack is: lambda_(2T) P Q -Q T f_i^2
-                    out += miller_loop_output_square(take_modulo=False, check_constant=False, clean_constant=False)
+                    out += miller_loop_output_square(
+                        take_modulo=False, check_constant=False, clean_constant=False, positive_modulo=False
+                    )
                 if exp_miller_loop[i] == 0:
                     # After this, the stack is: lambda_(2T) P Q -Q T f_i^2 ev_(l_(T,T))(P)
                     stack_length_added = 0
@@ -311,12 +354,20 @@ class MillerLoop:
                         n_elements=EXTENSION_DEGREE,
                     )  # Pick P
                     out += line_eval(
-                        take_modulo=True, check_constant=False, clean_constant=False, is_constant_reused=False
+                        take_modulo=True,
+                        positive_modulo=False,
+                        check_constant=False,
+                        clean_constant=False,
+                        is_constant_reused=False,
                     )
                     stack_length_added = N_ELEMENTS_EVALUATION_OUTPUT
                     # After this, the stack is: lambda_(2T) P Q -Q T, altstack = [f_i^2 * ev_(l_(T,T))(P)]
                     out += miller_loop_output_times_eval(
-                        take_modulo=take_modulo_F, check_constant=False, clean_constant=False, is_constant_reused=False
+                        take_modulo=take_modulo_F,
+                        positive_modulo=False,
+                        check_constant=False,
+                        clean_constant=False,
+                        is_constant_reused=False,
                     )
                     out += Script.parse_string(" ".join(["OP_TOALTSTACK"] * N_ELEMENTS_MILLER_OUTPUT))
                     stack_length_added = 0
@@ -328,7 +379,11 @@ class MillerLoop:
                     stack_length_added += EXTENSION_DEGREE
                     out += roll(position=N_POINTS_TWIST + EXTENSION_DEGREE - 1, n_elements=N_POINTS_TWIST)  # Roll T
                     out += point_doubling_twisted_curve(
-                        take_modulo=take_modulo_T, check_constant=False, clean_constant=clean_final
+                        take_modulo=take_modulo_T,
+                        verify_gradient=True,
+                        check_constant=False,
+                        clean_constant=clean_final,
+                        positive_modulo=positive_modulo_i,
                     )
                     stack_length_added = 0
                     # After this, the stack is: P Q -Q 2T, f_i^2 * ev_(l_(T,T))(P)
@@ -347,7 +402,11 @@ class MillerLoop:
                     out += pick(position=N_POINTS_TWIST + stack_length_added - 1, n_elements=N_POINTS_TWIST)  # Pick T
                     stack_length_added += N_POINTS_TWIST
                     out += point_doubling_twisted_curve(
-                        take_modulo=take_modulo_T, check_constant=False, clean_constant=False
+                        take_modulo=take_modulo_T,
+                        verify_gradient=True,
+                        check_constant=False,
+                        clean_constant=False,
+                        positive_modulo=False,
                     )
                     stack_length_added = N_POINTS_TWIST
                     # After this, the stack is: lambda_(2T \pm Q) lambda_(2T) P Q -Q T 2T (2T \pm Q), altstack = [f_i^2]
@@ -367,7 +426,11 @@ class MillerLoop:
                             position=2 * N_POINTS_TWIST + stack_length_added - 1, n_elements=N_POINTS_TWIST
                         )  # Pick -Q
                     out += point_addition_twisted_curve(
-                        take_modulo=take_modulo_T, check_constant=False, clean_constant=False
+                        take_modulo=take_modulo_T,
+                        verify_gradient=True,
+                        check_constant=False,
+                        clean_constant=False,
+                        positive_modulo=positive_modulo_i,
                     )
                     stack_length_added = 2 * N_POINTS_TWIST
                     # After this, the stack is: lambda_(2T \pm Q) P Q -Q 2T (2T \pm Q) ev_(l_(T,T))(P),
@@ -384,7 +447,11 @@ class MillerLoop:
                     )  # Pick P
                     stack_length_added += N_POINTS_CURVE
                     out += line_eval(
-                        take_modulo=True, check_constant=False, clean_constant=False, is_constant_reused=False
+                        take_modulo=True,
+                        positive_modulo=False,
+                        check_constant=False,
+                        clean_constant=False,
+                        is_constant_reused=False,
                     )
                     stack_length_added = N_ELEMENTS_EVALUATION_OUTPUT + N_POINTS_TWIST
                     # After this, the stack is: P Q -Q (2T \pm Q) ev_(l_(T,T))(P) ev_(l_(2T,\pm Q))(P),
@@ -400,14 +467,21 @@ class MillerLoop:
                         position=3 * N_POINTS_TWIST + N_POINTS_CURVE + stack_length_added - 1, n_elements=N_POINTS_CURVE
                     )  # Pick P
                     out += line_eval(
-                        take_modulo=True, check_constant=False, clean_constant=False, is_constant_reused=False
+                        take_modulo=True,
+                        positive_modulo=False,
+                        check_constant=False,
+                        clean_constant=False,
+                        is_constant_reused=False,
                     )
                     stack_length_added = 2 * N_ELEMENTS_EVALUATION_OUTPUT
                     # After this, the stack is: P Q -Q (2T \pm Q) [ev_(l_(T,T))(P) * ev_(l_(2T,\pm Q))(P) * f_i^2]
-                    out += line_eval_times_eval(take_modulo=False, check_constant=False, clean_constant=False)
+                    out += line_eval_times_eval(
+                        take_modulo=False, check_constant=False, clean_constant=False, positive_modulo=False
+                    )
                     out += Script.parse_string(" ".join(["OP_FROMALTSTACK"] * N_ELEMENTS_MILLER_OUTPUT))
                     out += line_eval_times_eval_times_miller_loop_output(
                         take_modulo=take_modulo_F,
+                        positive_modulo=positive_modulo_i,
                         check_constant=False,
                         clean_constant=clean_final,
                         is_constant_reused=False,
