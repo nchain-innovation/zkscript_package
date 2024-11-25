@@ -317,11 +317,11 @@ def test_groth16_print(alpha_beta, vk, groth16_proof, test_script, filename, sav
     context = Context(script=unlock + lock)
 
     print(
-        "\nThe locking script size for Groth16 for the curve ",
+        "\nThe locking script size for Groth16 for the curve",
         filename,
-        " with ",
+        "with",
         ("two" if filename == "bls12_381" else "one"),
-        " is ",
+        "public input is",
         len(lock.raw_serialize()),
     )
 
