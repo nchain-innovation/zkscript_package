@@ -321,8 +321,11 @@ def test_groth16_print(alpha_beta, vk, groth16_proof, test_script, filename, sav
         filename,
         "with",
         ("two" if filename == "bls12_381" else "one"),
-        "public input is",
+        "public",
+        ("inputs" if filename == "bls12_381" else "input"),
+        "is",
         len(lock.raw_serialize()),
+        "bytes.",
     )
 
     assert context.evaluate()
