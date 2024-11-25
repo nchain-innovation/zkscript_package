@@ -164,7 +164,7 @@ class Mnt4753:
     filename = "mnt4_753"
 
 
-def generate_random_tests(curve, groth16, filename, print_script_size):
+def generate_random_tests(curve, groth16, filename, is_minimal_example):
     A = curve.g1.multiply(randint(1, curve.r - 1))  # noqa: S311
     B = curve.g2.multiply(randint(1, curve.r - 1))  # noqa: S311
     C = curve.g1.multiply(randint(1, curve.r - 1))  # noqa: S311
@@ -174,7 +174,7 @@ def generate_random_tests(curve, groth16, filename, print_script_size):
     gamma = curve.g2.multiply(randint(1, curve.r - 1))  # noqa: S311
     delta = curve.g2.multiply(randint(1, curve.r - 1))  # noqa: S311
 
-    if print_script_size:
+    if is_minimal_example:
         dlog_gamma_abc = [15, 23, 11] if filename == "bls12_381" else [7, 19]
         pub_statement = [1, 5, 4] if filename == "bls12_381" else [1, 2]
     else:
@@ -205,12 +205,12 @@ def generate_random_tests(curve, groth16, filename, print_script_size):
     return (alpha_beta, vk, groth16_proof, groth16, filename)
 
 
-def generate_test_cases(test_num, print_script_size=False, rnd_seed=0):
+def generate_test_cases(test_num, is_minimal_example=False, rnd_seed=42):
     # Parse and return config and the test_data for each config
     seed(rnd_seed)
     return [
-        generate_random_tests(bls12_381_curve, bls12_381, "bls12_381", print_script_size) for _ in range(test_num)
-    ] + [generate_random_tests(mnt4_753_curve, mnt4_753, "mnt4_753", print_script_size) for _ in range(test_num)]
+        generate_random_tests(bls12_381_curve, bls12_381, "bls12_381", is_minimal_example) for _ in range(test_num)
+    ] + [generate_random_tests(mnt4_753_curve, mnt4_753, "mnt4_753", is_minimal_example) for _ in range(test_num)]
 
 
 def save_scripts(lock, unlock, save_to_json_folder, filename, test_name):
@@ -264,7 +264,10 @@ def test_groth16(test_script, vk, alpha_beta, groth16_proof, filename, save_to_j
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize(("alpha_beta", "vk", "groth16_proof", "test_script", "filename"), generate_test_cases(0))
+@pytest.mark.parametrize(
+    ("alpha_beta", "vk", "groth16_proof", "test_script", "filename"),
+    generate_test_cases(test_num=1, is_minimal_example=False, rnd_seed=42),
+)
 def test_groth16_slow(alpha_beta, vk, groth16_proof, test_script, filename, save_to_json_folder):
     groth16_proof = {
         "lambdas_partial_sums" if key == "lamdbas_partial_sums" else key: value for key, value in groth16_proof.items()
@@ -291,7 +294,10 @@ def test_groth16_slow(alpha_beta, vk, groth16_proof, test_script, filename, save
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize(("alpha_beta", "vk", "groth16_proof", "test_script", "filename"), generate_test_cases(0, True))
+@pytest.mark.parametrize(
+    ("alpha_beta", "vk", "groth16_proof", "test_script", "filename"),
+    generate_test_cases(test_num=1, is_minimal_example=True, rnd_seed=42),
+)
 def test_groth16_print(alpha_beta, vk, groth16_proof, test_script, filename, save_to_json_folder):
     groth16_proof = {
         "lambdas_partial_sums" if key == "lamdbas_partial_sums" else key: value for key, value in groth16_proof.items()
@@ -310,7 +316,14 @@ def test_groth16_print(alpha_beta, vk, groth16_proof, test_script, filename, sav
 
     context = Context(script=unlock + lock)
 
-    print("\nThe locking script size for Groth16 for the curve ", filename, " is ", len(lock.raw_serialize()))
+    print(
+        "\nThe locking script size for Groth16 for the curve ",
+        filename,
+        " with ",
+        ("two" if filename == "bls12_381" else "one"),
+        " is ",
+        len(lock.raw_serialize()),
+    )
 
     assert context.evaluate()
     assert len(context.get_stack()) == 1
