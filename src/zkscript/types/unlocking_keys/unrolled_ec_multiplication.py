@@ -1,6 +1,7 @@
+"""Unlocking keys for EllipticCurveFqUnrolled."""
+
 from dataclasses import dataclass
 from math import log2
-from typing import List
 
 from tx_engine import Script
 
@@ -10,28 +11,81 @@ from src.zkscript.util.utility_scripts import nums_to_script
 
 @dataclass
 class EllipticCurveFqUnrolledUnlockingKey:
-    P: List[int]
-    a: int
-    gradients: List[List[int]] | None
-    max_multiplier: int
-    """
-    Class encapsulating the data required to generate an unlocking script for unrolled_multiplication.
+    """Unlocking key for unrolled EC multiplication over Fq."""
 
-    Attributes:
-        P (List[int]): The point P for which the script computes a*P
-        a (int): The multiplier for which the script computes a*P
-        gradients (List[List[int]] | None): The list of gradients required to compute a*P, computed according
-            to the following algorithm:
-                gradients = []
-                for i in range(len(bin(a)[2:])-2,-1,-1):
-                    to_add = []
-                    to_add.append(gradient of line tangent at T)
-                    T = T + T
-                    if bin(a)[2:][i] == 1:
-                        to_add.append(gradient of line through T and P)
-                    gradients.append(to_add)
-            If a = 0, it is passed as None.
-        max_multiplier (int): The max multiplier n for which unrolled_multiplication can compute n*P
+    P: list[int]
+    a: int
+    gradients: list[list[int]] | None
+    max_multiplier: int
+    """Gradients and operational steps related to the point doubling and addition.
+
+    This method returns a script that can be used as the gradient_operations script used by the
+    `self.unrolled_multiplication` method.
+
+    Args:
+        P (list[int]): The elliptic curve point multiplied.
+        a (int): The scalar `a` used to multiply `P`.
+        gradients (list[list[list[int]]]): The sequence of gradients as required to execute the double-and-add scalar
+            multiplication.
+        max_multiplier (int): The maximum value of `a`.
+        load_modulus (bool): If `True`, load the modulus `self.MODULUS` on the stack. Defaults to True.
+
+    Preconditions:
+        The list `gradients` is computed as follows. We denote `exp_a = (a0, a1, ..., aN)` the binary expansion of `a`.
+        The function `get_gradient` is assumed to return the gradient of the line through two points.
+            lambdas = []
+            for i in reversed(range(len(exp_a) - 1)):
+                to_add = []
+                to_add.append(T.get_gradient(T).to_list())
+                T = T + T  # For point doubling
+                if exp_a[i] == 1:
+                    to_add.append(T.get_gradient(P).to_list())  # For point addition
+                lambdas.append(to_add)
+        We ignore the last element of `exp_a`, therefore `len(gradients) = len(exp_a)-1`.
+
+    Returns:
+        Script containing the gradients and operational steps to execute double-and-add scalar multiplication.
+
+    Notes:
+        The script is based on the binary expansion of `a` (denoted `exp_a`) and the list of gradients `gradients`.
+        Here's how it is built:
+        - Let `exp_a = (a0, a1, ..., aN)` where `a = sum_i 2^i * ai`, and let `M = log2(max_multiplier)`.
+        - Start with the point [xP yP].
+        - Iterate from `M-1` to 0:
+            - If `N <= i < M`: Prepend `OP_0` to the script.
+            - If `0 <= i < N`:
+                - If `exp_a[i] == 0`: Prepend `OP_0 gradient_2T OP_1`.
+                - If `exp_a[i] == 1`: Prepend `gradient_(2T+P) OP_1 gradient_2T OP_1`.
+        - Prepend the modulus `q`.
+
+        Note that we ignore the last element of exp_a (the most significant bit).
+
+        Example 1 (a = 3, max_multiplier = 8, N = 1, M = 3):
+            - `exp_a = (1,1)`, `gradients = [[[gradient_(2T+P)], [gradient_2T]]]`
+            - Resulting script: [q gradient_(2T+P) OP_1 gradient_2T OP_1 OP_0 OP_0 xP yP].
+
+        Example 2 (a = 8, max_multiplier = 8, N = 3, M = 3):
+            - `exp_a = (0,0,0,1)`, `gradients = [[[gradient_2T]], [[gradient_2T]], [[gradient_2T]]]`
+            - Resulting script: [q OP_0 gradient_2T OP_1 OP_0 gradient_2T OP_1 OP_0 gradient_2T OP_1 xP yP]
+
+        The list indicates execution steps:
+            - `OP_0`: Skip loop execution.
+            - `OP_1`: Perform point doubling using the provided gradient_2T. If followed by another `OP_1`, perform
+            point addition using the provided gradient_(2T+P), otherwise continue.
+
+    Example:
+        >>> from src.zkscript.elliptic_curves.ec_operations_fq import EllipticCurveFq
+        >>>
+        >>> P = [6, 11]
+        >>> ec_curve = EllipticCurveFq(q=17, curve_a=0)
+        >>> ec_curve_unrolled = EllipticCurveFqUnrolled(q=17, ec_over_fq=ec_curve)
+        >>> a = 3
+        >>> lambdas = [[[8], [10]]]
+        >>> ec_curve_unrolled.unrolled_multiplication_input(P, a, lambdas, max_multiplier=8)
+        0x11 OP_0 OP_10 OP_1 OP_8 OP_1 OP_0 OP_0 OP_6 OP_11
+
+            ^     ^          ^         ^    ^    ^    ^    ^
+            q   marker     adding   double pass pass  xP   yP
     """
 
     def to_unlocking_script(self, unrolled_ec_over_fq: EllipticCurveFqUnrolled, load_modulus=True) -> Script:

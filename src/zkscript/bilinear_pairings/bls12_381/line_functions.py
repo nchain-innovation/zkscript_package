@@ -41,8 +41,8 @@ class LineFunctions:
         r"""Evaluate line through T and Q at P.
 
         Stack input:
-            - stack:    [q, ..., gradient, .., P, .., Q, ..], `P` is in `E(F_q)`, `Q` is in `E'(F_q^2)`, the sextic twist,
-                `gradient` is in F_q^2
+            - stack:    [q, ..., gradient, .., P, .., Q, ..], `P` is in `E(F_q)`, `Q` is in `E'(F_q^2)`,
+                the sextic twist, `gradient` is in F_q^2
             - altstack: []
 
         Stack output:
@@ -57,6 +57,20 @@ class LineFunctions:
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
                 after execution. Defaults to `None`.
+            gradient (StackFiniteFieldElement): The position of the gradient between T and Q on the stack. Defaults to
+                `StackFiniteFieldElement(7, False, 2)`.
+            P (StackEllipticCurvePoint): The position of the point `P` on the stack. Defaults to:
+                `StackEllipticCurvePoint(
+                    StackFiniteFieldElement(5, False, 1),
+                    StackFiniteFieldElement(4, False, 1),
+                )`
+            Q (StackEllipticCurvePoint): The position of the point `Q` on the stack. Defaults to:
+                `StackEllipticCurvePoint(
+                    StackFiniteFieldElement(3, False, 2),
+                    StackFiniteFieldElement(1, False, 2),
+                )`
+            rolling_options (int): Bitmask detailing which elements among `gradient`, `P`, and `Q` should be rolled.
+                Default to 7 (everything is rolled).
 
         Preconditions:
             - `gradient` is the gradient through `T` and `Q`.
@@ -123,13 +137,13 @@ class LineFunctions:
 
         if take_modulo:
             out += roll(position=-1, n_elements=1) if clean_constant else pick(position=-1, n_elements=1)
-            out += mod(stack_preparation="", is_mod_on_top=True)
-            out += mod()
+            out += mod(stack_preparation="", is_mod_on_top=True, is_positive=positive_modulo)
+            out += mod(is_positive=positive_modulo)
             out += move(P.y.shift(3 - 4 * is_q_rolled), bool_to_moving_function(is_p_rolled))  # Move yP
             out += Script.parse_string("OP_ROT")  # Rotate q
-            out += mod(stack_preparation="")
-            out += mod()
-            out += mod(is_constant_reused=is_constant_reused)
+            out += mod(stack_preparation="", is_positive=positive_modulo)
+            out += mod(is_positive=positive_modulo)
+            out += mod(is_constant_reused=is_constant_reused, is_positive=positive_modulo)
         else:
             out += Script.parse_string("OP_FROMALTSTACK")
             out += move(P.y.shift(2 - 2 * is_q_rolled), bool_to_moving_function(is_p_rolled))  # Move yP

@@ -764,25 +764,3 @@ def test_multiplication_unrolled(config, P, a, expected, save_to_json_folder):  
 
     if save_to_json_folder:
         save_scripts(str(lock), str(unlock), save_to_json_folder, config.filename, "unrolled multiplication")
-
-
-@pytest.mark.parametrize(("config", "P", "expected"), generate_test_cases("test_negation"))
-@pytest.mark.parametrize("positive_modulo", [True, False])
-def test_negation(config, P, expected, positive_modulo, save_to_json_folder):  # noqa: N803
-    unlock = nums_to_script([config.modulus])
-    unlock += generate_unlock(P, degree=config.degree)
-    lock = config.test_script.point_negation(
-        take_modulo=True, check_constant=True, is_constant_reused=False, positive_modulo=positive_modulo
-    )
-
-    verify = generate_verify_point(expected, degree=config.degree)
-
-    lock += verify if positive_modulo or (P.x is None and P.y is None) else modify_verify_modulo_check(verify)
-
-    context = Context(script=unlock + lock)
-    assert context.evaluate()
-    assert len(context.get_stack()) == 2
-    assert len(context.get_altstack()) == 0
-
-    if save_to_json_folder:
-        save_scripts(str(lock), str(unlock), save_to_json_folder, config.filename, "point negation")

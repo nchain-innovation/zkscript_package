@@ -1,6 +1,8 @@
+"""Unlocking keys for Merkle trees."""
+
 import string
 from dataclasses import dataclass, field
-from typing import List, Optional, Tuple
+from typing import Optional
 
 from tx_engine import Script
 
@@ -16,13 +18,12 @@ class MerkleTreeBitFlagsUnlockingKey:
         aux: The list of labels used in the Merkle path.
         bit: A list of booleans representing the position of the nodes in the Merkle path.
         path_data: The Merkle path for the data, containing auxiliary data and bit flags.
-
     """
 
     data: str
-    aux: Optional[List[str]] = field(default=None)
-    bit: Optional[List[bool]] = field(default=None)
-    path_data: Optional[List[Tuple[str, bool]]] = field(init=False)
+    aux: Optional[list[str]] = field(default=None)
+    bit: Optional[list[bool]] = field(default=None)
+    path_data: Optional[list[tuple[str, bool]]] = field(init=False)
 
     def __post_init__(self):
         """Validate inputs and initialize path_data.
@@ -67,7 +68,6 @@ class MerkleTreeBitFlagsUnlockingKey:
         Raises:
             AssertionError: Raised if
                 - the lengths of `self.path_data[0]` or `self.path_data[1]` do not match `merkle_tree.depth - 1`.
-
         """
         assert (
             len(self.path_data[0]) == merkle_tree.depth - 1
@@ -96,13 +96,12 @@ class MerkleTreeTwoAuxUnlockingKey:
         aux_left: list of node labels. If the a right node is required in the Merkle path, an empty string is used.
         aux_right: list of node labels. If the a left node is required in the Merkle path, an empty string is used.
         path_data: the Merkle path of the data, formatted accordingly to the locking script.
-
     """
 
     data: str
-    aux_left: Optional[List[str]] = field(default=None)
-    aux_right: Optional[List[str]] = field(default=None)
-    path_data: Optional[List[Tuple[str, str]]] = field(init=False)
+    aux_left: Optional[list[str]] = field(default=None)
+    aux_right: Optional[list[str]] = field(default=None)
+    path_data: Optional[list[tuple[str, str]]] = field(init=False)
 
     def __post_init__(self):
         """Validate inputs and initialize path_data.
@@ -115,7 +114,6 @@ class MerkleTreeTwoAuxUnlockingKey:
                 - `aux_left` elements are not hexadecimal strings.
                 - `aux_right` elements are not hexadecimal strings.
                 - `data` is not an hexadecimal sting.
-
         """
         assert self.aux_left is not None, f"{self.aux_left} should be a list of strings"
         assert self.aux_right is not None, f"{self.aux_right} should be a list of strings"
@@ -153,7 +151,6 @@ class MerkleTreeTwoAuxUnlockingKey:
         Raises:
             AssertionError: Raised if
                 - the lengths of `self.path_data[0]` or `self.path_data[1]` do not match `merkle_tree.depth - 1`.
-
         """
         assert (
             len(self.path_data[0]) == merkle_tree.depth - 1

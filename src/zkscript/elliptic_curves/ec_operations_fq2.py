@@ -104,11 +104,25 @@ class EllipticCurveFq2:
         """
         return (
             self.point_algebraic_addition_verifying_gradient(
-                take_modulo, check_constant, clean_constant, positive_modulo, gradient, P, Q, rolling_options
+                take_modulo=take_modulo,
+                check_constant=check_constant,
+                clean_constant=clean_constant,
+                positive_modulo=positive_modulo,
+                gradient=gradient,
+                P=P,
+                Q=Q,
+                rolling_options=rolling_options,
             )
             if verify_gradient
             else self.point_algebraic_addition_without_verifying_gradient(
-                take_modulo, check_constant, clean_constant, positive_modulo, gradient, P, Q, rolling_options
+                take_modulo=take_modulo,
+                check_constant=check_constant,
+                clean_constant=clean_constant,
+                positive_modulo=positive_modulo,
+                gradient=gradient,
+                P=P,
+                Q=Q,
+                rolling_options=rolling_options,
             )
         )
 
@@ -176,83 +190,26 @@ class EllipticCurveFq2:
         """
         return (
             self.point_algebraic_doubling_verifying_gradient(
-                take_modulo, check_constant, clean_constant, positive_modulo, gradient, P, rolling_options
+                take_modulo=take_modulo,
+                check_constant=check_constant,
+                clean_constant=clean_constant,
+                positive_modulo=positive_modulo,
+                gradient=gradient,
+                P=P,
+                rolling_options=rolling_options,
             )
             if verify_gradient
             else self.point_algebraic_doubling_without_verifying_gradient(
-                take_modulo, check_constant, clean_constant, positive_modulo, gradient, P, rolling_options
+                take_modulo=take_modulo,
+                check_constant=check_constant,
+                clean_constant=clean_constant,
+                positive_modulo=positive_modulo,
+                gradient=gradient,
+                P=P,
+                rolling_options=rolling_options,
             )
         )
 
-<<<<<<< HEAD
-    def point_negation(
-        self,
-        take_modulo: bool,
-        positive_modulo: bool = True,
-        check_constant: bool | None = None,
-        clean_constant: bool | None = None,
-        is_constant_reused: bool | None = None,
-    ) -> Script:
-        """Perform point negation on an elliptic curve defined over Fq2.
-
-        Stack input:
-            - stack:    [q, ..., P]
-            - altstack: []
-
-        Stack output:
-            - stack:    [q, ..., -P]
-            - altstack: []
-
-        Args:
-            take_modulo (bool): If `True`, the result is reduced modulo `q`.
-            positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
-            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
-            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
-            is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
-                after execution. Defaults to `None`.
-
-        Returns:
-            Script to negate a point on E(F_q^2).
-
-        Note:
-            The constant cannot be cleaned from inside this function.
-        """
-        assert (not clean_constant) or (
-            clean_constant is None
-        ), "It is not possible to clean the constant from inside this function"
-        # Fq2 implementation
-        fq2 = self.FQ2
-
-        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
-
-        # Check if P is point at infinity
-        out += Script.parse_string("OP_2OVER OP_2OVER")
-        out += Script.parse_string("OP_CAT OP_CAT OP_CAT 0x00000000 OP_EQUAL OP_NOT OP_IF")
-
-        # If not, carry out the negation
-        out += fq2.negate(take_modulo=False, check_constant=False, clean_constant=False, is_constant_reused=False)
-
-        if take_modulo:
-            assert is_constant_reused is not None
-            # After this, the stack is: P.x0, altstack = [-P.y, P.x1]
-            out += Script.parse_string(" ".join(["OP_TOALTSTACK"] * 3))
-
-            fetch_q = Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
-
-            batched_modulo = mod(stack_preparation="", is_positive=positive_modulo)
-            batched_modulo += mod(is_positive=positive_modulo)
-            batched_modulo += mod(is_positive=positive_modulo)
-            batched_modulo += mod(is_constant_reused=is_constant_reused, is_positive=positive_modulo)
-
-            out += fetch_q + batched_modulo
-
-        # Else, exit
-        out += Script.parse_string("OP_ENDIF")
-
-        return out
-
-=======
->>>>>>> 4098788 (Rewrite line evaluations to allow refactoring of the Miller loop; refactor Miller loop; define types for  unlocking keys; remove negation method from EllipticCurveFq2; update BilinearPairingModel to support refactoring of Miller loop)
     def point_algebraic_addition_verifying_gradient(
         self,
         take_modulo: bool,
@@ -739,18 +696,18 @@ class EllipticCurveFq2:
         y_coordinate += (
             fq2.add(
                 take_modulo=take_modulo,
+                positive_modulo=positive_modulo,
                 check_constant=False,
                 clean_constant=clean_constant,
                 is_constant_reused=False,
-                positive_modulo=positive_modulo,
             )
             if P.y.negate
             else fq2.subtract(
                 take_modulo=take_modulo,
+                positive_modulo=positive_modulo,
                 check_constant=False,
                 clean_constant=clean_constant,
                 is_constant_reused=False,
-                positive_modulo=positive_modulo,
             )
         )  # Compute y_(2P)
 

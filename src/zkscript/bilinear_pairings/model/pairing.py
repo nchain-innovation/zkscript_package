@@ -70,7 +70,10 @@ class Pairing:
 
         # After this, the stack is: miller(P,Q)^-1 (t-1)Q miller(P,Q)
         out += self.miller_loop(
-            modulo_threshold=modulo_threshold, check_constant=False, clean_constant=False, positive_modulo=False
+            modulo_threshold=modulo_threshold,
+            positive_modulo=False,
+            check_constant=False,
+            clean_constant=False,
         )
 
         # This is where one would perform subgroup membership checks if they were needed
@@ -152,7 +155,9 @@ class Pairing:
         # After this, the stack is:
         # quadratic([miller(P1,Q1) * miller(P2,Q2) * miller(P3,Q3)])^-1
         # quadratic([miller(P1,Q1) * miller(P2,Q2) * miller(P3,Q3)])
-        out += self.triple_miller_loop(modulo_threshold=modulo_threshold, check_constant=False, clean_constant=False)
+        out += self.triple_miller_loop(
+            modulo_threshold=modulo_threshold, positive_modulo=False, check_constant=False, clean_constant=False
+        )
 
         out += easy_exponentiation_with_inverse_check(
             take_modulo=True, positive_modulo=False, check_constant=False, clean_constant=False

@@ -1,5 +1,7 @@
+"""Size estimate function for MNT4-753."""
+
 from math import ceil, log2
-from typing import List, Union
+from typing import Union
 
 r"""
 P + Q:
@@ -18,7 +20,7 @@ Worst calculation is: (b_0^2 + b_1^2 13), 2|b^2s| <= 52 |b_1^2|
 Finally: |f^2| <= 52 |b_1^2|
 
 f <-- f^2 * element
-    |f^2 * element| <= 52 |size(f)| * |size(element)|
+    |f^2 * element| <= 52 |size(f^2)| * |size(element)| <= 52^2 * |size(f)|^2 * |size(element)|
 """
 
 
@@ -26,8 +28,8 @@ def size_estimation_miller_loop(
     modulus,
     modulo_threshold: int,
     ix: int,
-    exp_miller_loop: List[int],
-    current_size_miller_ouput: int,
+    exp_miller_loop: list[int],
+    current_size_miller_output: int,
     current_size_point_multiplication: int,
     is_triple_miller_loop: bool,
 ) -> Union[bool, int]:
@@ -37,8 +39,8 @@ def size_estimation_miller_loop(
         modulus (int): the modulus of MNT4-753
         modulo_threshold (int): the size after which to take a modulo in the script (in bytes).
         ix (int): the index of the Miller loop.
-        exp_miller_loop (List[int]): the binary expansion of the value for which the Miller loop is computed.
-        current_size_miller_ouput (int): the current size of the Miller output.
+        exp_miller_loop (list[int]): the binary expansion of the value for which the Miller loop is computed.
+        current_size_miller_output (int): the current size of the Miller output.
         current_size_point_multiplication (int): the current size of the calculation of w*Q, where w is the
             value over which the Miller loop is computed.
         is_triple_miller_loop (bool): whether the function is used to estimate the sizes for the triple Miller
@@ -59,14 +61,16 @@ def size_estimation_miller_loop(
     if exp_miller_loop[ix - 1] == 0:
         multiplier = 3 if is_triple_miller_loop else 1
         # Next iteration update will be: f <-- f^2 * line_eval, T <-- 2T
-        future_size_miller_output = current_size_miller_ouput
+        future_size_miller_output = current_size_miller_output
+        future_size_miller_output = 2 * future_size_miller_output + log2(52)
         for _ in range(multiplier):
             future_size_miller_output = ceil(log2(modulus)) + future_size_miller_output + log2(52)
         future_size_point_multiplication = ceil(log2(modulus)) + current_size_point_multiplication + log2(6)
     else:
         multiplier = 6 if is_triple_miller_loop else 2
-        # Next iteration update will be: f <-- f^2 * line_eval * line_elval, T <-- 2T ± Q
-        future_size_miller_output = current_size_miller_ouput
+        # Next iteration update will be: f <-- f^2 * line_eval * line_eval, T <-- 2T ± Q
+        future_size_miller_output = current_size_miller_output
+        future_size_miller_output = 2 * future_size_miller_output + log2(52)
         for _ in range(multiplier):
             future_size_miller_output = ceil(log2(modulus)) + future_size_miller_output + log2(52)
         future_size_point_multiplication = ceil(log2(modulus)) + current_size_point_multiplication + log2(6)

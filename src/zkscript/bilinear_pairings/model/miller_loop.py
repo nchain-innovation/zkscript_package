@@ -11,6 +11,7 @@ from src.zkscript.util.utility_scripts import move, pick, roll, verify_bottom_co
 
 class MillerLoop:
     """Miller loop operation."""
+
     def __one_step_without_addition(
         self,
         i: int,
@@ -30,6 +31,7 @@ class MillerLoop:
             i (int): The step begin performed in the computation of the Miller loop.
             take_modulo (List[bool]): List of two booleans that declare whether to take modulos after
                 calculating the evaluations and the points doubling.
+            positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
             clean_constant (bool): Whether to clean the constant at the end of the execution of the
                 Miller loop.
             gradient_doubling (StackFiniteFieldElement): List of gradients needed for doubling.
@@ -44,6 +46,7 @@ class MillerLoop:
         # stack out: [gradient_(2T), P, Q, T, {f_i^2}, ev_(l_(T,T))(P)]
         out += self.line_eval(
             take_modulo=True,
+            positive_modulo=False,
             check_constant=False,
             clean_constant=False,
             gradient=gradient_doubling.shift(shift),
@@ -55,7 +58,11 @@ class MillerLoop:
             # stack in:  [gradient_(2T), P, Q, T, {f_i^2}, ev_(l_(T,T))(P)]
             # stack out: [gradient_(2T), P, Q, T, ({f_i^2} * ev_(l_(T,T))(P))]
             out += self.miller_loop_output_times_eval(
-                take_modulo=take_modulo[0], positive_modulo=positive_modulo and (i==0), check_constant=False, clean_constant=False, is_constant_reused=False
+                take_modulo=take_modulo[0],
+                positive_modulo=positive_modulo,
+                check_constant=False,
+                clean_constant=False,
+                is_constant_reused=False,
             )
         # stack in:  [gradient_(2T), P, Q, T, ({f_i^2} * ev_(l_(T,T))(P))]
         # stack out: [gradient_(2T), P, Q, T]
@@ -76,7 +83,7 @@ class MillerLoop:
         # altstack out: [({f_i^2} * ev_(l_(T,T))(P))]
         out += self.point_doubling_twisted_curve(
             take_modulo=take_modulo[1],
-            positive_modulo=positive_modulo and (i==0),
+            positive_modulo=positive_modulo,
             check_constant=False,
             clean_constant=(i == 0) and clean_constant,
             verify_gradient=True,
@@ -120,6 +127,7 @@ class MillerLoop:
             i (int): The step begin performed in the computation of the Miller loop.
             take_modulo (List[bool]): List of two booleans that declare whether to take modulos after
                 calculating the evaluations and the points doubling.
+            positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
             clean_constant (bool): Whether to clean the constant at the end of the execution of the
                 Miller loop.
             gradient_doubling (StackFiniteFieldElement): List of gradients needed for doubling.
@@ -171,7 +179,7 @@ class MillerLoop:
             #               ({f_i^2} * ev_(l_(T,T))(P) * ev_(l_(2T, ± Q))(P))^2]
             out += self.miller_loop_output_times_eval_times_eval(
                 take_modulo=take_modulo[0],
-                positive_modulo=positive_modulo and (i==0),
+                positive_modulo=positive_modulo,
                 check_constant=False,
                 clean_constant=False,
                 is_constant_reused=False,
@@ -209,7 +217,7 @@ class MillerLoop:
         # altstack out: [({f_i^2} * ev_(l_(T,T))(P) * ev_(l_(2T, ± Q))(P))^2]
         out += self.point_addition_twisted_curve(
             take_modulo=take_modulo[1],
-            positive_modulo=positive_modulo and (i==0),
+            positive_modulo=positive_modulo,
             check_constant=False,
             clean_constant=(i == 0) and clean_constant,
             verify_gradient=True,
@@ -244,8 +252,8 @@ class MillerLoop:
         """Evaluation of the Miller loop at points `P` and `Q`.
 
         Stack input:
-            - stack:    [q, ..., gradients, P, Q], `P` is a point on E(F_q), `Q` is a point on E'(F_q^{k/d}), `gradients` is
-                the sequence of gradients to compute the miller loop
+            - stack:    [q, ..., gradients, P, Q], `P` is a point on E(F_q), `Q` is a point on E'(F_q^{k/d}),
+                `gradients` is the sequence of gradients to compute the miller loop
             - altstack: []
 
         Stack output:
@@ -326,11 +334,7 @@ class MillerLoop:
         # stack in:  [P, Q, T]
         # stack out: [w*Q, miller(P,Q)]
         for i in range(len(self.exp_miller_loop) - 2, -1, -1):
-            positive_modulo_i = False
-
-            # Constants set up
-            if i == 0:
-                positive_modulo_i = positive_modulo
+            positive_modulo_i = positive_modulo if i == 0 else False
 
             (
                 take_modulo_miller_loop_output,
@@ -370,40 +374,43 @@ class MillerLoop:
                         n_elements=self.N_ELEMENTS_EVALUATION_TIMES_EVALUATION,
                     )
                     out += self.line_eval_times_eval_times_eval_times_eval(
-                        take_modulo=take_modulo_miller_loop_output, positive_modulo=False, check_constant=False, clean_constant=False
+                        take_modulo=take_modulo_miller_loop_output,
+                        positive_modulo=False,
+                        check_constant=False,
+                        clean_constant=False,
                     )
                     out += self.pad_eval_times_eval_times_eval_times_eval_to_miller_output
 
             if i < len(self.exp_miller_loop) - 3:
                 # stack in:  [gradient_(2T), P, Q, T, f_i]
                 # stack out: [gradient_(2T), P, Q, T, f_i^2]
-                out += self.miller_loop_output_square(take_modulo=True, check_constant=False, clean_constant=False, positive_modulo=False)
+                out += self.miller_loop_output_square(take_modulo=False, check_constant=False, clean_constant=False)
 
             if self.exp_miller_loop[i] == 0:
                 # stack in:  [gradient_(2T), P, Q, T, f_i^2]
                 # stack out: [P, Q, 2T, (f_i^2 * ev_(l_(T,T))(P))]
                 out += self.__one_step_without_addition(
-                    i,
-                    [take_modulo_miller_loop_output, take_modulo_point_multiplication],
-                    positive_modulo_i,
-                    clean_constant,
-                    gradient_doubling,
-                    P,
-                    T,
+                    i=i,
+                    take_modulo=[take_modulo_miller_loop_output, take_modulo_point_multiplication],
+                    positive_modulo=positive_modulo_i,
+                    clean_constant=clean_constant,
+                    gradient_doubling=gradient_doubling,
+                    P=P,
+                    T=T,
                 )
             else:
                 # stack in:  [gradient_(2T ± Q), gradient_(2T), P, Q, T, f_i^2]
                 # stack out: [P, Q, (2T ± Q), (f_i^2 * ev_(l_(T,T))(P) * ev_(l_(2T, ± Q))(P))]
                 out += self.__one_step_with_addition(
-                    i,
-                    [take_modulo_miller_loop_output, take_modulo_point_multiplication],
-                    positive_modulo_i,
-                    clean_constant,
-                    gradient_doubling,
-                    gradient_addition,
-                    P,
-                    Q,
-                    T,
+                    i=i,
+                    take_modulo=[take_modulo_miller_loop_output, take_modulo_point_multiplication],
+                    positive_modulo=positive_modulo_i,
+                    clean_constant=clean_constant,
+                    gradient_doubling=gradient_doubling,
+                    gradient_addition=gradient_addition,
+                    P=P,
+                    Q=Q,
+                    T=T,
                 )
 
         # stack in:  [P, Q, w*Q, miller(P,Q)]

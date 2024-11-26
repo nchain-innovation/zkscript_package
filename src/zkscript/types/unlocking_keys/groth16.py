@@ -1,6 +1,7 @@
+"""Unlocking key for Groth16."""
+
 from dataclasses import dataclass
 from math import log2
-from typing import List
 
 from tx_engine import Script
 
@@ -10,49 +11,50 @@ from src.zkscript.util.utility_scripts import nums_to_script
 
 @dataclass
 class Groth16UnlockingKey:
-    pub: List[int]
-    A: List[int]
-    B: List[int]
-    C: List[int]
-    gradients_pairings: List[List[List[int]]]
-    inverse_miller_output: List[int]
-    gradients_partial_sums: List[int]
-    gradients_multiplication: List[List[List[int]]]
+    """Groth16 unlocking key."""
+
+    pub: list[int]
+    A: list[int]
+    B: list[int]
+    C: list[int]
+    gradients_pairings: list[list[list[int]]]
+    inverse_miller_output: list[int]
+    gradients_partial_sums: list[int]
+    gradients_multiplication: list[list[list[int]]]
     r"""
     Class encapsulating the data required to generate an unlocking script for a Groth16 verifier.
 
     Attributes:
-        pub (List[int]): List of public statements (extended with).
-        A (List[int]): Component of the zk proof.
-        B (List[int]): Component of the zk proof.
-        C (List[int]): Component of the zk proof.
-        gradients_pairings (List[List[List[int]]]): list of gradients required to compute the pairings
+        pub (list[int]): list of public statements (extended with).
+        A (list[int]): Component of the zk proof.
+        B (list[int]): Component of the zk proof.
+        C (list[int]): Component of the zk proof.
+        gradients_pairings (list[list[list[int]]]): list of gradients required to compute the pairings
             in the Groth16 verification equation. The meaning of the lists is:
                 - gradients_pairings[0]: gradients required to compute w*B
                 - gradients_pairings[1]: gradients required to compute w*(-gamma)
                 - gradients_pairings[2]: gradients required to compute w*(-delta)
-        inverse_miller_loop (List[int]): the inverse of
+        inverse_miller_loop (list[int]): the inverse of
             miller(A,B) * miller(gamma_abc[0] + \sum_{i >=0} pub[i-1] * gamma_abc[i], -gamma) * miller(C, -delta)
-        gradients_partial_sums (List[int]): gradients_partial_sums[n_pub - i - 1] is the gradient required to compute
+        gradients_partial_sums (list[int]): gradients_partial_sums[n_pub - i - 1] is the gradient required to compute
             the sum (gamma_abc[0] + \sum_{j=1}^{i} pub[j-1] gamma_abc[j]) + (pub[i] * gamma_abc[i+1]), 0 <= i <= n_pub-1
-        gradients_multiplication (List[List[List[int]]]): gradients_multiplication[i] is the list of
+        gradients_multiplication (list[list[list[int]]]): gradients_multiplication[i] is the list of
             gradients required to compute pub[i] * gamma_abc[i+1], 0 <= i <= n_pub-1
     """
 
     def to_unlocking_script(
         self,
         groth16_model: Groth16,
-        max_multipliers: List[int] | None = None,
+        max_multipliers: list[int] | None = None,
         load_modulus: bool = True,
     ) -> Script:
         r"""Return the script needed to execute the groth16_verifier script.
 
         Args:
             groth16_model (Groth16): The Groth16 script model used to construct the groth16_verifier script.
-            max_multipliers (List[int] | None): The integer n such that |pub[i]| <= n for all i. If passed as
+            max_multipliers (list[int] | None): The integer n such that |pub[i]| <= n for all i. If passed as
                 None, then n = groth16_model.r.
             load_modulus (bool): Whether or not to load the modulus. Defaults to `True`.
-
         """
         n_pub = len(self.pub)
 

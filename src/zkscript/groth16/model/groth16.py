@@ -1,7 +1,5 @@
 """Bitcoin scripts that perform Groth16 proof verification."""
 
-from math import log2
-
 from tx_engine import Script
 
 # Pairing
@@ -66,11 +64,9 @@ class Groth16(PairingModel):
             - altstack: []
 
         Args:
+            locking_key (Groth16LockingKey): Locking key used to generate the verifier. Encapsulates the data of the
+                CRS needed by the verifier.
             modulo_threshold (int): Bit-length threshold. Values whose bit-length exceeds it are reduced modulo `q`.
-            alpha_beta (list[int]): List of integers representing the alpha and beta coefficients for the computation.
-            minus_gamma (list[int]): List of integers representing the negated gamma values for the computation.
-            minus_delta (list[int]): List of integers representing the negated delta values for the computation
-            gamma_abc (list[list[int]]): List of points given in the Common Reference String.
             max_multipliers (list[int]): List where each element max_multipliers[i] is the max value of the i-th public
                 statement.
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
@@ -141,7 +137,7 @@ class Groth16(PairingModel):
 
         # After this, the stack is: q .. e(A,B) * e(sum_(i=0)^(l) a_i * gamma_abc[i], gamma) * e(C, delta)
         out += self.pairing_model.triple_pairing(
-            modulo_threshold=modulo_threshold, check_constant=False, clean_constant=clean_constant
+            modulo_threshold=modulo_threshold, positive_modulo=True, check_constant=False, clean_constant=clean_constant
         )
 
         # After this, the top of the stack is:

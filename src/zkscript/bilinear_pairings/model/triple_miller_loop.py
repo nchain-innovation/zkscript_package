@@ -10,6 +10,8 @@ from src.zkscript.util.utility_scripts import pick, roll, verify_bottom_constant
 
 
 class TripleMillerLoop:
+    """Triple Miller loop."""
+
     def __one_step_without_addition(
         self,
         i: int,
@@ -29,6 +31,7 @@ class TripleMillerLoop:
             i (int): The step begin performed in the computation of the Miller loop.
             take_modulo (list[bool]): list of two booleans that declare whether to take modulos after
                 calculating the evaluations and the points doubling.
+            positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
             clean_constant (bool): Whether to clean the constant at the end of the execution of the
                 Miller loop.
             gradients_doubling (list[StackFiniteFieldElement]): list of gradients needed for doubling.
@@ -102,7 +105,11 @@ class TripleMillerLoop:
             # stack out: [gradient_(2*T1), gradient_(2*T2), gradient_(2*T3), P1, P2, P3, Q1, Q2, Q3, T1, T2, T3,
             #               {f_i^2} * (ev_(l_(T1,T1))(P1) * ev_(l_(T2,T2))(P2) * ev_(l_(T3,T3))(P3))]
             out += self.miller_loop_output_times_eval_times_eval_times_eval(
-                take_modulo=take_modulo[0], positive_modulo=positive_modulo and (i==0), check_constant=False, clean_constant=False, is_constant_reused=False
+                take_modulo=take_modulo[0],
+                positive_modulo=positive_modulo,
+                check_constant=False,
+                clean_constant=False,
+                is_constant_reused=False,
             )  # Compute f_i * (t1 * t2 * t3)
         # stack in:     [gradient_(2*T1), gradient_(2*T2), gradient_(2*T3), P1, P2, P3, Q1, Q2, Q3, T1, T2, T3,
         #                   {f_i^2} * (ev_(l_(T1,T1))(P1) * ev_(l_(T2,T2))(P2) * ev_(l_(T3,T3))(P3))]
@@ -115,7 +122,7 @@ class TripleMillerLoop:
         # altstack out: [{f_i^2} * (ev_(l_(T1,T1))(P1) * ev_(l_(T2,T2))(P2) * ev_(l_(T3,T3))(P3))]
         out += self.point_doubling_twisted_curve(
             take_modulo=take_modulo[1],
-            positive_modulo=positive_modulo and (i==0),
+            positive_modulo=positive_modulo,
             check_constant=False,
             clean_constant=False,
             verify_gradient=True,
@@ -129,7 +136,7 @@ class TripleMillerLoop:
         # altstack out: [{f_i^2} * (ev_(l_(T1,T1))(P1) * ev_(l_(T2,T2))(P2) * ev_(l_(T3,T3))(P3))]
         out += self.point_doubling_twisted_curve(
             take_modulo=take_modulo[1],
-            positive_modulo=positive_modulo and (i==0),
+            positive_modulo=positive_modulo,
             check_constant=False,
             clean_constant=False,
             verify_gradient=True,
@@ -143,7 +150,7 @@ class TripleMillerLoop:
         # altstack out: [{f_i^2} * (ev_(l_(T1,T1))(P1) * ev_(l_(T2,T2))(P2) * ev_(l_(T3,T3))(P3))]
         out += self.point_doubling_twisted_curve(
             take_modulo=take_modulo[1],
-            positive_modulo=positive_modulo and (i==0),
+            positive_modulo=positive_modulo,
             check_constant=False,
             clean_constant=(i == 0) and clean_constant,
             verify_gradient=True,
@@ -180,6 +187,7 @@ class TripleMillerLoop:
             i (int): The step begin performedin the computation of the Miller loop.
             take_modulo (list[bool]): list of two booleans that declare whether to take modulos after
                 calculating the evaluations and the points doubling.
+            positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
             clean_constant (bool): Whether to clean the constant at the end of the execution of the
                 Miller loop.
             gradients_doubling (list[StackFiniteFieldElement]): list of gradients needed for doubling.
@@ -232,7 +240,9 @@ class TripleMillerLoop:
         # stack out: [gradient_(2* T1 ± Q1), gradient_(2* T2 ± Q2), gradient_(2* T3 ± Q3), gradient_(2*T1),
         #               gradient_(2*T2), gradient_(2*T3), P1, P2, P3, Q1, Q2, Q3, T1, T2, T3, {f_i^2},
         #                   (ev_(l_(T1,T1))(P1)*ev_(l_(T2,T2))(P2))]
-        out += self.line_eval_times_eval(take_modulo=False, positive_modulo=False, check_constant=False, clean_constant=False)
+        out += self.line_eval_times_eval(
+            take_modulo=False, positive_modulo=False, check_constant=False, clean_constant=False
+        )
         # stack in:  [gradient_(2* T1 ± Q1), gradient_(2* T2 ± Q2), gradient_(2* T3 ± Q3), gradient_(2*T1),
         #               gradient_(2*T2), gradient_(2*T3), P1, P2, P3, Q1, Q2, Q3, T1, T2, T3, {f_i^2},
         #                   (ev_(l_(T1,T1))(P1)*ev_(l_(T2,T2))(P2))]
@@ -280,7 +290,9 @@ class TripleMillerLoop:
         #               gradient_(2*T2), gradient_(2*T3), P1, P2, P3, Q1, Q2, Q3, T1, T2, T3, {f_i^2},
         #                   (ev_(l_(T1,T1))(P1)*ev_(l_(T2,T2))(P2)),
         #                       (ev_(l_(T3,T3))(P3)*ev_(l_(2*T1,± Q1))(P1))]
-        out += self.line_eval_times_eval(take_modulo=False, positive_modulo=False, check_constant=False, clean_constant=False)
+        out += self.line_eval_times_eval(
+            take_modulo=False, positive_modulo=False, check_constant=False, clean_constant=False
+        )
         # stack in:  [gradient_(2* T1 ± Q1), gradient_(2* T2 ± Q2), gradient_(2* T3 ± Q3), gradient_(2*T1),
         #               gradient_(2*T2), gradient_(2*T3), P1, P2, P3, Q1, Q2, Q3, T1, T2, T3, {f_i^2},
         #                   (ev_(l_(T1,T1))(P1)*ev_(l_(T2,T2))(P2)),
@@ -338,7 +350,9 @@ class TripleMillerLoop:
         #                   (ev_(l_(T1,T1))(P1)*ev_(l_(T2,T2))(P2)),
         #                       (ev_(l_(T3,T3))(P3)*ev_(l_(2*T1,± Q1))(P1)),
         #                           (ev_(l_(2*T2,± Q2))(P2)*ev_(l_(2*T3,± Q3))(P3))]
-        out += self.line_eval_times_eval(take_modulo=False, check_constant=False, clean_constant=False)
+        out += self.line_eval_times_eval(
+            take_modulo=False, positive_modulo=False, check_constant=False, clean_constant=False
+        )
         # stack in:    [gradient_(2* T1 ± Q1), gradient_(2* T2 ± Q2), gradient_(2* T3 ± Q3), gradient_(2*T1),
         #                   gradient_(2*T2), gradient_(2*T3), P1, P2, P3, Q1, Q2, Q3, T1, T2, T3, {f_i^2},
         #                       (ev_(l_(T1,T1))(P1)*ev_(l_(T2,T2))(P2)),
@@ -358,7 +372,11 @@ class TripleMillerLoop:
         )
         if i != len(self.exp_miller_loop) - 2:
             out += self.miller_loop_output_times_eval_times_eval_times_eval_times_eval_times_eval_times_eval(
-                take_modulo=take_modulo[0], positive_modulo=positive_modulo and (i==0), check_constant=False, clean_constant=False, is_constant_reused=False
+                take_modulo=take_modulo[0],
+                positive_modulo=positive_modulo,
+                check_constant=False,
+                clean_constant=False,
+                is_constant_reused=False,
             )
         out += Script.parse_string(" ".join(["OP_TOALTSTACK"] * self.N_ELEMENTS_MILLER_OUTPUT))
         # stack in:     [gradient_(2* T1 ± Q1), gradient_(2* T2 ± Q2), gradient_(2* T3 ± Q3), gradient_(2*T1),
@@ -385,7 +403,7 @@ class TripleMillerLoop:
         # altstack out: [{f_i^2}*(ev_(l_(T1,T1))(P1)*ev_(l_(T2,T2))(P2)) *(ev_(l_(T3,T3))(P3)*ev_(l_(2*T1,± Q1))(P1)) * (ev_(l_(2*T2,± Q2))(P2)*ev_(l_(2*T3,± Q3))(P3))]  # noqa: E501
         out += self.point_addition_twisted_curve(
             take_modulo=take_modulo[1],
-            positive_modulo=positive_modulo and (i==0),
+            positive_modulo=positive_modulo,
             check_constant=False,
             clean_constant=False,
             verify_gradient=True,
@@ -417,7 +435,7 @@ class TripleMillerLoop:
         # altstack out: [{f_i^2}*(ev_(l_(T1,T1))(P1)*ev_(l_(T2,T2))(P2)) *(ev_(l_(T3,T3))(P3)*ev_(l_(2*T1,± Q1))(P1)) * (ev_(l_(2*T2,± Q2))(P2)*ev_(l_(2*T3,± Q3))(P3))]  # noqa: E501
         out += self.point_addition_twisted_curve(
             take_modulo=take_modulo[1],
-            positive_modulo=positive_modulo and (i==0),
+            positive_modulo=positive_modulo,
             check_constant=False,
             clean_constant=False,
             verify_gradient=True,
@@ -446,7 +464,7 @@ class TripleMillerLoop:
         # altstack out: [{f_i^2}*(ev_(l_(T1,T1))(P1)*ev_(l_(T2,T2))(P2)) *(ev_(l_(T3,T3))(P3)*ev_(l_(2*T1,± Q1))(P1)) * (ev_(l_(2*T2,± Q2))(P2)*ev_(l_(2*T3,± Q3))(P3))]  # noqa: E501
         out += self.point_addition_twisted_curve(
             take_modulo=take_modulo[1],
-            positive_modulo=positive_modulo and (i==0),
+            positive_modulo=positive_modulo,
             check_constant=False,
             clean_constant=(i == 0) and clean_constant,
             verify_gradient=True,
@@ -595,7 +613,7 @@ class TripleMillerLoop:
         # stack in:  [P1, P2, P3, Q1, Q2, Q3, T1, T2, T3]
         # stack out: [P1, P2, P3, Q1, Q2, Q3, w*Q1, w*Q2, w*Q3, (miller(P1,Q1) * miller(P2,Q2) * miller(P3,Q3))]
         for i in range(len(self.exp_miller_loop) - 2, -1, -1):
-            positive_modulo_i = False
+            positive_modulo_i = positive_modulo if i == 0 else False
             (
                 take_modulo_miller_loop_output,
                 take_modulo_point_multiplication,
@@ -614,20 +632,20 @@ class TripleMillerLoop:
             if i != len(self.exp_miller_loop) - 2:
                 # stack in:  [P1, P2, P3, Q1, Q2, Q3, T1, T2, T3, f_i]
                 # stack out: [P1, P2, P3, Q1, Q2, Q3, T1, T2, T3, f_i^2]
-                out += self.miller_loop_output_square(take_modulo=False, positive_modulo=False, check_constant=False, clean_constant=False)
+                out += self.miller_loop_output_square(take_modulo=False, check_constant=False, clean_constant=False)
             if self.exp_miller_loop[i] == 0:
                 # stack in:  [gradient_(2*T1), gradient_(2*T2), gradient_(2*T3), P1, P2, P3, Q1, Q2, Q3, T1, T2, T3,
                 #               {f_i^2}]
                 # stack out: [P1, P2, P3, Q1, Q2, Q3, (2*T1), (2*T2), (2*T3),
                 #               {f_i^2} * (ev_(l_(T1,T1))(P1) * ev_(l_(T2,T2))(P2) * ev_(l_(T3,T3))(P3)]
                 out += self.__one_step_without_addition(
-                    i,
-                    [take_modulo_miller_loop_output, take_modulo_point_multiplication],
-                    positive_modulo_i,
-                    clean_constant,
-                    gradients_doubling,
-                    P,
-                    T,
+                    i=i,
+                    take_modulo=[take_modulo_miller_loop_output, take_modulo_point_multiplication],
+                    positive_modulo=positive_modulo_i,
+                    clean_constant=clean_constant,
+                    gradients_doubling=gradients_doubling,
+                    P=P,
+                    T=T,
                 )
             else:
                 # stack in:  [gradient_(2* T1 ± Q1), gradient_(2* T2 ± Q2), gradient_(2* T3 ± Q3), gradient_(2*T1),
@@ -635,15 +653,15 @@ class TripleMillerLoop:
                 # stack out: [P1, P2, P3, Q1, Q2, Q3, (2*T1 ± Q1), (2*T2 ± Q2), (2*T3 ± Q3),
                 #               {f_i^2}*(ev_(l_(T1,T1))(P1)*ev_(l_(T2,T2))(P2)) *(ev_(l_(T3,T3))(P3)*ev_(l_(2*T1,± Q1))(P1)) * (ev_(l_(2*T2,± Q2))(P2)*ev_(l_(2*T3,± Q3))(P3))]  # noqa: E501
                 out += self.__one_step_with_addition(
-                    i,
-                    [take_modulo_miller_loop_output, take_modulo_point_multiplication],
-                    positive_modulo_i,
-                    clean_constant,
-                    gradients_doubling,
-                    gradients_addition,
-                    P,
-                    Q,
-                    T,
+                    i=i,
+                    take_modulo=[take_modulo_miller_loop_output, take_modulo_point_multiplication],
+                    positive_modulo=positive_modulo_i,
+                    clean_constant=clean_constant,
+                    gradients_doubling=gradients_doubling,
+                    gradients_addition=gradients_addition,
+                    P=P,
+                    Q=Q,
+                    T=T,
                 )
 
         # stack in:  [P1, P2, P3, Q1, Q2, Q3, w*Q1, w*Q2, w*Q3, (miller(P1,Q1) * miller(P2,Q2) * miller(P3,Q3))]

@@ -366,6 +366,7 @@ class MillerOutputOperations(Fq12CubicScriptModel):
     def miller_loop_output_times_eval_times_eval(
         self,
         take_modulo: bool,
+        positive_modulo: bool = True,
         check_constant: bool | None = None,
         clean_constant: bool | None = None,
         is_constant_reused: bool | None = None,
@@ -385,7 +386,6 @@ class MillerOutputOperations(Fq12CubicScriptModel):
             - If take_modulo is set to True, then the coordinates of the result are in Z_q;
             otherwise, the coordinates are not taken modulo q.
         """
-
         # Fq2 implementation
         fq2 = self.FQ2
 
@@ -635,7 +635,11 @@ class MillerOutputOperations(Fq12CubicScriptModel):
         compute_first_component += fq2.mul(take_modulo=False, check_constant=False, clean_constant=False)
         if take_modulo:
             compute_first_component += fq2.add(
-                take_modulo=True, check_constant=False, clean_constant=clean_constant, is_constant_reused=True
+                take_modulo=True,
+                positive_modulo=positive_modulo,
+                check_constant=False,
+                clean_constant=clean_constant,
+                is_constant_reused=True,
             )
         else:
             compute_first_component += fq2.add(take_modulo=False, check_constant=False, clean_constant=False)
@@ -652,8 +656,8 @@ class MillerOutputOperations(Fq12CubicScriptModel):
         if take_modulo:
             # Batched modulo operations: pull from altstack, rotate, mod out, repeat
             for _ in range(9):
-                out += mod()
-            out += mod(is_constant_reused=is_constant_reused)
+                out += mod(is_positive=positive_modulo)
+            out += mod(is_positive=positive_modulo, is_constant_reused=is_constant_reused)
         else:
             out += Script.parse_string(" ".join(["OP_FROMALTSTACK"] * 10))
         return out
