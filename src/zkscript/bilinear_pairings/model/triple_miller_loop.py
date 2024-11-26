@@ -292,7 +292,7 @@ class TripleMillerLoop:
                     stack_length_added += N_POINTS_TWIST
                     out += point_doubling_twisted_curve(
                         take_modulo=take_modulo_T,
-                        verify_gradient=False,
+                        verify_gradient=True,
                         check_constant=False,
                         clean_constant=False,
                         positive_modulo=False,
@@ -315,7 +315,7 @@ class TripleMillerLoop:
                     stack_length_added += N_POINTS_TWIST
                     out += point_doubling_twisted_curve(
                         take_modulo=take_modulo_T,
-                        verify_gradient=False,
+                        verify_gradient=True,
                         check_constant=False,
                         clean_constant=False,
                         positive_modulo=False,
@@ -334,7 +334,7 @@ class TripleMillerLoop:
                     stack_length_added += N_POINTS_TWIST
                     out += point_doubling_twisted_curve(
                         take_modulo=take_modulo_T,
-                        verify_gradient=False,
+                        verify_gradient=True,
                         check_constant=False,
                         clean_constant=clean_final,
                         positive_modulo=False,
@@ -639,7 +639,7 @@ class TripleMillerLoop:
                     stack_length_added += 0
                     out += point_doubling_twisted_curve(
                         take_modulo=take_modulo_T,
-                        verify_gradient=False,
+                        verify_gradient=True,
                         check_constant=False,
                         clean_constant=False,
                         positive_modulo=False,
@@ -671,7 +671,7 @@ class TripleMillerLoop:
                         raise ValueError
                     out += point_addition_twisted_curve(
                         take_modulo=take_modulo_T,
-                        verify_gradient=False,
+                        verify_gradient=True,
                         check_constant=False,
                         clean_constant=False,
                         positive_modulo=False,
@@ -695,7 +695,7 @@ class TripleMillerLoop:
                     stack_length_added += 0
                     out += point_doubling_twisted_curve(
                         take_modulo=take_modulo_T,
-                        verify_gradient=False,
+                        verify_gradient=True,
                         check_constant=False,
                         clean_constant=False,
                         positive_modulo=False,
@@ -727,7 +727,7 @@ class TripleMillerLoop:
                         raise ValueError
                     out += point_addition_twisted_curve(
                         take_modulo=take_modulo_T,
-                        verify_gradient=False,
+                        verify_gradient=True,
                         check_constant=False,
                         clean_constant=False,
                         positive_modulo=False,
@@ -746,7 +746,7 @@ class TripleMillerLoop:
                     stack_length_added += 0
                     out += point_doubling_twisted_curve(
                         take_modulo=take_modulo_T,
-                        verify_gradient=False,
+                        verify_gradient=True,
                         check_constant=False,
                         clean_constant=False,
                         positive_modulo=False,
@@ -774,7 +774,7 @@ class TripleMillerLoop:
                         raise ValueError
                     out += point_addition_twisted_curve(
                         take_modulo=take_modulo_T,
-                        verify_gradient=False,
+                        verify_gradient=True,
                         check_constant=False,
                         clean_constant=False,
                         positive_modulo=False,
@@ -932,7 +932,7 @@ class TripleMillerLoop:
                 stack_length_added += N_POINTS_TWIST
                 out += point_doubling_twisted_curve(
                     take_modulo=take_modulo_T,
-                    verify_gradient=False,
+                    verify_gradient=True,
                     check_constant=False,
                     clean_constant=False,
                     positive_modulo=False,
@@ -949,7 +949,7 @@ class TripleMillerLoop:
                 stack_length_added += N_POINTS_TWIST
                 out += point_doubling_twisted_curve(
                     take_modulo=take_modulo_T,
-                    verify_gradient=False,
+                    verify_gradient=True,
                     check_constant=False,
                     clean_constant=False,
                     positive_modulo=False,
@@ -966,7 +966,7 @@ class TripleMillerLoop:
                 stack_length_added += N_POINTS_TWIST
                 out += point_doubling_twisted_curve(
                     take_modulo=take_modulo_T,
-                    verify_gradient=False,
+                    verify_gradient=True,
                     check_constant=False,
                     clean_constant=clean_final,
                     positive_modulo=positive_modulo_i,
@@ -1305,7 +1305,7 @@ class TripleMillerLoop:
                 stack_length_added += 0
                 out += point_doubling_twisted_curve(
                     take_modulo=take_modulo_T,
-                    verify_gradient=False,
+                    verify_gradient=True,
                     check_constant=False,
                     clean_constant=False,
                     positive_modulo=False,
@@ -1333,7 +1333,7 @@ class TripleMillerLoop:
                     raise ValueError
                 out += point_addition_twisted_curve(
                     take_modulo=take_modulo_T,
-                    verify_gradient=False,
+                    verify_gradient=True,
                     check_constant=False,
                     clean_constant=False,
                     positive_modulo=False,
@@ -1351,7 +1351,7 @@ class TripleMillerLoop:
                 stack_length_added += 0
                 out += point_doubling_twisted_curve(
                     take_modulo=take_modulo_T,
-                    verify_gradient=False,
+                    verify_gradient=True,
                     check_constant=False,
                     clean_constant=False,
                     positive_modulo=False,
@@ -1379,7 +1379,7 @@ class TripleMillerLoop:
                     raise ValueError
                 out += point_addition_twisted_curve(
                     take_modulo=take_modulo_T,
-                    verify_gradient=False,
+                    verify_gradient=True,
                     check_constant=False,
                     clean_constant=False,
                     positive_modulo=False,
@@ -1396,7 +1396,7 @@ class TripleMillerLoop:
                 stack_length_added += 0
                 out += point_doubling_twisted_curve(
                     take_modulo=take_modulo_T,
-                    verify_gradient=False,
+                    verify_gradient=True,
                     check_constant=False,
                     clean_constant=False,
                     positive_modulo=False,
@@ -1424,7 +1424,7 @@ class TripleMillerLoop:
                     raise ValueError
                 out += point_addition_twisted_curve(
                     take_modulo=take_modulo_T,
-                    verify_gradient=False,
+                    verify_gradient=True,
                     check_constant=False,
                     clean_constant=clean_final,
                     positive_modulo=positive_modulo_i,
