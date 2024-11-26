@@ -11,12 +11,6 @@ from src.zkscript.util.utility_scripts import nums_to_script
 
 @dataclass
 class EllipticCurveFqUnrolledUnlockingKey:
-    """Unlocking key for unrolled EC multiplication over Fq."""
-
-    P: list[int]
-    a: int
-    gradients: list[list[int]] | None
-    max_multiplier: int
     """Gradients and operational steps related to the point doubling and addition.
 
     This method returns a script that can be used as the gradient_operations script used by the
@@ -87,6 +81,11 @@ class EllipticCurveFqUnrolledUnlockingKey:
             ^     ^          ^         ^    ^    ^    ^    ^
             q   marker     adding   double pass pass  xP   yP
     """
+
+    P: list[int]
+    a: int
+    gradients: list[list[list[int]]] | None
+    max_multiplier: int
 
     def to_unlocking_script(self, unrolled_ec_over_fq: EllipticCurveFqUnrolled, load_modulus=True) -> Script:
         """Return the unlocking script required by unrolled_multiplication script.

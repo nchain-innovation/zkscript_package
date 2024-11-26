@@ -335,6 +335,7 @@ class MillerLoop:
         # stack out: [w*Q, miller(P,Q)]
         for i in range(len(self.exp_miller_loop) - 2, -1, -1):
             positive_modulo_i = positive_modulo if i == 0 else False
+            clean_constant_i = clean_constant if i == 0 else False
 
             (
                 take_modulo_miller_loop_output,
@@ -393,7 +394,7 @@ class MillerLoop:
                     i=i,
                     take_modulo=[take_modulo_miller_loop_output, take_modulo_point_multiplication],
                     positive_modulo=positive_modulo_i,
-                    clean_constant=clean_constant,
+                    clean_constant=clean_constant_i,
                     gradient_doubling=gradient_doubling,
                     P=P,
                     T=T,
@@ -405,7 +406,7 @@ class MillerLoop:
                     i=i,
                     take_modulo=[take_modulo_miller_loop_output, take_modulo_point_multiplication],
                     positive_modulo=positive_modulo_i,
-                    clean_constant=clean_constant,
+                    clean_constant=clean_constant_i,
                     gradient_doubling=gradient_doubling,
                     gradient_addition=gradient_addition,
                     P=P,

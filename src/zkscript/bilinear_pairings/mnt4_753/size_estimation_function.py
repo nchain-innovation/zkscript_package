@@ -62,19 +62,19 @@ def size_estimation_miller_loop(
         multiplier = 3 if is_triple_miller_loop else 1
         # Next iteration update will be: f <-- f^2 * line_eval, T <-- 2T
         future_size_miller_output = current_size_miller_output
-        future_size_miller_output = 2 * future_size_miller_output + log2(52)
+        future_size_miller_output = 2 * future_size_miller_output + ceil(log2(52))
         for _ in range(multiplier):
-            future_size_miller_output = ceil(log2(modulus)) + future_size_miller_output + log2(52)
-        future_size_point_multiplication = ceil(log2(modulus)) + current_size_point_multiplication + log2(6)
+            future_size_miller_output = ceil(log2(modulus)) + future_size_miller_output + ceil(log2(52))
+        future_size_point_multiplication = ceil(log2(modulus)) + current_size_point_multiplication + ceil(log2(6))
     else:
         multiplier = 6 if is_triple_miller_loop else 2
         # Next iteration update will be: f <-- f^2 * line_eval * line_eval, T <-- 2T ± Q
         future_size_miller_output = current_size_miller_output
-        future_size_miller_output = 2 * future_size_miller_output + log2(52)
+        future_size_miller_output = 2 * future_size_miller_output + ceil(log2(52))
         for _ in range(multiplier):
             future_size_miller_output = ceil(log2(modulus)) + future_size_miller_output + log2(52)
-        future_size_point_multiplication = ceil(log2(modulus)) + current_size_point_multiplication + log2(6)
-        future_size_point_multiplication = ceil(log2(modulus)) + future_size_point_multiplication + log2(6)
+        future_size_point_multiplication = ceil(log2(modulus)) + current_size_point_multiplication + ceil(log2(6))
+        future_size_point_multiplication = ceil(log2(modulus)) + future_size_point_multiplication + ceil(log2(6))
 
     if future_size_miller_output > modulo_threshold:
         take_modulo_miller_loop_output = True

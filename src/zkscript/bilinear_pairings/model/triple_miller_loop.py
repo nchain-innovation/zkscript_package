@@ -22,9 +22,9 @@ class TripleMillerLoop:
         P: list[StackEllipticCurvePoint],  # noqa: N803
         T: list[StackEllipticCurvePoint],  # noqa: N803
     ) -> Script:
-        """Generate the script to perfom one step in the calculation of the Miller loop.
+        """Generate the script to perform one step in the calculation of the Miller loop.
 
-        The function generates the script to perfom one step in the calculation of the Miller loop when
+        The function generates the script to perform one step in the calculation of the Miller loop when
         there is no addition to be computed.
 
         Args:
@@ -178,13 +178,13 @@ class TripleMillerLoop:
         Q: list[StackEllipticCurvePoint],  # noqa: N803
         T: list[StackEllipticCurvePoint],  # noqa: N803
     ) -> Script:
-        """Generate the script to perfom one step in the calculation of the Miller loop.
+        """Generate the script to perform one step in the calculation of the Miller loop.
 
-        The function generates the script to perfom one step in the calculation of the Miller loop when
+        The function generates the script to perform one step in the calculation of the Miller loop when
         there is addition to be computed.
 
         Args:
-            i (int): The step begin performedin the computation of the Miller loop.
+            i (int): The step begin performed in the computation of the Miller loop.
             take_modulo (list[bool]): list of two booleans that declare whether to take modulos after
                 calculating the evaluations and the points doubling.
             positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
@@ -544,8 +544,8 @@ class TripleMillerLoop:
         """
         Assumption on data:
             - Pi are passed as couples of integers (minimally encoded, in little endian)
-            - Qi are passed as couples of elements in Fq2 (see Fq2.py)
-            - miller(P1,Q1) * miller(P2,Q2) * miller(P3,Q3) is in Fq4
+            - Qi are passed as couples of elements in F_q^{k/d}
+            - miller(P1,Q1) * miller(P2,Q2) * miller(P3,Q3)
         """
         gradients_addition = [
             StackFiniteFieldElement(
@@ -614,6 +614,8 @@ class TripleMillerLoop:
         # stack out: [P1, P2, P3, Q1, Q2, Q3, w*Q1, w*Q2, w*Q3, (miller(P1,Q1) * miller(P2,Q2) * miller(P3,Q3))]
         for i in range(len(self.exp_miller_loop) - 2, -1, -1):
             positive_modulo_i = positive_modulo if i == 0 else False
+            clean_constant_i = clean_constant if i == 0 else False
+
             (
                 take_modulo_miller_loop_output,
                 take_modulo_point_multiplication,
@@ -642,7 +644,7 @@ class TripleMillerLoop:
                     i=i,
                     take_modulo=[take_modulo_miller_loop_output, take_modulo_point_multiplication],
                     positive_modulo=positive_modulo_i,
-                    clean_constant=clean_constant,
+                    clean_constant=clean_constant_i,
                     gradients_doubling=gradients_doubling,
                     P=P,
                     T=T,
@@ -656,7 +658,7 @@ class TripleMillerLoop:
                     i=i,
                     take_modulo=[take_modulo_miller_loop_output, take_modulo_point_multiplication],
                     positive_modulo=positive_modulo_i,
-                    clean_constant=clean_constant,
+                    clean_constant=clean_constant_i,
                     gradients_doubling=gradients_doubling,
                     gradients_addition=gradients_addition,
                     P=P,

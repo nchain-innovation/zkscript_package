@@ -11,18 +11,7 @@ from src.zkscript.util.utility_scripts import nums_to_script
 
 @dataclass
 class Groth16UnlockingKey:
-    """Groth16 unlocking key."""
-
-    pub: list[int]
-    A: list[int]
-    B: list[int]
-    C: list[int]
-    gradients_pairings: list[list[list[int]]]
-    inverse_miller_output: list[int]
-    gradients_partial_sums: list[int]
-    gradients_multiplication: list[list[list[int]]]
-    r"""
-    Class encapsulating the data required to generate an unlocking script for a Groth16 verifier.
+    r"""Class encapsulating the data required to generate an unlocking script for a Groth16 verifier.
 
     Attributes:
         pub (list[int]): list of public statements (extended with).
@@ -41,6 +30,15 @@ class Groth16UnlockingKey:
         gradients_multiplication (list[list[list[int]]]): gradients_multiplication[i] is the list of
             gradients required to compute pub[i] * gamma_abc[i+1], 0 <= i <= n_pub-1
     """
+
+    pub: list[int]
+    A: list[int]
+    B: list[int]
+    C: list[int]
+    gradients_pairings: list[list[list[int]]]
+    inverse_miller_output: list[int]
+    gradients_partial_sums: list[int]
+    gradients_multiplication: list[list[list[int]]]
 
     def to_unlocking_script(
         self,
