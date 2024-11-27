@@ -1,3 +1,5 @@
+"""Build the MerkleTree class."""
+
 import string
 
 from tx_engine import Script

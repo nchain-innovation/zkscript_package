@@ -71,7 +71,7 @@ class PairingModel(MillerLoop, TripleMillerLoop, Pairing):
                 F_q^k.
             miller_loop_output_times_eval: Script to compute the multiplication of the Miller output with a line
                 evaluation.
-            miller_loop_output_times_eval_times_eval: Script to compute the multiplication of the Miller output with 
+            miller_loop_output_times_eval_times_eval: Script to compute the multiplication of the Miller output with
                 a product of two line evaluations: the script computes t1 * t2, where
                 t1 = miller_output, t2 = ev * ev
             miller_loop_output_times_eval_times_eval_times_eval: Script to compute the multiplication of the Miller
@@ -86,6 +86,8 @@ class PairingModel(MillerLoop, TripleMillerLoop, Pairing):
             cyclotomic_inverse: Script to compute the inverse of an element in the cyclotomic subgroup.
             easy_exponentiation_with_inverse_check: Script to compute easy exponentiation with inverse check.
             hard_exponentiation: Script to compute hard exponentiation.
+            size_estimation_miller_loop: function to estimate the size of the elements computed while executing
+                the Miller loop.
         """
         self.MODULUS = q
         self.exp_miller_loop = exp_miller_loop

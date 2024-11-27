@@ -7,7 +7,7 @@ from tx_engine import Script
 from src.zkscript.elliptic_curves.ec_operations_fq import EllipticCurveFq
 from src.zkscript.types.stack_elements import StackEllipticCurvePoint, StackFiniteFieldElement
 from src.zkscript.util.utility_functions import boolean_list_to_bitmask
-from src.zkscript.util.utility_scripts import nums_to_script, roll, verify_bottom_constant
+from src.zkscript.util.utility_scripts import roll, verify_bottom_constant
 
 
 class EllipticCurveFqUnrolled:

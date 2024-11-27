@@ -1,7 +1,9 @@
-"""Size estimate function for BLS12-381."""
+"""Export size estimate function for BLS12-381."""
 
 from math import ceil, log2
 from typing import Union
+
+from src.zkscript.util.utility_functions import base_function_size_estimation_miller_loop
 
 r"""
 P + Q:
@@ -23,7 +25,7 @@ Worst calculation is: (b_1^2 + 2b_0b_2) (1+u): 2|b^2v| <= 16|b_0b_2|
 Finally: |f^2| <= 32|b_00b_20|
 
 f <-- f^2 * element
-    |f^2 * element| <= 32 |size(f^2)| * |size(element)| <= 32^2 |size(f)|^2 * |size(element)|
+    |f^2 * element| <= 32 |bit_size(f^2)| * |bit_size(element)| <= 32^2 |bit_size(f)|^2 * |bit_size(element)|
 """
 
 
@@ -56,46 +58,14 @@ def size_estimation_miller_loop(
             value of w*Q.
         out_size_miller_loop (int): the new size of the Miller loop output (in bytes).
         out_size_point_miller_loop (int): the new size of the intermediate value of w*Q (in bytes).
-
     """
-    if ix == 0:
-        return True, True, 0, 0
-
-    if exp_miller_loop[ix - 1] == 0:
-        multiplier = 3 if is_triple_miller_loop else 1
-        # Next iteration update will be: f <-- f^2 * line_eval, T <-- 2T
-        future_size_miller_output = current_size_miller_output
-        future_size_miller_output = 2 * future_size_miller_output + ceil(log2(32))
-        for _ in range(multiplier):
-            future_size_miller_output = ceil(log2(modulus)) + future_size_miller_output + log2(32)
-        future_size_point_multiplication = ceil(log2(modulus)) + current_size_point_multiplication + ceil(log2(6))
-    else:
-        multiplier = 6 if is_triple_miller_loop else 2
-        # Next iteration update will be: f <-- f^2 * line_eval * line_eval, T <-- 2T ± Q
-        future_size_miller_output = current_size_miller_output
-        future_size_miller_output = 2 * future_size_miller_output + ceil(log2(32))
-        for _ in range(multiplier):
-            future_size_miller_output = ceil(log2(modulus)) + future_size_miller_output + log2(32)
-        future_size_point_multiplication = ceil(log2(modulus)) + current_size_point_multiplication + ceil(log2(6))
-        future_size_point_multiplication = ceil(log2(modulus)) + future_size_point_multiplication + ceil(log2(6))
-
-    if future_size_miller_output > modulo_threshold:
-        take_modulo_miller_loop_output = True
-        out_size_miller_loop = ceil(log2(modulus))
-    else:
-        take_modulo_miller_loop_output = False
-        out_size_miller_loop = future_size_miller_output
-
-    if future_size_point_multiplication > modulo_threshold:
-        take_modulo_point_multiplication = True
-        out_size_point_miller_loop = ceil(log2(modulus))
-    else:
-        take_modulo_point_multiplication = False
-        out_size_point_miller_loop = future_size_point_multiplication
-
-    return (
-        take_modulo_miller_loop_output,
-        take_modulo_point_multiplication,
-        out_size_miller_loop,
-        out_size_point_miller_loop,
+    return base_function_size_estimation_miller_loop(
+        modulus=modulus,
+        modulo_threshold=modulo_threshold,
+        ix=ix,
+        n=ceil(log2(32)),
+        exp_miller_loop=exp_miller_loop,
+        current_size_miller_output=current_size_miller_output,
+        current_size_point_multiplication=current_size_point_multiplication,
+        is_triple_miller_loop=is_triple_miller_loop,
     )
