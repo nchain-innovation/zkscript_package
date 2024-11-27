@@ -17,6 +17,7 @@ from src.zkscript.bilinear_pairings.mnt4_753.parameters import (
     q,
     twisted_a,
 )
+from src.zkscript.bilinear_pairings.mnt4_753.size_estimation_function import size_estimation_miller_loop
 from src.zkscript.bilinear_pairings.model.model_definition import PairingModel
 from src.zkscript.elliptic_curves.ec_operations_fq2 import EllipticCurveFq2
 
@@ -33,7 +34,6 @@ mnt4_753 = PairingModel(
     n_elements_evaluation_times_evaluation=N_ELEMENTS_EVALUATION_TIMES_EVALUATION,
     point_doubling_twisted_curve=twisted_curve_operations.point_algebraic_doubling,
     point_addition_twisted_curve=twisted_curve_operations.point_algebraic_addition,
-    point_negation_twisted_curve=twisted_curve_operations.point_negation,
     line_eval=line_functions.line_evaluation,
     line_eval_times_eval=miller_output_ops.line_eval_times_eval,
     line_eval_times_eval_times_eval=miller_output_ops.line_eval_times_eval_times_eval,
@@ -43,6 +43,7 @@ mnt4_753 = PairingModel(
     miller_loop_output_square=miller_output_ops.square,
     miller_loop_output_mul=miller_output_ops.mul,
     miller_loop_output_times_eval=miller_output_ops.miller_loop_output_times_eval,
+    miller_loop_output_times_eval_times_eval=miller_output_ops.miller_loop_output_times_eval_times_eval,
     miller_loop_output_times_eval_times_eval_times_eval=miller_output_ops.miller_loop_output_times_eval_times_eval_times_eval,
     miller_loop_output_times_eval_times_eval_times_eval_times_eval_times_eval_times_eval=miller_output_ops.miller_loop_output_times_eval_times_eval_times_eval_times_eval_times_eval_times_eval,
     pad_eval_times_eval_to_miller_output=Script(),
@@ -50,4 +51,5 @@ mnt4_753 = PairingModel(
     cyclotomic_inverse=final_exponentiation.cyclotomic_inverse,
     easy_exponentiation_with_inverse_check=final_exponentiation.easy_exponentiation_with_inverse_check,
     hard_exponentiation=final_exponentiation.hard_exponentiation,
+    size_estimation_miller_loop=size_estimation_miller_loop,
 )

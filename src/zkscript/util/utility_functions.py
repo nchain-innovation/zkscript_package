@@ -1,6 +1,7 @@
 """Utility functions."""
 
-from typing import List, Union
+from math import ceil, log2
+from typing import Union
 
 from tx_engine import Script
 
@@ -70,7 +71,7 @@ def check_order(stack_elements: list[StackElements]) -> ValueError | None:
     return
 
 
-def boolean_list_to_bitmask(boolean_list: List[bool]) -> int:
+def boolean_list_to_bitmask(boolean_list: list[bool]) -> int:
     """Convert a list of True, False into a bitmask.
 
     Example:
@@ -89,7 +90,7 @@ def boolean_list_to_bitmask(boolean_list: List[bool]) -> int:
     return bitmask
 
 
-def bitmask_to_boolean_list(bitmask: int, list_length: int) -> List[bool]:
+def bitmask_to_boolean_list(bitmask: int, list_length: int) -> list[bool]:
     """Convert a bitmask to a list of True, False of length list_length.
 
     Example:
@@ -112,3 +113,78 @@ def bitmask_to_boolean_list(bitmask: int, list_length: int) -> List[bool]:
 def bool_to_moving_function(is_rolled: bool) -> Union[pick, roll]:
     """Map is_rolled (bool) to corresponding moving function."""
     return roll if is_rolled else pick
+
+
+def base_function_size_estimation_miller_loop(
+    modulus: int,
+    modulo_threshold: int,
+    ix: int,
+    n: int,
+    exp_miller_loop: list[int],
+    current_size_miller_output: int,
+    current_size_point_multiplication: int,
+    is_triple_miller_loop: bool,
+) -> Union[bool, int]:
+    """Estimate size of elements computed while executing the Miller loop.
+
+    Args:
+        modulus (int): the modulus of BLS12-381.
+        modulo_threshold (int): the size after which to take a modulo in the script (in bytes).
+        ix (int): the index of the Miller loop.
+        n (int): integer constant for which |bit_size(ab)| <= |bit_size(a)| + |bit_size(b)| + n
+        exp_miller_loop (list[int]): the binary expansion of the value for which the Miller loop is computed.
+        current_size_miller_output (int): the current size of the Miller output.
+        current_size_point_multiplication (int): the current size of the calculation of w*Q, where w is the
+            value over which the Miller loop is computed.
+        is_triple_miller_loop (bool): whether the function is used to estimate the sizes for the triple Miller
+            loop or a single one.
+
+    Returns:
+        take_modulo_miller_loop_output (bool): whether to take a modulo after the update of the Miller loop
+            output.
+        take_modulo_point_multiplication (bool): whether to take a modulo after the update of the intermediate
+            value of w*Q.
+        out_size_miller_loop (int): the new size of the Miller loop output (in bytes).
+        out_size_point_miller_loop (int): the new size of the intermediate value of w*Q (in bytes).
+    """
+    if ix == 0:
+        return True, True, 0, 0
+
+    if exp_miller_loop[ix - 1] == 0:
+        multiplier = 3 if is_triple_miller_loop else 1
+        # Next iteration update will be: f <-- f^2 * line_eval, T <-- 2T
+        future_size_miller_output = current_size_miller_output
+        future_size_miller_output = 2 * future_size_miller_output + n
+        for _ in range(multiplier):
+            future_size_miller_output = ceil(log2(modulus)) + future_size_miller_output + n
+        future_size_point_multiplication = ceil(log2(modulus)) + current_size_point_multiplication + ceil(log2(6))
+    else:
+        multiplier = 6 if is_triple_miller_loop else 2
+        # Next iteration update will be: f <-- f^2 * line_eval * line_eval, T <-- 2T ± Q
+        future_size_miller_output = current_size_miller_output
+        future_size_miller_output = 2 * future_size_miller_output + n
+        for _ in range(multiplier):
+            future_size_miller_output = ceil(log2(modulus)) + future_size_miller_output + n
+        future_size_point_multiplication = ceil(log2(modulus)) + current_size_point_multiplication + ceil(log2(6))
+        future_size_point_multiplication = ceil(log2(modulus)) + future_size_point_multiplication + ceil(log2(6))
+
+    if future_size_miller_output > modulo_threshold:
+        take_modulo_miller_loop_output = True
+        out_size_miller_loop = ceil(log2(modulus))
+    else:
+        take_modulo_miller_loop_output = False
+        out_size_miller_loop = future_size_miller_output
+
+    if future_size_point_multiplication > modulo_threshold:
+        take_modulo_point_multiplication = True
+        out_size_point_miller_loop = ceil(log2(modulus))
+    else:
+        take_modulo_point_multiplication = False
+        out_size_point_miller_loop = future_size_point_multiplication
+
+    return (
+        take_modulo_miller_loop_output,
+        take_modulo_point_multiplication,
+        out_size_miller_loop,
+        out_size_point_miller_loop,
+    )

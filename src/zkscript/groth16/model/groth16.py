@@ -1,7 +1,5 @@
 """Bitcoin scripts that perform Groth16 proof verification."""
 
-from math import log2
-
 from tx_engine import Script
 
 # Pairing
@@ -11,8 +9,9 @@ from src.zkscript.bilinear_pairings.model.model_definition import PairingModel
 # EC arithmetic
 from src.zkscript.elliptic_curves.ec_operations_fq import EllipticCurveFq
 from src.zkscript.elliptic_curves.ec_operations_fq_unrolled import EllipticCurveFqUnrolled
+from src.zkscript.types.locking_keys.groth16 import Groth16LockingKey
 from src.zkscript.util.utility_functions import optimise_script
-from src.zkscript.util.utility_scripts import nums_to_script, roll
+from src.zkscript.util.utility_scripts import nums_to_script, roll, verify_bottom_constant
 
 
 class Groth16(PairingModel):
@@ -38,11 +37,8 @@ class Groth16(PairingModel):
 
     def groth16_verifier(
         self,
+        locking_key: Groth16LockingKey,
         modulo_threshold: int,
-        alpha_beta: list[int],
-        minus_gamma: list[int],
-        minus_delta: list[int],
-        gamma_abc: list[list[int]],
         max_multipliers: list[int] | None = None,
         check_constant: bool | None = None,
         clean_constant: bool | None = None,
@@ -68,11 +64,9 @@ class Groth16(PairingModel):
             - altstack: []
 
         Args:
+            locking_key (Groth16LockingKey): Locking key used to generate the verifier. Encapsulates the data of the
+                CRS needed by the verifier.
             modulo_threshold (int): Bit-length threshold. Values whose bit-length exceeds it are reduced modulo `q`.
-            alpha_beta (list[int]): List of integers representing the alpha and beta coefficients for the computation.
-            minus_gamma (list[int]): List of integers representing the negated gamma values for the computation.
-            minus_delta (list[int]): List of integers representing the negated delta values for the computation
-            gamma_abc (list[list[int]]): List of points given in the Common Reference String.
             max_multipliers (list[int]): List where each element max_multipliers[i] is the max value of the i-th public
                 statement.
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
@@ -86,24 +80,14 @@ class Groth16(PairingModel):
         Notes:
             a_0 = 1.
         """
-        q = self.pairing_model.MODULUS
-        N_POINTS_CURVE = self.pairing_model.N_POINTS_CURVE
-        N_POINTS_TWIST = self.pairing_model.N_POINTS_TWIST
-        n_pub = len(gamma_abc) - 1
+        n_pub = len(locking_key.gamma_abc) - 1
 
         # Elliptic curve arithmetic
-        ec_fq = EllipticCurveFq(q=q, curve_a=self.curve_a)
+        ec_fq = EllipticCurveFq(q=self.pairing_model.MODULUS, curve_a=self.curve_a)
         # Unrolled EC arithmetic
-        ec_fq_unrolled = EllipticCurveFqUnrolled(q=q, ec_over_fq=ec_fq)
+        ec_fq_unrolled = EllipticCurveFqUnrolled(q=self.pairing_model.MODULUS, ec_over_fq=ec_fq)
 
-        if check_constant:
-            out = (
-                Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
-                + nums_to_script([q])
-                + Script.parse_string("OP_EQUALVERIFY")
-            )
-        else:
-            out = Script()
+        out = verify_bottom_constant(self.pairing_model.MODULUS) if check_constant else Script()
 
         """
         After this:
@@ -115,10 +99,10 @@ class Groth16(PairingModel):
         for i in range(n_pub, -1, -1):
             # After this, the top of the stack is: a_(i-1) lambdas[a_(i-1),gamma_abc[i-1]],
             # altstack = [..., a_i * gamma_abc[i]]
-            if not any(gamma_abc[i]):
-                out += Script.parse_string(" ".join(["0x00"] * N_POINTS_CURVE))
+            if not any(locking_key.gamma_abc[i]):
+                out += Script.parse_string(" ".join(["0x00"] * self.pairing_model.N_POINTS_CURVE))
             else:
-                out += nums_to_script(gamma_abc[i])
+                out += nums_to_script(locking_key.gamma_abc[i])
             if i > 0:
                 max_multiplier = self.r if max_multipliers is None else max_multipliers[i - 1]
                 out += ec_fq_unrolled.unrolled_multiplication(
@@ -129,131 +113,40 @@ class Groth16(PairingModel):
                     positive_modulo=False,
                 )
                 out += Script.parse_string("OP_2SWAP OP_2DROP")  # Drop gamma_abc[i]
-                out += Script.parse_string(" ".join(["OP_TOALTSTACK"] * N_POINTS_CURVE))
+                out += Script.parse_string(" ".join(["OP_TOALTSTACK"] * self.pairing_model.N_POINTS_CURVE))
 
         # After this, the stack is: q .. lambdas_pairing inverse_miller_loop_triple_pairing A B C
         # sum_(i=0)^l a_i * gamma_abc[i]
         for _i in range(n_pub):
-            out += Script.parse_string(" ".join(["OP_FROMALTSTACK"] * N_POINTS_CURVE))
+            out += Script.parse_string(" ".join(["OP_FROMALTSTACK"] * self.pairing_model.N_POINTS_CURVE))
             out += ec_fq.point_addition_with_unknown_points(
                 take_modulo=True, positive_modulo=False, check_constant=False, clean_constant=False
             )
 
         # After this, the stack is: q .. lambdas_pairing inverse_miller_loop_triple_pairing A
         # sum_(i=0)^l a_i * gamma_abc[i] C B gamma delta
-        out += roll(position=2 * N_POINTS_CURVE - 1, n_elements=N_POINTS_CURVE)  # Roll C
-        out += roll(position=2 * N_POINTS_CURVE + N_POINTS_TWIST - 1, n_elements=N_POINTS_TWIST)  # Roll B
-        out += nums_to_script(minus_gamma)
-        out += nums_to_script(minus_delta)
+        out += roll(
+            position=2 * self.pairing_model.N_POINTS_CURVE - 1, n_elements=self.pairing_model.N_POINTS_CURVE
+        )  # Roll C
+        out += roll(
+            position=2 * self.pairing_model.N_POINTS_CURVE + self.pairing_model.N_POINTS_TWIST - 1,
+            n_elements=self.pairing_model.N_POINTS_TWIST,
+        )  # Roll B
+        out += nums_to_script(locking_key.minus_gamma)
+        out += nums_to_script(locking_key.minus_delta)
 
         # After this, the stack is: q .. e(A,B) * e(sum_(i=0)^(l) a_i * gamma_abc[i], gamma) * e(C, delta)
         out += self.pairing_model.triple_pairing(
-            modulo_threshold=modulo_threshold, check_constant=False, clean_constant=clean_constant
+            modulo_threshold=modulo_threshold, positive_modulo=True, check_constant=False, clean_constant=clean_constant
         )
 
         # After this, the top of the stack is:
         # [e(A,B) * e(sum_(i=0)^(l) a_i * gamma_abc[i], gamma) * e(C, delta) ?= alpha_beta]
-        for ix, el in enumerate(alpha_beta[::-1]):
+        for ix, el in enumerate(locking_key.alpha_beta[::-1]):
             out += nums_to_script([el])
-            if ix != len(alpha_beta) - 1:
+            if ix != len(locking_key.alpha_beta) - 1:
                 out += Script.parse_string("OP_EQUALVERIFY")
             else:
                 out += Script.parse_string("OP_EQUAL")
 
         return optimise_script(out)
-
-    def groth16_verifier_unlock(
-        self,
-        pub: list[int],
-        A: list[int],  # noqa: N803
-        B: list[int],  # noqa: N803
-        C: list[int],  # noqa: N803
-        lambdas_B_exp_miller_loop: list[list[list[int]]],  # noqa: N803
-        lambdas_minus_gamma_exp_miller_loop: list[list[list[int]]],
-        lambdas_minus_delta_exp_miller_loop: list[list[list[int]]],
-        inverse_miller_loop: list[int],
-        lambdas_partial_sums: list[int],
-        lambdas_multiplications: list[int],
-        max_multipliers: list[int] | None = None,
-        load_q=True,
-    ) -> Script:
-        r"""Generate the unlocking script for the Groth16 verifier.
-
-        Args:
-            pub (list[int]): List of public statements.
-            A (list[int]): Point A of the zk-proof. Specified as a list of coordinates.
-            B (list[int]): Point B of the zk-proof. Specified as a list of coordinates.
-            C (list[int]): Point C of the zk-proof. Specified as a list of coordinates.
-            lambdas_B_exp_miller_loop (list[list[list[int]]]): Gradients needed to compute val * B, see also
-                unrolled_multiplication in EllipticCurveFqUnrolled (val is the value over which we compute the Miller
-                loop).
-            lambdas_minus_gamma_exp_miller_loop (list[list[list[int]]]): Gradients needed to compute val * (-gamma).
-            lambdas_minus_delta_exp_miller_loop (list[list[list[int]]]): Gradients needed to compute val * (-delta).
-            inverse_miller_loop (list[int]): Inverse of miller_loop(A,B) * miller_loop(C,-delta) *
-                miller_loop(sum_gamma_abc,-gamma), where gamma_abc is taken from the vk.
-            lambdas_partial_sums (list[int]): List of gradients, the element at position n_pub - i - 1 is the list of
-                gradients to compute a_(i+1) * gamma_abc[i] and \sum_(j=0)^(i) a_j * gamma_abc[j], 0 <= i <= n_pub - 1.
-            lambdas_multiplications (list[int]): List of gradients, the element at position i is the list of gradients
-                to compute pub[i] * gamma_abc[i], 0 <= i <= n_pub - 1.
-            max_multipliers (list[int] | None): Upper bound for public statement pub[i]. Defaults to `None`.
-            load_q (bool): If `True`, load the modulus `q` on the stack. Defaults to `True`.
-        """
-        q = self.pairing_model.MODULUS
-        r = self.r
-        n_pub = len(pub)
-
-        # Lambdas for the pairing
-        lambdas = []
-        lambdas.append(lambdas_B_exp_miller_loop)
-        lambdas.append(lambdas_minus_gamma_exp_miller_loop)
-        lambdas.append(lambdas_minus_delta_exp_miller_loop)
-
-        out = nums_to_script([q]) if load_q else Script()
-
-        # Load z inverse
-        out += nums_to_script(inverse_miller_loop)
-
-        # Load lambdas
-        for i in range(len(lambdas[0]) - 1, -1, -1):
-            for j in range(len(lambdas[0][i]) - 1, -1, -1):
-                for k in range(3):
-                    out += nums_to_script(lambdas[k][i][j])
-
-        # Load A, B, C
-        out += nums_to_script(A)
-        out += nums_to_script(B)
-        out += nums_to_script(C)
-
-        # Partial sums
-        for i in range(n_pub):
-            out += nums_to_script(lambdas_partial_sums[i])
-
-        # Multiplications pub[i] * gamma_abc[i]
-        for i in range(n_pub):
-            M = int(log2(r)) if max_multipliers is None else int(log2(max_multipliers[i]))
-
-            if pub[i] == 0:
-                out += Script.parse_string("OP_1") + Script.parse_string(" ".join(["OP_0"] * M))
-            else:
-                # Binary expansion of pub[i]
-                exp_pub_i = [int(bin(pub[i])[j]) for j in range(2, len(bin(pub[i])))][::-1]
-
-                N = len(exp_pub_i) - 1
-
-                # Marker marker_a_equal_zero
-                out += Script.parse_string("OP_0")
-
-                # Load the lambdas and the markers
-                for j in range(len(lambdas_multiplications[i]) - 1, -1, -1):
-                    if exp_pub_i[-j - 2] == 1:
-                        out += nums_to_script(lambdas_multiplications[i][j][1]) + Script.parse_string("OP_1")
-                        out += nums_to_script(lambdas_multiplications[i][j][0]) + Script.parse_string("OP_1")
-                    else:
-                        out += (
-                            Script.parse_string("OP_0")
-                            + nums_to_script(lambdas_multiplications[i][j][0])
-                            + Script.parse_string("OP_1")
-                        )
-                out += Script.parse_string(" ".join(["OP_0"] * (M - N)))
-
-        return out

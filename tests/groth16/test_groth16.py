@@ -10,6 +10,8 @@ from tx_engine import Context
 
 from src.zkscript.groth16.bls12_381.bls12_381 import bls12_381
 from src.zkscript.groth16.mnt4_753.mnt4_753 import mnt4_753
+from src.zkscript.types.locking_keys.groth16 import Groth16LockingKey
+from src.zkscript.types.unlocking_keys.groth16 import Groth16UnlockingKey
 
 
 @dataclass
@@ -239,17 +241,31 @@ def save_scripts(lock, unlock, save_to_json_folder, filename, test_name):
     ],
 )
 def test_groth16(test_script, vk, alpha_beta, groth16_proof, filename, save_to_json_folder):
-    groth16_proof = {
-        "lambdas_partial_sums" if key == "lamdbas_partial_sums" else key: value for key, value in groth16_proof.items()
-    }  # Temporary fix
-    unlock = test_script.groth16_verifier_unlock(**groth16_proof)
+    unlocking_key = Groth16UnlockingKey(
+        pub=groth16_proof["pub"],
+        A=groth16_proof["A"],
+        B=groth16_proof["B"],
+        C=groth16_proof["C"],
+        gradients_pairings=[
+            groth16_proof["lambdas_B_exp_miller_loop"],
+            groth16_proof["lambdas_minus_gamma_exp_miller_loop"],
+            groth16_proof["lambdas_minus_delta_exp_miller_loop"],
+        ],
+        inverse_miller_output=groth16_proof["inverse_miller_loop"],
+        gradients_partial_sums=groth16_proof["lamdbas_partial_sums"],
+        gradients_multiplication=groth16_proof["lambdas_multiplications"],
+    )
+    unlock = unlocking_key.to_unlocking_script(test_script, None, True)
 
-    lock = test_script.groth16_verifier(
-        modulo_threshold=1,
+    locking_key = Groth16LockingKey(
         alpha_beta=alpha_beta.to_list(),
         minus_gamma=(-vk["gamma"]).to_list(),
         minus_delta=(-vk["delta"]).to_list(),
         gamma_abc=[s.to_list() for s in vk["gamma_abc"]],
+    )
+    lock = test_script.groth16_verifier(
+        locking_key,
+        modulo_threshold=1,
         check_constant=True,
         clean_constant=True,
     )
@@ -266,21 +282,37 @@ def test_groth16(test_script, vk, alpha_beta, groth16_proof, filename, save_to_j
 @pytest.mark.slow
 @pytest.mark.parametrize(
     ("alpha_beta", "vk", "groth16_proof", "test_script", "filename", "is_minimal_example"),
-    generate_test_cases(test_num=1, is_minimal_example=False, rnd_seed=42)
-    + generate_test_cases(test_num=1, is_minimal_example=True, rnd_seed=42),
+    [
+        *generate_test_cases(test_num=1, is_minimal_example=False, rnd_seed=42),
+        *generate_test_cases(test_num=1, is_minimal_example=True, rnd_seed=42),
+    ],
 )
 def test_groth16_slow(alpha_beta, vk, groth16_proof, test_script, filename, is_minimal_example, save_to_json_folder):
-    groth16_proof = {
-        "lambdas_partial_sums" if key == "lamdbas_partial_sums" else key: value for key, value in groth16_proof.items()
-    }  # Temporary fix
-    unlock = test_script.groth16_verifier_unlock(**groth16_proof)
+    unlocking_key = Groth16UnlockingKey(
+        pub=groth16_proof["pub"],
+        A=groth16_proof["A"],
+        B=groth16_proof["B"],
+        C=groth16_proof["C"],
+        gradients_pairings=[
+            groth16_proof["lambdas_B_exp_miller_loop"],
+            groth16_proof["lambdas_minus_gamma_exp_miller_loop"],
+            groth16_proof["lambdas_minus_delta_exp_miller_loop"],
+        ],
+        inverse_miller_output=groth16_proof["inverse_miller_loop"],
+        gradients_partial_sums=groth16_proof["lamdbas_partial_sums"],
+        gradients_multiplication=groth16_proof["lambdas_multiplications"],
+    )
+    unlock = unlocking_key.to_unlocking_script(test_script, None, True)
 
-    lock = test_script.groth16_verifier(
-        modulo_threshold=200 * 8 if is_minimal_example else 1,
+    locking_key = Groth16LockingKey(
         alpha_beta=alpha_beta.to_list(),
         minus_gamma=(-vk["gamma"]).to_list(),
         minus_delta=(-vk["delta"]).to_list(),
         gamma_abc=[s.to_list() for s in vk["gamma_abc"]],
+    )
+    lock = test_script.groth16_verifier(
+        locking_key,
+        modulo_threshold=200 * 8,
         check_constant=True,
         clean_constant=True,
     )

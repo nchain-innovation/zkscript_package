@@ -22,6 +22,8 @@ from tx_engine.interface.verify_script import ScriptFlags, verifyscript_params
 from src.zkscript.groth16.bls12_381.bls12_381 import bls12_381 as bls12_381_groth
 from src.zkscript.groth16.mnt4_753.mnt4_753 import mnt4_753 as mnt4_753_groth
 from src.zkscript.groth16.model.groth16 import Groth16
+from src.zkscript.types.locking_keys.groth16 import Groth16LockingKey
+from src.zkscript.types.unlocking_keys.groth16 import Groth16UnlockingKey
 
 verification_flags = 1
 for f in ScriptFlags._member_names_[1:-2]:
@@ -108,7 +110,7 @@ def proof_to_unlock(
     miller_loop_type: MillerLoopType,
     denominator_elimination: DenominatorElimination,
 ) -> Script:
-    input_groth16 = curve.prepare_groth16_proof(
+    groth16_proof = curve.prepare_groth16_proof(
         pub=public_statements[1:],
         proof=proof,
         vk=vk,
@@ -116,24 +118,35 @@ def proof_to_unlock(
         denominator_elimination=denominator_elimination.value[0],
     )
 
-    return groth16_script.groth16_verifier_unlock(**input_groth16)
+    unlocking_key = Groth16UnlockingKey(
+        pub=groth16_proof["pub"],
+        A=groth16_proof["A"],
+        B=groth16_proof["B"],
+        C=groth16_proof["C"],
+        gradients_pairings=[
+            groth16_proof["lambdas_B_exp_miller_loop"],
+            groth16_proof["lambdas_minus_gamma_exp_miller_loop"],
+            groth16_proof["lambdas_minus_delta_exp_miller_loop"],
+        ],
+        inverse_miller_output=groth16_proof["inverse_miller_loop"],
+        gradients_partial_sums=groth16_proof["lamdbas_partial_sums"],
+        gradients_multiplication=groth16_proof["lambdas_multiplications"],
+    )
+
+    return unlocking_key.to_unlocking_script(groth16_script, None, True)
 
 
 def vk_to_lock(vk, curve: BilinearPairingCurve, groth16_script: Groth16) -> Script:
-    alpha = vk["alpha"]
-    beta = vk["beta"]
-    gamma = vk["gamma"]
-    delta = vk["delta"]
-    gamma_abc = vk["gamma_abc"]
-
-    alpha_beta = curve.pairing(alpha, beta)
+    locking_key = Groth16LockingKey(
+        alpha_beta=curve.pairing(vk["alpha"], vk["beta"]).to_list(),
+        minus_gamma=(-vk["gamma"]).to_list(),
+        minus_delta=(-vk["delta"]).to_list(),
+        gamma_abc=[s.to_list() for s in vk["gamma_abc"]],
+    )
 
     return groth16_script.groth16_verifier(
+        locking_key=locking_key,
         modulo_threshold=200 * 8,
-        alpha_beta=alpha_beta.to_list(),
-        minus_gamma=(-gamma).to_list(),
-        minus_delta=(-delta).to_list(),
-        gamma_abc=[s.to_list() for s in gamma_abc],
         check_constant=True,
         clean_constant=True,
     )
@@ -237,7 +250,7 @@ if __name__ == "__main__":
     unlock = proof_to_unlock(public_inputs, proof, vk, curve, groth16_script, miller_loop_type, denominator_elimination)
 
     context = Context(script=unlock + lock)
-    assert context.evaluate()
+    assert context.evaluate(), "Evaluation using Context failed"
 
     if not config_path:
         save_data_to_file(

@@ -11,6 +11,7 @@ from src.zkscript.elliptic_curves.ec_operations_fq import EllipticCurveFq
 from src.zkscript.elliptic_curves.ec_operations_fq2 import EllipticCurveFq2
 from src.zkscript.elliptic_curves.ec_operations_fq_unrolled import EllipticCurveFqUnrolled
 from src.zkscript.fields.fq2 import Fq2 as Fq2ScriptModel
+from src.zkscript.types.unlocking_keys.unrolled_ec_multiplication import EllipticCurveFqUnrolledUnlockingKey
 from src.zkscript.util.utility_scripts import nums_to_script
 from tests.elliptic_curves.util import (
     generate_test,
@@ -379,10 +380,6 @@ class Secp256k1Extension:
         ],
         "test_addition_slow": generate_test_data(modulus, P, Q, positions_addition),
         "test_doubling_slow": generate_test_data(modulus, P, P, positions_doubling),
-        "test_negation": [
-            {"P": P, "expected": -P},
-            {"P": point_at_infinity, "expected": -point_at_infinity},
-        ],
     }
 
 
@@ -511,10 +508,6 @@ class Secp256r1Extension:
         ],
         "test_addition_slow": generate_test_data(modulus, P, Q, positions_addition),
         "test_doubling_slow": generate_test_data(modulus, P, P, positions_doubling),
-        "test_negation": [
-            {"P": P, "expected": -P},
-            {"P": point_at_infinity, "expected": -point_at_infinity},
-        ],
     }
 
 
@@ -571,8 +564,6 @@ def generate_test_cases(test_name):
                         out.append((config, test_data["P"], test_data["Q"], test_data["expected"]))
                     case "test_multiplication_unrolled":
                         out.append((config, test_data["P"], test_data["a"], test_data["expected"]))
-                    case "test_negation":
-                        out.append((config, test_data["P"], test_data["expected"]))
     return out
 
 
@@ -752,15 +743,13 @@ def test_addition_unknown_points(config, P, Q, positive_modulo, expected, save_t
 
 @pytest.mark.parametrize(("config", "P", "a", "expected"), generate_test_cases("test_multiplication_unrolled"))
 def test_multiplication_unrolled(config, P, a, expected, save_to_json_folder):  # noqa: N803
-    exp_a = [int(bin(a)[j]) for j in range(2, len(bin(a)))][::-1]
-
-    unlock = config.test_script_unrolled.unrolled_multiplication_input(
-        P=P.to_list(),
-        a=a,
-        lambdas=[[s.to_list() for s in el] for el in P.get_lambdas(exp_a)] if a else [],
-        max_multiplier=config.order,
-        load_modulus=True,
+    binary_expansion_a = [int(bin(a)[j]) for j in range(2, len(bin(a)))][::-1]
+    gradients = [[s.to_list() for s in el] for el in P.get_lambdas(binary_expansion_a)] if a else None
+    unlocking_key = EllipticCurveFqUnrolledUnlockingKey(
+        P=P.to_list(), a=a, gradients=gradients, max_multiplier=config.order
     )
+
+    unlock = unlocking_key.to_unlocking_script(config.test_script_unrolled, load_modulus=True)
 
     lock = config.test_script_unrolled.unrolled_multiplication(
         max_multiplier=config.order, modulo_threshold=1, check_constant=True, clean_constant=True
@@ -775,25 +764,3 @@ def test_multiplication_unrolled(config, P, a, expected, save_to_json_folder):  
 
     if save_to_json_folder:
         save_scripts(str(lock), str(unlock), save_to_json_folder, config.filename, "unrolled multiplication")
-
-
-@pytest.mark.parametrize(("config", "P", "expected"), generate_test_cases("test_negation"))
-@pytest.mark.parametrize("positive_modulo", [True, False])
-def test_negation(config, P, expected, positive_modulo, save_to_json_folder):  # noqa: N803
-    unlock = nums_to_script([config.modulus])
-    unlock += generate_unlock(P, degree=config.degree)
-    lock = config.test_script.point_negation(
-        take_modulo=True, check_constant=True, is_constant_reused=False, positive_modulo=positive_modulo
-    )
-
-    verify = generate_verify_point(expected, degree=config.degree)
-
-    lock += verify if positive_modulo or (P.x is None and P.y is None) else modify_verify_modulo_check(verify)
-
-    context = Context(script=unlock + lock)
-    assert context.evaluate()
-    assert len(context.get_stack()) == 2
-    assert len(context.get_altstack()) == 0
-
-    if save_to_json_folder:
-        save_scripts(str(lock), str(unlock), save_to_json_folder, config.filename, "point negation")

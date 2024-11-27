@@ -2,7 +2,7 @@
 
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import Self, Tuple, Union
+from typing import Self, Union
 
 
 @dataclass(init=False)
@@ -35,7 +35,7 @@ class StackBaseElement:
             else self.position > other.position
         )
 
-    def overlaps_on_the_right(self, other) -> Tuple[bool, str]:
+    def overlaps_on_the_right(self, other) -> tuple[bool, str]:
         """Check whether the end of self overlaps with the beginning of other."""
         if self.position <= other.position:
             msg = "Self and other overlap: "
@@ -111,7 +111,7 @@ class StackFiniteFieldElement(StackNumber):
         super().__init__(position, negate)
         self.extension_degree = extension_degree
 
-    def overlaps_on_the_right(self, other) -> Tuple[bool, str]:
+    def overlaps_on_the_right(self, other) -> tuple[bool, str]:
         """Check whether the end of self overlaps with the beginning of other.
 
         Return True if: (self[0], .., self[self.extension_degree-1]) and (other[0], .., other[other.extension_degree-1])
@@ -166,7 +166,7 @@ class StackEllipticCurvePoint:
         self.position = self.x.position
         self.negate = y.negate
 
-    def overlaps_on_the_right(self, other) -> Tuple[bool, str]:
+    def overlaps_on_the_right(self, other) -> tuple[bool, str]:
         """Check whether the end of self overlaps with the beginning of other.
 
         The method checks whether all the elements: (self[0], .., self[self.length-1]) are before the elements
