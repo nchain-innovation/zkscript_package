@@ -1,4 +1,5 @@
 import json
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from random import randint, seed
@@ -32,15 +33,39 @@ class Bls12381:
     B = g2.multiply(B_)
     C = g1.multiply(C_)
 
-    # First two are fixed, next three are generated with secrets.randbelow(r), last one test case in which sum_gamma_abc
-    # is the point at infinity
-    pub_statement = [
-        1,
-        0,
-        3060811274857224904833047709398271967974074288386860351197236696152656573180,
-        27390874479047017110851549424990220824522965971102888510629230366504674671506,
-        24349152937740702231723796066510072408409883142298395590343084869732829436096,
-        0,
+    pub_statements = [
+        # First two are fixed, next three are generated with secrets.randbelow(r),
+        # last one test case in which sum_gamma_abc is the point at infinity
+        [
+            1,
+            0,
+            3060811274857224904833047709398271967974074288386860351197236696152656573180,
+            27390874479047017110851549424990220824522965971102888510629230366504674671506,
+            24349152937740702231723796066510072408409883142298395590343084869732829436096,
+            0,
+        ],
+        # First is fixed, next three generated with secrets.randbelow(max_multipliers[i])
+        [
+            1,
+            15873601289888851563210890519954554722754944672877308879146748244748648215436,
+            18200759004277852045069547238917690602215856516219524855050602748049002760543,
+            6624207402763485465215146574494506210670268277971846111605242550457686129604,
+            7723334359066753317031400026175301517722172915552964496178764583574220787321,
+            3143823999318409638568135151204909725849182090248472279935177552280870027687,
+        ],
+    ]
+
+    max_multipliers = [
+        # Default: r
+        None,
+        # Generated with secrets.randbelow(r)
+        [
+            48674282419960792948572465601857205496657803389507810561802118132204139818319,
+            28828014628321497409813258425417715136480751747916501733157949037063021340095,
+            9426102824259960575917047761056404778935153673065407357090026999444014361360,
+            15159523228525613447532194300935938647513070623483703070707530544757884107632,
+            9290867845475613632722678172943098621671641805019779573073747944398154759759,
+        ],
     ]
 
     # Dummy CRS
@@ -69,21 +94,34 @@ class Bls12381:
     for i in range(len(dlog_gamma_abc)):
         gamma_abc.append(g1.multiply(dlog_gamma_abc[i]))
 
-    sum_gamma_abc = g1.multiply(0)
-    for i in range(len(gamma_abc)):
-        sum_gamma_abc += gamma_abc[i].multiply(pub_statement[i])
+    sum_gamma_abc = [g1.multiply(0), g1.multiply(0)]
+    for j in range(2):
+        for i in range(len(gamma_abc)):
+            sum_gamma_abc[j] += gamma_abc[i].multiply(pub_statements[j][i])
 
-    alpha_beta = bls12_381_curve.triple_pairing(A, sum_gamma_abc, C, B, -gamma, -delta)
+    alpha_beta = [
+        bls12_381_curve.triple_pairing(A, sum_gamma_abc[0], C, B, -gamma, -delta),
+        bls12_381_curve.triple_pairing(A, sum_gamma_abc[1], C, B, -gamma, -delta),
+    ]
 
     vk = {"alpha": alpha, "beta": beta, "gamma": gamma, "delta": delta, "gamma_abc": gamma_abc}
 
-    groth16_proof = bls12_381_curve.prepare_groth16_proof(
-        pub=pub_statement[1:],
-        proof={"a": A, "b": B, "c": C},
-        vk=vk,
-        miller_loop_type="twisted_curve",
-        denominator_elimination="quadratic",
-    )
+    groth16_proof = [
+        bls12_381_curve.prepare_groth16_proof(
+            pub=pub_statements[0][1:],
+            proof={"a": A, "b": B, "c": C},
+            vk=vk,
+            miller_loop_type="twisted_curve",
+            denominator_elimination="quadratic",
+        ),
+        bls12_381_curve.prepare_groth16_proof(
+            pub=pub_statements[1][1:],
+            proof={"a": A, "b": B, "c": C},
+            vk=vk,
+            miller_loop_type="twisted_curve",
+            denominator_elimination="quadratic",
+        ),
+    ]
 
     test_script = bls12_381
 
@@ -110,13 +148,36 @@ class Mnt4753:
 
     # First two are fixed, next three are generated with secrets.randbelow(r), last one test case in which sum_gamma_abc
     # is the point at infinity
-    pub_statement = [
-        1,
-        0,
-        3800869276070790397500879783445441002239131304875812449940885748039214325636107043746181943692913794384318119948503065800442782298175442633374022885239310799719619346136657477875024060132795358959197893998611200389168111447311,
-        28781452683004534275964361805323957053197312054729383211457538421523515999686407551486887390207945443601268123372819585278853990679379332656283982884473022143950452547357041406053247908500379416739218268832322803357589353142668,
-        1467112264393594915737484231842743900018280034283544779833281854093164556016772674684703892580610835986072436711848603973015705524563724870838125780491307338082686169926744047799657227529532719071228407008026743740303534464202,
-        0,
+    pub_statements = [
+        [
+            1,
+            0,
+            3800869276070790397500879783445441002239131304875812449940885748039214325636107043746181943692913794384318119948503065800442782298175442633374022885239310799719619346136657477875024060132795358959197893998611200389168111447311,
+            28781452683004534275964361805323957053197312054729383211457538421523515999686407551486887390207945443601268123372819585278853990679379332656283982884473022143950452547357041406053247908500379416739218268832322803357589353142668,
+            1467112264393594915737484231842743900018280034283544779833281854093164556016772674684703892580610835986072436711848603973015705524563724870838125780491307338082686169926744047799657227529532719071228407008026743740303534464202,
+            0,
+        ],
+        [
+            1,
+            22011153221527638867606747211571794590718197227358838336496385777418334396996443664595798106450512215713614436370776867359413515599085351471103428661899329296711688299852880987957849458507568791454455496770126694395545718757097,
+            30949058512810328257564167179736165752223431798970237651727459655087240500568311626778320308631563459488457913578974528781499177789744736639717919304436242750638244279898146182658057424381308647120846598852648503552724087277805,
+            7390326651868016354968170551141356652142362217596319694877432518147590315636154285686794049336355822929046312679255058143657457564689617493201784501781039440119942968571101947228982108034339656480070405530472098124187227607365,
+            15498304331516340666672360426319827093910373933279021596665184321533095563454834679200698735853414034597761546686166019542315024785843116278617822712873735245129429106018924783567212912904892589997703978207902297690291258395167,
+            8561374157664351811794224646917071693762550957028622084398574670574661800711074404868001073075557068685583206545273662257986023963073452328267314664277920573689836537608018302388308895392620363451453214696046577588032369102844,
+        ],
+    ]
+
+    max_multipliers = [
+        # Default: r
+        None,
+        # Generated with secrets.randbelow(r)
+        [
+            22332903824394420615152979486276974397918042189462746647435789095522156384236975337361575515499716564529403147489921625521022311271361849827765232824397214629306871772923691488606653815112745434947025910691995042710298173497705,
+            31158206618898976265016091224555356512346685098950342924922944329159368047571653088237950519064675011316131926763190270000097442880176987323993200129499314604455011511601338341255397384765192601075851743581781352305684754185119,
+            8285619431093959234615568552994882531157519626950395190720003059292855073304576435661706935271359435362357183168221687952473161267624646752235192049455760659454873657366121204771289030693542263233323886271385651677964899042352,
+            39476487257179005535114412831489574507994807326180313091930991326455393336895749412003142614961912487875436047217882394461674146569654978487889836366437789192982600665671716384887610537998635521149229463705583827430627567016684,
+            11475276001327463306989756118902186888975361218125587517355841993542403776288748364181293881033782662370504831760637822611778044650835824228674930294697346584295211501459997348272874043592439556638606419544923105487115143317865,
+        ],
     ]
 
     # Dummy CRS
@@ -145,21 +206,34 @@ class Mnt4753:
     for i in range(len(dlog_gamma_abc)):
         gamma_abc.append(g1.multiply(dlog_gamma_abc[i]))
 
-    sum_gamma_abc = g1.multiply(0)
-    for i in range(len(gamma_abc)):
-        sum_gamma_abc += gamma_abc[i].multiply(pub_statement[i])
+    sum_gamma_abc = [g1.multiply(0), g1.multiply(0)]
+    for j in range(2):
+        for i in range(len(gamma_abc)):
+            sum_gamma_abc[j] += gamma_abc[i].multiply(pub_statements[j][i])
 
-    alpha_beta = mnt4_753_curve.triple_pairing(A, sum_gamma_abc, C, B, -gamma, -delta)
+    alpha_beta = [
+        mnt4_753_curve.triple_pairing(A, sum_gamma_abc[0], C, B, -gamma, -delta),
+        mnt4_753_curve.triple_pairing(A, sum_gamma_abc[1], C, B, -gamma, -delta),
+    ]
 
     vk = {"alpha": alpha, "beta": beta, "gamma": gamma, "delta": delta, "gamma_abc": gamma_abc}
 
-    groth16_proof = mnt4_753_curve.prepare_groth16_proof(
-        pub=pub_statement[1:],
-        proof={"a": A, "b": B, "c": C},
-        vk=vk,
-        miller_loop_type="twisted_curve",
-        denominator_elimination="quadratic",
-    )
+    groth16_proof = [
+        mnt4_753_curve.prepare_groth16_proof(
+            pub=pub_statements[0][1:],
+            proof={"a": A, "b": B, "c": C},
+            vk=vk,
+            miller_loop_type="twisted_curve",
+            denominator_elimination="quadratic",
+        ),
+        mnt4_753_curve.prepare_groth16_proof(
+            pub=pub_statements[1][1:],
+            proof={"a": A, "b": B, "c": C},
+            vk=vk,
+            miller_loop_type="twisted_curve",
+            denominator_elimination="quadratic",
+        ),
+    ]
 
     test_script = mnt4_753
 
@@ -179,10 +253,13 @@ def generate_random_tests(curve, groth16, filename, is_minimal_example):
     if is_minimal_example:
         dlog_gamma_abc = [15, 23, 11] if filename == "bls12_381" else [7, 19]
         pub_statement = [1, 5, 4] if filename == "bls12_381" else [1, 2]
+        max_multipliers = None
     else:
         dlog_gamma_abc = [randint(1, curve.r - 1) for _ in range(6)]  # noqa: S311
+        max_multipliers = [randint(1, curve.r - 1) for _ in range(3)]  # noqa: S311
         # First two are fixed, next three are random, last one test case in which sum_gamma_abc is the point at infinity
-        pub_statement = [1, 0] + [randint(1, curve.r - 1) for _ in range(3)] + [0]  # noqa: S311
+        pub_statement = [1, 0] + [randint(1, max_multipliers[i]) for i in range(3)] + [0]  # noqa: S311
+        max_multipliers = [curve.r, *max_multipliers, curve.r]
 
     gamma_abc = []
     for i in range(len(dlog_gamma_abc)):
@@ -204,15 +281,16 @@ def generate_random_tests(curve, groth16, filename, is_minimal_example):
 
     alpha_beta = curve.triple_pairing(A, sum_gamma_abc, C, B, -gamma, -delta)
 
-    return (alpha_beta, vk, groth16_proof, groth16, filename, is_minimal_example)
+    return (alpha_beta, vk, groth16_proof, groth16, filename, max_multipliers, is_minimal_example)
 
 
 def generate_test_cases(test_num, is_minimal_example=False, rnd_seed=42):
     # Parse and return config and the test_data for each config
     seed(rnd_seed)
     return [
-        generate_random_tests(bls12_381_curve, bls12_381, "bls12_381", is_minimal_example) for _ in range(test_num)
-    ] + [generate_random_tests(mnt4_753_curve, mnt4_753, "mnt4_753", is_minimal_example) for _ in range(test_num)]
+        *[generate_random_tests(bls12_381_curve, bls12_381, "bls12_381", is_minimal_example) for _ in range(test_num)],
+        *[generate_random_tests(mnt4_753_curve, mnt4_753, "mnt4_753", is_minimal_example) for _ in range(test_num)],
+    ]
 
 
 def save_scripts(lock, unlock, save_to_json_folder, filename, test_name):
@@ -234,13 +312,43 @@ def save_scripts(lock, unlock, save_to_json_folder, filename, test_name):
 
 
 @pytest.mark.parametrize(
-    ("test_script", "vk", "alpha_beta", "groth16_proof", "filename"),
+    ("test_script", "vk", "alpha_beta", "groth16_proof", "max_multipliers", "filename"),
     [
-        (Bls12381.test_script, Bls12381.vk, Bls12381.alpha_beta, Bls12381.groth16_proof, Bls12381.filename),
-        (Mnt4753.test_script, Mnt4753.vk, Mnt4753.alpha_beta, Mnt4753.groth16_proof, Mnt4753.filename),
+        (
+            Bls12381.test_script,
+            Bls12381.vk,
+            Bls12381.alpha_beta[0],
+            Bls12381.groth16_proof[0],
+            Bls12381.max_multipliers[0],
+            Bls12381.filename,
+        ),
+        (
+            Bls12381.test_script,
+            Bls12381.vk,
+            Bls12381.alpha_beta[1],
+            Bls12381.groth16_proof[1],
+            Bls12381.max_multipliers[1],
+            Bls12381.filename,
+        ),
+        (
+            Mnt4753.test_script,
+            Mnt4753.vk,
+            Mnt4753.alpha_beta[0],
+            Mnt4753.groth16_proof[0],
+            Mnt4753.max_multipliers[0],
+            Mnt4753.filename,
+        ),
+        (
+            Mnt4753.test_script,
+            Mnt4753.vk,
+            Mnt4753.alpha_beta[1],
+            Mnt4753.groth16_proof[1],
+            Mnt4753.max_multipliers[1],
+            Mnt4753.filename,
+        ),
     ],
 )
-def test_groth16(test_script, vk, alpha_beta, groth16_proof, filename, save_to_json_folder):
+def test_groth16(test_script, vk, alpha_beta, groth16_proof, max_multipliers, filename, save_to_json_folder):
     unlocking_key = Groth16UnlockingKey(
         pub=groth16_proof["pub"],
         A=groth16_proof["A"],
@@ -255,17 +363,23 @@ def test_groth16(test_script, vk, alpha_beta, groth16_proof, filename, save_to_j
         gradients_partial_sums=groth16_proof["lamdbas_partial_sums"],
         gradients_multiplication=groth16_proof["lambdas_multiplications"],
     )
-    unlock = unlocking_key.to_unlocking_script(test_script, None, True)
+    unlock = unlocking_key.to_unlocking_script(test_script, max_multipliers, True)
 
     locking_key = Groth16LockingKey(
         alpha_beta=alpha_beta.to_list(),
         minus_gamma=(-vk["gamma"]).to_list(),
         minus_delta=(-vk["delta"]).to_list(),
         gamma_abc=[s.to_list() for s in vk["gamma_abc"]],
+        gradients_pairings=[
+            groth16_proof["lambdas_B_exp_miller_loop"],
+            groth16_proof["lambdas_minus_gamma_exp_miller_loop"],
+            groth16_proof["lambdas_minus_delta_exp_miller_loop"],
+        ],
     )
     lock = test_script.groth16_verifier(
         locking_key,
         modulo_threshold=1,
+        max_multipliers=max_multipliers,
         check_constant=True,
         clean_constant=True,
     )
@@ -281,13 +395,15 @@ def test_groth16(test_script, vk, alpha_beta, groth16_proof, filename, save_to_j
 
 @pytest.mark.slow
 @pytest.mark.parametrize(
-    ("alpha_beta", "vk", "groth16_proof", "test_script", "filename", "is_minimal_example"),
+    ("alpha_beta", "vk", "groth16_proof", "test_script", "filename", "max_multipliers", "is_minimal_example"),
     [
         *generate_test_cases(test_num=1, is_minimal_example=False, rnd_seed=42),
         *generate_test_cases(test_num=1, is_minimal_example=True, rnd_seed=42),
     ],
 )
-def test_groth16_slow(alpha_beta, vk, groth16_proof, test_script, filename, is_minimal_example, save_to_json_folder):
+def test_groth16_slow(
+    alpha_beta, vk, groth16_proof, test_script, filename, max_multipliers, is_minimal_example, save_to_json_folder
+):
     unlocking_key = Groth16UnlockingKey(
         pub=groth16_proof["pub"],
         A=groth16_proof["A"],
@@ -302,17 +418,23 @@ def test_groth16_slow(alpha_beta, vk, groth16_proof, test_script, filename, is_m
         gradients_partial_sums=groth16_proof["lamdbas_partial_sums"],
         gradients_multiplication=groth16_proof["lambdas_multiplications"],
     )
-    unlock = unlocking_key.to_unlocking_script(test_script, None, True)
+    unlock = unlocking_key.to_unlocking_script(test_script, max_multipliers, True)
 
     locking_key = Groth16LockingKey(
         alpha_beta=alpha_beta.to_list(),
         minus_gamma=(-vk["gamma"]).to_list(),
         minus_delta=(-vk["delta"]).to_list(),
         gamma_abc=[s.to_list() for s in vk["gamma_abc"]],
+        gradients_pairings=[
+            groth16_proof["lambdas_B_exp_miller_loop"],
+            groth16_proof["lambdas_minus_gamma_exp_miller_loop"],
+            groth16_proof["lambdas_minus_delta_exp_miller_loop"],
+        ],
     )
     lock = test_script.groth16_verifier(
         locking_key,
         modulo_threshold=200 * 8,
+        max_multipliers=max_multipliers,
         check_constant=True,
         clean_constant=True,
     )
@@ -323,16 +445,12 @@ def test_groth16_slow(alpha_beta, vk, groth16_proof, test_script, filename, is_m
     assert len(context.get_altstack()) == 0
 
     if is_minimal_example:
-        print(
-            "\nThe locking script size for Groth16 for the curve",
-            filename,
-            "with",
-            ("two" if filename == "bls12_381" else "one"),
-            "public",
-            ("inputs" if filename == "bls12_381" else "input"),
-            "is",
-            len(lock.raw_serialize()),
-            "bytes.",
+        sys.stdout.write(
+            "\nThe locking script size for Groth16 for the curve" + f"{filename}" + "with" + "two"
+            if filename == "bls12_381"
+            else "one" + "public" + "inputs"
+            if filename == "bls12_381"
+            else "input" + "is" + f"{len(lock.raw_serialize())}" + "bytes."
         )
 
     if save_to_json_folder:

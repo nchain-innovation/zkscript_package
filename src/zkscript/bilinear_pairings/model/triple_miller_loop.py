@@ -17,6 +17,7 @@ class TripleMillerLoop:
         i: int,
         take_modulo: list[bool],
         positive_modulo: bool,
+        verify_gradients: int,
         clean_constant: bool,
         gradients_doubling: list[StackFiniteFieldElement],
         P: list[StackEllipticCurvePoint],  # noqa: N803
@@ -29,14 +30,16 @@ class TripleMillerLoop:
 
         Args:
             i (int): The step begin performed in the computation of the Miller loop.
-            take_modulo (list[bool]): list of two booleans that declare whether to take modulos after
+            take_modulo (list[bool]): List of two booleans that declare whether to take modulos after
                 calculating the evaluations and the points doubling.
             positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
+            verify_gradients (int): Bitmask detailing which gradients used in this step of the Miller loop should
+                be verified.
             clean_constant (bool): Whether to clean the constant at the end of the execution of the
                 Miller loop.
-            gradients_doubling (list[StackFiniteFieldElement]): list of gradients needed for doubling.
-            P (list[StackEllipticCurvePoint]): list of the points P needed for the evaluations.
-            T (list[StackEllipticCurvePoint]): list of the points T needed for the evaluations and the
+            gradients_doubling (list[StackFiniteFieldElement]): List of gradients needed for doubling.
+            P (list[StackEllipticCurvePoint]): List of the points P needed for the evaluations.
+            T (list[StackEllipticCurvePoint]): List of the points T needed for the evaluations and the
                 doublings. i-th step of the calculation of w*Q
 
         """
@@ -125,7 +128,7 @@ class TripleMillerLoop:
             positive_modulo=positive_modulo,
             check_constant=False,
             clean_constant=False,
-            verify_gradient=True,
+            verify_gradient=verify_gradients & 1,
             gradient=gradients_doubling[0],
             P=T[0],
             rolling_options=3,
@@ -139,7 +142,7 @@ class TripleMillerLoop:
             positive_modulo=positive_modulo,
             check_constant=False,
             clean_constant=False,
-            verify_gradient=True,
+            verify_gradient=(verify_gradients >> 1) & 1,
             gradient=gradients_doubling[1],
             P=T[1].shift(self.N_POINTS_TWIST),
             rolling_options=3,
@@ -153,7 +156,7 @@ class TripleMillerLoop:
             positive_modulo=positive_modulo,
             check_constant=False,
             clean_constant=(i == 0) and clean_constant,
-            verify_gradient=True,
+            verify_gradient=(verify_gradients >> 2) & 1,
             gradient=gradients_doubling[2],
             P=T[2].shift(2 * self.N_POINTS_TWIST),
             rolling_options=3,
@@ -171,6 +174,7 @@ class TripleMillerLoop:
         i: int,
         take_modulo: list[bool],
         positive_modulo: bool,
+        verify_gradients: int,
         clean_constant: bool,
         gradients_doubling: list[StackFiniteFieldElement],
         gradients_addition: list[StackFiniteFieldElement],
@@ -185,17 +189,19 @@ class TripleMillerLoop:
 
         Args:
             i (int): The step begin performed in the computation of the Miller loop.
-            take_modulo (list[bool]): list of two booleans that declare whether to take modulos after
+            take_modulo (list[bool]): List of two booleans that declare whether to take modulos after
                 calculating the evaluations and the points doubling.
             positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
+            verify_gradients (int): Bitmask detailing which gradients used in this step of the Miller loop should
+                be verified.
             clean_constant (bool): Whether to clean the constant at the end of the execution of the
                 Miller loop.
-            gradients_doubling (list[StackFiniteFieldElement]): list of gradients needed for doubling.
-            gradients_addition (list[StackFiniteFieldElement]): list of gradients needed for addition.
-            P (list[StackEllipticCurvePoint]): list of the points P needed for the evaluations.
-            Q (list[StackEllipticCurvePoint]): list of the points Q needed for the evaluations and the
+            gradients_doubling (list[StackFiniteFieldElement]): List of gradients needed for doubling.
+            gradients_addition (list[StackFiniteFieldElement]): List of gradients needed for addition.
+            P (list[StackEllipticCurvePoint]): List of the points P needed for the evaluations.
+            Q (list[StackEllipticCurvePoint]): List of the points Q needed for the evaluations and the
                 additions.
-            T (list[StackEllipticCurvePoint]): list of the points T needed for the evaluations and the
+            T (list[StackEllipticCurvePoint]): List of the points T needed for the evaluations and the
                 doublings. i-th step of the calculation of w*Q
 
         """
@@ -390,7 +396,7 @@ class TripleMillerLoop:
             positive_modulo=False,
             check_constant=False,
             clean_constant=False,
-            verify_gradient=True,
+            verify_gradient=verify_gradients & 1,
             gradient=gradients_doubling[0],
             P=T[0],
             rolling_options=3,
@@ -406,7 +412,7 @@ class TripleMillerLoop:
             positive_modulo=positive_modulo,
             check_constant=False,
             clean_constant=False,
-            verify_gradient=True,
+            verify_gradient=verify_gradients & 1,
             gradient=gradients_addition[0].shift(-self.EXTENSION_DEGREE),
             P=Q[0].set_negate(self.exp_miller_loop[i] == -1),
             Q=T[0].shift(-2 * self.N_POINTS_TWIST),
@@ -423,7 +429,7 @@ class TripleMillerLoop:
             positive_modulo=False,
             check_constant=False,
             clean_constant=False,
-            verify_gradient=True,
+            verify_gradient=(verify_gradients >> 1) & 1,
             gradient=gradients_doubling[1],
             P=T[1].shift(self.N_POINTS_TWIST),
             rolling_options=3,
@@ -438,7 +444,7 @@ class TripleMillerLoop:
             positive_modulo=positive_modulo,
             check_constant=False,
             clean_constant=False,
-            verify_gradient=True,
+            verify_gradient=(verify_gradients >> 1) & 1,
             gradient=gradients_addition[1].shift(-2 * self.EXTENSION_DEGREE),
             P=Q[1].set_negate(self.exp_miller_loop[i] == -1),
             Q=T[1].shift(-self.N_POINTS_TWIST),
@@ -453,7 +459,7 @@ class TripleMillerLoop:
             positive_modulo=False,
             check_constant=False,
             clean_constant=False,
-            verify_gradient=True,
+            verify_gradient=(verify_gradients >> 2) & 1,
             gradient=gradients_doubling[2],
             P=T[2].shift(2 * self.N_POINTS_TWIST),
             rolling_options=3,
@@ -467,7 +473,7 @@ class TripleMillerLoop:
             positive_modulo=positive_modulo,
             check_constant=False,
             clean_constant=(i == 0) and clean_constant,
-            verify_gradient=True,
+            verify_gradient=(verify_gradients >> 2) & 1,
             gradient=gradients_addition[2].shift(-3 * self.EXTENSION_DEGREE),
             P=Q[2].set_negate(self.exp_miller_loop[i] == -1),
             Q=T[2],
@@ -485,6 +491,7 @@ class TripleMillerLoop:
         self,
         modulo_threshold: int,
         positive_modulo: bool = True,
+        verify_gradients: int = 7,
         check_constant: bool | None = None,
         clean_constant: bool | None = None,
     ) -> Script:
@@ -501,12 +508,19 @@ class TripleMillerLoop:
 
         Args:
             modulo_threshold (int): Bit-length threshold. Values whose bit-length exceeds it are reduced modulo `q`.
+            positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
+            verify_gradients (int): Bitmask detailing which of the gradients used in the Miller loop should
+                be verified. Defaults to `7` (all the gradients are verified).
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
-            positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
 
         Returns:
             Script to evaluate the product of three Miller loops.
+
+        Preconditions:
+            - Pi are passed as couples of integers (minimally encoded, in little endian)
+            - Qi are passed as couples of elements in F_q^{k/d}
+            - miller(P1,Q1) * miller(P2,Q2) * miller(P3,Q3)
 
         Notes:
             At the beginning of every iteration of the loop the stack is assumed to be:
@@ -540,12 +554,6 @@ class TripleMillerLoop:
 
             Modulo operations are carried out as in a similar fashion to a single miller loop, with the only difference
             being that the update of f is now always of the form: f <-- f^2 * Dense
-        """
-        """
-        Assumption on data:
-            - Pi are passed as couples of integers (minimally encoded, in little endian)
-            - Qi are passed as couples of elements in F_q^{k/d}
-            - miller(P1,Q1) * miller(P2,Q2) * miller(P3,Q3)
         """
         gradients_addition = [
             StackFiniteFieldElement(
@@ -644,6 +652,7 @@ class TripleMillerLoop:
                     i=i,
                     take_modulo=[take_modulo_miller_loop_output, take_modulo_point_multiplication],
                     positive_modulo=positive_modulo_i,
+                    verify_gradients=verify_gradients,
                     clean_constant=clean_constant_i,
                     gradients_doubling=gradients_doubling,
                     P=P,
@@ -658,6 +667,7 @@ class TripleMillerLoop:
                     i=i,
                     take_modulo=[take_modulo_miller_loop_output, take_modulo_point_multiplication],
                     positive_modulo=positive_modulo_i,
+                    verify_gradients=verify_gradients,
                     clean_constant=clean_constant_i,
                     gradients_doubling=gradients_doubling,
                     gradients_addition=gradients_addition,
