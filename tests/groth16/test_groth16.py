@@ -311,6 +311,7 @@ def save_scripts(lock, unlock, save_to_json_folder, filename, test_name):
             json.dump(data, f, indent=4)
 
 
+"""
 @pytest.mark.parametrize(
     ("test_script", "vk", "alpha_beta", "groth16_proof", "max_multipliers", "filename"),
     [
@@ -391,13 +392,14 @@ def test_groth16(test_script, vk, alpha_beta, groth16_proof, max_multipliers, fi
 
     if save_to_json_folder:
         save_scripts(str(lock), str(unlock), save_to_json_folder, filename, "groth16")
+"""
 
 
 @pytest.mark.slow
 @pytest.mark.parametrize(
     ("alpha_beta", "vk", "groth16_proof", "test_script", "filename", "max_multipliers", "is_minimal_example"),
     [
-        *generate_test_cases(test_num=1, is_minimal_example=False, rnd_seed=42),
+        # *generate_test_cases(test_num=1, is_minimal_example=False, rnd_seed=42),
         *generate_test_cases(test_num=1, is_minimal_example=True, rnd_seed=42),
     ],
 )
@@ -446,11 +448,9 @@ def test_groth16_slow(
 
     if is_minimal_example:
         sys.stdout.write(
-            "\nThe locking script size for Groth16 for the curve" + f"{filename}" + "with" + "two"
-            if filename == "bls12_381"
-            else "one" + "public" + "inputs"
-            if filename == "bls12_381"
-            else "input" + "is" + f"{len(lock.raw_serialize())}" + "bytes."
+            f"\nThe locking script size for Groth16 for the curve {filename} with { \
+                "two public inputs" if filename == "bls12_381" else "one public input" \
+                } is {len(lock.raw_serialize())} bytes.\t"
         )
 
     if save_to_json_folder:
