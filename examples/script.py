@@ -136,12 +136,25 @@ def proof_to_unlock(
     return unlocking_key.to_unlocking_script(groth16_script, None, True)
 
 
-def vk_to_lock(vk, curve: BilinearPairingCurve, groth16_script: Groth16) -> Script:
+def vk_to_lock(public_statements, vk, curve: BilinearPairingCurve, groth16_script: Groth16) -> Script:
+    groth16_proof = curve.prepare_groth16_proof(
+        pub=public_statements[1:],
+        proof=proof,
+        vk=vk,
+        miller_loop_type=miller_loop_type.value[0],
+        denominator_elimination=denominator_elimination.value[0],
+    )
+
     locking_key = Groth16LockingKey(
         alpha_beta=curve.pairing(vk["alpha"], vk["beta"]).to_list(),
         minus_gamma=(-vk["gamma"]).to_list(),
         minus_delta=(-vk["delta"]).to_list(),
         gamma_abc=[s.to_list() for s in vk["gamma_abc"]],
+        gradients_pairings=[
+            groth16_proof["lambdas_B_exp_miller_loop"],
+            groth16_proof["lambdas_minus_gamma_exp_miller_loop"],
+            groth16_proof["lambdas_minus_delta_exp_miller_loop"],
+        ],
     )
 
     return groth16_script.groth16_verifier(
@@ -246,7 +259,7 @@ if __name__ == "__main__":
     public_inputs = load_public_inputs(json.load(Path.open(data_dir / "proof/public_inputs.json"))["public_inputs"])
 
     # Construct locking and unlocking scripts
-    lock = vk_to_lock(vk, curve, groth16_script)
+    lock = vk_to_lock(public_inputs, vk, curve, groth16_script)
     unlock = proof_to_unlock(public_inputs, proof, vk, curve, groth16_script, miller_loop_type, denominator_elimination)
 
     context = Context(script=unlock + lock)
