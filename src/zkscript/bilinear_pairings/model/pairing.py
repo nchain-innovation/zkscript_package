@@ -12,6 +12,7 @@ class Pairing:
     def single_pairing(
         self,
         modulo_threshold: int,
+        verify_gradients: bool = True,
         check_constant: bool | None = None,
         clean_constant: bool | None = None,
         positive_modulo: bool = True,
@@ -30,6 +31,8 @@ class Pairing:
 
         Args:
             modulo_threshold (int): Bit-length threshold. Values whose bit-length exceeds it are reduced modulo `q`.
+            verify_gradients (bool): If `True`, the validity of the gradients used in the Miller loop is verified.
+                Defaults to `True`.
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
@@ -72,6 +75,7 @@ class Pairing:
         out += self.miller_loop(
             modulo_threshold=modulo_threshold,
             positive_modulo=False,
+            verify_gradients=verify_gradients,
             check_constant=False,
             clean_constant=False,
         )
@@ -115,6 +119,7 @@ class Pairing:
     def triple_pairing(
         self,
         modulo_threshold: int,
+        verify_gradients: tuple[bool] = (True, True, True),
         check_constant: bool | None = None,
         clean_constant: bool | None = None,
         positive_modulo: bool = True,
@@ -134,6 +139,8 @@ class Pairing:
 
         Args:
             modulo_threshold (int): Bit-length threshold. Values whose bit-length exceeds it are reduced modulo `q`.
+            verify_gradients (tuple[bool]): Tuple of bools detailing which of the gradients used in the Miller loop
+                should be mathematically verified. Defaults to `(True,True,True)`: all the gradients are verified.
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
@@ -153,10 +160,14 @@ class Pairing:
         out = verify_bottom_constant(q) if check_constant else Script()
 
         # After this, the stack is:
-        # quadratic([miller(P1,Q1) * miller(P2,Q2) * miller(P3,Q3)])^-1
-        # quadratic([miller(P1,Q1) * miller(P2,Q2) * miller(P3,Q3)])
+        # [miller(P1,Q1) * miller(P2,Q2) * miller(P3,Q3)]^-1
+        # [miller(P1,Q1) * miller(P2,Q2) * miller(P3,Q3)]
         out += self.triple_miller_loop(
-            modulo_threshold=modulo_threshold, positive_modulo=False, check_constant=False, clean_constant=False
+            modulo_threshold=modulo_threshold,
+            positive_modulo=False,
+            verify_gradients=verify_gradients,
+            check_constant=False,
+            clean_constant=False,
         )
 
         out += easy_exponentiation_with_inverse_check(

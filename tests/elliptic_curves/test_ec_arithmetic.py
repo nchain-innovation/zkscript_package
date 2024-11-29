@@ -134,8 +134,9 @@ class Secp256k1:
             {"P": point_at_infinity, "Q": Q, "expected": Q},
         ],
         "test_multiplication_unrolled": [
-            {"P": P, "a": a, "expected": P.multiply(a)},
-            {"P": P, "a": 0, "expected": P.multiply(0)},
+            {"P": P, "a": a, "expected": P.multiply(a), "max_multiplier": order},
+            {"P": P, "a": 0, "expected": P.multiply(0), "max_multiplier": order},
+            {"P": P, "a": order // 4, "expected": P.multiply(order // 4), "max_multiplier": order // 2},
         ],
     }
 
@@ -256,8 +257,9 @@ class Secp256r1:
             {"P": point_at_infinity, "Q": Q, "expected": Q},
         ],
         "test_multiplication_unrolled": [
-            {"P": P, "a": a, "expected": P.multiply(a)},
-            {"P": P, "a": 0, "expected": P.multiply(0)},
+            {"P": P, "a": a, "expected": P.multiply(a), "max_multiplier": order},
+            {"P": P, "a": 0, "expected": P.multiply(0), "max_multiplier": order},
+            {"P": P, "a": order // 4, "expected": P.multiply(order // 4), "max_multiplier": order // 2},
         ],
     }
 
@@ -563,7 +565,9 @@ def generate_test_cases(test_name):
                     case "test_addition_unknown_points":
                         out.append((config, test_data["P"], test_data["Q"], test_data["expected"]))
                     case "test_multiplication_unrolled":
-                        out.append((config, test_data["P"], test_data["a"], test_data["expected"]))
+                        out.append(
+                            (config, test_data["P"], test_data["a"], test_data["expected"], test_data["max_multiplier"])
+                        )
     return out
 
 
@@ -741,18 +745,20 @@ def test_addition_unknown_points(config, P, Q, positive_modulo, expected, save_t
         save_scripts(str(lock), str(unlock), save_to_json_folder, config.filename, "point addition with unknown points")
 
 
-@pytest.mark.parametrize(("config", "P", "a", "expected"), generate_test_cases("test_multiplication_unrolled"))
-def test_multiplication_unrolled(config, P, a, expected, save_to_json_folder):  # noqa: N803
+@pytest.mark.parametrize(
+    ("config", "P", "a", "expected", "max_multiplier"), generate_test_cases("test_multiplication_unrolled")
+)
+def test_multiplication_unrolled(config, P, a, expected, max_multiplier, save_to_json_folder):  # noqa: N803
     binary_expansion_a = [int(bin(a)[j]) for j in range(2, len(bin(a)))][::-1]
     gradients = [[s.to_list() for s in el] for el in P.get_lambdas(binary_expansion_a)] if a else None
     unlocking_key = EllipticCurveFqUnrolledUnlockingKey(
-        P=P.to_list(), a=a, gradients=gradients, max_multiplier=config.order
+        P=P.to_list(), a=a, gradients=gradients, max_multiplier=max_multiplier
     )
 
     unlock = unlocking_key.to_unlocking_script(config.test_script_unrolled, load_modulus=True)
 
     lock = config.test_script_unrolled.unrolled_multiplication(
-        max_multiplier=config.order, modulo_threshold=1, check_constant=True, clean_constant=True
+        max_multiplier=max_multiplier, modulo_threshold=1, check_constant=True, clean_constant=True
     )
     lock += generate_verify_point(expected, degree=config.degree) + Script.parse_string("OP_VERIFY")
     lock += generate_verify_point(P, degree=config.degree)

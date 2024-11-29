@@ -1,7 +1,6 @@
 """Unlocking key for Groth16."""
 
 from dataclasses import dataclass
-from math import log2
 
 from tx_engine import Script
 
@@ -18,16 +17,18 @@ class Groth16UnlockingKey:
         A (list[int]): Component of the zk proof.
         B (list[int]): Component of the zk proof.
         C (list[int]): Component of the zk proof.
-        gradients_pairings (list[list[list[int]]]): list of gradients required to compute the pairings
+        gradients_pairings (list[list[list[list[int]]]]): list of gradients required to compute the pairings
             in the Groth16 verification equation. The meaning of the lists is:
                 - gradients_pairings[0]: gradients required to compute w*B
                 - gradients_pairings[1]: gradients required to compute w*(-gamma)
                 - gradients_pairings[2]: gradients required to compute w*(-delta)
         inverse_miller_loop (list[int]): the inverse of
             miller(A,B) * miller(gamma_abc[0] + \sum_{i >=0} pub[i-1] * gamma_abc[i], -gamma) * miller(C, -delta)
-        gradients_partial_sums (list[int]): gradients_partial_sums[n_pub - i - 1] is the gradient required to compute
-            the sum (gamma_abc[0] + \sum_{j=1}^{i} pub[j-1] gamma_abc[j]) + (pub[i] * gamma_abc[i+1]), 0 <= i <= n_pub-1
-        gradients_multiplication (list[list[list[int]]]): gradients_multiplication[i] is the list of
+        gradients_partial_sums (list[list[list[list[int]]]]): gradients_partial_sums[n_pub - i - 1] is the gradient
+            required to compute the sum
+                (gamma_abc[0] + \sum_{j=1}^{i} pub[j-1] gamma_abc[j]) + (pub[i] * gamma_abc[i+1])
+            where 0 <= i <= n_pub-1
+        gradients_multiplication (list[list[list[list[int]]]]): gradients_multiplication[i] is the list of
             gradients required to compute pub[i] * gamma_abc[i+1], 0 <= i <= n_pub-1
     """
 
@@ -35,10 +36,10 @@ class Groth16UnlockingKey:
     A: list[int]
     B: list[int]
     C: list[int]
-    gradients_pairings: list[list[list[int]]]
+    gradients_pairings: list[list[list[list[int]]]]
     inverse_miller_output: list[int]
-    gradients_partial_sums: list[int]
-    gradients_multiplication: list[list[list[int]]]
+    gradients_partial_sums: list[list[list[list[int]]]]
+    gradients_multiplication: list[list[list[list[int]]]]
 
     def to_unlocking_script(
         self,
@@ -78,7 +79,7 @@ class Groth16UnlockingKey:
 
         # Multiplications pub[i] * gamma_abc[i+1]
         for i in range(n_pub):
-            M = int(log2(groth16_model.r)) if max_multipliers is None else int(log2(self.max_multipliers[i]))
+            M = groth16_model.r.bit_length() - 1 if max_multipliers is None else max_multipliers[i].bit_length() - 1
 
             if self.pub[i] == 0:
                 out += Script.parse_string("OP_1") + Script.parse_string(" ".join(["OP_0"] * M))

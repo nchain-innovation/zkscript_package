@@ -17,6 +17,7 @@ class MillerLoop:
         i: int,
         take_modulo: list[bool],
         positive_modulo: bool,
+        verify_gradient: bool,
         clean_constant: bool,
         gradient_doubling: StackFiniteFieldElement,
         P: StackEllipticCurvePoint,  # noqa: N803
@@ -28,10 +29,12 @@ class MillerLoop:
         there is no addition to be computed.
 
         Args:
-            i (int): The step begin performed in the computation of the Miller loop.
-            take_modulo (List[bool]): List of two booleans that declare whether to take modulos after
-                calculating the evaluations and the points doubling.
+            i (int): The step being performed in the computation of the Miller loop.
+            take_modulo (list[bool]): List of two booleans that declare whether to take modulos after
+                calculating the evaluations and the point doublings.
             positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
+            verify_gradient (bool): If `True` the validity of the gradients used for this step of
+                the Miller loop is verified.
             clean_constant (bool): Whether to clean the constant at the end of the execution of the
                 Miller loop.
             gradient_doubling (StackFiniteFieldElement): List of gradients needed for doubling.
@@ -86,7 +89,7 @@ class MillerLoop:
             positive_modulo=positive_modulo,
             check_constant=False,
             clean_constant=(i == 0) and clean_constant,
-            verify_gradient=True,
+            verify_gradient=verify_gradient,
             gradient=gradient_doubling,
             P=T,
             rolling_options=3,
@@ -111,6 +114,7 @@ class MillerLoop:
         i: int,
         take_modulo: list[bool],
         positive_modulo: bool,
+        verify_gradients: bool,
         clean_constant: bool,
         gradient_doubling: StackFiniteFieldElement,
         gradient_addition: StackFiniteFieldElement,
@@ -125,9 +129,11 @@ class MillerLoop:
 
         Args:
             i (int): The step begin performed in the computation of the Miller loop.
-            take_modulo (List[bool]): List of two booleans that declare whether to take modulos after
-                calculating the evaluations and the points doubling.
+            take_modulo (list[bool]): List of two booleans that declare whether to take modulos after
+                calculating the evaluations and the point doublings.
             positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
+            verify_gradients (bool): If `True` the validity of the gradients used for this step of
+                the Miller loop is verified.
             clean_constant (bool): Whether to clean the constant at the end of the execution of the
                 Miller loop.
             gradient_doubling (StackFiniteFieldElement): List of gradients needed for doubling.
@@ -206,7 +212,7 @@ class MillerLoop:
             positive_modulo=False,
             check_constant=False,
             clean_constant=False,
-            verify_gradient=True,
+            verify_gradient=verify_gradients,
             gradient=gradient_doubling,
             P=T,
             rolling_options=3,
@@ -220,7 +226,7 @@ class MillerLoop:
             positive_modulo=positive_modulo,
             check_constant=False,
             clean_constant=(i == 0) and clean_constant,
-            verify_gradient=True,
+            verify_gradient=verify_gradients,
             gradient=gradient_addition.shift(-self.EXTENSION_DEGREE),
             P=Q.set_negate(self.exp_miller_loop[i] == -1),
             Q=T,
@@ -245,9 +251,10 @@ class MillerLoop:
     def miller_loop(
         self,
         modulo_threshold: int,
+        positive_modulo: bool = True,
+        verify_gradients: bool = True,
         check_constant: bool | None = None,
         clean_constant: bool | None = None,
-        positive_modulo: bool = True,
     ) -> Script:
         """Evaluation of the Miller loop at points `P` and `Q`.
 
@@ -262,9 +269,10 @@ class MillerLoop:
 
         Args:
             modulo_threshold (int): Bit-length threshold. Values whose bit-length exceeds it are reduced modulo `q`.
+            positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
+            verify_gradients (bool): If `True` the validity of the gradients used for the Miller loop is verified.
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
-            positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
 
         Returns:
             Script to evaluate the Miller loop at points `P` and `Q`.
@@ -394,6 +402,7 @@ class MillerLoop:
                     i=i,
                     take_modulo=[take_modulo_miller_loop_output, take_modulo_point_multiplication],
                     positive_modulo=positive_modulo_i,
+                    verify_gradient=verify_gradients,
                     clean_constant=clean_constant_i,
                     gradient_doubling=gradient_doubling,
                     P=P,
@@ -406,6 +415,7 @@ class MillerLoop:
                     i=i,
                     take_modulo=[take_modulo_miller_loop_output, take_modulo_point_multiplication],
                     positive_modulo=positive_modulo_i,
+                    verify_gradients=verify_gradients,
                     clean_constant=clean_constant_i,
                     gradient_doubling=gradient_doubling,
                     gradient_addition=gradient_addition,
