@@ -1,7 +1,6 @@
-from typing import Union
+"""Bitcoin scripts that achieve transaction introspection."""
 
-from tx_engine import SIGHASH, Script, Tx, encode_num, hash256d
-from tx_engine import sig_hash_preimage as tx_to_sig_hash_preimage
+from tx_engine import SIGHASH, Script, encode_num, hash256d
 from tx_engine.engine.util import GROUP_ORDER_INT, Gx, Gx_bytes
 
 from src.zkscript.types.stack_elements import StackBaseElement
@@ -35,6 +34,8 @@ pushtx_bit_shift_data = {
 
 
 class TransactionIntrospection:
+    """Class generating Bitcoin scripts that achieve transaction introspection."""
+
     @staticmethod
     def pushtx(
         sighash_value: SIGHASH,
@@ -71,9 +72,7 @@ class TransactionIntrospection:
             The Bitcoin Script of PUSHTX, which fails unless sig_hash_preimage is the message digest of the
             transaction in which the script is executed. The message digest of a transaction is defined here:
             https://github.com/bitcoin-sv/bitcoin-sv/blob/master/doc/abc/replay-protected-sighash.md#digest-algorithm
-
         """
-
         out = Script()
 
         if verify_constants:
@@ -182,9 +181,7 @@ class TransactionIntrospection:
                     https://github.com/bitcoin-sv/bitcoin-sv/blob/master/doc/abc/replay-protected-sighash.md#digest-algorithm
                 - sig_hash_preimage % 2**security = 1
                 - sig_hash_preimage // 2**security >= 2**(31*8)
-
         """
-
         assert security in [2, 3], f"Security parameter must be 2 or 3, security: {security}"
 
         out = Script()
@@ -221,86 +218,3 @@ class TransactionIntrospection:
             out += Script.parse_string("OP_CHECKSIG")
 
         return out
-
-    @staticmethod
-    def pushtx_unlock(
-        tx: Tx, index: int, script_pubkey: Script, prev_amount: int, sighash_value: SIGHASH, append_constants: bool
-    ) -> Script:
-        """Construct unlocking script for pushtx.
-
-        Args:
-            tx (Tx): The transaction for which we want to construct the unlocking script.
-            index (int): The index of the UTXO for which we want to construct the unlocking script.
-            script_pubkey (Script): The script_pubkey of the outpoint we want to construct the unlocking
-                script for.
-            prev_amount (int): The amount of the outpoint we want to construct the unlocking
-                script for.
-            sighash_value (SIGHASH): The sighash flag with which the pushtx locking script was constructed.
-            append_constants (bool): Whether or not to append the required constants at the beginning of the script.
-
-        """
-
-        sig_hash_preimage = tx_to_sig_hash_preimage(
-            tx,
-            index,
-            script_pubkey,
-            prev_amount,
-            sighash_value,
-        )
-
-        out = Script()
-        if append_constants:
-            out += nums_to_script([GROUP_ORDER_INT, Gx])
-            out.append_pushdata(Gx_bytes)
-        out.append_pushdata(sig_hash_preimage)
-
-        return out
-
-    @staticmethod
-    def pushtx_bit_shift_unlock(
-        tx: Tx, index: int, script_pubkey: Script, prev_amount: int, sighash_value: SIGHASH, security: int
-    ) -> Union[Tx, Script]:
-        """Construct PUSHTX bit shift unlocking script, it assumes that we can tweak the nSequence of the input.
-
-        Args:
-            tx (Tx): The transaction for which we want to construct the unlocking script.
-            index (int): The index of the UTXO for which we want to construct the unlocking script.
-            script_pubkey (Script): The script_pubkey of the outpoint we want to construct the unlocking
-                script for.
-            prev_amount (int): The amount of the outpoint we want to construct the unlocking
-                script for.
-            sighash_value (SIGHASH): The sighash flag with which the pushtx locking script was constructed.
-            security (int): The security value with which the pushtx_bit_shift locking script was constructed.
-
-        """
-
-        assert security in [2, 3], f"Security parameter must be 2 or 3, security: {security}"
-
-        tx_in = tx.tx_ins[0]
-        sig_hash_preimage = tx_to_sig_hash_preimage(
-            tx,
-            index,
-            script_pubkey,
-            prev_amount,
-            sighash_value,
-        )
-        sig_hash = hash256d(sig_hash_preimage)
-        sig_hash_int = int.from_bytes(sig_hash)
-
-        while sig_hash_int % 2**security != 1 or sig_hash_int // 2**security < 2 ** (31 * 8):
-            tx_in.sequence = (tx_in.sequence + 1) % 0xFFFFFFFF
-            tx.tx_ins = [tx_in]
-            sig_hash_preimage = tx_to_sig_hash_preimage(
-                tx,
-                index,
-                script_pubkey,
-                prev_amount,
-                sighash_value,
-            )
-            sig_hash = hash256d(sig_hash_preimage)
-            sig_hash_int = int.from_bytes(sig_hash)
-
-        out = Script()
-        out.append_pushdata(sig_hash_preimage)
-
-        return tx, out

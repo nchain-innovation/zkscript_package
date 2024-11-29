@@ -451,9 +451,23 @@ def int_sig_to_s_component(
 
 
 def bytes_to_unsigned(
-    stack_element: StackNumber = StackNumber(0, False),  # noqa: B008
+    stack_element: StackBaseElement = StackBaseElement(0),  # noqa: B008
     rolling_option: bool = True,
 ) -> Script:
-    """Convert a bytestring to an unsigned integer."""
+    """Convert a bytestring to an unsigned integer.
+
+    Stack input:
+        - stack: [.., stack_element, ..]
+    Stack output:
+        - stack: [.., stack_element, .., n] where `n` is `stack_element` if the first byte of `stack_element`
+            is less than 0x80, else `stack_element||00`
+
+    Args:
+        stack_element (StackBaseElement): The bytestring to convert into a number
+        rolling_option (bool): If `True`, stack_element is removed from the stack. Defaults to `True`.
+
+    Returns:
+        The script that converts `stack_element` into an unsigned number.
+    """
     out = move(stack_element, roll if rolling_option else pick)  # Move stack element
     return out + Script.parse_string("0x00 OP_CAT OP_BIN2NUM")

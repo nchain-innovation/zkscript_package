@@ -6,6 +6,7 @@ from tx_engine import SIGHASH, Context, Tx, TxIn, hash256d, sig_hash_preimage
 
 from src.zkscript.transaction_introspection.transaction_introspection import TransactionIntrospection
 from src.zkscript.types.stack_elements import StackBaseElement
+from src.zkscript.types.unlocking_keys.transaction_introspection import PushTxBitShiftUnlockingKey, PushTxUnlockingKey
 
 prev_txid = int.to_bytes(34060536512648028283387372577505466741680559421950955299118826044926210663733, length=32).hex()
 prev_amount = 100
@@ -55,9 +56,9 @@ def test_pushtx_bit_shift(sighash_value, security, is_opcodeseparator, save_to_j
     tx_in = TxIn(prev_tx=prev_txid, prev_index=0, sequence=0)
     tx = Tx(version=1, tx_ins=[tx_in], tx_outs=[], locktime=0)
 
-    tx, tx_in.script_sig = TransactionIntrospection.pushtx_bit_shift_unlock(
-        tx=tx, index=0, script_pubkey=lock, prev_amount=prev_amount, sighash_value=sighash_value, security=security
-    )
+    unlocking_key = PushTxBitShiftUnlockingKey(tx=tx, index=0, script_pubkey=lock, prev_amount=prev_amount)
+
+    tx_in.script_sig = unlocking_key.to_unlocking_script(sighash_value=sighash_value, security=security)
 
     message = sig_hash_preimage(
         tx=tx, index=0, script_pubkey=lock, prev_amount=prev_amount, sighash_value=sighash_value
@@ -100,9 +101,9 @@ def test_pushtx(sighash_value, is_opcodeseparator, save_to_json_folder):
     tx_in = TxIn(prev_tx=prev_txid, prev_index=0, sequence=0)
     tx = Tx(version=1, tx_ins=[tx_in], tx_outs=[], locktime=0)
 
-    tx_in.script_sig = TransactionIntrospection.pushtx_unlock(
-        tx=tx, index=0, script_pubkey=lock, prev_amount=prev_amount, sighash_value=sighash_value, append_constants=True
-    )
+    unlocking_key = PushTxUnlockingKey(tx=tx, index=0, script_pubkey=lock, prev_amount=prev_amount)
+
+    tx_in.script_sig = unlocking_key.to_unlocking_script(sighash_value=sighash_value, append_constants=True)
 
     message = sig_hash_preimage(
         tx=tx, index=0, script_pubkey=lock, prev_amount=prev_amount, sighash_value=sighash_value

@@ -392,12 +392,12 @@ def test_int_sig_to_s_component(stack, group_order, stack_element, rolling_optio
 @pytest.mark.parametrize(
     ("stack", "stack_element", "rolling_option", "expected"),
     [
-        (["01", "02"], StackNumber(0, False), True, ["01", "02"]),
-        (["01", "02"], StackNumber(0, False), False, ["01", "02", "02"]),
-        (["01", "0280"], StackNumber(0, False), True, ["01", "028000"]),
-        (["01", "0280"], StackNumber(0, False), False, ["01", "0280", "028000"]),
-        (["01", "02"], StackNumber(1, False), True, ["02", "01"]),
-        (["01ff", "02"], StackNumber(1, False), False, ["01ff", "02", "01ff00"]),
+        (["01", "02"], StackBaseElement(0), True, ["01", "02"]),
+        (["01", "02"], StackBaseElement(0), False, ["01", "02", "02"]),
+        (["01", "0280"], StackBaseElement(0), True, ["01", "028000"]),
+        (["01", "0280"], StackBaseElement(0), False, ["01", "0280", "028000"]),
+        (["01", "02"], StackBaseElement(1), True, ["02", "01"]),
+        (["01ff", "02"], StackBaseElement(1), False, ["01ff", "02", "01ff00"]),
     ],
 )
 def test_bytes_to_unsigned(stack, stack_element, rolling_option, expected):
