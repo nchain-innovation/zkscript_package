@@ -311,7 +311,6 @@ def save_scripts(lock, unlock, save_to_json_folder, filename, test_name):
             json.dump(data, f, indent=4)
 
 
-"""
 @pytest.mark.parametrize(
     ("test_script", "vk", "alpha_beta", "groth16_proof", "max_multipliers", "filename"),
     [
@@ -392,7 +391,6 @@ def test_groth16(test_script, vk, alpha_beta, groth16_proof, max_multipliers, fi
 
     if save_to_json_folder:
         save_scripts(str(lock), str(unlock), save_to_json_folder, filename, "groth16")
-"""
 
 
 @pytest.mark.slow

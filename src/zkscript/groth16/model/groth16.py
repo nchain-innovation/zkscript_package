@@ -222,7 +222,7 @@ class Groth16(PairingModel):
         out += self.pairing_model.triple_pairing(
             modulo_threshold=modulo_threshold,
             positive_modulo=True,
-            verify_gradients=1,
+            verify_gradients=(True, False, False),
             check_constant=False,
             clean_constant=clean_constant,
         )
