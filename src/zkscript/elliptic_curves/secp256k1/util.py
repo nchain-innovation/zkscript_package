@@ -1,3 +1,5 @@
+"""Utility scritps for secp256k1 package."""
+
 from tx_engine import Script
 
 from src.zkscript.types.stack_elements import (
@@ -9,8 +11,8 @@ from src.zkscript.util.utility_scripts import (
     bool_to_moving_function,
     move,
     pick,
-    reverse_endianness,
-    reverse_endianness_unknown_length,
+    reverse_endianness_bounded_length,
+    reverse_endianness_fixed_length,
     roll,
 )
 
@@ -38,7 +40,7 @@ def stack_elliptic_curve_point_to_compressed_pubkey(
                     StackFiniteFieldElement(1,False,1),
                     StackFiniteFieldElement(0,False,1),
                 ),
-        rolling_option (bool): Whether to roll A or not. Defaults to `True`.
+        rolling_option (bool): If `True`, A is removed from the stack after execution. Defaults to `True`.
 
     """
     out = move(A.y, bool_to_moving_function(rolling_option))  # Move A.y
@@ -48,7 +50,7 @@ def stack_elliptic_curve_point_to_compressed_pubkey(
         "33 OP_NUM2BIN 32 OP_SPLIT OP_DROP"
     )  # Bring A.x to 32 bytes - need 33 OP_NUM2BIN because A.x might not fit in 32 bytes as a
     # minimally encoded number
-    out += reverse_endianness(32)
+    out += reverse_endianness_fixed_length(32)
     out += Script.parse_string("OP_CAT")
 
     return out
@@ -64,15 +66,15 @@ def x_coordinate_to_r_component(
     Args:
         x_coordinate (StackNumber): The position in the stack of the x_coordinate. Defaults
             to `StackNumber(0,False)`.
-        rolling_option (int): Whether or not to roll x_coordinate, defaults to `True`.
+        rolling_option (int): If `True`, the x_coordinate is removed from the stack after execution.
+            Defaults to `True`.
         add_prefix (bool): Whether or not to prepend r with 0x02||len(r). Defaults to `True`.
 
     """
-
     out = move(x_coordinate, roll if rolling_option else pick)  # Move x_coordinate
     if add_prefix:
         out += Script.parse_string("OP_SIZE OP_SWAP")
-    out += reverse_endianness_unknown_length(max_length=33)
+    out += reverse_endianness_bounded_length(max_length=33)
     if add_prefix:
         out += Script.parse_string("OP_CAT")  # Compute len(r)||r
         out += Script.parse_string("0x02 OP_SWAP OP_CAT")  # Compute 02||len(s)||s

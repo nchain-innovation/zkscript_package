@@ -1,6 +1,6 @@
-from typing import List
+"""secp256k1 package."""
 
-from tx_engine import Script, encode_num, hash256d
+from tx_engine import Script, encode_num
 from tx_engine.engine.util import GROUP_ORDER_INT, PRIME_INT, Gx, Gx_bytes, Gy
 
 from src.zkscript.elliptic_curves.ec_operations_fq import EllipticCurveFq
@@ -27,18 +27,30 @@ from src.zkscript.util.utility_scripts import (
     move,
     nums_to_script,
     pick,
-    reverse_endianness,
+    reverse_endianness_fixed_length,
     roll,
+    verify_bottom_constants,
 )
 
 
 class Secp256k1:
-    GROUP_ORDER = GROUP_ORDER_INT
-    Gx = Gx
-    Gy = Gy
-    Gx_bytes = Gx_bytes
-    MODULUS = PRIME_INT
-    ec_fq = EllipticCurveFq(MODULUS, 0)
+    """Class containing scripts that perform scalar multiplications on secp256k1.
+
+    Attributes:
+        GROUP_ORDER (int): The order |E|, where E is secp256k1.
+        Gx (int): The x coordinate of the generator of E.
+        Gy (int): The y coordinate of the generator of E.
+        Gx_bytes (bytes): The byte representation of Gx.
+        MODULUS (int): The prime over which E is defined.
+        ec_fq (EllipticCurve): The script implementation of EC arithmetic over F_MODULUS.
+    """
+
+    GROUP_ORDER: int = GROUP_ORDER_INT
+    Gx: int = Gx
+    Gy: int = Gy
+    Gx_bytes: bytes = Gx_bytes
+    MODULUS: int = PRIME_INT
+    ec_fq: EllipticCurveFq = EllipticCurveFq(MODULUS, 0)
 
     @classmethod
     def verify_base_point_multiplication_up_to_epsilon(
@@ -51,38 +63,52 @@ class Secp256k1:
         A: StackBaseElement | StackEllipticCurvePoint = StackBaseElement(0),  # noqa: B008, N803
         rolling_options: int = 7,
     ) -> Script:
-        r"""Verify that A = (\pm a + additional_constant + epsilon)G.
+        r"""Verify that A = (± a + additional_constant + epsilon)G.
 
-        This script verifies that A = (\pm a + additional_constant + epsilon)G, where:
+        This script verifies that A = (± a + additional_constant + epsilon)G, where:
         - A is a point on E
         - a is a scalar
         - G is the generator of secp256k1.
+        - epsilon is either 0 or -2*h/Gx -2(a + additional_constant)
 
         Stack input:
-            - stack:    [GROUP_ORDER, Gx, 0x0220||Gx_bytes||02||02, .., h .., a .., A]
+            - stack:    [GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, .., h .., a .., A]
             - altstack: []
         Stack out:
-            - stack:    [GROUP_ORDER Gx 0x0220||Gx_bytes||02||02 .., h .., a .., A] or fail
+            - stack:    [GROUP_ORDER Gx 0x0220||Gx_bytes||02, .., h .., a .., A] or fail
             - altstack: []
 
+        Args:
+            check_constants (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constants (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
+            additional_constant (int): The additional constant for which the script verifies
+                A = (± a + additional_constant + epsilon)G. Defaults to `0`.
+            h (StackFiniteFieldElement): The position of the sighash of the transaction in which the script is executed.
+                Defaults to `StackFiniteFieldElement(2,False,1)`.
+            a (StackFiniteFieldElement): The position of the constant `a` for which the script verifies
+                A = (± a + additional_constant + epsilon)G. Defaults to `StackFiniteFieldElement(1, False, 1)`.
+            A (StackBaseElement | StackEllipticCurvePoint): The position of the point on E for which the script
+                verifies A = (± a + additional_constant + epsilon)G. Defaults to `StackBaseElement(0)`.
+            rolling_options (int): Bitmask detailing which elements among `h`, `a`, and `A` should be removed from
+                the stack after execution.
+
+        Returns:
+            The script that verifies A = (± a + additional_constant + epsilon)G.
         """
         check_order([h, a, A])
         is_h_rolled, is_a_rolled, is_A_rolled = bitmask_to_boolean_list(rolling_options, 3)
 
-        out = Script()
-        if check_constants:
-            out += pick(position=-1, n_elements=3)
-            out += Script.parse_string("OP_CAT OP_CAT OP_HASH256")
-            out.append_pushdata(
-                hash256d(
-                    encode_num(cls.GROUP_ORDER)
-                    + encode_num(cls.Gx)
-                    + bytes.fromhex("0220")
-                    + cls.Gx_bytes
-                    + bytes.fromhex("02")
-                )
+        out = (
+            verify_bottom_constants(
+                [
+                    encode_num(cls.GROUP_ORDER),
+                    encode_num(Gx),
+                    bytes.fromhex("0220") + cls.Gx_bytes + bytes.fromhex("02"),
+                ]
             )
-            out += Script.parse_string("OP_EQUALVERIFY")
+            if check_constants
+            else Script()
+        )
 
         # Compute h + a
         # stack in:  [GROUP_ORDER, Gx, 0x0220||Gx_bytes||02||02, .., h, .., a, .., A, ..,]
@@ -168,34 +194,49 @@ class Secp256k1:
         - G is the generator of secp256k1.
 
         Stack input:
-            - stack: MODULUS GROUP_ORDER Gx 0x0220||Gx_bytes||02, Gy, .., h .., gradient .., a .., A, ..,
-            - altstack:
+            - stack: [MODULUS, GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, Gy, .., h .., gradient .., a .., A, ..]
+            - altstack: []
         Stack out:
-            - stack: GROUP_ORDER Gx 0x0220||Gx_bytes||02, Gy, .., h .., gradient .., a .., A, ..,,
+            - stack: [GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, Gy, .., h .., gradient .., a .., A, ..,]
             or fail
-            - altstack:
+            - altstack: []
 
+        Args:
+            check_constants (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constants (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
+            h (StackFiniteFieldElement): The position of the sighash of the transaction in which the script is executed.
+                Defaults to `StackFiniteFieldElement(4,False,1)`.
+            gradient (StackFiniteFieldElement): The position of the gradient through `A` and `G`. Defaults to
+                `StackFiniteFieldElement(3, False, 1)`.
+            a (StackFiniteFieldElement): The position of the constant `a` for which the script verifies
+                A = aG. Defaults to `StackFiniteFieldElement(2, False, 1)`.
+            A (StackEllipticCurvePoint): The position of the point on E for which the script
+                verifies A = aG. Defaults to
+                `StackEllipticCurvePoint(
+                    StackFiniteFieldElement(1, False, 1),
+                    StackFiniteFieldElement(0, False, 1),
+                ),
+            rolling_options (int): Bitmask detailing which elements among `h`, `gradient`, `a`, and `A` should be
+                removed from the stack after execution.
+
+        Returns:
+            The script that verifies A = aG.
         """
-
         check_order([h, gradient, a, A])
         is_h_rolled, is_gradient_rolled, is_a_rolled, is_A_rolled = bitmask_to_boolean_list(rolling_options, 4)
 
-        out = Script()
-        if check_constants:
-            out += pick(position=-1, n_elements=5)
-            out += Script.parse_string("OP_CAT OP_CAT OP_CAT OP_CAT OP_HASH256")
-            out.append_pushdata(
-                hash256d(
-                    encode_num(cls.MODULUS)
-                    + encode_num(cls.GROUP_ORDER)
-                    + encode_num(cls.Gx)
-                    + bytes.fromhex("0220")
-                    + cls.Gx_bytes
-                    + bytes.fromhex("02")
-                    + encode_num(cls.Gy)
-                )
+        out = (
+            verify_bottom_constants(
+                [
+                    encode_num(cls.MODULUS),
+                    encode_num(cls.GROUP_ORDER),
+                    encode_num(cls.Gx),
+                    bytes.fromhex("0220") + cls.Gx_bytes + bytes.fromhex("02"),
+                ]
             )
-            out += Script.parse_string("OP_EQUALVERIFY")
+            if check_constants
+            else Script()
+        )
 
         # Compute A + G
         # stack in:  [PRIME_INT GROUP_ORDER Gx 0x0220||Gx_bytes||02||02 Gy, .., h .., gradient .., a .., A, ..]
@@ -265,32 +306,48 @@ class Secp256k1:
         - G is the generator of secp256k1.
 
         Stack input:
-            - stack: GROUP_ORDER Gx 0x0220||Gx_bytes||02, .., h .., a .., A, ..,
-            - altstack:
+            - stack: [GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, .., h .., a .., A, ..]
+            - altstack: []
         Stack out:
-            - stack: GROUP_ORDER Gx 0x0220||Gx_bytes||02, .., h .., a .., A, ..,,
+            - stack: [GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, .., h .., a .., A, ..]
             or fail
-            - altstack:
+            - altstack: []
 
+        Args:
+            check_constants (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constants (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
+            additional_constant (int): The additional constant for which the script verifies
+                A = (± a + additional_constant + epsilon)G. Defaults to `0`.
+            h (StackFiniteFieldElement): The position of the sighash of the transaction in which the script is executed.
+                Defaults to `StackFiniteFieldElement(3, False, 1)`.
+            a (StackFiniteFieldElement): The position of the constant `a` for which the script verifies
+                A = aG. Defaults to `StackFiniteFieldElement(2, False, 1)`.
+            A (StackEllipticCurvePoint): The position of the point on E for which the script
+                verifies A = aG. Defaults to
+                `StackEllipticCurvePoint(
+                    StackFiniteFieldElement(1, False, 1),
+                    StackFiniteFieldElement(0, False, 1),
+                ),
+            rolling_options (int): Bitmask detailing which elements among `h`, `a`, and `A` should be removed
+                from the stack after execution.
+
+        Returns:
+            The script that verifies A = aG.
         """
-
         check_order([h, a, A])
         is_h_rolled, is_a_rolled, is_A_rolled = bitmask_to_boolean_list(rolling_options, 3)
 
-        out = Script()
-        if check_constants:
-            out += pick(position=-1, n_elements=3)
-            out += Script.parse_string("OP_CAT OP_CAT OP_HASH256")
-            out.append_pushdata(
-                hash256d(
-                    encode_num(cls.GROUP_ORDER)
-                    + encode_num(cls.Gx)
-                    + bytes.fromhex("0220")
-                    + cls.Gx_bytes
-                    + bytes.fromhex("02")
-                )
+        out = (
+            verify_bottom_constants(
+                [
+                    encode_num(cls.GROUP_ORDER),
+                    encode_num(cls.Gx),
+                    bytes.fromhex("0220") + cls.Gx_bytes + bytes.fromhex("02"),
+                ]
             )
-            out += Script.parse_string("OP_EQUALVERIFY")
+            if check_constants
+            else Script()
+        )
 
         # Prepare A and -A
         # stack in:  [GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, Gy, .., h .., a, .., A, ..]
@@ -300,7 +357,7 @@ class Secp256k1:
         out += Script.parse_string(
             "OP_ROT 33 OP_NUM2BIN 32 OP_SPLIT OP_DROP"
         )  # Move A.x on top of the stack and make it 32 bytes
-        out += reverse_endianness(32)  # Reverse endianness of A.x
+        out += reverse_endianness_fixed_length(32)  # Reverse endianness of A.x
         out += Script.parse_string("OP_TUCK OP_CAT")  # Construct -A
 
         # Verify that -A = (-a - additional_constant + epsilon)G
@@ -361,8 +418,53 @@ class Secp256k1:
             - stack: [MODULUS, GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, .., h, .., b,
                         x_coordinate_target_times_b_inverse, .., h_times_x_coordinate_target_inverse, .., gradient, ..,
                             Q, .. P, .., h_times_x_coordinate_target_inverse_times_G, ..]
-        """
+            - altstack: []
+        Stack output:
+            - stack: [MODULUS, GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, .., h, .., b,
+                        x_coordinate_target_times_b_inverse, .., h_times_x_coordinate_target_inverse, .., gradient, ..,
+                            Q, .. P, .., h_times_x_coordinate_target_inverse_times_G, ..] or fail
+            - altstack: []
 
+        Args:
+            check_constants (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constants (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
+            h (StackFiniteFieldElement): The position of the sighash of the transaction in which the script is executed.
+                Defaults to `StackFiniteFieldElement(10, False, 1)`.
+            b (StackFiniteFieldElement): The position of the constant `b` for which the script verifies
+                Q = ± b * P. Defaults to `StackFiniteFieldElement(9, False, 1)`.
+            x_coordinate_target_times_b_inverse (StackFiniteFieldElement): The position in the stack of the x coordinate
+                of `Q` times the inverse of `b` modulo `GROUP_ORDER`. Defaults to
+                    `StackFiniteFieldElement(8, False, 1)`.
+            h_times_x_coordinate_target_inverse (StackFiniteFieldElement): The position in the stack of `h` times the
+                inverse of the x coordinate of `Q` modulo `GROUP_ORDER`. Defaults to
+                    `StackFiniteFieldElement(7, False, 1)`.
+            gradient (StackFiniteFieldElement): The position in the stack of the gradient through `P` and
+                `x_coordinate_target_times_b_inverse` * `G`. Defaults to
+                    `StackFiniteFieldElement(6, False, 1)`.
+            Q (StackEllipticCurvePoint): The position in the stack of the point `Q` for which the script verifies
+                Q = ± b * P. Defaults to:
+                    `StackEllipticCurvePoint(
+                        StackFiniteFieldElement(5, False, 1),
+                        StackFiniteFieldElement(4, False, 1),
+                    )`
+            P (StackEllipticCurvePoint): The position in the stack of the point `P` for which the script verifies
+                Q = ± b * P. Defaults to:
+                    `StackEllipticCurvePoint(
+                        StackFiniteFieldElement(3, False, 1),
+                        StackFiniteFieldElement(2, False, 1),
+                    )`
+            h_times_x_coordinate_target_inverse_times_G (StackEllipticCurvePoint): The position in the stack of the
+                point `h_times_x_coordinate_target_inverse` * `G`. Defaults to:
+                    `StackEllipticCurvePoint(
+                        StackFiniteFieldElement(1, False, 1),
+                        StackFiniteFieldElement(0, False, 1),
+                    )`
+            rolling_options (int): Bitmask detailing which of the elements used by the script should be removed
+                from the stack after execution.
+
+        Returns:
+            The script that verifies Q = ± b * P.
+        """
         check_order(
             [
                 h,
@@ -377,21 +479,18 @@ class Secp256k1:
         )
         list_rolling_options = bitmask_to_boolean_list(rolling_options, 8)
 
-        out = Script()
-        if check_constants:
-            out += pick(position=-1, n_elements=4)
-            out += Script.parse_string("OP_CAT OP_CAT OP_CAT OP_HASH256")
-            out.append_pushdata(
-                hash256d(
-                    encode_num(cls.MODULUS)
-                    + encode_num(cls.GROUP_ORDER)
-                    + encode_num(cls.Gx)
-                    + bytes.fromhex("0220")
-                    + cls.Gx_bytes
-                    + bytes.fromhex("02")
-                )
+        out = (
+            verify_bottom_constants(
+                [
+                    encode_num(cls.MODULUS),
+                    encode_num(cls.GROUP_ORDER),
+                    encode_num(cls.Gx),
+                    bytes.fromhex("0220") + cls.Gx_bytes + bytes.fromhex("02"),
+                ]
             )
-            out += Script.parse_string("OP_EQUALVERIFY")
+            if check_constants
+            else Script()
+        )
 
         # Compute P - h_times_x_coordinate_target_inverse_times_G
         # stack in:     [MODULUS, GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, .., h, .., b,
@@ -557,31 +656,31 @@ class Secp256k1:
         check_constants: bool = False,
         clean_constants: bool = False,
         h: StackFiniteFieldElement = StackFiniteFieldElement(18, False, 1),  # noqa: B008
-        s: List[StackFiniteFieldElement] = (
-            StackFiniteFieldElement(17, False, 1),  # noqa: B008
-            StackFiniteFieldElement(16, False, 1),  # noqa: B008
+        s: tuple[StackFiniteFieldElement] = (
+            StackFiniteFieldElement(17, False, 1),
+            StackFiniteFieldElement(16, False, 1),
         ),
-        gradients: List[StackFiniteFieldElement] = (
-            StackFiniteFieldElement(15, False, 1),  # noqa: B008
-            StackFiniteFieldElement(14, False, 1),  # noqa: B008
-            StackFiniteFieldElement(13, False, 1),  # noqa: B008
+        gradients: tuple[StackFiniteFieldElement] = (
+            StackFiniteFieldElement(15, False, 1),
+            StackFiniteFieldElement(14, False, 1),
+            StackFiniteFieldElement(13, False, 1),
         ),
-        d: List[StackFiniteFieldElement] = (
-            StackFiniteFieldElement(12, False, 1),  # noqa: B008
-            StackFiniteFieldElement(11, False, 1),  # noqa: B008
+        d: tuple[StackFiniteFieldElement] = (
+            StackFiniteFieldElement(12, False, 1),
+            StackFiniteFieldElement(11, False, 1),
         ),
-        D: List[StackEllipticCurvePoint] = (  # noqa: N803
-            StackEllipticCurvePoint(  # noqa: B008
-                StackFiniteFieldElement(10, False, 1),  # noqa: B008
-                StackFiniteFieldElement(9, False, 1),  # noqa: B008
+        D: tuple[StackEllipticCurvePoint] = (  # noqa: N803
+            StackEllipticCurvePoint(
+                StackFiniteFieldElement(10, False, 1),
+                StackFiniteFieldElement(9, False, 1),
             ),
-            StackEllipticCurvePoint(  # noqa: B008
-                StackFiniteFieldElement(8, False, 1),  # noqa: B008
-                StackFiniteFieldElement(7, False, 1),  # noqa: B008
+            StackEllipticCurvePoint(
+                StackFiniteFieldElement(8, False, 1),
+                StackFiniteFieldElement(7, False, 1),
             ),
-            StackEllipticCurvePoint(  # noqa: B008
-                StackFiniteFieldElement(6, False, 1),  # noqa: B008
-                StackFiniteFieldElement(5, False, 1),  # noqa: B008
+            StackEllipticCurvePoint(
+                StackFiniteFieldElement(6, False, 1),
+                StackFiniteFieldElement(5, False, 1),
             ),
         ),
         Q: StackEllipticCurvePoint = StackEllipticCurvePoint(  # noqa: B008, N803
@@ -606,27 +705,95 @@ class Secp256k1:
             - Q = bP
 
         Stack input:
-            - stack: [MODULUS, GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, ..]
-        """
+            - stack: [MODULUS, GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, .. h, .., s, .., gradients,
+                        .., d, .., D, .., Q, .., b, .., P, ..]
+            - altstack: []
+        Stack output:
+            - stack: [MODULUS, GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, .. h, .., s, .., gradients,
+                        .., d, .., D, .., Q, .., b, .., P, ..] or fail
+            - altstack: []
 
+        Args:
+            check_constants (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constants (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
+            h (StackFiniteFieldElement): The position of the sighash of the transaction in which the script is executed.
+                Defaults to `StackFiniteFieldElement(18, False, 1)`.
+            s (tuple[StackFiniteFieldElement]): The position in the stack of:
+                    s[0] = Q_x / b mod GROUP_ORDER, s[1] = (Q + bG)_x / b mod GROUP_ORDER
+                in the stack. Defaults to:
+                `(
+                    StackFiniteFieldElement(17, False, 1),
+                    StackFiniteFieldElement(16, False, 1),
+                `),
+            gradients (tuple[StackFiniteFieldElement]): The position in the stack of:
+                    gradients[0] = The gradient through `P` and `D[0]`
+                    gradients[1] = The gradient through `P` and `D[1]`
+                    gradients[2] = The gradient through `P` and `D[2]`
+                Defaults to:
+                `(
+                    StackFiniteFieldElement(15, False, 1),
+                    StackFiniteFieldElement(14, False, 1),
+                    StackFiniteFieldElement(13, False, 1),
+                `)
+            d (list[StackFiniteFieldElement]): The position in the stack of:
+                    d[0] = h / Q_x mod GROUP_ORDER, d[1] = h / (Q + bG)_x mod GROUP_ORDER
+                Defaults to:
+                `(
+                    StackFiniteFieldElement(12, False, 1),
+                    StackFiniteFieldElement(11, False, 1),
+                `)
+            D (tuple[StackEllipticCurvePoint]): The position in the stack of:
+                    D[0] = (h / Q_x)*G, D[1] = (h / (Q + bG)_x) * G, D[2] = b * G
+                Defaults to:
+                `(
+                    StackEllipticCurvePoint(
+                        StackFiniteFieldElement(10, False, 1),
+                        StackFiniteFieldElement(9, False, 1),
+                    ),
+                    StackEllipticCurvePoint(
+                        StackFiniteFieldElement(8, False, 1),
+                        StackFiniteFieldElement(7, False, 1),
+                    ),
+                    StackEllipticCurvePoint(
+                        StackFiniteFieldElement(6, False, 1),
+                        StackFiniteFieldElement(5, False, 1),
+                    ),
+                )`
+            Q (StackEllipticCurvePoint): The position in the stack of the point `Q` for which the script verifies
+                Q = b * P. Defaults to:
+                `StackEllipticCurvePoint(
+                    StackFiniteFieldElement(4, False, 1),
+                    StackFiniteFieldElement(3, False, 1),
+                )`
+            b (StackFiniteFieldElement): The position in the stack of the element `b` for which the script verifies
+                Q = b * P. Defaults to: `StackFiniteFieldElement(2, False, 1)`.
+            P (StackEllipticCurvePoint): The position in the stack of the point `P` for which the script verifies
+                Q = ± b * P. Defaults to:
+                    `StackEllipticCurvePoint(
+                        StackFiniteFieldElement(1, False, 1),
+                        StackFiniteFieldElement(0, False, 1),
+                    )`
+            rolling_options (int): Bitmask detailing which of the elements used by the script should be removed
+                from the stack after execution.
+
+        Returns:
+            The script that verifies Q = b * P.
+        """
         check_order([h, *s, *gradients, *d, *D, Q, b, P])
         list_rolling_options = bitmask_to_boolean_list(rolling_options, 14)
 
-        out = Script()
-        if check_constants:
-            out += pick(position=-1, n_elements=4)
-            out += Script.parse_string("OP_CAT OP_CAT OP_CAT OP_HASH256")
-            out.append_pushdata(
-                hash256d(
-                    encode_num(cls.MODULUS)
-                    + encode_num(cls.GROUP_ORDER)
-                    + encode_num(cls.Gx)
-                    + bytes.fromhex("0220")
-                    + cls.Gx_bytes
-                    + bytes.fromhex("02")
-                )
+        out = (
+            verify_bottom_constants(
+                [
+                    encode_num(cls.MODULUS),
+                    encode_num(cls.GROUP_ORDER),
+                    encode_num(cls.Gx),
+                    bytes.fromhex("0220") + cls.Gx_bytes + bytes.fromhex("02"),
+                ]
             )
-            out += Script.parse_string("OP_EQUALVERIFY")
+            if check_constants
+            else Script()
+        )
 
         # compute P - D[0]
         # stack in:  [MODULUS, GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, .., h, s[:],

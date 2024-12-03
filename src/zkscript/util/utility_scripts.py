@@ -2,12 +2,11 @@
 
 from typing import Union
 
-from tx_engine import Script, encode_num
+from tx_engine import Script, encode_num, hash256d
 from tx_engine.engine.op_codes import (
     OP_0,
     OP_1,
     OP_1NEGATE,
-    OP_1SUB,
     OP_2,
     OP_2DUP,
     OP_2OVER,
@@ -28,9 +27,10 @@ from tx_engine.engine.op_codes import (
     OP_15,
     OP_16,
     OP_ADD,
-    OP_DEPTH,
+    OP_CAT,
     OP_DUP,
     OP_EQUALVERIFY,
+    OP_HASH256,
     OP_MOD,
     OP_OVER,
     OP_PICK,
@@ -298,7 +298,7 @@ def verify_bottom_constant(n: int) -> Script:
     """Verify a constant against a provided value in Bitcoin Script.
 
     This function generates a Bitcoin Script that checks if a specific constant value is equal to the value present at
-    the top of the stack. If the check passes, the script continues; otherwise, it terminates the transaction.
+    the bottom of the stack. If the check passes, the script continues; otherwise, it terminates the transaction.
 
     Args:
         n (int): The constant value to check against.
@@ -306,7 +306,35 @@ def verify_bottom_constant(n: int) -> Script:
     Returns:
         A Bitcoin Script that verifies the constant against the value at the bottom of the stack.
     """
-    return Script([OP_DEPTH, OP_1SUB, OP_PICK]) + nums_to_script([n]) + Script([OP_EQUALVERIFY])
+    return pick(position=-1, n_elements=1) + nums_to_script([n]) + Script([OP_EQUALVERIFY])
+
+
+def verify_bottom_constants(constants: list[bytes]) -> Script:
+    """Verify a list of constants against a provided list in Bitcoin Script.
+
+    This function generates a Bitcoin Script that checks if the bottom of the stack is equal to the list of
+    constants `constants`. If the check passes, the script continues; otherwise, it terminates the transaction.
+
+    Args:
+        constants (list[int]): The list of constants to check against.
+
+    Returns:
+        A Bitcoin Script that verifies the list of constants against the bottom of the stack.
+    """
+    n = len(constants)
+    verification_hash = b""
+    for el in constants[::-1]:
+        verification_hash = el + verification_hash
+        verification_hash = hash256d(verification_hash)
+
+    out = Script()
+    out += pick(position=-1, n_elements=n)
+    out += Script([OP_HASH256, OP_CAT] * (n - 1))
+    out += Script([OP_HASH256])
+    out.append_pushdata(verification_hash)
+    out += Script([OP_EQUALVERIFY])
+
+    return out
 
 
 def move(
