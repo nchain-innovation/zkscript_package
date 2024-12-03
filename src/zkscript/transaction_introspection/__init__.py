@@ -1,10 +1,10 @@
 """transaction_introspection package.
 
-This package provides modules for constructing Bitcoin scripts that achieve transaction introspection.
+This package provides modules for constructing Bitcoin scripts for transaction introspection.
 
 Modules:
     - transaction_introspection: Contains the TransactionIntrospection class for scripts that achieve
-        transaction introspection.
+        transaction introspection. Reference for implementation: https://hackmd.io/@federicobarbacovi/By6zkFmfyl
 
 Usage example:
     >>> from tx_engine import SIGHASH

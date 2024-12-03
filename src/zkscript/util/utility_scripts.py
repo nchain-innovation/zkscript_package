@@ -338,7 +338,7 @@ def bool_to_moving_function(is_rolled: bool) -> Union[pick, roll]:
     return roll if is_rolled else pick
 
 
-def reverse_endianness(
+def reverse_endianness_fixed_length(
     length: int,
     stack_element: StackBaseElement = StackBaseElement(0),  # noqa: B008
     rolling_option: bool = True,
@@ -358,7 +358,7 @@ def reverse_endianness(
     return out
 
 
-def reverse_endianness_unknown_length(
+def reverse_endianness_bounded_length(
     max_length: int,
     stack_element: StackBaseElement = StackBaseElement(0),  # noqa: B008
     rolling_option: bool = True,
@@ -383,7 +383,7 @@ def reverse_endianness_unknown_length(
 
     # stack in:  [.., stack_element, .., len(stack_element), right_padded(stack_element,max_length)]
     # stack out: [.., stack_element, .., reverse_endianness(stack_element)
-    out += reverse_endianness(max_length + 1)
+    out += reverse_endianness_fixed_length(max_length + 1)
     out += nums_to_script([max_length + 1])
     out += Script.parse_string(
         "OP_ROT OP_SUB OP_SPLIT OP_NIP"
@@ -408,40 +408,30 @@ def int_sig_to_s_component(
     """
     is_group_order_rolled, is_int_sig_rolled = bitmask_to_boolean_list(rolling_options, 2)
 
+    # stack out: [.., int_sig, group_order]
     if [int_sig.position, group_order.position] == [1, 0]:
-        # stack in:  [.., int_sig, group_order]
-        # stack in:  [.., int_sig, group_order, int_sig, group_order] if all([is_group_order_rolled, is_int_sig_rolled])
-        #                else [.., int_sig, group_order, int_sig, group_order, int_sig, group_order]
-        out = Script.parse_string("OP_2DUP" if all([is_group_order_rolled, is_int_sig_rolled]) else "OP_2DUP OP_2DUP")
+        out = Script()
     elif [int_sig.position, group_order.position] == [0, 1]:
-        # stack in:  [.., group_order, int_sig]
-        # stack in:  [.., int_sig, group_order, int_sig, group_order] if all([is_group_order_rolled, is_int_sig_rolled])
-        #                else [.., group_order, int_sig, int_sig, group_order, int_sig, group_order]
-        out = Script.parse_string(
-            "OP_SWAP OP_2DUP" if all([is_group_order_rolled, is_int_sig_rolled]) else "OP_2DUP OP_SWAP OP_2DUP"
-        )
+        out = Script.parse_string("OP_SWAP" if all([is_group_order_rolled, is_int_sig_rolled]) else "OP_2DUP OP_SWAP")
     else:
         if group_order.position >= 0:
             check_order([group_order, int_sig])
-        # stack in:  [.., group_order, .., int_sig, ..]
-        # stack out: [.., group_order, .., int_sig, .., int_sig, group_order, int_sig, group_order]
         out = move(int_sig, bool_to_moving_function(is_int_sig_rolled))  # Move int_sig
-        out += Script.parse_string("OP_DUP")  # Duplicate int_sig
         out += move(
-            group_order.shift(2 - is_int_sig_rolled if group_order.position >= 0 else 0),
+            group_order.shift(1 - is_int_sig_rolled if group_order.position >= 0 else 0),
             bool_to_moving_function(is_group_order_rolled),
         )  # Move group_order
-        out += Script.parse_string("OP_TUCK")
+
+    # stack out: [.., int_sig, group_order, int_sig, group_order]
+    out += Script.parse_string("OP_2DUP")
 
     # Put int_sig in canonical form
-    # stack in:  [.., group_order, .., int_sig, ..]
-    # stack out: [.., {group_order}, .., {int_sig}, .., min{int_sig, group_order - int_sig}]
+    # stack out: [.., min{int_sig, group_order - int_sig}]
     out += Script.parse_string("OP_2 OP_DIV OP_GREATERTHAN OP_IF OP_SWAP OP_SUB OP_ELSE OP_DROP OP_ENDIF")
 
     # Reverse endianness of min{int_sig, group_order - int_sig}
-    # stack in:  [.., {group_order}, .., {int_sig}, .., min{int_sig, group_order - int_sig}]
-    # stack out: [.., {group_order}, .., {int_sig}, .., s]
-    out += reverse_endianness_unknown_length(max_length=32)
+    # stack out: [.., s]
+    out += reverse_endianness_bounded_length(max_length=32)
 
     if add_prefix:
         out += Script.parse_string("OP_SIZE OP_SWAP OP_CAT")  # Compute len(s)||s
@@ -451,23 +441,26 @@ def int_sig_to_s_component(
 
 
 def bytes_to_unsigned(
+    length_stack_element: int,
     stack_element: StackBaseElement = StackBaseElement(0),  # noqa: B008
     rolling_option: bool = True,
 ) -> Script:
-    """Convert a bytestring to an unsigned integer.
+    """Convert a bytestring of length `length` to an unsigned integer.
 
     Stack input:
         - stack: [.., stack_element, ..]
     Stack output:
-        - stack: [.., stack_element, .., n] where `n` is `stack_element` if the first byte of `stack_element`
-            is less than 0x80, else `stack_element||00`
+        - stack: [.., stack_element, .., n] where `n` is `reverse_endianness(stack_element)` if the MSB of
+            `stack_element` is less than 0x80, else `reverse_endianness(stack_element)||00`
 
     Args:
         stack_element (StackBaseElement): The bytestring to convert into a number
+        length_stack_element: int: The length of the stack element
         rolling_option (bool): If `True`, stack_element is removed from the stack. Defaults to `True`.
 
     Returns:
         The script that converts `stack_element` into an unsigned number.
     """
-    out = move(stack_element, roll if rolling_option else pick)  # Move stack element
-    return out + Script.parse_string("0x00 OP_CAT OP_BIN2NUM")
+    return reverse_endianness_fixed_length(
+        length=length_stack_element, stack_element=stack_element, rolling_option=rolling_option
+    ) + Script.parse_string("0x00 OP_CAT OP_BIN2NUM")

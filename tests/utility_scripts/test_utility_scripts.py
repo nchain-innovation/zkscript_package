@@ -10,8 +10,8 @@ from src.zkscript.util.utility_scripts import (
     move,
     nums_to_script,
     pick,
-    reverse_endianness,
-    reverse_endianness_unknown_length,
+    reverse_endianness_bounded_length,
+    reverse_endianness_fixed_length,
     roll,
     verify_bottom_constant,
 )
@@ -217,12 +217,12 @@ def test_errors_move(stack_element, moving_function, start_index, end_index, msg
         ),
     ],
 )
-def test_reverse_endianness(stack, length, stack_element, rolling_option, expected):
+def test_reverse_endianness_fixed_length(stack, length, stack_element, rolling_option, expected):
     unlock = Script()
     for el in stack:
         unlock.append_pushdata(bytes.fromhex(el))
 
-    lock = reverse_endianness(length, stack_element, rolling_option)
+    lock = reverse_endianness_fixed_length(length, stack_element, rolling_option)
     for ix, el in enumerate(expected[::-1]):
         lock.append_pushdata(bytes.fromhex(el))
         lock += Script.parse_string("OP_EQUAL" if ix == len(expected) - 1 else "OP_EQUALVERIFY")
@@ -252,12 +252,12 @@ def test_reverse_endianness(stack, length, stack_element, rolling_option, expect
         ),
     ],
 )
-def test_reverse_endianness_unknown_length(stack, max_length, stack_element, rolling_option, expected):
+def test_reverse_endianness_bounded_length(stack, max_length, stack_element, rolling_option, expected):
     unlock = Script()
     for el in stack:
         unlock.append_pushdata(bytes.fromhex(el))
 
-    lock = reverse_endianness_unknown_length(max_length, stack_element, rolling_option)
+    lock = reverse_endianness_bounded_length(max_length, stack_element, rolling_option)
     for ix, el in enumerate(expected[::-1]):
         lock.append_pushdata(bytes.fromhex(el))
         lock += Script.parse_string("OP_EQUAL" if ix == len(expected) - 1 else "OP_EQUALVERIFY")
@@ -390,22 +390,22 @@ def test_int_sig_to_s_component(stack, group_order, stack_element, rolling_optio
 
 
 @pytest.mark.parametrize(
-    ("stack", "stack_element", "rolling_option", "expected"),
+    ("stack", "length_stack_element", "stack_element", "rolling_option", "expected"),
     [
-        (["01", "02"], StackBaseElement(0), True, ["01", "02"]),
-        (["01", "02"], StackBaseElement(0), False, ["01", "02", "02"]),
-        (["01", "0280"], StackBaseElement(0), True, ["01", "028000"]),
-        (["01", "0280"], StackBaseElement(0), False, ["01", "0280", "028000"]),
-        (["01", "02"], StackBaseElement(1), True, ["02", "01"]),
-        (["01ff", "02"], StackBaseElement(1), False, ["01ff", "02", "01ff00"]),
+        (["01", "02"], 1, StackBaseElement(0), True, ["01", "02"]),
+        (["01", "02"], 1, StackBaseElement(0), False, ["01", "02", "02"]),
+        (["01", "8002"], 2, StackBaseElement(0), True, ["01", "028000"]),
+        (["01", "8002"], 2, StackBaseElement(0), False, ["01", "8002", "028000"]),
+        (["01", "02"], 1, StackBaseElement(1), True, ["02", "01"]),
+        (["ff01", "02"], 2, StackBaseElement(1), False, ["ff01", "02", "01ff00"]),
     ],
 )
-def test_bytes_to_unsigned(stack, stack_element, rolling_option, expected):
+def test_bytes_to_unsigned(stack, length_stack_element, stack_element, rolling_option, expected):
     unlock = Script()
     for el in stack:
         unlock.append_pushdata(bytes.fromhex(el))
 
-    lock = bytes_to_unsigned(stack_element, rolling_option)
+    lock = bytes_to_unsigned(length_stack_element, stack_element, rolling_option)
     for ix, el in enumerate(expected[::-1]):
         lock.append_pushdata(bytes.fromhex(el))
         lock += Script.parse_string("OP_EQUAL" if ix == len(expected) - 1 else "OP_EQUALVERIFY")
