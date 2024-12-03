@@ -2,14 +2,9 @@ import pytest
 from tx_engine import Context, Script, encode_num
 from tx_engine.engine.util import GROUP_ORDER_INT
 
-from src.zkscript.types.stack_elements import StackBaseElement, StackNumber
+from src.zkscript.types.stack_elements import StackBaseElement, StackFiniteFieldElement, StackNumber
 from src.zkscript.util.utility_scripts import (
     bytes_to_unsigned,
-    int_sig_to_s_component,
-    enforce_mul_equal
-)
-from src.zkscript.types.stack_elements import StackBaseElement, StackNumber, StackFiniteFieldElement
-from src.zkscript.util.utility_scripts import (
     enforce_mul_equal,
     int_sig_to_s_component,
     mod,
