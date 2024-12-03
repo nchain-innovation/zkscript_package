@@ -1,12 +1,10 @@
 """Utility functions."""
 
-from math import ceil, log2
 from typing import Union
 
 from tx_engine import Script
 
 from src.zkscript.types.stack_elements import StackElements
-from src.zkscript.util.utility_scripts import pick, roll
 
 
 def optimise_script(script: Script) -> Script:
@@ -110,11 +108,6 @@ def bitmask_to_boolean_list(bitmask: int, list_length: int) -> list[bool]:
     return [*out, *[False] * (list_length - len(out))]
 
 
-def bool_to_moving_function(is_rolled: bool) -> Union[pick, roll]:
-    """Map is_rolled (bool) to corresponding moving function."""
-    return roll if is_rolled else pick
-
-
 def base_function_size_estimation_miller_loop(
     modulus: int,
     modulo_threshold: int,
@@ -156,28 +149,28 @@ def base_function_size_estimation_miller_loop(
         future_size_miller_output = current_size_miller_output
         future_size_miller_output = 2 * future_size_miller_output + n
         for _ in range(multiplier):
-            future_size_miller_output = ceil(log2(modulus)) + future_size_miller_output + n
-        future_size_point_multiplication = ceil(log2(modulus)) + current_size_point_multiplication + ceil(log2(6))
+            future_size_miller_output = modulus.bit_length() + future_size_miller_output + n
+        future_size_point_multiplication = modulus.bit_length() + current_size_point_multiplication + (6).bit_length()
     else:
         multiplier = 6 if is_triple_miller_loop else 2
         # Next iteration update will be: f <-- f^2 * line_eval * line_eval, T <-- 2T ± Q
         future_size_miller_output = current_size_miller_output
         future_size_miller_output = 2 * future_size_miller_output + n
         for _ in range(multiplier):
-            future_size_miller_output = ceil(log2(modulus)) + future_size_miller_output + n
-        future_size_point_multiplication = ceil(log2(modulus)) + current_size_point_multiplication + ceil(log2(6))
-        future_size_point_multiplication = ceil(log2(modulus)) + future_size_point_multiplication + ceil(log2(6))
+            future_size_miller_output = modulus.bit_length() + future_size_miller_output + n
+        future_size_point_multiplication = modulus.bit_length() + current_size_point_multiplication + (6).bit_length()
+        future_size_point_multiplication = modulus.bit_length() + future_size_point_multiplication + (6).bit_length()
 
     if future_size_miller_output > modulo_threshold:
         take_modulo_miller_loop_output = True
-        out_size_miller_loop = ceil(log2(modulus))
+        out_size_miller_loop = modulus.bit_length()
     else:
         take_modulo_miller_loop_output = False
         out_size_miller_loop = future_size_miller_output
 
     if future_size_point_multiplication > modulo_threshold:
         take_modulo_point_multiplication = True
-        out_size_point_miller_loop = ceil(log2(modulus))
+        out_size_point_miller_loop = modulus.bit_length()
     else:
         take_modulo_point_multiplication = False
         out_size_point_miller_loop = future_size_point_multiplication

@@ -41,10 +41,13 @@ from tx_engine.engine.op_codes import (
 )
 
 from src.zkscript.types.stack_elements import (
+    StackBaseElement,
     StackElements,
     StackEllipticCurvePoint,
     StackFiniteFieldElement,
+    StackNumber,
 )
+from src.zkscript.util.utility_functions import bitmask_to_boolean_list, check_order
 
 patterns_to_pick = {
     (0, 1): [OP_DUP],
@@ -328,3 +331,136 @@ def move(
         msg += f"Self has {length} elements, end_index: {end_index}"
         raise ValueError(msg)
     return moving_function(position=stack_element.position - start_index, n_elements=end_index - start_index)
+
+
+def bool_to_moving_function(is_rolled: bool) -> Union[pick, roll]:
+    """Map is_rolled (bool) to corresponding moving function."""
+    return roll if is_rolled else pick
+
+
+def reverse_endianness_fixed_length(
+    length: int,
+    stack_element: StackBaseElement = StackBaseElement(0),  # noqa: B008
+    rolling_option: bool = True,
+) -> Script:
+    """Reverse the endianness of a StackBaseElement of byte length `length`.
+
+    Args:
+        length (int): The byte length of stack_element.
+        stack_element (StackBaseElement): The stack element whose endianness should be reversed.
+            Defaults to `StackBaseElement(0)`.
+        rolling_option (bool): Whether stack_element should be rolled. Defaults to `True`.
+
+    """
+    out = move(stack_element, roll if rolling_option else pick)  # Move stack_element
+    out += Script.parse_string(" ".join(["OP_1 OP_SPLIT"] * (length - 1)))
+    out += Script.parse_string(" ".join(["OP_SWAP OP_CAT"] * (length - 1)))
+    return out
+
+
+def reverse_endianness_bounded_length(
+    max_length: int,
+    stack_element: StackBaseElement = StackBaseElement(0),  # noqa: B008
+    rolling_option: bool = True,
+) -> Script:
+    """Reverse the endianness of a StackBaseElement of byte length at most `max_length`.
+
+    Args:
+        max_length (int): The maximum byte length of stack_element.
+        stack_element (StackBaseElement): The stack element whose endianness should be reversed.
+            Defaults to `StackBaseElement(0)`.
+        rolling_option (bool): Whether stack_element should be rolled. Defaults to `True`.
+
+    """
+    out = move(stack_element, roll if rolling_option else pick)  # Move stack_element
+
+    # stack in: [.., stack_element, .., stack_element]
+    # stack out: [.., stack_element, .., len(stack_element), right_padded(stack_element,max_length)]
+    out += Script.parse_string("OP_SIZE OP_SWAP")
+    out += Script.parse_string("0x00 OP_CAT")
+    out += nums_to_script([max_length + 1])
+    out += Script.parse_string("OP_NUM2BIN")
+
+    # stack in:  [.., stack_element, .., len(stack_element), right_padded(stack_element,max_length)]
+    # stack out: [.., stack_element, .., reverse_endianness(stack_element)
+    out += reverse_endianness_fixed_length(max_length + 1)
+    out += nums_to_script([max_length + 1])
+    out += Script.parse_string(
+        "OP_ROT OP_SUB OP_SPLIT OP_NIP"
+    )  # Reset reverse_endianness(stack_element) to its correct length
+    return out
+
+
+def int_sig_to_s_component(
+    group_order: StackNumber = StackNumber(1, False),  # noqa: B008
+    int_sig: StackNumber = StackNumber(0, False),  # noqa: B008
+    rolling_options: int = 3,
+    add_prefix: bool = True,
+) -> Script:
+    """Return the script that transforms int_sig to the s-component of a secp256k1 ECDSA signature.
+
+    Args:
+        group_order (StackNumber): The position in the stack of the group order of secp256k1. Defaults
+            to `StackNumber(1,False)`.
+        int_sig (StackNumber): The position in the stack of int_sig. Defaults to `StackNumber(0,False)`.
+        rolling_options (int): Whether or not to roll group_order and int_sig, defaults to 3 (roll everything).
+        add_prefix (bool): Whether or not to prepend s with 0x02||len(s). Defaults to `True`.
+    """
+    is_group_order_rolled, is_int_sig_rolled = bitmask_to_boolean_list(rolling_options, 2)
+
+    # stack out: [.., int_sig, group_order]
+    if [int_sig.position, group_order.position] == [1, 0]:
+        out = Script()
+    elif [int_sig.position, group_order.position] == [0, 1]:
+        out = Script.parse_string("OP_SWAP" if all([is_group_order_rolled, is_int_sig_rolled]) else "OP_2DUP OP_SWAP")
+    else:
+        if group_order.position >= 0:
+            check_order([group_order, int_sig])
+        out = move(int_sig, bool_to_moving_function(is_int_sig_rolled))  # Move int_sig
+        out += move(
+            group_order.shift(1 - is_int_sig_rolled if group_order.position >= 0 else 0),
+            bool_to_moving_function(is_group_order_rolled),
+        )  # Move group_order
+
+    # stack out: [.., int_sig, group_order, int_sig, group_order]
+    out += Script.parse_string("OP_2DUP")
+
+    # Put int_sig in canonical form
+    # stack out: [.., min{int_sig, group_order - int_sig}]
+    out += Script.parse_string("OP_2 OP_DIV OP_GREATERTHAN OP_IF OP_SWAP OP_SUB OP_ELSE OP_DROP OP_ENDIF")
+
+    # Reverse endianness of min{int_sig, group_order - int_sig}
+    # stack out: [.., s]
+    out += reverse_endianness_bounded_length(max_length=32)
+
+    if add_prefix:
+        out += Script.parse_string("OP_SIZE OP_SWAP OP_CAT")  # Compute len(s)||s
+        out += Script.parse_string("OP_2 OP_SWAP OP_CAT")  # Compute 02||len(s)||s
+
+    return out
+
+
+def bytes_to_unsigned(
+    length_stack_element: int,
+    stack_element: StackBaseElement = StackBaseElement(0),  # noqa: B008
+    rolling_option: bool = True,
+) -> Script:
+    """Convert a bytestring of length `length` to an unsigned integer.
+
+    Stack input:
+        - stack: [.., stack_element, ..]
+    Stack output:
+        - stack: [.., stack_element, .., n] where `n` is `reverse_endianness(stack_element)` if the MSB of
+            `stack_element` is less than 0x80, else `reverse_endianness(stack_element)||00`
+
+    Args:
+        stack_element (StackBaseElement): The bytestring to convert into a number
+        length_stack_element: int: The length of the stack element
+        rolling_option (bool): If `True`, stack_element is removed from the stack. Defaults to `True`.
+
+    Returns:
+        The script that converts `stack_element` into an unsigned number.
+    """
+    return reverse_endianness_fixed_length(
+        length=length_stack_element, stack_element=stack_element, rolling_option=rolling_option
+    ) + Script.parse_string("0x00 OP_CAT OP_BIN2NUM")

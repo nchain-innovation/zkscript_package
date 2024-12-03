@@ -1,8 +1,20 @@
 import pytest
-from tx_engine import Context, Script
+from tx_engine import Context, Script, encode_num
+from tx_engine.engine.util import GROUP_ORDER_INT
 
-from src.zkscript.types.stack_elements import StackNumber
-from src.zkscript.util.utility_scripts import mod, move, nums_to_script, pick, roll, verify_bottom_constant
+from src.zkscript.types.stack_elements import StackBaseElement, StackNumber
+from src.zkscript.util.utility_scripts import (
+    bytes_to_unsigned,
+    int_sig_to_s_component,
+    mod,
+    move,
+    nums_to_script,
+    pick,
+    reverse_endianness_bounded_length,
+    reverse_endianness_fixed_length,
+    roll,
+    verify_bottom_constant,
+)
 
 
 def generate_verify(z) -> Script:
@@ -183,3 +195,221 @@ def test_fail_verify_bottom_constant(n, stack):
 def test_errors_move(stack_element, moving_function, start_index, end_index, msg):
     with pytest.raises(ValueError, match=msg):
         move(stack_element, moving_function, start_index, end_index)
+
+
+@pytest.mark.parametrize(
+    ("stack", "length", "stack_element", "rolling_option", "expected"),
+    [
+        (
+            ["01", "02", "03", "04", "aabbccddeeff"],
+            6,
+            StackBaseElement(0),
+            True,
+            ["01", "02", "03", "04", "ffeeddccbbaa"],
+        ),
+        (["01", "02", "aabbccddee", "03", "04"], 5, StackBaseElement(2), True, ["01", "02", "03", "04", "eeddccbbaa"]),
+        (
+            ["aabbccdd", "01", "02", "03", "04"],
+            4,
+            StackBaseElement(-1),
+            False,
+            ["aabbccdd", "01", "02", "03", "04", "ddccbbaa"],
+        ),
+    ],
+)
+def test_reverse_endianness_fixed_length(stack, length, stack_element, rolling_option, expected):
+    unlock = Script()
+    for el in stack:
+        unlock.append_pushdata(bytes.fromhex(el))
+
+    lock = reverse_endianness_fixed_length(length, stack_element, rolling_option)
+    for ix, el in enumerate(expected[::-1]):
+        lock.append_pushdata(bytes.fromhex(el))
+        lock += Script.parse_string("OP_EQUAL" if ix == len(expected) - 1 else "OP_EQUALVERIFY")
+
+    context = Context(unlock + lock)
+    assert context.evaluate()
+    assert len(context.get_stack()) == 1
+
+
+@pytest.mark.parametrize(
+    ("stack", "max_length", "stack_element", "rolling_option", "expected"),
+    [
+        (
+            ["01", "02", "03", "04", "aabbccddeeff"],
+            10,
+            StackBaseElement(0),
+            True,
+            ["01", "02", "03", "04", "ffeeddccbbaa"],
+        ),
+        (["01", "02", "aabbccddee", "03", "04"], 8, StackBaseElement(2), True, ["01", "02", "03", "04", "eeddccbbaa"]),
+        (
+            ["aabbccdd", "01", "02", "03", "04"],
+            6,
+            StackBaseElement(-1),
+            False,
+            ["aabbccdd", "01", "02", "03", "04", "ddccbbaa"],
+        ),
+    ],
+)
+def test_reverse_endianness_bounded_length(stack, max_length, stack_element, rolling_option, expected):
+    unlock = Script()
+    for el in stack:
+        unlock.append_pushdata(bytes.fromhex(el))
+
+    lock = reverse_endianness_bounded_length(max_length, stack_element, rolling_option)
+    for ix, el in enumerate(expected[::-1]):
+        lock.append_pushdata(bytes.fromhex(el))
+        lock += Script.parse_string("OP_EQUAL" if ix == len(expected) - 1 else "OP_EQUALVERIFY")
+
+    context = Context(unlock + lock)
+    assert context.evaluate()
+    assert len(context.get_stack()) == 1
+
+
+@pytest.mark.parametrize("add_prefix", [True, False])
+@pytest.mark.parametrize(
+    ("stack", "group_order", "stack_element", "rolling_options", "expected"),
+    [
+        (
+            [
+                bytes.fromhex("01"),
+                encode_num(GROUP_ORDER_INT),
+                encode_num(23273337322559462728397485925482564225812377166088316918328726254919566391069),  # sig
+            ],
+            StackNumber(1, False),
+            StackNumber(0, False),
+            3,
+            [
+                bytes.fromhex("01"),
+                (23273337322559462728397485925482564225812377166088316918328726254919566391069).to_bytes(32),
+            ],
+        ),
+        (
+            [
+                bytes.fromhex("01"),
+                encode_num(23273337322559462728397485925482564225812377166088316918328726254919566391069),  # sig
+                encode_num(GROUP_ORDER_INT),
+            ],
+            StackNumber(0, False),
+            StackNumber(1, False),
+            3,
+            [
+                bytes.fromhex("01"),
+                (23273337322559462728397485925482564225812377166088316918328726254919566391069).to_bytes(32),
+            ],
+        ),
+        (
+            [
+                encode_num(GROUP_ORDER_INT),
+                bytes.fromhex("01"),
+                encode_num(23273337322559462728397485925482564225812377166088316918328726254919566391069),  # sig
+            ],
+            StackNumber(-1, False),
+            StackNumber(0, False),
+            3,
+            [
+                bytes.fromhex("01"),
+                (23273337322559462728397485925482564225812377166088316918328726254919566391069).to_bytes(32),
+            ],
+        ),
+        (
+            [
+                bytes.fromhex("01"),
+                encode_num(GROUP_ORDER_INT),
+                encode_num(23273337322559462728397485925482564225812377166088316918328726254919566391069),  # sig
+            ],
+            StackNumber(1, False),
+            StackNumber(0, False),
+            0,
+            [
+                bytes.fromhex("01"),
+                encode_num(GROUP_ORDER_INT),
+                encode_num(23273337322559462728397485925482564225812377166088316918328726254919566391069),  # sig
+                (23273337322559462728397485925482564225812377166088316918328726254919566391069).to_bytes(32),
+            ],
+        ),
+        (
+            [
+                bytes.fromhex("01"),
+                encode_num(GROUP_ORDER_INT),
+                encode_num(23273337322559462728397485925482564225812377166088316918328726254919566391069),  # sig
+                bytes.fromhex("02"),
+            ],
+            StackNumber(2, False),
+            StackNumber(1, False),
+            0,
+            [
+                bytes.fromhex("01"),
+                encode_num(GROUP_ORDER_INT),
+                encode_num(23273337322559462728397485925482564225812377166088316918328726254919566391069),  # sig
+                bytes.fromhex("02"),
+                (23273337322559462728397485925482564225812377166088316918328726254919566391069).to_bytes(32),
+            ],
+        ),
+        (
+            [
+                bytes.fromhex("01"),
+                encode_num(GROUP_ORDER_INT),
+                encode_num(208306889145243764628110735254800045248183311764997803938817302883604514149),  # sig
+            ],
+            StackNumber(1, False),
+            StackNumber(0, False),
+            3,
+            [
+                bytes.fromhex("01"),
+                (208306889145243764628110735254800045248183311764997803938817302883604514149).to_bytes(31),
+            ],
+        ),
+        (
+            [
+                bytes.fromhex("01"),
+                encode_num(GROUP_ORDER_INT),
+                encode_num(GROUP_ORDER_INT // 2 + 100),  # sig
+            ],
+            StackNumber(1, False),
+            StackNumber(0, False),
+            3,
+            [bytes.fromhex("01"), (GROUP_ORDER_INT - (GROUP_ORDER_INT // 2 + 100)).to_bytes(32)],
+        ),
+    ],
+)
+def test_int_sig_to_s_component(stack, group_order, stack_element, rolling_options, add_prefix, expected):
+    unlock = Script()
+    for el in stack:
+        unlock.append_pushdata(el)
+
+    lock = int_sig_to_s_component(group_order, stack_element, rolling_options, add_prefix)
+    for ix, el in enumerate(expected[::-1]):
+        lock.append_pushdata(el if ix != 0 or not add_prefix else bytes.fromhex("02" + hex(len(el))[2:]) + el)
+        lock += Script.parse_string("OP_EQUAL" if ix == len(expected) - 1 else "OP_EQUALVERIFY")
+
+    context = Context(unlock + lock)
+    assert context.evaluate()
+    assert len(context.get_stack()) == 1
+
+
+@pytest.mark.parametrize(
+    ("stack", "length_stack_element", "stack_element", "rolling_option", "expected"),
+    [
+        (["01", "02"], 1, StackBaseElement(0), True, ["01", "02"]),
+        (["01", "02"], 1, StackBaseElement(0), False, ["01", "02", "02"]),
+        (["01", "8002"], 2, StackBaseElement(0), True, ["01", "028000"]),
+        (["01", "8002"], 2, StackBaseElement(0), False, ["01", "8002", "028000"]),
+        (["01", "02"], 1, StackBaseElement(1), True, ["02", "01"]),
+        (["ff01", "02"], 2, StackBaseElement(1), False, ["ff01", "02", "01ff00"]),
+    ],
+)
+def test_bytes_to_unsigned(stack, length_stack_element, stack_element, rolling_option, expected):
+    unlock = Script()
+    for el in stack:
+        unlock.append_pushdata(bytes.fromhex(el))
+
+    lock = bytes_to_unsigned(length_stack_element, stack_element, rolling_option)
+    for ix, el in enumerate(expected[::-1]):
+        lock.append_pushdata(bytes.fromhex(el))
+        lock += Script.parse_string("OP_EQUAL" if ix == len(expected) - 1 else "OP_EQUALVERIFY")
+
+    context = Context(unlock + lock)
+    assert context.evaluate()
+    assert len(context.get_stack()) == 1

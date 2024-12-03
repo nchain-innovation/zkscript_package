@@ -6,4 +6,5 @@ Modules:
     - miller_loops- implement classes MillerLoopUnlockingKey and TripleMillerLoopUnlockingKey.
     - pairings - implement classes SinglePairingUnlockingKey and TriplePairingUnlockingKey.
     - unrolled_ec_multiplication - implement class EllipticCurveFqUnrolledUnlockingKey.
+    - transaction_introspection - implement classes PushTxUnlockingKey and PushTxBitShiftUnlockingKey.
 """
