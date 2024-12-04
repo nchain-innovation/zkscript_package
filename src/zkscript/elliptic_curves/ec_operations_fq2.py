@@ -351,7 +351,11 @@ class EllipticCurveFq2:
         verify_gradient += roll(position=2, n_elements=1)  # Bring [(yQ_)_1 - (yP_)_1] on top
         verify_gradient += roll(position=5, n_elements=2)  # Bring [gradient * (xP - xQ)] on top
         verify_gradient += fq2.add(
-            take_modulo=True, check_constant=False, clean_constant=False, is_constant_reused=False
+            take_modulo=True,
+            check_constant=False,
+            clean_constant=False,
+            is_constant_reused=False,
+            positive_modulo=False,
         )  # Compute gradient * (x_P - x_Q) + (yQ_ - yP_)
         verify_gradient += Script.parse_string("OP_CAT OP_0 OP_EQUALVERIFY")
 
@@ -665,7 +669,11 @@ class EllipticCurveFq2:
             verify_gradient += Script.parse_string("OP_ADD")  # Compute 3 * (xP^2)_1 + a_1
         verify_gradient += Script.parse_string("OP_FROMALTSTACK")
         verify_gradient += fq2.subtract(
-            take_modulo=True, check_constant=False, clean_constant=False, is_constant_reused=False
+            take_modulo=True,
+            check_constant=False,
+            clean_constant=False,
+            is_constant_reused=False,
+            positive_modulo=False,
         )  # Compute 2*gradient*yP_ - (3xP^2 + a)
         verify_gradient += Script.parse_string("OP_CAT OP_0 OP_EQUALVERIFY")
 
