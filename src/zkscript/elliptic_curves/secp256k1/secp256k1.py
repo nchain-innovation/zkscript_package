@@ -53,7 +53,7 @@ class Secp256k1:
     ec_fq: EllipticCurveFq = EllipticCurveFq(MODULUS, 0)
 
     @classmethod
-    def verify_base_point_multiplication_up_to_epsilon(
+    def __verify_base_point_multiplication_up_to_epsilon(
         cls,
         check_constants: bool = False,
         clean_constants: bool = False,
@@ -257,7 +257,7 @@ class Secp256k1:
         # stack in:  [GROUP_ORDER Gx 0x0220||Gx_bytes||02||02 Gy, .., h .., gradient .., a .., A, .., (A + G)]
         # stack out: [GROUP_ORDER Gx 0x0220||Gx_bytes||02||02 Gy, .., h .., gradient .., a .., A, ..,
         #               (A + G)] or fail
-        out += cls.verify_base_point_multiplication_up_to_epsilon(
+        out += cls.__verify_base_point_multiplication_up_to_epsilon(
             check_constants=False,
             clean_constants=False,
             additional_constant=0,
@@ -272,7 +272,7 @@ class Secp256k1:
         #               (A + G)]
         # stack out: [GROUP_ORDER Gx 0x0220||Gx_bytes||02||02 Gy, .., h .., gradient .., a .., A,
         #               ..] or fail
-        out += cls.verify_base_point_multiplication_up_to_epsilon(
+        out += cls.__verify_base_point_multiplication_up_to_epsilon(
             check_constants=False,
             clean_constants=clean_constants,
             additional_constant=1,
@@ -363,7 +363,7 @@ class Secp256k1:
         # Verify that -A = (-a - additional_constant + epsilon)G
         # stack in:  [GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, Gy, .., h .., a, .., A, .., [2/3], A.x, -A]
         # stack out: [GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, Gy, .., h .., a, .., A, .., [2/3], A.x], or fail
-        out += cls.verify_base_point_multiplication_up_to_epsilon(
+        out += cls.__verify_base_point_multiplication_up_to_epsilon(
             check_constants=False,
             clean_constants=False,
             additional_constant=-additional_constant,
@@ -377,7 +377,7 @@ class Secp256k1:
         #               [2/3], A.x]
         # stack out: [GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, Gy, .., h .., a, .., A, ..]
         out += Script.parse_string("OP_CAT")  # Construct A
-        out += cls.verify_base_point_multiplication_up_to_epsilon(
+        out += cls.__verify_base_point_multiplication_up_to_epsilon(
             check_constants=False,
             clean_constants=clean_constants,
             additional_constant=additional_constant,
@@ -695,14 +695,6 @@ class Secp256k1:
         rolling_options: int = (2 << 13) - 1,
     ) -> Script:
         """Verify Q = bP.
-
-        Meaning of the arguments:
-            - h = msg digest
-            - s[0] = x_Q / b mod GROUP_ORDER, s[1] = x_{Q + bG} / b mod GROUP_ORDER
-            - gradients[0] = gradient(P,D[0]), gradients[1] = gradient(P,D[1]), gradients[2] = gradient(P,D[2])
-            - d[0] = h / x_Q mod GROUP_ORDER, d[1] = h / x_{Q + bG} mod GROUP_ORDER
-            - D[0] = h / x_Q * G, D[1] = (h / x_{Q + bG} - 1) * G, D[2] = b * G
-            - Q = bP
 
         Stack input:
             - stack: [MODULUS, GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, .. h, .., s, .., gradients,
