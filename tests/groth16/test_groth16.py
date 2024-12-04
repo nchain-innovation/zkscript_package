@@ -433,7 +433,7 @@ def test_groth16_slow(
     )
     lock = test_script.groth16_verifier(
         locking_key,
-        modulo_threshold=500 * 8,
+        modulo_threshold=200 * 8,
         max_multipliers=max_multipliers,
         check_constant=True,
         clean_constant=True,
