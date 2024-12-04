@@ -300,7 +300,7 @@ class EllipticCurveFq:
         else:
             verify_gradient += Script.parse_string("OP_ADD")  # Compute gradient *(xP - xQ) - (yP_ - yQ_)
         verify_gradient += roll(position=-1, n_elements=1) if clean_constant else pick(position=-1, n_elements=1)
-        verify_gradient += mod(stack_preparation="")
+        verify_gradient += mod(stack_preparation="", is_positive=False)
         verify_gradient += Script.parse_string("OP_0 OP_EQUALVERIFY")
         verify_gradient += Script.parse_string("OP_TOALTSTACK" if take_modulo else "OP_DROP")
 
@@ -538,7 +538,7 @@ class EllipticCurveFq:
             verify_gradient += Script.parse_string("OP_ADD")
         verify_gradient += Script.parse_string("OP_ADD" if P.y.negate else "OP_SUB")
         verify_gradient += roll(position=-1, n_elements=1) if clean_constant else pick(position=-1, n_elements=1)
-        verify_gradient += mod(stack_preparation="")
+        verify_gradient += mod(stack_preparation="", is_positive=False)
         verify_gradient += Script.parse_string("OP_0 OP_EQUALVERIFY")
         verify_gradient += Script.parse_string("OP_TOALTSTACK" if take_modulo else "OP_DROP")
 
@@ -799,12 +799,12 @@ class EllipticCurveFq:
             batched_modulo += Script.parse_string("OP_FROMALTSTACK OP_ROT")
             out += batched_modulo
 
-        check_gradient = Script.parse_string("OP_FROMALTSTACK")
-        check_gradient += mod(stack_preparation="", is_mod_on_top=False, is_constant_reused=False, is_positive=True)
-        check_gradient += Script.parse_string("OP_0 OP_EQUALVERIFY")
+        verify_gradient = Script.parse_string("OP_FROMALTSTACK")
+        verify_gradient += mod(stack_preparation="", is_mod_on_top=False, is_constant_reused=False, is_positive=False)
+        verify_gradient += Script.parse_string("OP_0 OP_EQUALVERIFY")
 
         # Check gradient was correct
-        out += check_gradient
+        out += verify_gradient
 
         # Termination conditions  --------------------------------------------------------------------------------------
 
