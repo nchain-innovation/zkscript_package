@@ -4,7 +4,7 @@ from math import ceil, log2
 
 from tx_engine import Script
 
-from src.zkscript.types.stack_elements import StackEllipticCurvePoint, StackFiniteFieldElement
+from src.zkscript.types.stack_elements import StackEllipticCurvePoint, StackFiniteFieldElement, StackNumber
 from src.zkscript.util.utility_functions import bitmask_to_boolean_list, boolean_list_to_bitmask, check_order
 from src.zkscript.util.utility_scripts import (
     bool_to_moving_function,
@@ -25,15 +25,88 @@ class EllipticCurveFq:
         CURVE_A: The `a` coefficient in the Short-Weierstrass equation of the curve (an element in F_q).
     """
 
-    def __init__(self, q: int, curve_a: int):
+    def __init__(self, q: int, curve_a: int, curve_b: int):
         """Initialise the elliptic curve group E(F_q).
 
         Args:
             q: The characteristic of the field F_q.
             curve_a: The `a` coefficient in the Short-Weierstrass equation of the curve (an element in F_q).
+            curve_b: The `b` coefficient in the Short-Weierstrass equation of the curve (an element in F_q).
         """
         self.MODULUS = q
         self.CURVE_A = curve_a
+        self.CURVE_B = curve_b
+
+    def is_on_curve(
+        self,
+        check_constant: bool | None = None,
+        clean_constant: bool | None = None,
+        modulus: StackNumber = StackNumber(-1, False),  # noqa: B008
+        P: StackEllipticCurvePoint = StackEllipticCurvePoint(  # noqa: B008, N803
+            StackFiniteFieldElement(1, False, 1),  # noqa: B008
+            StackFiniteFieldElement(0, False, 1),  # noqa: B008
+        ),
+        rolling_option: bool = True,
+    ) -> Script:
+        """Verify that P is on the curve.
+
+        This script verifies that P is on the curve. Namely, that
+            y_P^2 = x_P^3 + self.a * x_P + self.b mod self.MODULUS.
+
+        Stack input:
+            - stack:    [q, .., P, ..]
+            - altstack: []
+        Stack output:
+            - stack:    [q, .., P, ..] or fail
+            - altstack: []
+
+        Args:
+            check_constant (bool | None): If `True`, check if `modulus` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `modulus` from the bottom of the stack. Defaults to `None`.
+            modulus: The position of `self.MODULUS` in the stack.
+            P (StackEllipticCurvePoint): The position in the stack of the point `P` for which the script
+                checks whether `P` belongs to the curve. Defaults to:
+                `StackEllipticCurvePoint(
+                    StackFiniteFieldElement(1, False, 1),
+                    StackFiniteFieldElement(0, False, 1),
+                )`
+            rolling_option (bool): If `True`, `P` is removed from the stack after the execution of the script.
+                Defaults to `True`.
+
+        Returns:
+            The script that verifies that `P` is on the curve.
+        """
+        if modulus.position > 0:
+            check_order([modulus, P])
+
+        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
+
+        out += move(P, bool_to_moving_function(rolling_option))  # Move P
+        out += Script.parse_string("OP_DUP OP_MUL")  # Compute y_P^2
+        out += Script.parse_string("OP_OVER" if self.CURVE_A else "OP_SWAP")
+        out += Script.parse_string("OP_DUP OP_DUP OP_MUL OP_MUL OP_SUB")  # Compute y_P^2 - x_P^3
+        if self.CURVE_A:
+            out += (
+                Script.parse_string("OP_SWAP") + nums_to_script([self.CURVE_A]) + Script.parse_string("OP_MUL OP_SUB")
+            )  # Compute y_P^2 - x_P^3 - self.CURVE_A * x_P
+        # Compute y_P^2 - x_P^3 - self.CURVE_A * x_P - self.CURVE_B
+        match self.CURVE_B:
+            case 1:
+                out += Script.parse_string("OP_1SUB")
+            case -1:
+                out += Script.parse_string("OP_1ADD")
+            case 0:
+                pass
+            case _:
+                out += nums_to_script([self.CURVE_B]) + Script.parse_string("OP_SUB")
+        out += move(
+            modulus.shift(1 - 2 * rolling_option if modulus.position > 0 else 0),
+            bool_to_moving_function(clean_constant),
+        )
+        out += mod(stack_preparation="", is_positive=False, is_constant_reused=False)
+        out += Script.parse_string("OP_0 OP_EQUALVERIFY")
+
+        return out
 
     def point_algebraic_addition(
         self,

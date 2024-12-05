@@ -177,7 +177,11 @@ class Secp256r1:
         y=Fq_r1(0x4FE342E2FE1A7F9B8EE7EB4A7C0F9E162BCE33576B315ECECBB6406837BF51F5),
         infinity=False,
     )
-    test_script = EllipticCurveFq(q=modulus, curve_a=0xFFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFC)
+    test_script = EllipticCurveFq(
+        q=modulus,
+        curve_a=0xFFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFC,
+        curve_b=0x5AC635D8AA3A93E7B3EBBD55769886BC651D06B0CC53B0F63BCE3C3E27D2604B,
+    )
     # All possible combinations: ± P ± Q are tested. Refer to ./util.py
     positions_addition = [
         {"modulus": 5, "gradient": 4, "P": 3, "Q": 1},

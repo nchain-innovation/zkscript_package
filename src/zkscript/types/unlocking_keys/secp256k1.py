@@ -33,6 +33,7 @@ class Secp256k1BasePointMultiplicationUnlockingKey:
         if load_constants:
             out += nums_to_script([GROUP_ORDER_INT, Gx])
             out.append_pushdata(bytes.fromhex("0220") + Gx_bytes + bytes.fromhex("02"))
+            out += nums_to_script([PRIME_INT])
 
         out.append_pushdata(encode_num(int.from_bytes(self.h)))
         out += nums_to_script([self.a])

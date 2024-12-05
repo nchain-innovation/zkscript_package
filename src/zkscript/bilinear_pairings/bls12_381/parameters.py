@@ -14,7 +14,10 @@ r = u**4 - u**2 + 1
 
 # Curve coefficients
 a = 0
+b = 4
 twisted_a = [0, 0]
+twisted_b = [b, b]
+
 
 # Non-residue
 NON_RESIDUE_FQ = -1  # List serialisation
