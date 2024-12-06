@@ -44,10 +44,10 @@ def stack_elliptic_curve_point_to_compressed_pubkey(
 
     """
     out = move(A.y, bool_to_moving_function(rolling_option))  # Move A.y
-    out += Script.parse_string("OP_2 OP_MOD OP_IF 0x03 OP_ELSE 0x02 OP_ENDIF")  # Set the first byte for compressed form
+    out += Script.parse_string("OP_2 OP_MOD OP_IF OP_3 OP_ELSE OP_2 OP_ENDIF")  # Set the first byte for compressed form
     out += move(A.x.shift(1 - 1 * rolling_option), bool_to_moving_function(rolling_option))  # Move A.x
     out += Script.parse_string(
-        "33 OP_NUM2BIN 32 OP_SPLIT OP_DROP"
+        "0x21 OP_NUM2BIN 0x20 OP_SPLIT OP_DROP"
     )  # Bring A.x to 32 bytes - need 33 OP_NUM2BIN because A.x might not fit in 32 bytes as a
     # minimally encoded number
     out += reverse_endianness_fixed_length(32)
@@ -77,6 +77,6 @@ def x_coordinate_to_r_component(
     out += reverse_endianness_bounded_length(max_length=33)
     if add_prefix:
         out += Script.parse_string("OP_CAT")  # Compute len(r)||r
-        out += Script.parse_string("0x02 OP_SWAP OP_CAT")  # Compute 02||len(s)||s
+        out += Script.parse_string("OP_2 OP_SWAP OP_CAT")  # Compute 02||len(s)||s
 
     return out

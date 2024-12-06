@@ -31,11 +31,7 @@ h = int.from_bytes(dummy_sighash)
 
 def compress(P) -> bytes:  # noqa: N803
     point_as_list = P.to_list()
-    x_coordinate = int.to_bytes(point_as_list[0], (point_as_list[0].bit_length() + 8) // 8)
-    ix = 0
-    while x_coordinate[ix] == 0:
-        ix += 1
-    x_coordinate = x_coordinate[ix:]
+    x_coordinate = int.to_bytes(point_as_list[0], 32)
     out = bytes.fromhex("03") if point_as_list[1] % 2 else bytes.fromhex("02")
     out += x_coordinate
 
@@ -87,7 +83,7 @@ def test_verify_base_point_multiplication_up_to_epsilon(a, A, additional_constan
 
 
 @pytest.mark.parametrize(("a", "A"), [(2, generator.multiply(2)), (10, generator.multiply(10))])
-def test_verify_base_point_with_negation(a, A):  # noqa: N803
+def test_verify_base_point(a, A):  # noqa: N803
     lock = Secp256k1.verify_base_point_multiplication(
         True,
         True,
