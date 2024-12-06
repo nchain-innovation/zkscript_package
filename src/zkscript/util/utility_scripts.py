@@ -5,6 +5,7 @@ from typing import Union
 from tx_engine import Script, encode_num, hash256d
 from tx_engine.engine.op_codes import (
     OP_0,
+    OP_0NOTEQUAL,
     OP_1,
     OP_1NEGATE,
     OP_2,
@@ -38,6 +39,7 @@ from tx_engine.engine.op_codes import (
     OP_ROT,
     OP_SWAP,
     OP_TUCK,
+    OP_VERIFY,
 )
 
 from src.zkscript.types.stack_elements import (
@@ -494,6 +496,101 @@ def bytes_to_unsigned(
     ) + Script.parse_string("0x00 OP_CAT OP_BIN2NUM")
 
 
+def compute_mul_sub(
+    clean_constant: bool = False,
+    is_constant_reused: bool = False,
+    modulus: StackNumber = StackNumber(-1, False),  # noqa: B008
+    a: StackFiniteFieldElement = StackFiniteFieldElement(2, False, 1),  # noqa: B008
+    b: StackFiniteFieldElement = StackFiniteFieldElement(1, False, 1),  # noqa: B008
+    c: StackFiniteFieldElement = StackFiniteFieldElement(0, False, 1),  # noqa: B008
+    rolling_options: int = 7,
+    leave_on_top_of_stack: int = 0,
+    permutation: int = 1,
+) -> Script:
+    """Evaluate the polynomial f(x,y,z) = ±(x - yz) % modulus at one of the permutations of (a,b,c).
+
+    Stack input:
+        - stack:    [.., modulus, .., a, .., b, .., c, ..]
+        - altstack: []
+    Stack output:
+        - stack:    [.., modulus, .., a, .., b, .., c, .., f(v)] where `v` is one of the permutations of
+            (a,b,c)
+        - altstack: []
+
+    Args:
+        clean_constant (bool): Whether the modulus should be cleaned from the stack or not.
+        is_constant_reused (bool): Whether the modulus should be left on top of the or not.
+            Defaults to `False`.
+        modulus (StackNumber): the position of the modulus used to check the equality. Defaults to
+            `StackNumber(-1,False)`.
+        a (StackFiniteFieldElement): the element a for which a = b*c % modulus. Defaults to
+            `StackFiniteFieldElement(2,False,1)`. It must have extension_degree equal to 1.
+        b (StackFiniteFieldElement): the element b for which a = b*c % modulus. Defaults to
+            `StackFiniteFieldElement(1,False,1)`. It must have extension_degree equal to 1.
+        c (StackFiniteFieldElement): the element c for which a = b*c % modulus. Defaults to
+            `StackFiniteFieldElement(0,False,1)`. It must have extension_degree equal to 1.
+        rolling_options (int): Bitmask deciding which elements should be removed from the stack after
+            the execution of the script. Defaults to `7`: remove everything.
+        leave_on_top_of_stack (int): Bitmask deciding which of the elements `a`, `b`, `c` should be left
+            on top of the stack after the execution of the script. Defaults to `0`: don't leave anything.
+        permutation (int): The permutation of (a,b,c) to evaluate f(x,y,z) at:
+            - 1 << 0: f(a,b,c) = (a - bc) % modulus
+            - 1 << 1: f(c,a,b) = (ab - c) % modulus
+            - 1 << 2: f(b,a,c) = (b - ac) % modulus
+    """
+    if modulus.position > 0:
+        check_order([modulus, a, b, c])
+    assert all(
+        [a.extension_degree == 1, b.extension_degree == 1, c.extension_degree == 1]
+    ), "The extension degrees of a, b, and c must be equal to 1."
+    list_rolling_options = bitmask_to_boolean_list(rolling_options, 3)
+    list_leave_on_top = bitmask_to_boolean_list(leave_on_top_of_stack, 3)
+
+    out = move(a, bool_to_moving_function(list_rolling_options[0]))
+    if list_leave_on_top[0]:
+        out += Script.parse_string("OP_DUP")
+    if a.negate:
+        out += Script.parse_string("OP_NEGATE")
+    out += move(b.shift(1 + list_leave_on_top[0]), bool_to_moving_function(list_rolling_options[1]))
+    if list_leave_on_top[1]:
+        out += Script.parse_string("OP_TUCK")
+    if b.negate:
+        out += Script.parse_string("OP_NEGATE")
+    if permutation >> 1 & 1:
+        out += Script.parse_string("OP_MUL")
+    out += move(
+        c.shift(2 + list_leave_on_top[0] + list_leave_on_top[1] - (permutation >> 1 & 1)),
+        bool_to_moving_function(list_rolling_options[2]),
+    )
+    if list_leave_on_top[2]:
+        out += Script.parse_string("OP_TUCK")
+    if c.negate:
+        out += Script.parse_string("OP_NEGATE")
+    if permutation >> 2 & 1:
+        out += roll(position=2 + list_leave_on_top[2], n_elements=1)  # roll a
+    if not (permutation >> 1 & 1):
+        out += Script.parse_string("OP_MUL")
+    if list_leave_on_top[2]:
+        out += Script.parse_string("OP_ROT")
+    out += Script.parse_string("OP_SUB")
+    out += move(
+        modulus.shift(
+            3
+            + list_leave_on_top[0]
+            + list_leave_on_top[1]
+            + list_leave_on_top[2]
+            - list_rolling_options[0]
+            - list_rolling_options[1]
+            - list_rolling_options[2]
+            if modulus.position > 0
+            else 0
+        ),
+        bool_to_moving_function(clean_constant),
+    )
+    out += mod("", is_constant_reused=is_constant_reused)
+    return out
+
+
 def enforce_mul_equal(
     clean_constant: bool = False,
     is_constant_reused: bool = False,
@@ -505,7 +602,7 @@ def enforce_mul_equal(
     leave_on_top_of_stack: int = 0,
     equation_to_check: int = 1,
 ) -> Script:
-    """Enforce that a = b*c % modulus.
+    """Enforce that the polynomial f(x,y,z) = (xy - z) % modulus is zero at one of the permutations of (a,b,c).
 
     Stack input:
         - stack:    [.., modulus, .., a, .., b, .., c, ..]
@@ -526,59 +623,67 @@ def enforce_mul_equal(
             `StackFiniteFieldElement(1,False,1)`. It must have extension_degree equal to 1.
         c (StackFiniteFieldElement): the element c for which a = b*c % modulus. Defaults to
             `StackFiniteFieldElement(0,False,1)`. It must have extension_degree equal to 1.
-        rolling_options (int): Whether to roll the elements. Defaults to `7`, roll everything.
-        leave_on_top_of_stack (int): Whether to leave the elements a,b,c on top of the stack after the
-            equality check. Defaults to `0`, don't leave anything.
+        rolling_options (int): Bitmask deciding which elements should be removed from the stack after
+            the execution of the script. Defaults to `7`: remove everything.
+        leave_on_top_of_stack (int): Bitmask deciding which of the elements `a`, `b`, `c` should be left
+            on top of the stack after the execution of the script. Defaults to `0`: don't leave anything.
         equation_to_check (int): Which equation to check:
             - 1 << 0: a = b*c % modulus
             - 1 << 1: c = a*b % modulus
             - 1 << 2: b = a*c % modulus
 
     """
-    if modulus.position != -1:
-        check_order([modulus, a, b, c])
-    assert all(
-        [a.extension_degree == 1, b.extension_degree == 1, c.extension_degree == 1]
-    ), "The extension degrees of a, b, and c must be equal to 1."
-    list_rolling_options = bitmask_to_boolean_list(rolling_options, 3)
-    list_leave_on_top = bitmask_to_boolean_list(leave_on_top_of_stack, 3)
+    out = compute_mul_sub(
+        clean_constant=clean_constant,
+        is_constant_reused=is_constant_reused,
+        modulus=modulus,
+        a=a,
+        b=b,
+        c=c,
+        rolling_options=rolling_options,
+        leave_on_top_of_stack=leave_on_top_of_stack,
+        permutation=equation_to_check,
+    )
+    out += is_zero()
 
-    out = move(a, bool_to_moving_function(list_rolling_options[0]))
-    if list_leave_on_top[0]:
-        out += Script.parse_string("OP_DUP")
-    out += move(b.shift(1 + list_leave_on_top[0]), bool_to_moving_function(list_rolling_options[1]))
-    if list_leave_on_top[1]:
-        out += Script.parse_string("OP_TUCK")
-    if equation_to_check >> 1 & 1:
-        out += Script.parse_string("OP_MUL")
-    out += move(
-        c.shift(2 + list_leave_on_top[0] + list_leave_on_top[1] - (equation_to_check >> 1 & 1)),
-        bool_to_moving_function(list_rolling_options[2]),
-    )
-    if list_leave_on_top[2]:
-        out += Script.parse_string("OP_TUCK")
-    if equation_to_check >> 2 & 1:
-        out += roll(position=2 + list_leave_on_top[2], n_elements=1)  # roll a
-    if not (equation_to_check >> 1 & 1):
-        out += Script.parse_string("OP_MUL")
-    if list_leave_on_top[2]:
-        out += Script.parse_string("OP_ROT")
-    out += Script.parse_string("OP_SUB")
-    out += move(
-        modulus.shift(
-            3
-            + list_leave_on_top[0]
-            + list_leave_on_top[1]
-            + list_leave_on_top[2]
-            - list_rolling_options[0]
-            - list_rolling_options[1]
-            - list_rolling_options[2]
-            if modulus.position > 0
-            else 0
-        ),
-        bool_to_moving_function(clean_constant),
-    )
-    out += mod("", is_constant_reused=is_constant_reused)
-    out += Script.parse_string("OP_0 OP_EQUALVERIFY")
+    return out
+
+
+def is_zero(
+    stack_element: StackBaseElement = StackBaseElement(0),  # noqa: B008
+    rolling_option: bool = True,
+) -> Script:
+    """Verify that `stack_element` is equal to zero.
+
+    Args:
+        stack_element (StackBaseElement): The position in the stack of the element for which the script checks
+            `stack_element` = 0.
+        rolling_option (bool): If `True`, `stack_element` is removed from the stack after the execution.
+
+    Returns:
+        The script that verifies if `stack_element` is equal to zero.
+    """
+    out = move(stack_element, bool_to_moving_function(rolling_option))  # Move stack_element
+    out += Script([OP_0, OP_EQUALVERIFY])
+
+    return out
+
+
+def is_not_zero(
+    stack_element: StackBaseElement = StackBaseElement(0),  # noqa: B008
+    rolling_option: bool = True,
+) -> Script:
+    """Verify that `stack_element` is not equal to zero.
+
+    Args:
+        stack_element (StackBaseElement): The position in the stack of the element for which the script checks
+            `stack_element` != 0.
+        rolling_option (bool): If `True`, `stack_element` is removed from the stack after the execution.
+
+    Returns:
+        The script that verifies if `stack_element` is not equal to zero.
+    """
+    out = move(stack_element, bool_to_moving_function(rolling_option))  # Move stack_element
+    out += Script([OP_0NOTEQUAL, OP_VERIFY])
 
     return out

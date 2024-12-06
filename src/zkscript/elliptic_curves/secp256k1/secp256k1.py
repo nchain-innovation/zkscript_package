@@ -21,8 +21,11 @@ from src.zkscript.util.utility_functions import (
 )
 from src.zkscript.util.utility_scripts import (
     bool_to_moving_function,
+    compute_mul_sub,
     enforce_mul_equal,
     int_sig_to_s_component,
+    is_not_zero,
+    is_zero,
     mod,
     move,
     nums_to_script,
@@ -173,119 +176,7 @@ class Secp256k1:
         return out
 
     @classmethod
-    def verify_base_point_multiplication_with_addition(
-        cls,
-        check_constants: bool = False,
-        clean_constants: bool = False,
-        h: StackFiniteFieldElement = StackFiniteFieldElement(4, False, 1),  # noqa: B008
-        gradient: StackFiniteFieldElement = StackFiniteFieldElement(3, False, 1),  # noqa: B008
-        a: StackFiniteFieldElement = StackFiniteFieldElement(2, False, 1),  # noqa: B008
-        A: StackEllipticCurvePoint = StackEllipticCurvePoint(  # noqa: B008, N803
-            StackFiniteFieldElement(1, False, 1),  # noqa: B008
-            StackFiniteFieldElement(0, False, 1),  # noqa: B008
-        ),
-        rolling_options: int = 15,
-    ) -> Script:
-        """Verify that A = aG.
-
-        This script verifies that A = aG, where:
-        - A is a point on E
-        - a is a scalar
-        - G is the generator of secp256k1.
-
-        Stack input:
-            - stack: [MODULUS, GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, Gy, .., h .., gradient .., a .., A, ..]
-            - altstack: []
-        Stack out:
-            - stack: [GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, Gy, .., h .., gradient .., a .., A, ..,]
-            or fail
-            - altstack: []
-
-        Args:
-            check_constants (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
-            clean_constants (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
-            h (StackFiniteFieldElement): The position of the sighash of the transaction in which the script is executed.
-                Defaults to `StackFiniteFieldElement(4,False,1)`.
-            gradient (StackFiniteFieldElement): The position of the gradient through `A` and `G`. Defaults to
-                `StackFiniteFieldElement(3, False, 1)`.
-            a (StackFiniteFieldElement): The position of the constant `a` for which the script verifies
-                A = aG. Defaults to `StackFiniteFieldElement(2, False, 1)`.
-            A (StackEllipticCurvePoint): The position of the point on E for which the script
-                verifies A = aG. Defaults to
-                `StackEllipticCurvePoint(
-                    StackFiniteFieldElement(1, False, 1),
-                    StackFiniteFieldElement(0, False, 1),
-                ),
-            rolling_options (int): Bitmask detailing which elements among `h`, `gradient`, `a`, and `A` should be
-                removed from the stack after execution.
-
-        Returns:
-            The script that verifies A = aG.
-        """
-        check_order([h, gradient, a, A])
-        is_h_rolled, is_gradient_rolled, is_a_rolled, is_A_rolled = bitmask_to_boolean_list(rolling_options, 4)
-
-        out = (
-            verify_bottom_constants(
-                [
-                    encode_num(cls.MODULUS),
-                    encode_num(cls.GROUP_ORDER),
-                    encode_num(cls.Gx),
-                    bytes.fromhex("0220") + cls.Gx_bytes + bytes.fromhex("02"),
-                ]
-            )
-            if check_constants
-            else Script()
-        )
-
-        # Compute A + G
-        # stack in:  [PRIME_INT GROUP_ORDER Gx 0x0220||Gx_bytes||02||02 Gy, .., h .., gradient .., a .., A, ..]
-        # stack out: [GROUP_ORDER Gx 0x0220||Gx_bytes||02||02 Gy, .., h .., gradient .., a .., A, .., (A + G)]
-        out += pick(position=-3, n_elements=1)  # Pick Gx
-        out += roll(position=-5, n_elements=1) if clean_constants else pick(position=-5, n_elements=1)  # Move Gy,
-        out += cls.ec_fq.point_algebraic_addition(
-            take_modulo=True,
-            check_constant=False,
-            clean_constant=True,
-            verify_gradient=True,
-            gradient=gradient.shift(2),
-            P=A.shift(2),
-            rolling_options=boolean_list_to_bitmask([is_gradient_rolled, False, True]),
-        )
-
-        # Verify that A = (a + epsilon)G
-        # stack in:  [GROUP_ORDER Gx 0x0220||Gx_bytes||02||02 Gy, .., h .., gradient .., a .., A, .., (A + G)]
-        # stack out: [GROUP_ORDER Gx 0x0220||Gx_bytes||02||02 Gy, .., h .., gradient .., a .., A, ..,
-        #               (A + G)] or fail
-        out += cls.__verify_base_point_multiplication_up_to_epsilon(
-            check_constants=False,
-            clean_constants=False,
-            additional_constant=0,
-            h=h.shift(2 - 1 * is_gradient_rolled),
-            a=a.shift(2),
-            A=A.shift(2),
-            rolling_options=boolean_list_to_bitmask([False, False, is_A_rolled]),
-        )
-
-        # Verify that (A+G) = (a + 1 + epsilon)G
-        # stack in:  [GROUP_ORDER Gx 0x0220||Gx_bytes||02||02 Gy, .., h .., gradient .., a .., A, ..,
-        #               (A + G)]
-        # stack out: [GROUP_ORDER Gx 0x0220||Gx_bytes||02||02 Gy, .., h .., gradient .., a .., A,
-        #               ..] or fail
-        out += cls.__verify_base_point_multiplication_up_to_epsilon(
-            check_constants=False,
-            clean_constants=clean_constants,
-            additional_constant=1,
-            h=h.shift(2 - 2 * is_A_rolled - 1 * is_gradient_rolled),
-            a=a.shift(2 - 2 * is_A_rolled),
-            A=StackEllipticCurvePoint(StackFiniteFieldElement(1, False, 1), StackFiniteFieldElement(0, False, 1)),
-            rolling_options=boolean_list_to_bitmask([is_h_rolled, is_a_rolled, True]),
-        )
-
-        return out
-
-    @classmethod
-    def verify_base_point_multiplication_with_negation_unchecked(
+    def verify_base_point_multiplication_unchecked(
         cls,
         check_constants: bool = False,
         clean_constants: bool = False,
@@ -351,6 +242,20 @@ class Secp256k1:
             else Script()
         )
 
+        # Enforce that a Gx != -h mod GROUP_ORDER
+        # stack in:   [GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, Gy, .., h .., a, .., A, ..]
+        # stack out:  [GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, Gy, .., h .., a, .., A, ..] or fail
+        out += compute_mul_sub(
+            clean_constant=False,
+            is_constant_reused=False,
+            a=StackFiniteFieldElement(-2, False, 1),
+            b=h.set_negate(True),
+            c=a,
+            rolling_options=0,
+            permutation=1 << 2,
+        )
+        out += is_not_zero()
+
         # Prepare A and -A
         # stack in:  [GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, Gy, .., h .., a, .., A, ..]
         # stack out: [GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, Gy, .., h .., a, .., A, .., [2/3], A.x, -A]
@@ -391,7 +296,7 @@ class Secp256k1:
         return out
 
     @classmethod
-    def verify_base_point_multiplication_with_negation(
+    def verify_base_point_multiplication(
         cls,
         check_constants: bool = False,
         clean_constants: bool = False,
@@ -463,7 +368,7 @@ class Secp256k1:
             rolling_option=False,
         )
 
-        out += cls.verify_base_point_multiplication_with_negation_unchecked(
+        out += cls.verify_base_point_multiplication_unchecked(
             check_constants=False,
             clean_constants=clean_constants,
             additional_constant=additional_constant,
@@ -582,8 +487,12 @@ class Secp256k1:
         )
 
         # Verify that Q, P, h_times_x_coordinate_target_inverse_times_G are on the curve
-        for point in [Q, P, h_times_x_coordinate_target_inverse_times_G]:
-            out += cls.ec_fq.is_on_curve(check_constant=False, clean_constant=False, P=point, rolling_option=False)
+        for i, point in enumerate([Q, P, h_times_x_coordinate_target_inverse_times_G]):
+            out += cls.ec_fq.evaluate_curve_equation(
+                check_constant=False, clean_constant=False, P=point.shift(i), rolling_option=False
+            )
+        out += Script.parse_string(" ".join(["OP_CAT"] * i))
+        out += is_zero()
 
         # Compute P - h_times_x_coordinate_target_inverse_times_G
         # stack in:     [MODULUS, GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, .., h, .., b,
@@ -718,7 +627,7 @@ class Secp256k1:
         #                   x_coordinate_target_times_b_inverse, .., h_times_x_coordinate_target_inverse, .., gradient,
         #                       .., Q, .. P, .., h_times_x_coordinate_target_inverse_times_G, ..] or fail
         # altstack out: []
-        out += cls.verify_base_point_multiplication_with_negation_unchecked(
+        out += cls.verify_base_point_multiplication_unchecked(
             check_constants=False,
             clean_constants=clean_constants,
             h=h.shift(
@@ -884,8 +793,15 @@ class Secp256k1:
         )
 
         # Verify that D[0], D[1], D[2], Q, P are on the curve
-        for point in [*D, Q, P]:
-            out += cls.ec_fq.is_on_curve(check_constant=False, clean_constant=False, P=point, rolling_option=False)
+        for i, point in enumerate([*D, Q, P]):
+            out += cls.ec_fq.evaluate_curve_equation(
+                check_constant=False, clean_constant=False, P=point.shift(i), rolling_option=False
+            )
+        out += Script.parse_string(" ".join(["OP_CAT"] * i))
+        out += is_zero()
+
+        # Verify that b != 0
+        out += is_not_zero(stack_element=b, rolling_option=False)
 
         # compute P - D[0]
         # stack in:  [MODULUS, GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, .., h, s[:],
@@ -947,7 +863,7 @@ class Secp256k1:
         # stack out: [GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, .., h, s[:],
         #               gradients[:], d[:], D[:], Q, b, P] or fail
         # altstack out: [P - D[0], P - D[1], (Q + D[2])_x]
-        out += cls.verify_base_point_multiplication_with_negation_unchecked(
+        out += cls.verify_base_point_multiplication_unchecked(
             check_constants=False,
             clean_constants=False,
             h=h.shift(
@@ -967,7 +883,7 @@ class Secp256k1:
         # stack out: [GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, .., h, s[:],
         #               gradients[:], d[:], D[:], Q, b, P] or fail
         # altstack out: [P - D[0], P - D[1], (Q + D[2])_x]
-        out += cls.verify_base_point_multiplication_with_negation_unchecked(
+        out += cls.verify_base_point_multiplication_unchecked(
             check_constants=False,
             clean_constants=False,
             additional_constant=-1,
@@ -992,7 +908,7 @@ class Secp256k1:
         out += move(
             D[2].shift(-2 * list_rolling_options[13]), bool_to_moving_function(list_rolling_options[10])
         )  # Move D[2]
-        out += cls.verify_base_point_multiplication_with_negation_unchecked(
+        out += cls.verify_base_point_multiplication_unchecked(
             check_constants=False,
             clean_constants=False,
             additional_constant=0,

@@ -86,35 +86,9 @@ def test_verify_base_point_multiplication_up_to_epsilon(a, A, additional_constan
     assert len(context.get_stack()) == 1
 
 
-@pytest.mark.parametrize(
-    ("gradient", "a", "A"),
-    [
-        (generator.get_lambda(generator.multiply(2)), 2, generator.multiply(2)),
-        (generator.get_lambda(generator.multiply(5)), 5, generator.multiply(5)),
-    ],
-)
-def test_verify_base_point_multiplication_with_addition(gradient, a, A):  # noqa: N803
-    lock = Secp256k1.verify_base_point_multiplication_with_addition(
-        True,
-        True,
-    )
-    lock += Script.parse_string("OP_1")
-
-    unlock = nums_to_script([modulus, order, generator.x.x])
-    unlock.append_pushdata(signature_prefix)
-    unlock += nums_to_script([generator.y.x, h])
-    unlock += nums_to_script(gradient.to_list())
-    unlock += nums_to_script([a])
-    unlock += nums_to_script(A.to_list())
-
-    context = Context(unlock + lock, z=dummy_sighash)
-    assert context.evaluate()
-    assert len(context.get_stack()) == 1
-
-
 @pytest.mark.parametrize(("a", "A"), [(2, generator.multiply(2)), (10, generator.multiply(10))])
-def test_verify_base_point_multiplication_with_negation(a, A):  # noqa: N803
-    lock = Secp256k1.verify_base_point_multiplication_with_negation(
+def test_verify_base_point_with_negation(a, A):  # noqa: N803
+    lock = Secp256k1.verify_base_point_multiplication(
         True,
         True,
     )

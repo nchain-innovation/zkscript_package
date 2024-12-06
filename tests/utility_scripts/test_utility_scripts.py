@@ -539,32 +539,55 @@ def test_int_sig_to_s_component(stack, group_order, stack_element, rolling_optio
 
 
 @pytest.mark.parametrize(
-    ("stack", "modulus", "a", "b", "c", "rolling_options", "leave_on_top_of_stack", "equation_to_check", "expected"),
+    (
+        "stack",
+        "modulus",
+        "a",
+        "b",
+        "c",
+        "negate",
+        "rolling_options",
+        "leave_on_top_of_stack",
+        "equation_to_check",
+        "expected",
+    ),
     [
-        ([17, 6, 2, 3], -1, 2, 1, 0, 7, 0, 1 << 0, []),  # a = b*c
-        ([17, 10, 9, 3], -1, 2, 1, 0, 0, 0, 1 << 0, [10, 9, 3]),  # a = b*c, pick everything
-        ([17, 9, 10, 3], -1, 2, 1, 0, 7, 0, 1 << 2, []),  # b = a*c
-        ([17, 9, 3, 10], -1, 2, 1, 0, 7, 0, 1 << 1, []),  # c = a*b
-        ([17, 6, 2, 3], -1, 2, 1, 0, 7, 1, 1 << 0, [6]),  # a = b*c, leave a
-        ([17, 6, 2, 3], -1, 2, 1, 0, 7, 2, 1 << 0, [2]),  # a = b*c, leave b
-        ([17, 6, 2, 3], -1, 2, 1, 0, 7, 4, 1 << 0, [3]),  # a = b*c, leave c
-        ([17, 6, 2, 3], -1, 2, 1, 0, 7, 3, 1 << 0, [6, 2]),  # a = b*c, leave a, b
-        ([17, 6, 2, 3], -1, 2, 1, 0, 7, 5, 1 << 0, [6, 3]),  # a = b*c, leave a, c
-        ([17, 6, 2, 3], -1, 2, 1, 0, 7, 6, 1 << 0, [2, 3]),  # a = b*c, leave b, c
-        ([17, 6, 2, 3], -1, 2, 1, 0, 7, 7, 1 << 0, [6, 2, 3]),  # a = b*c, leave a, b, c
+        ([17, 6, 2, 3], -1, 2, 1, 0, [False, False, False], 7, 0, 1 << 0, []),  # a = b*c
+        ([17, 6, 2, 3], -1, 2, 1, 0, [False, True, True], 7, 0, 1 << 0, []),  # a = b*c
+        ([1, 17, 1, 6, 1, 2, 1, 3], -2, 4, 2, 0, [False, False, False], 7, 0, 1 << 0, [1, 1, 1, 1]),  # a = b*c
+        ([17, 11, 2, 3], -1, 2, 1, 0, [False, False, True], 7, 0, 1 << 0, []),  # a = -b*c
+        ([17, 11, 2, 3], -1, 2, 1, 0, [False, True, False], 7, 0, 1 << 0, []),  # a = -b*c
+        ([17, 11, 2, 3], -1, 2, 1, 0, [True, False, False], 7, 0, 1 << 0, []),  # -a = b*c
+        ([17, 11, 2, 3], -1, 2, 1, 0, [True, True, True], 7, 0, 1 << 0, []),  # -a = b*c
+        ([17, 10, 9, 3], -1, 2, 1, 0, [False, False, False], 0, 0, 1 << 0, [10, 9, 3]),  # a = b*c, pick everything
+        ([17, 9, 10, 3], -1, 2, 1, 0, [False, False, False], 7, 0, 1 << 2, []),  # b = a*c
+        ([17, 9, 7, 3], -1, 2, 1, 0, [True, False, False], 7, 0, 1 << 2, []),  # b = -a*c
+        ([17, 9, 7, 3], -1, 2, 1, 0, [False, False, True], 7, 0, 1 << 2, []),  # b = -a*c
+        ([17, 9, 7, 3], -1, 2, 1, 0, [False, True, False], 7, 0, 1 << 2, []),  # -b = a*c
+        ([17, 9, 3, 10], -1, 2, 1, 0, [False, False, False], 7, 0, 1 << 1, []),  # c = a*b
+        ([17, 9, 3, 7], -1, 2, 1, 0, [True, False, False], 7, 0, 1 << 1, []),  # c = -a*b
+        ([17, 9, 3, 7], -1, 2, 1, 0, [False, True, False], 7, 0, 1 << 1, []),  # c = -a*b
+        ([17, 9, 3, 7], -1, 2, 1, 0, [False, False, True], 7, 0, 1 << 1, []),  # -c = a*b
+        ([17, 6, 2, 3], -1, 2, 1, 0, [False, False, False], 7, 1, 1 << 0, [6]),  # a = b*c, leave a
+        ([17, 6, 2, 3], -1, 2, 1, 0, [False, False, False], 7, 2, 1 << 0, [2]),  # a = b*c, leave b
+        ([17, 6, 2, 3], -1, 2, 1, 0, [False, False, False], 7, 4, 1 << 0, [3]),  # a = b*c, leave c
+        ([17, 6, 2, 3], -1, 2, 1, 0, [False, False, False], 7, 3, 1 << 0, [6, 2]),  # a = b*c, leave a, b
+        ([17, 6, 2, 3], -1, 2, 1, 0, [False, False, False], 7, 5, 1 << 0, [6, 3]),  # a = b*c, leave a, c
+        ([17, 6, 2, 3], -1, 2, 1, 0, [False, False, False], 7, 6, 1 << 0, [2, 3]),  # a = b*c, leave b, c
+        ([17, 6, 2, 3], -1, 2, 1, 0, [False, False, False], 7, 7, 1 << 0, [6, 2, 3]),  # a = b*c, leave a, b, c
     ],
 )
 def test_enforce_mul_equal(
-    stack, modulus, a, b, c, rolling_options, leave_on_top_of_stack, equation_to_check, expected
+    stack, modulus, a, b, c, negate, rolling_options, leave_on_top_of_stack, equation_to_check, expected
 ):
     unlock = nums_to_script(stack)
     lock = enforce_mul_equal(
         True,
         False,
         StackNumber(modulus, False),
-        StackFiniteFieldElement(a, False, 1),
-        StackFiniteFieldElement(b, False, 1),
-        StackFiniteFieldElement(c, False, 1),
+        StackFiniteFieldElement(a, negate[0], 1),
+        StackFiniteFieldElement(b, negate[1], 1),
+        StackFiniteFieldElement(c, negate[2], 1),
         rolling_options,
         leave_on_top_of_stack,
         equation_to_check,
