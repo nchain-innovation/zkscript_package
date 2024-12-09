@@ -125,6 +125,12 @@ class StackFiniteFieldElement(StackNumber):
             return True, msg
         return False, ""
 
+    def extract_component(self, component: int) -> Self:
+        """Extract `self_component` from `self`."""
+        assert component >= 0, "Component should be positive."
+        assert component < self.extension_degree, "Component should be smaller than self.extension_degree."
+        return StackFiniteFieldElement(self.position - component, self.negate, 1)
+
 
 @dataclass(init=False)
 class StackEllipticCurvePoint:
