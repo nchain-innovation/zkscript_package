@@ -24,6 +24,7 @@ def optimise_script(script: Script) -> Script:
         ["OP_TOALTSTACK", "OP_FROMALTSTACK"],
         ["OP_FROMALTSTACK", "OP_TOALTSTACK"],
         ["OP_ROT", "OP_ROT", "OP_ROT"],
+        ["OP_SWAP OP_ADD"],
     ]
 
     script_list = script.to_string().split()
