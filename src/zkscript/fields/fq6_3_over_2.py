@@ -2,6 +2,8 @@
 
 from tx_engine import Script
 
+from src.zkscript.fields.fq import Fq
+from src.zkscript.fields.prime_field_extension import PrimeFieldExtension
 from src.zkscript.util.utility_scripts import mod, pick, roll, verify_bottom_constant
 
 
@@ -16,7 +18,7 @@ def fq6_for_towering(mul_by_non_residue):
     return Fq6ForTowering
 
 
-class Fq6:
+class Fq6(PrimeFieldExtension):
     """Construct Bitcoin scripts that perform arithmetic operations in F_q^6 = F_q^2[v] / (v^3 - non_residue_over_fq2).
 
     F_q^6 = F_q^2[v] / (v^3 - non_residue_over_fq2) is a cubic extension of F_q^2.
@@ -41,142 +43,8 @@ class Fq6:
         """
         self.MODULUS = q
         self.BASE_FIELD = base_field
-
-    def add(
-        self,
-        take_modulo: bool,
-        positive_modulo: bool = True,
-        check_constant: bool | None = None,
-        clean_constant: bool | None = None,
-        is_constant_reused: bool | None = None,
-    ) -> Script:
-        """Addition in F_q^6.
-
-        Stack input:
-            - stack:    [q, ..., x := (x0, x1, x2, x3, x4, x5), y := (y0, y1, y2, y3, y4, y5)], `x`, `y` are triplets of
-                elements of F_q^2
-            - altstack: []
-
-        Stack output:
-            - stack:    [q, ..., x + y]
-            - altstack: []
-
-        Args:
-            take_modulo (bool): If `True`, the result is reduced modulo `q`.
-            positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
-            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
-            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
-            is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
-                after execution. Defaults to `None`.
-
-        Returns:
-            Script to add two elements in F_q^6.
-        """
-        # Fq2 implementation
-        fq2 = self.BASE_FIELD
-
-        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
-
-        # After this, the stack is x0 x1 y0 y1 altstack = [x2 + y2]
-        out += roll(position=7, n_elements=2)  # Roll x2
-        out += fq2.add(take_modulo=False, check_constant=False, clean_constant=False)
-        out += Script.parse_string("OP_TOALTSTACK OP_TOALTSTACK")
-
-        # After this, the stack is: x0 y0 (x1 + y1), altstack = [x2 + y2]
-        out += Script.parse_string("OP_2ROT")
-        out += fq2.add(take_modulo=False, check_constant=False, clean_constant=False)
-
-        if take_modulo:
-            # After this the stack is: (x0 + y0), altstack = [x2 + y2, x1 + y1]
-            out += Script.parse_string("OP_TOALTSTACK OP_TOALTSTACK")
-            out += fq2.add(
-                take_modulo=True,
-                positive_modulo=positive_modulo,
-                check_constant=False,
-                clean_constant=clean_constant,
-                is_constant_reused=True,
-            )
-            # Batched modulo operations: pull from altstack, rotate, mod out, repeat
-            for _ in range(3):
-                out += mod(is_positive=positive_modulo)
-            out += mod(is_constant_reused=is_constant_reused, is_positive=positive_modulo)
-        else:
-            # After this the stack is: (x0 + y0) (x1 + y1), altstack = [x2 + y2]
-            out += Script.parse_string("OP_2ROT OP_2ROT")
-            out += fq2.add(take_modulo=False, check_constant=False, clean_constant=False)
-            out += Script.parse_string("OP_2SWAP")
-
-            out += Script.parse_string("OP_FROMALTSTACK OP_FROMALTSTACK")
-
-        return out
-
-    def subtract(
-        self,
-        take_modulo: bool,
-        positive_modulo: bool = True,
-        check_constant: bool | None = None,
-        clean_constant: bool | None = None,
-        is_constant_reused: bool | None = None,
-    ) -> Script:
-        """Subtraction in F_q^6.
-
-        Stack input:
-            - stack:    [q, ..., x := (x0, x1, x2, x3, x4, x5), y := (y0, y1, y2, y3, y4, y5)], `x`, `y` are triplets of
-                elements of F_q^2
-            - altstack: []
-
-        Stack output:
-            - stack:    [q, ..., x - y]
-            - altstack: []
-
-        Args:
-            take_modulo (bool): If `True`, the result is reduced modulo `q`.
-            positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
-            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
-            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
-            is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
-                after execution. Defaults to `None`.
-
-        Returns:
-            Script to subtract two elements in F_q^6.
-        """
-        # Fq2 implementation
-        fq2 = self.BASE_FIELD
-
-        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
-
-        # After this, the stack is: x0 x1 y0 y1, altstack = [x2 - y2]
-        out += roll(position=7, n_elements=2)  # Roll x2
-        out += Script.parse_string("OP_2SWAP")
-        out += fq2.subtract(take_modulo=False, check_constant=False, clean_constant=False)
-        out += Script.parse_string("OP_TOALTSTACK OP_TOALTSTACK")
-        # After this, the stack is: x0 y0 (x1 - y1), altstack = [x2 - y2]
-        out += Script.parse_string("OP_2ROT OP_2SWAP")
-        out += fq2.subtract(take_modulo=False, check_constant=False, clean_constant=False)
-
-        if take_modulo:
-            # After this the stack is: (x0 + y0), altstack = [x2 + y2, x1 + y1]
-            out += Script.parse_string("OP_TOALTSTACK OP_TOALTSTACK")
-            out += fq2.subtract(
-                take_modulo=True,
-                positive_modulo=positive_modulo,
-                check_constant=False,
-                clean_constant=clean_constant,
-                is_constant_reused=True,
-            )
-            # Batched modulo operations: pull from altstack, rotate, mod out, repeat
-            for _ in range(3):
-                out += mod(is_positive=positive_modulo)
-            out += mod(is_constant_reused=is_constant_reused, is_positive=positive_modulo)
-        else:
-            # After this the stack is: (x0 + y0) (x1 + y1), altstack = [x2 + y2]
-            out += Script.parse_string("OP_2ROT OP_2ROT")
-            out += fq2.subtract(take_modulo=False, check_constant=False, clean_constant=False)
-            out += Script.parse_string("OP_2SWAP")
-
-            out += Script.parse_string("OP_FROMALTSTACK OP_FROMALTSTACK")
-
-        return out
+        self.EXTENSION_DEGREE = 6
+        self.PRIME_FIELD = Fq(q)
 
     def fq_scalar_mul(
         self,

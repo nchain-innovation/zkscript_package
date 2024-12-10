@@ -2,10 +2,12 @@
 
 from tx_engine import Script
 
+from src.zkscript.fields.fq import Fq
+from src.zkscript.fields.prime_field_extension import PrimeFieldExtension
 from src.zkscript.util.utility_scripts import mod, pick, roll, verify_bottom_constant
 
 
-class Fq12Cubic:
+class Fq12Cubic(PrimeFieldExtension):
     """Construct Bitcoin scripts that perform arithmetic operations in F_q^12 = F_q^4[v] / v^3 - non_residue_over_fq4.
 
     F_q^12 = F_q^4[v] / v^3 - non_residue_over_fq4 is a cubic extension of F_q^4 = F_q^2[u] / u^2 -
@@ -34,6 +36,8 @@ class Fq12Cubic:
         self.MODULUS = q
         self.FQ2 = fq2
         self.FQ4 = fq4
+        self.EXTENSION_DEGREE = 12
+        self.PRIME_FIELD = Fq(q)
 
     def mul(
         self,
