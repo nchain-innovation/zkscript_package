@@ -125,6 +125,10 @@ class StackFiniteFieldElement(StackNumber):
             return True, msg
         return False, ""
 
+    def set_negate(self, negate: bool) -> Self:
+        """Return a copy of self with negate set to negate."""
+        return StackFiniteFieldElement(self.position, negate, self.extension_degree)
+
     def extract_component(self, component: int) -> Self:
         """Extract `self_component` from `self`."""
         assert component >= 0, "Component should be positive."

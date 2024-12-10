@@ -2,10 +2,12 @@
 
 from tx_engine import Script
 
+from src.zkscript.fields.fq import Fq
+from src.zkscript.fields.prime_field_extension import PrimeFieldExtension
 from src.zkscript.util.utility_scripts import mod, nums_to_script, pick, roll, verify_bottom_constant
 
 
-class Fq12:
+class Fq12(PrimeFieldExtension):
     """Construct Bitcoin scripts that perform arithmetic operations in F_q^12 = F_q^6[u] / u^2 - v.
 
     F_q^12 = F_q^6[u] / u^2 - v is a quadratic extension of F_q^6 = F_q^2[v] / v^3 - non_residue_over_fq2.
@@ -37,6 +39,8 @@ class Fq12:
         self.FQ2 = fq2
         self.FQ6 = fq6
         self.GAMMAS_FROBENIUS = gammas_frobenius
+        self.EXTENSION_DEGREE = 12
+        self.PRIME_FIELD = Fq(q)
 
     def mul(
         self,
