@@ -11,7 +11,7 @@ from src.zkscript.elliptic_curves.ec_operations_fq import EllipticCurveFq
 from src.zkscript.elliptic_curves.ec_operations_fq_unrolled import EllipticCurveFqUnrolled
 from src.zkscript.types.locking_keys.groth16 import Groth16LockingKey
 from src.zkscript.util.utility_functions import optimise_script
-from src.zkscript.util.utility_scripts import nums_to_script, pick, roll, verify_bottom_constant
+from src.zkscript.util.utility_scripts import nums_to_script, roll, verify_bottom_constant
 
 
 class Groth16(PairingModel):
@@ -43,27 +43,22 @@ class Groth16(PairingModel):
                 CRS needed by the verifier.
         """
         verification_hash = b""
-        for i in range(len(locking_key.gradients_pairings[0]) - 1, -1, -1):
-            for j in range(len(locking_key.gradients_pairings[0][i]) - 1, -1, -1):
-                for k in range(1, 3):
-                    verification_hash += b"".join(
-                        [
-                            hash256d(encode_num(locking_key.gradients_pairings[k][i][j][s]))
-                            for s in range(self.pairing_model.EXTENSION_DEGREE)
-                        ]
-                    )
-                    verification_hash = hash256d(verification_hash)
-
+        for i in range(len(locking_key.gradients_pairings[0])):
+            for j in range(len(locking_key.gradients_pairings[0][i])):
+                for k in range(2,0,-1):
+                    for s in range(self.pairing_model.EXTENSION_DEGREE - 1, -1, -1):
+                        verification_hash = encode_num(locking_key.gradients_pairings[k][i][j][s]) + verification_hash
+                        verification_hash = hash256d(verification_hash)
         return verification_hash
 
     def __verify_hash_commitment(self, locking_key: Groth16LockingKey, verification_hash: bytes) -> Script:
         """Script that verifies that the gradients contained in `locking_key` commit to verification_hash.
 
         Stack input:
-            - stack: [.., gradients_pairing, ..]
+            - stack: [.., gradients_pairing]
 
         Stack output:
-            - stack: [.., gradients_pairing, ..] or fail
+            - stack: [.., ] or fail
 
         Args:
             locking_key (Groth16LockingKey): Locking key used to generate the verifier. Encapsulates the data of the
@@ -71,33 +66,18 @@ class Groth16(PairingModel):
             verification_hash (bytes): The hash commitment against which we verify the gradients contained in
                 `locking_key`.
         """
-        total_number_of_gradients = sum(
-            [
-                len(locking_key.gradients_pairings[k][i][j])
-                for k in range(3)
-                for i in range(len(locking_key.gradients_pairings[k]))
-                for j in range(len(locking_key.gradients_pairings[k][i]))
-            ]
-        )
-        position_to_pick = (
-            total_number_of_gradients
-            + 3 * self.pairing_model.N_POINTS_CURVE
-            + self.pairing_model.N_POINTS_TWIST
-            - self.pairing_model.EXTENSION_DEGREE
-        )  # position_first_gradient +1 -self.pairing_model.EXTENSION_DEGREE
-
-        out = Script.parse_string("OP_0")
+        list_of_opcodes = []
         for i in range(len(locking_key.gradients_pairings[0]) - 1, -1, -1):
             for _ in range(len(locking_key.gradients_pairings[0][i]) - 1, -1, -1):
                 for _ in range(1, 3):
                     for _ in range(self.pairing_model.EXTENSION_DEGREE):
-                        out += pick(position=position_to_pick, n_elements=1) + Script.parse_string("OP_HASH256 OP_CAT")
-                        position_to_pick -= 1  # Move one towards top of the stack
-                    out += Script.parse_string("OP_HASH256")
-                position_to_pick -= self.pairing_model.EXTENSION_DEGREE  # Skip gradients for B
+                        list_of_opcodes.append("OP_HASH256")
+                        list_of_opcodes.append("OP_CAT")
+        del list_of_opcodes[-1]
+        string_of_opcodes = " ".join(list_of_opcodes)
+        out = Script.parse_string(string_of_opcodes)
         out.append_pushdata(verification_hash)
-        out += Script.parse_string("OP_EQUALVERIFY")
-
+        out += Script.parse_string("OP_EQUAL")
         return out
 
     def groth16_verifier(
@@ -194,13 +174,6 @@ class Groth16(PairingModel):
                 take_modulo=True, positive_modulo=False, check_constant=False, clean_constant=False
             )
 
-        # Verify that the gradients supplied for -gamma and -delta are the correct one
-        # stack in:  [q, ..., inverse_miller_loop_triple_pairing, gradients_pairing, A, B, C,
-        #                   sum_(i=0)^l a_i * gamma_abc[i]]
-        # stack out: [q, ..., inverse_miller_loop_triple_pairing, gradients_pairing, A, B, C,
-        #                   sum_(i=0)^l a_i * gamma_abc[i]] or fail
-        out += self.__verify_hash_commitment(locking_key=locking_key, verification_hash=verification_hash)
-
         # stack in:  [q, ..., inverse_miller_loop_triple_pairing, gradients_pairing, A, B, C,
         #                   sum_(i=0)^l a_i * gamma_abc[i]]
         # stack out: [q, ..., inverse_miller_loop_triple_pairing, gradients_pairing, A,
@@ -218,7 +191,8 @@ class Groth16(PairingModel):
         # Compute the triple pairing
         # stack in:  [q, ..., inverse_miller_loop_triple_pairing, gradients_pairing, A,
         #                   sum_(i=0)^l a_i * gamma_abc[i], C, B, -gamma, -delta]
-        # stack out: [q, ..., pairing(A,B) * pairing(sum_(i=0)^(l) a_i * gamma_abc[i], -gamma) * pairing(C, -delta)]
+        # stack out: [q, ..., gradients_pairing,
+        #                   pairing(A,B) * pairing(sum_(i=0)^(l) a_i * gamma_abc[i], -gamma) * pairing(C, -delta)]
         out += self.pairing_model.triple_pairing(
             modulo_threshold=modulo_threshold,
             positive_modulo=True,
@@ -228,11 +202,16 @@ class Groth16(PairingModel):
         )
 
         # Verify pairing(A,B) * pairing(sum_(i=0)^(l) a_i * gamma_abc[i], -gamma) * pairing(C, -delta) == alpha_beta
-        for ix, el in enumerate(locking_key.alpha_beta[::-1]):
+        # stack in:  [q, ..., gradients_pairing,
+        #                   pairing(A,B) * pairing(sum_(i=0)^(l) a_i * gamma_abc[i], -gamma) * pairing(C, -delta)]
+        # stack out: [q, ..., gradients_pairing] or fail
+        for el in locking_key.alpha_beta[::-1]:
             out += nums_to_script([el])
-            if ix != len(locking_key.alpha_beta) - 1:
-                out += Script.parse_string("OP_EQUALVERIFY")
-            else:
-                out += Script.parse_string("OP_EQUAL")
+            out += Script.parse_string("OP_EQUALVERIFY")
+
+        # Verify that the gradients supplied for -gamma and -delta are the correct one
+        # stack in:  [q, ..., gradients_pairing]
+        # stack out: [q, ...] or fail
+        out += self.__verify_hash_commitment(locking_key=locking_key, verification_hash=verification_hash)
 
         return optimise_script(out)
