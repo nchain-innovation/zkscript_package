@@ -5,7 +5,8 @@ from tx_engine import Script
 from src.zkscript.bilinear_pairings.mnt4_753.fields import fq2_script, fq4_script
 from src.zkscript.bilinear_pairings.mnt4_753.parameters import exp_miller_loop
 from src.zkscript.bilinear_pairings.model.cyclotomic_exponentiation import CyclotomicExponentiation
-from src.zkscript.util.utility_scripts import pick, verify_bottom_constant
+from src.zkscript.types.stack_elements import StackFiniteFieldElement
+from src.zkscript.util.utility_scripts import pick, roll, verify_bottom_constant
 
 
 class FinalExponentiation(CyclotomicExponentiation):
@@ -34,6 +35,9 @@ class FinalExponentiation(CyclotomicExponentiation):
         check_constant: bool | None = None,
         clean_constant: bool | None = None,
         is_constant_reused: bool | None = None,
+        f: StackFiniteFieldElement = StackFiniteFieldElement(3, False, 4),  # noqa: B008
+        f_inverse: StackFiniteFieldElement = StackFiniteFieldElement(7, False, 4),  # noqa: B008
+
     ) -> Script:
         """Easy part of the final exponentiation.
 
@@ -52,6 +56,10 @@ class FinalExponentiation(CyclotomicExponentiation):
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
                 after execution. Defaults to `None`.
+            f (StackFiniteFieldElement): the value `f`. Default to
+                StackFiniteFieldElement = StackFiniteFieldElement(3, False, 4).
+            f_inverse (StackFiniteFieldElement): the value `f_inverse`. Default to
+                StackFiniteFieldElement = StackFiniteFieldElement(7, False, 4).
 
         Returns:
             Script to perform the easy part of the exponentiation in the pairing for MNT4-753.
@@ -62,6 +70,13 @@ class FinalExponentiation(CyclotomicExponentiation):
         fq4 = self.FQ4
 
         out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
+
+        # After this, the stack is: Inverse(f) f
+        if f_inverse == StackFiniteFieldElement(3, False, 4):
+            out += roll(position=f.position, n_elements=f.extension_degree)
+        elif f != StackFiniteFieldElement(3, False, 4) or f_inverse != StackFiniteFieldElement(7, False, 4):
+            out += roll(position=f_inverse.position, n_elements=f_inverse.extension_degree)
+            out += roll(position=f.position + self.EXTENSION_DEGREE, n_elements=f.extension_degree)
 
         # After this, the stack is: Inverse(f) f
         check_f_inverse = pick(position=7, n_elements=4)  # Bring Inverse(f) on top of the stack

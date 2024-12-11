@@ -2,6 +2,7 @@
 
 from tx_engine import Script
 
+from src.zkscript.types.stack_elements import StackFiniteFieldElement
 from src.zkscript.util.utility_functions import optimise_script
 from src.zkscript.util.utility_scripts import pick, roll, verify_bottom_constant
 
@@ -170,9 +171,21 @@ class Pairing:
             clean_constant=False,
         )
 
+        gradient_tracker = sum(
+            self.EXTENSION_DEGREE for verify_gradient in verify_gradients if not verify_gradient
+        ) * sum([1 if i == 0 else 2 for i in self.exp_miller_loop[:-1]])
+
         out += easy_exponentiation_with_inverse_check(
-            take_modulo=True, positive_modulo=False, check_constant=False, clean_constant=False
+            take_modulo=True,
+            positive_modulo=False,
+            check_constant=False,
+            clean_constant=False,
+            f=StackFiniteFieldElement(self.N_ELEMENTS_MILLER_OUTPUT - 1, False, self.N_ELEMENTS_MILLER_OUTPUT),
+            f_inverse=StackFiniteFieldElement(
+                2 * self.N_ELEMENTS_MILLER_OUTPUT - 1 + gradient_tracker, False, self.N_ELEMENTS_MILLER_OUTPUT
+            ),
         )
+
         out += hard_exponentiation(
             take_modulo=True,
             modulo_threshold=modulo_threshold,
