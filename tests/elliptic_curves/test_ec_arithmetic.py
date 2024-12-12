@@ -21,6 +21,7 @@ from tests.elliptic_curves.util import (
     generate_test,
     generate_test_data,
     generate_unlock,
+    generate_verify_from_list,
     generate_verify_point,
     modify_verify_modulo_check,
     save_scripts,
@@ -73,6 +74,10 @@ class Secp256k1:
     )
     a = 64046112301879843941239178948101222343000413030798872646069227448863068996094
     test_data = {
+        "test_is_on_curve": [
+            {"P": P, "position": 1, "expected": []},
+            {"P": P, "position": 5, "expected": [1, 1, 1, 1]},
+        ],
         "test_addition": [
             # Test standard configuration
             generate_test(
@@ -213,6 +218,10 @@ class Secp256r1:
     )
     a = 104614095137500434070196828944928516815982260532830080798264081596642730786155
     test_data = {
+        "test_is_on_curve": [
+            {"P": P, "position": 1, "expected": []},
+            {"P": P, "position": 5, "expected": [1, 1, 1, 1]},
+        ],
         "test_addition": [
             # Test standard configuration
             generate_test(
@@ -562,6 +571,8 @@ def generate_test_cases(test_name):
         if test_name in config.test_data:
             for test_data in config.test_data[test_name]:
                 match test_name:
+                    case "test_is_on_curve":
+                        out.append((config, test_data["P"], test_data["position"], test_data["expected"]))
                     case "test_addition":
                         out.append(
                             (
@@ -613,6 +624,31 @@ def generate_test_cases(test_name):
                     case "test_msm_with_fixed_bases":
                         out.append((config, test_data["scalars"], test_data["bases"], test_data["expected"]))
     return out
+
+
+@pytest.mark.parametrize(("config", "P", "position", "expected"), generate_test_cases("test_is_on_curve"))
+def test_is_on_curve(config, P, position, expected, save_to_json_folder):
+    unlock = nums_to_script([config.modulus])
+    unlock += nums_to_script(P.to_list())
+    unlock += nums_to_script([1] * (position - 1))
+
+    lock = config.test_script.is_on_curve(
+        check_constant=True,
+        clean_constant=True,
+        P=StackEllipticCurvePoint(
+            StackFiniteFieldElement(position, False, 1),
+            StackFiniteFieldElement(position - 1, False, 1),
+        ),
+    )
+    lock += generate_verify_from_list(expected) if expected != [] else Script.parse_string("OP_1")
+
+    context = Context(script=unlock + lock)
+    assert context.evaluate()
+    assert len(context.get_stack()) == 1
+    assert len(context.get_altstack()) == 0
+
+    if save_to_json_folder:
+        save_scripts(str(lock), str(unlock), save_to_json_folder, config.filename, "is point on curve")
 
 
 @pytest.mark.parametrize("verify_gradient", [True, False])
