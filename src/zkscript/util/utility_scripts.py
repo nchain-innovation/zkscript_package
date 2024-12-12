@@ -547,31 +547,22 @@ def compute_mul_sub(
     list_leave_on_top = bitmask_to_boolean_list(leave_on_top_of_stack, 3)
 
     out = move(a, bool_to_moving_function(list_rolling_options[0]))
-    if list_leave_on_top[0]:
-        out += Script.parse_string("OP_DUP")
-    if a.negate:
-        out += Script.parse_string("OP_NEGATE")
+    out += Script.parse_string("OP_DUP" if list_leave_on_top[0] else "")
+    out += Script.parse_string("OP_NEGATE" if a.negate else "")
     out += move(b.shift(1 + list_leave_on_top[0]), bool_to_moving_function(list_rolling_options[1]))
-    if list_leave_on_top[1]:
-        out += Script.parse_string("OP_TUCK")
-    if b.negate:
-        out += Script.parse_string("OP_NEGATE")
-    if permutation >> 1 & 1:
-        out += Script.parse_string("OP_MUL")
+    out += Script.parse_string("OP_TUCK" if list_leave_on_top[1] else "")
+    out += Script.parse_string("OP_NEGATE" if b.negate else "")
+    out += Script.parse_string("OP_MUL" if (permutation >> 1 & 1) else "")
     out += move(
         c.shift(2 + list_leave_on_top[0] + list_leave_on_top[1] - (permutation >> 1 & 1)),
         bool_to_moving_function(list_rolling_options[2]),
     )
-    if list_leave_on_top[2]:
-        out += Script.parse_string("OP_TUCK")
-    if c.negate:
-        out += Script.parse_string("OP_NEGATE")
+    out += Script.parse_string("OP_TUCK" if list_leave_on_top[2] else "")
+    out += Script.parse_string("OP_NEGATE" if c.negate else "")
     if permutation >> 2 & 1:
         out += roll(position=2 + list_leave_on_top[2], n_elements=1)  # roll a
-    if not (permutation >> 1 & 1):
-        out += Script.parse_string("OP_MUL")
-    if list_leave_on_top[2]:
-        out += Script.parse_string("OP_ROT")
+    out += Script.parse_string("OP_MUL" if not (permutation >> 1 & 1) else "")
+    out += Script.parse_string("OP_ROT" if list_leave_on_top[2] else "")
     out += Script.parse_string("OP_SUB")
     out += move(
         modulus.shift(
@@ -657,7 +648,7 @@ def is_zero(
 
     Args:
         stack_element (StackBaseElement): The position in the stack of the element for which the script checks
-            `stack_element` = 0.
+            `stack_element` = 0 mod `modulus`.
         rolling_option (bool): If `True`, `stack_element` is removed from the stack after the execution.
 
     Returns:
@@ -665,6 +656,36 @@ def is_zero(
     """
     out = move(stack_element, bool_to_moving_function(rolling_option))  # Move stack_element
     out += Script([OP_0, OP_EQUALVERIFY])
+
+    return out
+
+
+def is_zero_modulo(
+    clean_constant: bool,
+    modulus: StackBaseElement = StackNumber(-1, False),  # noqa: B008
+    stack_element: StackBaseElement = StackBaseElement(0),  # noqa: B008
+    rolling_option: bool = True,
+) -> Script:
+    """Verify that `stack_element` is equal to zero modulo `modulus`.
+
+    Args:
+        clean_constant (bool): If `True`, `modulus` is removed from the stack after the execution.
+        modulus (StackBaseElement | None): The position in the stack of `modulus`. Defaults to
+            `StackNumber(-1,False)`
+        stack_element (StackBaseElement): The position in the stack of the element for which the script checks
+            `stack_element` = 0 mod `modulus`.
+        rolling_option (bool): If `True`, `stack_element` is removed from the stack after the execution.
+
+    Returns:
+        The script that verifies if `stack_element` is equal to zero modulo `modulus` (or straight equality with
+        zero if `modulus = None`).
+    """
+    if modulus.position > 0:
+        check_order([modulus, stack_element])
+
+    out = move(stack_element, bool_to_moving_function(rolling_option))  # Move stack_element
+    out += move(modulus.shift(1 if modulus.position > 0 else 0), bool_to_moving_function(clean_constant))
+    out += Script([OP_MOD, OP_0, OP_EQUALVERIFY])
 
     return out
 
@@ -685,5 +706,34 @@ def is_not_zero(
     """
     out = move(stack_element, bool_to_moving_function(rolling_option))  # Move stack_element
     out += Script([OP_0NOTEQUAL, OP_VERIFY])
+
+    return out
+
+
+def is_not_zero_modulo(
+    clean_constant: bool,
+    modulus: StackBaseElement = StackNumber(-1, False),  # noqa: B008
+    stack_element: StackBaseElement = StackBaseElement(0),  # noqa: B008
+    rolling_option: bool = True,
+) -> Script:
+    """Verify that `stack_element` is not equal to zero modulo `modulus`.
+
+    Args:
+        clean_constant (bool): If `True`, `modulus` is removed from the stack after the execution.
+        modulus (StackBaseElement | None): The position in the stack of `modulus`. Defaults to
+            `StackNumber(-1,False)`
+        stack_element (StackBaseElement): The position in the stack of the element for which the script checks
+            `stack_element` != 0 mod `modulus`.
+        rolling_option (bool): If `True`, `stack_element` is removed from the stack after the execution.
+
+    Returns:
+        The script that verifies if `stack_element` is not equal to zero modulo `modulus`.
+    """
+    if modulus.position > 0:
+        check_order([modulus, stack_element])
+
+    out = move(stack_element, bool_to_moving_function(rolling_option))  # Move stack_element
+    out += move(modulus.shift(1 if modulus.position > 0 else 0), bool_to_moving_function(clean_constant))
+    out += Script([OP_MOD, OP_0NOTEQUAL, OP_VERIFY])
 
     return out

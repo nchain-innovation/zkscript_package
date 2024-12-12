@@ -13,28 +13,32 @@ class Secp256k1BasePointMultiplicationUnlockingKey:
     """Class encapsulating the data required to generate an unlocking script for base point multiplication.
 
     Attributes:
+        sig_hash_preimage (bytes): The preimage of the sighash of the transaction in which the unlocking
+            script is used.
         h (bytes): The sighash of the transaction in which the unlocking script is used.
         a (int): The purported discrete logarithm of the point A.
         A (list[int]): The purported point a * G.
     """
 
+    sig_hash_preimage: bytes
     h: bytes
     a: int
     A: list[int]
 
-    def to_unlocking_script(self, load_constants: bool = True) -> Script:
+    def to_unlocking_script(self, append_constants: bool = True) -> Script:
         """Return the unlocking script required by `self.verify_base_point_multiplication`.
 
         Args:
-            load_constants (bool): If `True`, loads the constant required by
+            append_constants (bool): If `True`, loads the constant required by
                 `self.verify_base_point_multiplication`. Defaults to `True`.
         """
         out = Script()
-        if load_constants:
+        if append_constants:
             out += nums_to_script([GROUP_ORDER_INT, Gx])
             out.append_pushdata(bytes.fromhex("0220") + Gx_bytes + bytes.fromhex("02"))
             out += nums_to_script([PRIME_INT])
 
+        out.append_pushdata(self.sig_hash_preimage)
         out.append_pushdata(encode_num(int.from_bytes(self.h)))
         out += nums_to_script([self.a])
         out += nums_to_script(self.A)
@@ -47,6 +51,8 @@ class Secp256k1PointMultiplicationUpToSignUnlockingKey:
     """Class encapsulating the data required to generate an unlocking script for point multiplication up to sign.
 
     Attributes:
+        sig_hash_preimage (bytes): The preimage of the sighash of the transaction in which the unlocking
+            script is used.
         h (bytes): The sighash of the transaction in which the unlocking script is used.
         b (int): The purported discrete logarithm of the point Q (up to sign) with respect to P: Q = ± bP.
         x_coordinate_target_times_b_inverse (int): The x coordinate of Q times b inverse: Q_x / b mod GROUP_ORDER_INT.
@@ -58,6 +64,7 @@ class Secp256k1PointMultiplicationUpToSignUnlockingKey:
         h_times_x_coordinate_target_inverse_times_G (list[int]): The point (h / Q_x) G.
     """
 
+    sig_hash_preimage: bytes
     h: bytes
     b: int
     x_coordinate_target_times_b_inverse: int
@@ -67,18 +74,19 @@ class Secp256k1PointMultiplicationUpToSignUnlockingKey:
     P: list[int]
     h_times_x_coordinate_target_inverse_times_G: list[int]  # noqa: N815
 
-    def to_unlocking_script(self, load_constants: bool = True) -> Script:
+    def to_unlocking_script(self, append_constants: bool = True) -> Script:
         """Return the unlocking script required by `self.verify_base_point_multiplication`.
 
         Args:
-            load_constants (bool): If `True`, loads the constant required by
+            append_constants (bool): If `True`, loads the constant required by
                 `self.verify_base_point_multiplication`. Defaults to `True`.
         """
         out = Script()
-        if load_constants:
+        if append_constants:
             out += nums_to_script([PRIME_INT, GROUP_ORDER_INT, Gx])
             out.append_pushdata(bytes.fromhex("0220") + Gx_bytes + bytes.fromhex("02"))
 
+        out.append_pushdata(self.sig_hash_preimage)
         out.append_pushdata(encode_num(int.from_bytes(self.h)))
         out += nums_to_script(
             [self.b, self.x_coordinate_target_times_b_inverse, self.h_times_x_coordinate_target_inverse, self.gradient]
@@ -95,6 +103,8 @@ class Secp256k1PointMultiplicationUnlockingKey:
     """Class encapsulating the data required to generate an unlocking script for point multiplication.
 
     Attributes:
+        sig_hash_preimage (bytes): The preimage of the sighash of the transaction in which the unlocking
+            script is used.
         h (bytes): The sighash of the transaction in which the unlocking script is used.
         s (list[int]): The integers such that:
             s[0] = Q_x / b mod GROUP_ORDER, s[1] = (Q + bG)_x / b mod GROUP_ORDER.
@@ -111,6 +121,7 @@ class Secp256k1PointMultiplicationUnlockingKey:
         P (list[int]): The purported point Q = bP.
     """
 
+    sig_hash_preimage: bytes
     h: bytes
     s: list[int]
     gradients: list[list[int]]
@@ -120,18 +131,19 @@ class Secp256k1PointMultiplicationUnlockingKey:
     b: int
     P: list[int]
 
-    def to_unlocking_script(self, load_constants: bool = True) -> Script:
+    def to_unlocking_script(self, append_constants: bool = True) -> Script:
         """Return the unlocking script required by `self.verify_base_point_multiplication`.
 
         Args:
-            load_constants (bool): If `True`, loads the constant required by
+            append_constants (bool): If `True`, loads the constant required by
                 `self.verify_base_point_multiplication`. Defaults to `True`.
         """
         out = Script()
-        if load_constants:
+        if append_constants:
             out += nums_to_script([PRIME_INT, GROUP_ORDER_INT, Gx])
             out.append_pushdata(bytes.fromhex("0220") + Gx_bytes + bytes.fromhex("02"))
 
+        out.append_pushdata(self.sig_hash_preimage)
         out.append_pushdata(encode_num(int.from_bytes(self.h)))
         out += nums_to_script(self.s)
         out += nums_to_script(self.gradients)

@@ -1,6 +1,6 @@
 """secp256k1 package."""
 
-from tx_engine import Script, encode_num
+from tx_engine import SIGHASH, Script, encode_num
 from tx_engine.engine.util import GROUP_ORDER_INT, PRIME_INT, Gx, Gx_bytes, Gy
 
 from src.zkscript.elliptic_curves.ec_operations_fq import EllipticCurveFq
@@ -8,6 +8,7 @@ from src.zkscript.elliptic_curves.secp256k1.util import (
     stack_elliptic_curve_point_to_compressed_pubkey,
     x_coordinate_to_r_component,
 )
+from src.zkscript.transaction_introspection.transaction_introspection import TransactionIntrospection
 from src.zkscript.types.stack_elements import (
     StackBaseElement,
     StackEllipticCurvePoint,
@@ -21,10 +22,12 @@ from src.zkscript.util.utility_functions import (
 )
 from src.zkscript.util.utility_scripts import (
     bool_to_moving_function,
+    bytes_to_unsigned,
     compute_mul_sub,
     enforce_mul_equal,
     int_sig_to_s_component,
     is_not_zero,
+    is_not_zero_modulo,
     is_zero,
     mod,
     move,
@@ -54,6 +57,63 @@ class Secp256k1:
     Gx_bytes: bytes = Gx_bytes
     MODULUS: int = PRIME_INT
     ec_fq: EllipticCurveFq = EllipticCurveFq(MODULUS, 0, 7)
+
+    @staticmethod
+    def __verify_sighash(
+        clean_constants: bool,
+        sig_hash_preimage: StackBaseElement,
+        h: StackFiniteFieldElement,
+        rolling_options: int,
+        is_equalverify: bool,
+    ) -> Script:
+        """Verify that `h` is the little-endian, minimally encoded representation of `HASH256(sig_hash_preimage)`.
+
+        Stack input:
+            - stack:    [GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, .., sig_hash_preimage, .., h, ..]
+            - altstack: []
+        Stack output:
+            - stack:    [GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, .., sig_hash_preimage, .., h, ..] or fail
+            - altstack: []
+
+        Args:
+            clean_constants (bool): clean_constants (bool): If `True`, the constants GROUP_ORDER_INT, Gx, Gx_bytes are
+                removed from the stack after execution. Defaults to `True`.
+            sig_hash_preimage (StackBaseElement): The position in the stack of `sig_hash_preimage` of the spending
+                transaction.
+            h (StackFiniteFieldElement): The position in the stack of `h`.
+            rolling_options (int): Bitmask detailing which of `h`, `sig_hash_preimage` should be removed from the stack
+                after execution.
+            is_equalverify (bool): If `True`, the script consumes the result of the equality check.
+
+        Returns:
+            The script that verifies that `h` is the little-endian, minimally encoded representation of
+            `HASH256(sig_hash_preimage)`.
+        """
+        check_order([sig_hash_preimage, h])
+        is_sig_hash_preimage_rolled, is_h_rolled = bitmask_to_boolean_list(rolling_options, 2)
+        out = Script()
+
+        # Verify that `sig_hash_preimage` is the sig_hash_preimage of the spending transaction
+        out += TransactionIntrospection.pushtx(
+            sighash_value=SIGHASH.ALL_FORKID,
+            sig_hash_preimage=sig_hash_preimage,
+            rolling_option=False,
+            clean_constants=clean_constants,
+            verify_constants=False,
+            is_checksigverify=True,
+            is_opcodeseparator=False,
+        )
+
+        # Compute little-endian, minimally encoded representation of HASH256(sig_hash_preimage)
+        out += move(sig_hash_preimage, bool_to_moving_function(is_sig_hash_preimage_rolled))
+        out += Script.parse_string("OP_HASH256")
+        out += bytes_to_unsigned(length_stack_element=32, rolling_option=True)
+
+        # Enforce condition
+        out += move(h.shift(1), bool_to_moving_function(is_h_rolled))
+        out += Script.parse_string("OP_EQUALVERIFY" if is_equalverify else "OP_EQUAL")
+
+        return out
 
     @classmethod
     def __verify_base_point_multiplication_up_to_epsilon(
@@ -225,7 +285,8 @@ class Secp256k1:
             The script that verifies A = aG.
 
         Notes:
-            This script does not verify that A is on secp256k1.
+            This script does not verify that `A` is on secp256k1.
+            This script does not verify that `h` is the sighash of the spending transaction.
         """
         check_order([h, a, A])
         is_h_rolled, is_a_rolled, is_A_rolled = bitmask_to_boolean_list(rolling_options, 3)
@@ -243,8 +304,8 @@ class Secp256k1:
         )
 
         # Enforce that a Gx != -h mod GROUP_ORDER
-        # stack in:   [GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, Gy, .., h .., a, .., A, ..]
-        # stack out:  [GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, Gy, .., h .., a, .., A, ..] or fail
+        # stack in:   [GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, .., sig_hash_preimage, .., h .., a, .., A, ..]
+        # stack out:  [GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, .., sig_hash_preimage, .., h .., a, .., A, ..] or fail
         out += compute_mul_sub(
             clean_constant=False,
             is_constant_reused=False,
@@ -257,8 +318,9 @@ class Secp256k1:
         out += is_not_zero()
 
         # Prepare A and -A
-        # stack in:  [GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, Gy, .., h .., a, .., A, ..]
-        # stack out: [GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, Gy, .., h .., a, .., A, .., [2/3], A.x, -A]
+        # stack in:  [GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, .., sig_hash_preimage, .., h .., a, .., A, ..]
+        # stack out: [GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, .., sig_hash_preimage, .., h .., a, .., A, ..,
+        #               [2/3], A.x, -A]
         out += move(A, bool_to_moving_function(is_A_rolled))
         out += Script.parse_string("OP_2 OP_MOD OP_IF OP_3 OP_2 OP_ELSE OP_2 OP_3 OP_ENDIF")  # Compute A.y % 2
         out += Script.parse_string(
@@ -268,8 +330,10 @@ class Secp256k1:
         out += Script.parse_string("OP_TUCK OP_CAT")  # Construct -A
 
         # Verify that -A = (-a - additional_constant + epsilon)G
-        # stack in:  [GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, Gy, .., h .., a, .., A, .., [2/3], A.x, -A]
-        # stack out: [GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, Gy, .., h .., a, .., A, .., [2/3], A.x], or fail
+        # stack in:  [GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, .., sig_hash_preimage, .., h .., a, .., A, ..,
+        #               [2/3], A.x, -A]
+        # stack out: [GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, .., sig_hash_preimage, .., h .., a, .., A, ..,
+        #               [2/3], A.x], or fail
         out += cls.__verify_base_point_multiplication_up_to_epsilon(
             check_constants=False,
             clean_constants=False,
@@ -280,9 +344,9 @@ class Secp256k1:
         )
 
         # Verify that A = (a + additional_constant + epsilon)G
-        # stack in:  [GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, Gy, .., h .., a, .., A, ..,
+        # stack in:  [GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, .., sig_hash_preimage, .., h .., a, .., A, ..,
         #               [2/3], A.x]
-        # stack out: [GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, Gy, .., h .., a, .., A, ..]
+        # stack out: [GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, .., sig_hash_preimage, .., h .., a, .., A, ..]
         out += Script.parse_string("OP_CAT")  # Construct A
         out += cls.__verify_base_point_multiplication_up_to_epsilon(
             check_constants=False,
@@ -301,13 +365,14 @@ class Secp256k1:
         check_constants: bool = False,
         clean_constants: bool = False,
         additional_constant: int = 0,
+        sig_hash_preimage: StackBaseElement = StackBaseElement(4),  # noqa: B008
         h: StackFiniteFieldElement = StackFiniteFieldElement(3, False, 1),  # noqa: B008
         a: StackFiniteFieldElement = StackFiniteFieldElement(2, False, 1),  # noqa: B008
         A: StackEllipticCurvePoint = StackEllipticCurvePoint(  # noqa: B008, N803
             StackFiniteFieldElement(1, False, 1),  # noqa: B008
             StackFiniteFieldElement(0, False, 1),  # noqa: B008
         ),
-        rolling_options: int = 7,
+        rolling_options: int = 15,
     ) -> Script:
         """Verify that A = (a+additional_constant)G.
 
@@ -329,6 +394,8 @@ class Secp256k1:
             clean_constants (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             additional_constant (int): The additional constant for which the script verifies
                 A = (± a + additional_constant + epsilon)G. Defaults to `0`.
+            sig_hash_preimage (StackBaseElement): The position in the stack of `sig_hash_preimage` of the spending
+                transaction. Defaults to `StackBaseElement(4)`
             h (StackFiniteFieldElement): The position of the sighash of the transaction in which the script is executed.
                 Defaults to `StackFiniteFieldElement(3, False, 1)`.
             a (StackFiniteFieldElement): The position of the constant `a` for which the script verifies
@@ -339,13 +406,14 @@ class Secp256k1:
                     StackFiniteFieldElement(1, False, 1),
                     StackFiniteFieldElement(0, False, 1),
                 ),
-            rolling_options (int): Bitmask detailing which elements among `h`, `a`, and `A` should be removed
-                from the stack after execution.
+            rolling_options (int): Bitmask detailing which elements among `sig_hash_preimage`, `h`, `a`, and `A`
+                should be removed from the stack after execution.
 
         Returns:
             The script that verifies A = aG.
         """
-        check_order([h, a, A])
+        check_order([sig_hash_preimage, h, a, A])
+        is_sig_hash_preimage_rolled, is_h_rolled, is_a_rolled, is_A_rolled = bitmask_to_boolean_list(rolling_options, 4)
 
         out = (
             verify_bottom_constants(
@@ -370,12 +438,21 @@ class Secp256k1:
 
         out += cls.verify_base_point_multiplication_unchecked(
             check_constants=False,
-            clean_constants=clean_constants,
+            clean_constants=False,
             additional_constant=additional_constant,
             h=h,
             a=a,
             A=A,
-            rolling_options=rolling_options,
+            rolling_options=boolean_list_to_bitmask([False, is_a_rolled, is_A_rolled]),
+        )
+
+        # Verify that h is the sighash and leave result on the stack
+        out += cls.__verify_sighash(
+            clean_constants=clean_constants,
+            sig_hash_preimage=sig_hash_preimage.shift(-is_a_rolled - 2 * is_A_rolled),
+            h=h.shift(-is_a_rolled - 2 * is_A_rolled),
+            rolling_options=boolean_list_to_bitmask([is_sig_hash_preimage_rolled, is_h_rolled]),
+            is_equalverify=False,
         )
 
         return out
@@ -385,6 +462,7 @@ class Secp256k1:
         cls,
         check_constants: bool = False,
         clean_constants: bool = False,
+        sig_hash_preimage: StackBaseElement = StackBaseElement(11),  # noqa: B008
         h: StackFiniteFieldElement = StackFiniteFieldElement(10, False, 1),  # noqa: B008
         b: StackFiniteFieldElement = StackFiniteFieldElement(9, False, 1),  # noqa: B008
         x_coordinate_target_times_b_inverse: StackFiniteFieldElement = StackFiniteFieldElement(8, False, 1),  # noqa: B008
@@ -402,7 +480,7 @@ class Secp256k1:
             StackFiniteFieldElement(1, False, 1),  # noqa: B008
             StackFiniteFieldElement(0, False, 1),  # noqa: B008
         ),
-        rolling_options: int = 511,
+        rolling_options: int = 2**10 - 1,
     ) -> Script:
         """Verify Q = ± b * P.
 
@@ -420,6 +498,8 @@ class Secp256k1:
         Args:
             check_constants (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constants (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
+            sig_hash_preimage (StackBaseElement): The position in the stack of `sig_hash_preimage` of the spending
+                transaction. Defaults to `StackBaseElement(11)`
             h (StackFiniteFieldElement): The position of the sighash of the transaction in which the script is executed.
                 Defaults to `StackFiniteFieldElement(10, False, 1)`.
             b (StackFiniteFieldElement): The position of the constant `b` for which the script verifies
@@ -457,7 +537,9 @@ class Secp256k1:
         Returns:
             The script that verifies Q = ± b * P.
 
-        Note: this function removes MODULUS from the bottom of the stack.
+        Note:
+            This function removes MODULUS from the bottom of the stack.
+            This function does not handle the case in which b = 0 mod n.
         """
         check_order(
             [
@@ -471,7 +553,7 @@ class Secp256k1:
                 h_times_x_coordinate_target_inverse_times_G,
             ]
         )
-        list_rolling_options = bitmask_to_boolean_list(rolling_options, 8)
+        list_rolling_options = bitmask_to_boolean_list(rolling_options, 9)
 
         out = (
             verify_bottom_constants(
@@ -494,6 +576,12 @@ class Secp256k1:
         out += Script.parse_string(" ".join(["OP_CAT"] * i))
         out += is_zero()
 
+        # Verify that MODULUS - GROUP_ORDER < Q_x < GROUP_ORDER
+        out += move(Q.x, pick)  # Pick Q_x
+        out += pick(position=-1, n_elements=2)  # Move MODULUS, GROUP_ORDER
+        out += Script.parse_string("OP_TUCK OP_SUB OP_SWAP")  # Duplicate GROUP_ORDER, compute MODULUS - GROUP_ORDER
+        out += Script.parse_string("OP_WITHIN OP_VERIFY")
+
         # Compute P - h_times_x_coordinate_target_inverse_times_G
         # stack in:     [MODULUS, GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, .., h, .., b,
         #                   x_coordinate_target_times_b_inverse, .., h_times_x_coordinate_target_inverse, .., gradient,
@@ -510,9 +598,12 @@ class Secp256k1:
             gradient=gradient,
             P=P,
             Q=h_times_x_coordinate_target_inverse_times_G.set_negate(True),
-            rolling_options=boolean_list_to_bitmask([list_rolling_options[4], list_rolling_options[6], False]),
+            rolling_options=boolean_list_to_bitmask([list_rolling_options[5], list_rolling_options[7], False]),
         )
         out += Script.parse_string("OP_TOALTSTACK OP_TOALTSTACK")
+
+        # Verify that b != 0 mod n
+        out += is_not_zero_modulo(clean_constant=False, stack_element=b, rolling_option=False)
 
         # Verify x_coordinate_target_times_b_inverse * b = Q.x mod GROUP_ORDER
         # stack in:     [GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, .., h, .., b,
@@ -524,17 +615,17 @@ class Secp256k1:
         #                       .., Q, .. P, .., h_times_x_coordinate_target_inverse_times_G, .., Q.x, GROUP_ORDER]
         # altstack out: [(P - h_times_x_coordinate_target_inverse_times_G), x_coordinate_target_times_b_inverse, Q.x]
         out += move(
-            x_coordinate_target_times_b_inverse.shift(-list_rolling_options[4] - 2 * list_rolling_options[6]),
-            bool_to_moving_function(list_rolling_options[2]),
+            x_coordinate_target_times_b_inverse.shift(-list_rolling_options[5] - 2 * list_rolling_options[7]),
+            bool_to_moving_function(list_rolling_options[3]),
         )  # Move x_coordinate_target_times_b_inverse
         out += Script.parse_string("OP_DUP OP_TOALTSTACK")
         out += move(
-            b.shift(-list_rolling_options[2] - list_rolling_options[4] - 2 * list_rolling_options[6] + 1),
-            bool_to_moving_function(list_rolling_options[1]),
+            b.shift(-list_rolling_options[3] - list_rolling_options[5] - 2 * list_rolling_options[7] + 1),
+            bool_to_moving_function(list_rolling_options[2]),
         )  # Move b
         out += Script.parse_string("OP_MUL")  # Compute x_coordinate_target_times_b_inverse * b
         out += move(
-            Q.x.shift(-2 * list_rolling_options[6] + 1), bool_to_moving_function(list_rolling_options[5])
+            Q.x.shift(-2 * list_rolling_options[7] + 1), bool_to_moving_function(list_rolling_options[6])
         )  # Move Q.x
         out += Script.parse_string(
             "OP_DUP OP_TOALTSTACK OP_TUCK OP_SUB"
@@ -555,18 +646,18 @@ class Secp256k1:
         out += Script.parse_string("OP_SWAP")
         out += move(
             h.shift(
-                -list_rolling_options[1]
-                - list_rolling_options[2]
-                - list_rolling_options[4]
+                -list_rolling_options[2]
+                - list_rolling_options[3]
                 - list_rolling_options[5]
-                - 2 * list_rolling_options[6]
+                - list_rolling_options[6]
+                - 2 * list_rolling_options[7]
                 + 2
             ),
             pick,
         )  # Pick h
         out += move(
             h_times_x_coordinate_target_inverse.shift(
-                -list_rolling_options[4] - list_rolling_options[5] - 2 * list_rolling_options[6] + 3
+                -list_rolling_options[5] - list_rolling_options[6] - 2 * list_rolling_options[7] + 3
             ),
             pick,
         )  # Pick h_times_x_coordinate_target_inverse
@@ -629,25 +720,48 @@ class Secp256k1:
         # altstack out: []
         out += cls.verify_base_point_multiplication_unchecked(
             check_constants=False,
-            clean_constants=clean_constants,
+            clean_constants=False,
             h=h.shift(
-                -list_rolling_options[1]
-                - list_rolling_options[2]
-                - list_rolling_options[4]
+                -list_rolling_options[2]
+                - list_rolling_options[3]
                 - list_rolling_options[5]
-                - 2 * list_rolling_options[6]
+                - list_rolling_options[6]
+                - 2 * list_rolling_options[7]
             ),
             a=h_times_x_coordinate_target_inverse.shift(
-                -list_rolling_options[4] - list_rolling_options[5] - 2 * list_rolling_options[6]
+                -list_rolling_options[5] - list_rolling_options[6] - 2 * list_rolling_options[7]
             ),
             A=h_times_x_coordinate_target_inverse_times_G,
-            rolling_options=boolean_list_to_bitmask(
-                [list_rolling_options[0], list_rolling_options[3], list_rolling_options[7]]
-            ),
+            rolling_options=boolean_list_to_bitmask([False, list_rolling_options[4], list_rolling_options[8]]),
         )
 
-        if list_rolling_options[5]:
-            out += move(Q.y.shift(-2 * list_rolling_options[6] - 2 * list_rolling_options[7]), roll)
+        # Verify that h is the sighash and leave result on the stack
+        out += cls.__verify_sighash(
+            clean_constants=clean_constants,
+            sig_hash_preimage=sig_hash_preimage.shift(
+                -list_rolling_options[2]
+                - list_rolling_options[3]
+                - list_rolling_options[4]
+                - list_rolling_options[5]
+                - list_rolling_options[6]
+                - 2 * list_rolling_options[7]
+                - 2 * list_rolling_options[8]
+            ),
+            h=h.shift(
+                -list_rolling_options[2]
+                - list_rolling_options[3]
+                - list_rolling_options[4]
+                - list_rolling_options[5]
+                - list_rolling_options[6]
+                - 2 * list_rolling_options[7]
+                - 2 * list_rolling_options[8]
+            ),
+            rolling_options=boolean_list_to_bitmask([list_rolling_options[0], list_rolling_options[1]]),
+            is_equalverify=False,
+        )
+
+        if list_rolling_options[6]:
+            out += move(Q.y.shift(1 - 2 * list_rolling_options[7] - 2 * list_rolling_options[8]), roll)
             out += Script.parse_string("OP_DROP")
 
         return out
@@ -657,6 +771,7 @@ class Secp256k1:
         cls,
         check_constants: bool = False,
         clean_constants: bool = False,
+        sig_hash_preimage: StackBaseElement = StackBaseElement(19),  # noqa: B008
         h: StackFiniteFieldElement = StackFiniteFieldElement(18, False, 1),  # noqa: B008
         s: tuple[StackFiniteFieldElement] = (
             StackFiniteFieldElement(17, False, 1),
@@ -694,7 +809,7 @@ class Secp256k1:
             StackFiniteFieldElement(1, False, 1),  # noqa: B008
             StackFiniteFieldElement(0, False, 1),  # noqa: B008
         ),
-        rolling_options: int = (2 << 13) - 1,
+        rolling_options: int = (2 << 14) - 1,
     ) -> Script:
         """Verify Q = bP.
 
@@ -710,6 +825,8 @@ class Secp256k1:
         Args:
             check_constants (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constants (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
+            sig_hash_preimage (StackBaseElement): The position in the stack of `sig_hash_preimage` of the spending
+                transaction. Defaults to `StackBaseElement(19)`
             h (StackFiniteFieldElement): The position of the sighash of the transaction in which the script is executed.
                 Defaults to `StackFiniteFieldElement(18, False, 1)`.
             s (tuple[StackFiniteFieldElement]): The position in the stack of:
@@ -775,6 +892,8 @@ class Secp256k1:
 
         Notes:
             This script removes MODULUS from the bottom of the stack after execution.
+            This script does not handle the case b = 0 mod GROUP_ORDER.
+            This script only handles the case MODULUS - GROUP_ORDER < Q_x, (Q + bG)_x < GROUP_ORDER.
         """
         check_order([h, *s, *gradients, *d, *D, Q, b, P])
         list_rolling_options = bitmask_to_boolean_list(rolling_options, 14)
@@ -800,8 +919,17 @@ class Secp256k1:
         out += Script.parse_string(" ".join(["OP_CAT"] * i))
         out += is_zero()
 
-        # Verify that b != 0
-        out += is_not_zero(stack_element=b, rolling_option=False)
+        # Verify that b != 0 mod n
+        out += is_not_zero_modulo(
+            clean_constant=False, modulus=StackNumber(-2, False), stack_element=b, rolling_option=False
+        )
+
+        # Verify that MODULUS - GROUP_ORDER < Q_x < GROUP_ORDER
+        out += move(Q.x, pick)  # Pick Q_x
+        out += pick(position=-1, n_elements=2)  # Move MODULUS, GROUP_ORDER
+        out += Script.parse_string(
+            "OP_TUCK OP_SUB OP_SWAP OP_WITHIN OP_VERIFY"
+        )  # Verify MODULUS - GROUP_ORDER < Q_x < GROUP_ORDER
 
         # compute P - D[0]
         # stack in:  [MODULUS, GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, .., h, s[:],
@@ -817,7 +945,7 @@ class Secp256k1:
             gradient=gradients[0],
             P=D[0].set_negate(True),
             Q=P,
-            rolling_options=boolean_list_to_bitmask([list_rolling_options[3], False, False]),
+            rolling_options=boolean_list_to_bitmask([list_rolling_options[4], False, False]),
         )
         out += Script.parse_string("OP_TOALTSTACK OP_TOALTSTACK")
 
@@ -835,7 +963,7 @@ class Secp256k1:
             gradient=gradients[1],
             P=D[1].set_negate(True),
             Q=P,
-            rolling_options=boolean_list_to_bitmask([list_rolling_options[4], False, list_rolling_options[13]]),
+            rolling_options=boolean_list_to_bitmask([list_rolling_options[5], False, list_rolling_options[14]]),
         )
         out += Script.parse_string("OP_TOALTSTACK OP_TOALTSTACK")
 
@@ -843,19 +971,33 @@ class Secp256k1:
         # stack in:  [MODULUS, GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, .., h, s[:],
         #               gradients[:], d[:], D[:], Q, b, P]
         # stack out: [GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, .., h, s[:],
-        #               gradients[:], d[:], D[:], Q, b, P] or fail
-        # altstack out: [P - D[0], P - D[1], (Q + D[2])_x]
+        #               gradients[:], d[:], D[:], Q, b, P, (Q + D[2])_x] or fail
+        # altstack out: [P - D[0], P - D[1]]
         out += cls.ec_fq.point_algebraic_addition(
             take_modulo=True,
             check_constant=False,
-            clean_constant=True,
+            clean_constant=False,
             verify_gradient=True,
-            gradient=gradients[2].shift(-2 * list_rolling_options[13]),
-            P=D[2].shift(-2 * list_rolling_options[13]),
-            Q=Q.shift(-2 * list_rolling_options[13]),
-            rolling_options=boolean_list_to_bitmask([list_rolling_options[5], False, False]),
+            gradient=gradients[2].shift(-2 * list_rolling_options[14]),
+            P=D[2].shift(-2 * list_rolling_options[14]),
+            Q=Q.shift(-2 * list_rolling_options[14]),
+            rolling_options=boolean_list_to_bitmask([list_rolling_options[6], False, False]),
         )
-        out += Script.parse_string("OP_DROP OP_TOALTSTACK")
+        out += Script.parse_string("OP_DROP")
+
+        # Verify MODULUS - GROUP_ORDER < (Q + D[2])_x < GROUP_ORDER
+        # stack in:     [GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, .., h, s[:],
+        #               gradients[:], d[:], D[:], Q, b, P, (Q + D[2])_x]
+        # altstack in:  [P - D[0], P - D[1]]
+        # stack out:    [GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, .., h, s[:],
+        #               gradients[:], d[:], D[:], Q, b, P] or fail
+        # altstack out: [P - D[0], P - D[1], (Q + D[2])_x]
+        out += pick(position=0, n_elements=1)  # Duplicate (Q + D[2])_x
+        out += roll(position=-1, n_elements=1)  # Roll MODULUS
+        out += pick(position=-1, n_elements=1)  # Pick GROUP_ORDER
+        out += Script.parse_string(
+            "OP_TUCK OP_SUB OP_SWAP OP_WITHIN OP_VERIFY OP_TOALTSTACK"
+        )  # Verify MODULUS - GROUP_ORDER < (Q + D[2])_x < GROUP_ORDER and place (Q + D[2])_x on the altstack
 
         # verify D[0] = d[0] * G
         # stack in:  [GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, .., h, s[:],
@@ -867,14 +1009,14 @@ class Secp256k1:
             check_constants=False,
             clean_constants=False,
             h=h.shift(
-                -list_rolling_options[3]
-                - list_rolling_options[4]
+                -list_rolling_options[4]
                 - list_rolling_options[5]
-                - 2 * list_rolling_options[13]
+                - list_rolling_options[6]
+                - 2 * list_rolling_options[14]
             ),
-            a=d[0].shift(-2 * list_rolling_options[13]),
-            A=D[0].shift(-2 * list_rolling_options[13]),
-            rolling_options=boolean_list_to_bitmask([False, False, list_rolling_options[8]]),
+            a=d[0].shift(-2 * list_rolling_options[14]),
+            A=D[0].shift(-2 * list_rolling_options[14]),
+            rolling_options=boolean_list_to_bitmask([False, False, list_rolling_options[9]]),
         )
 
         # verify D[1] = (d[1]-1)* G
@@ -888,15 +1030,15 @@ class Secp256k1:
             clean_constants=False,
             additional_constant=-1,
             h=h.shift(
-                -list_rolling_options[3]
-                - list_rolling_options[4]
+                -list_rolling_options[4]
                 - list_rolling_options[5]
-                - 2 * list_rolling_options[8]
-                - 2 * list_rolling_options[13]
+                - list_rolling_options[6]
+                - 2 * list_rolling_options[9]
+                - 2 * list_rolling_options[14]
             ),
-            a=d[1].shift(-2 * list_rolling_options[8] - 2 * list_rolling_options[13]),
-            A=D[1].shift(-2 * list_rolling_options[13]),
-            rolling_options=boolean_list_to_bitmask([False, False, list_rolling_options[9]]),
+            a=d[1].shift(-2 * list_rolling_options[9] - 2 * list_rolling_options[14]),
+            A=D[1].shift(-2 * list_rolling_options[14]),
+            rolling_options=boolean_list_to_bitmask([False, False, list_rolling_options[10]]),
         )
 
         # verify D[2] = b * G
@@ -906,23 +1048,23 @@ class Secp256k1:
         #               gradients[:], d[:], D[:], Q, b, P] or fail
         # altstack out: [P - D[0], P - D[1], (Q + D[2])_x]
         out += move(
-            D[2].shift(-2 * list_rolling_options[13]), bool_to_moving_function(list_rolling_options[10])
+            D[2].shift(-2 * list_rolling_options[14]), bool_to_moving_function(list_rolling_options[11])
         )  # Move D[2]
         out += cls.verify_base_point_multiplication_unchecked(
             check_constants=False,
             clean_constants=False,
             additional_constant=0,
             h=h.shift(
-                -list_rolling_options[3]
-                - list_rolling_options[4]
+                -list_rolling_options[4]
                 - list_rolling_options[5]
-                - 2 * list_rolling_options[8]
+                - list_rolling_options[6]
                 - 2 * list_rolling_options[9]
                 - 2 * list_rolling_options[10]
-                - 2 * list_rolling_options[13]
+                - 2 * list_rolling_options[11]
+                - 2 * list_rolling_options[14]
                 + 2
             ),
-            a=b.shift(-2 * list_rolling_options[13] + 2),
+            a=b.shift(-2 * list_rolling_options[14] + 2),
             rolling_options=boolean_list_to_bitmask([False, False, True]),
         )
 
@@ -934,25 +1076,26 @@ class Secp256k1:
         # altstack out: [P - D[0], P - D[1]]
         out += Script.parse_string("OP_FROMALTSTACK")
         out += enforce_mul_equal(
+            clean_constant=False,
             is_constant_reused=False,
             a=h.shift(
-                -list_rolling_options[3]
-                - list_rolling_options[4]
+                -list_rolling_options[4]
                 - list_rolling_options[5]
-                - 2 * list_rolling_options[8]
+                - list_rolling_options[6]
                 - 2 * list_rolling_options[9]
                 - 2 * list_rolling_options[10]
-                - 2 * list_rolling_options[13]
+                - 2 * list_rolling_options[11]
+                - 2 * list_rolling_options[14]
                 + 1
             ),
             b=d[1].shift(
-                -2 * list_rolling_options[8]
-                - 2 * list_rolling_options[9]
+                -2 * list_rolling_options[9]
                 - 2 * list_rolling_options[10]
-                - 2 * list_rolling_options[13]
+                - 2 * list_rolling_options[11]
+                - 2 * list_rolling_options[14]
                 + 1
             ),
-            rolling_options=boolean_list_to_bitmask([False, list_rolling_options[7], False]),
+            rolling_options=boolean_list_to_bitmask([False, list_rolling_options[8], False]),
             leave_on_top_of_stack=0,
             equation_to_check=(1 << 0),
         )
@@ -964,20 +1107,21 @@ class Secp256k1:
         #               gradients[:], d[:], D[:], Q, b, P, (Q + D[2])_x, s[0]] or fail
         # altstack out: [P - D[0], P - D[1]]
         out += enforce_mul_equal(
+            clean_constant=False,
             is_constant_reused=False,
             a=s[1].shift(
-                -list_rolling_options[3]
-                - list_rolling_options[4]
+                -list_rolling_options[4]
                 - list_rolling_options[5]
-                - list_rolling_options[7]
-                - 2 * list_rolling_options[8]
+                - list_rolling_options[6]
+                - list_rolling_options[8]
                 - 2 * list_rolling_options[9]
                 - 2 * list_rolling_options[10]
-                - 2 * list_rolling_options[13]
+                - 2 * list_rolling_options[11]
+                - 2 * list_rolling_options[14]
                 + 1
             ),
-            b=b.shift(-2 * list_rolling_options[13] + 1),
-            rolling_options=boolean_list_to_bitmask([list_rolling_options[2], False, False]),
+            b=b.shift(-2 * list_rolling_options[14] + 1),
+            rolling_options=boolean_list_to_bitmask([list_rolling_options[3], False, False]),
             leave_on_top_of_stack=1,
             equation_to_check=(1 << 1),
         )
@@ -1009,27 +1153,25 @@ class Secp256k1:
             clean_constant=False,
             is_constant_reused=False,
             a=h.shift(
-                -list_rolling_options[2]
-                - list_rolling_options[3]
+                -list_rolling_options[3]
                 - list_rolling_options[4]
                 - list_rolling_options[5]
-                - list_rolling_options[7]
-                - 2 * list_rolling_options[8]
+                - list_rolling_options[6]
+                - list_rolling_options[8]
                 - 2 * list_rolling_options[9]
                 - 2 * list_rolling_options[10]
-                - 2 * list_rolling_options[13]
+                - 2 * list_rolling_options[11]
+                - 2 * list_rolling_options[14]
             ),
             b=d[0].shift(
-                -list_rolling_options[7]
-                - 2 * list_rolling_options[8]
+                -list_rolling_options[8]
                 - 2 * list_rolling_options[9]
                 - 2 * list_rolling_options[10]
-                - 2 * list_rolling_options[13]
+                - 2 * list_rolling_options[11]
+                - 2 * list_rolling_options[14]
             ),
-            c=Q.x.shift(-2 * list_rolling_options[13]),
-            rolling_options=boolean_list_to_bitmask(
-                [list_rolling_options[0], list_rolling_options[6], list_rolling_options[11]]
-            ),
+            c=Q.x.shift(-2 * list_rolling_options[14]),
+            rolling_options=boolean_list_to_bitmask([False, list_rolling_options[7], list_rolling_options[12]]),
             leave_on_top_of_stack=4,
             equation_to_check=(1 << 0),
         )
@@ -1045,21 +1187,21 @@ class Secp256k1:
             clean_constant=False,
             is_constant_reused=False,
             a=s[0].shift(
-                -list_rolling_options[2]
-                - list_rolling_options[3]
+                -list_rolling_options[3]
                 - list_rolling_options[4]
                 - list_rolling_options[5]
                 - list_rolling_options[6]
                 - list_rolling_options[7]
-                - 2 * list_rolling_options[8]
+                - list_rolling_options[8]
                 - 2 * list_rolling_options[9]
                 - 2 * list_rolling_options[10]
-                - list_rolling_options[11]
-                - 2 * list_rolling_options[13]
+                - 2 * list_rolling_options[11]
+                - list_rolling_options[12]
+                - 2 * list_rolling_options[14]
                 + 1
             ),
-            b=b.shift(-2 * list_rolling_options[13] + 1),
-            rolling_options=boolean_list_to_bitmask([list_rolling_options[2], list_rolling_options[12], False]),
+            b=b.shift(-2 * list_rolling_options[14] + 1),
+            rolling_options=boolean_list_to_bitmask([list_rolling_options[3], list_rolling_options[13], False]),
             leave_on_top_of_stack=1,
             equation_to_check=(1 << 1),
         )
@@ -1080,14 +1222,48 @@ class Secp256k1:
         out += stack_elliptic_curve_point_to_compressed_pubkey()
         out += Script.parse_string("OP_CHECKSIGVERIFY")
 
-        if list_rolling_options[11]:
+        # Verify that h is the sighash and leave result on the stack
+        out += cls.__verify_sighash(
+            clean_constants=clean_constants,
+            sig_hash_preimage=sig_hash_preimage.shift(
+                -list_rolling_options[2]
+                - list_rolling_options[3]
+                - list_rolling_options[4]
+                - list_rolling_options[5]
+                - list_rolling_options[6]
+                - list_rolling_options[7]
+                - list_rolling_options[8]
+                - 2 * list_rolling_options[9]
+                - 2 * list_rolling_options[10]
+                - 2 * list_rolling_options[11]
+                - list_rolling_options[12]
+                - list_rolling_options[13]
+                - 2 * list_rolling_options[14]
+            ),
+            h=h.shift(
+                -list_rolling_options[2]
+                - list_rolling_options[3]
+                - list_rolling_options[4]
+                - list_rolling_options[5]
+                - list_rolling_options[6]
+                - list_rolling_options[7]
+                - list_rolling_options[8]
+                - 2 * list_rolling_options[9]
+                - 2 * list_rolling_options[10]
+                - 2 * list_rolling_options[11]
+                - list_rolling_options[12]
+                - list_rolling_options[13]
+                - 2 * list_rolling_options[14]
+            ),
+            rolling_options=boolean_list_to_bitmask([list_rolling_options[0], list_rolling_options[1]]),
+            is_equalverify=False,
+        )
+
+        if list_rolling_options[12]:
             out += move(
-                Q.y.shift(-list_rolling_options[12] - 2 * list_rolling_options[13]),
-                bool_to_moving_function(list_rolling_options[12]),
+                Q.y.shift(1 - list_rolling_options[13] - 2 * list_rolling_options[14]),
+                bool_to_moving_function(list_rolling_options[13]),
             )  # Move Q.y
             out += Script.parse_string("OP_DROP")
-        if clean_constants:
-            out += roll(position=-1, n_elements=3)  # Roll the constants
-            out += Script.parse_string("OP_2DROP OP_DROP")
 
         return out

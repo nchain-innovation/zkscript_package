@@ -88,9 +88,10 @@ def test_verify_base_point(a, A):  # noqa: N803
         True,
         True,
     )
-    lock += Script.parse_string("OP_1")
 
-    unlocking_key = Secp256k1BasePointMultiplicationUnlockingKey(h=dummy_sighash, a=a, A=A.to_list())
+    unlocking_key = Secp256k1BasePointMultiplicationUnlockingKey(
+        sig_hash_preimage=dummy_pre_sig_hash, h=dummy_sighash, a=a, A=A.to_list()
+    )
     unlock = unlocking_key.to_unlocking_script()
 
     context = Context(unlock + lock, z=dummy_sighash)
@@ -117,9 +118,9 @@ def test_verify_point_multiplication_up_to_sign(b, P, negate):  # noqa: N803
         True,
         True,
     )
-    lock += Script.parse_string("OP_1")
 
     unlocking_key = Secp256k1PointMultiplicationUpToSignUnlockingKey(
+        sig_hash_preimage=dummy_pre_sig_hash,
         h=dummy_sighash,
         b=b,
         x_coordinate_target_times_b_inverse=x_coordinate_target_times_b_inverse.to_list()[0],
@@ -162,9 +163,9 @@ def test_verify_point_multiplication(b, P):  # noqa: N803
         True,
         True,
     )
-    lock += Script.parse_string("OP_1")
 
     unlocking_key = Secp256k1PointMultiplicationUnlockingKey(
+        sig_hash_preimage=dummy_pre_sig_hash,
         h=dummy_sighash,
         s=[el.to_list()[0] for el in s],
         gradients=[el.to_list()[0] for el in gradients],
