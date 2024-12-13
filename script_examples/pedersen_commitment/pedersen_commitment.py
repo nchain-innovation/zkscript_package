@@ -55,11 +55,11 @@ class PedersenCommitmentSecp256k1:
         R = StackEllipticCurvePoint(StackFiniteFieldElement(4, False, 1), StackFiniteFieldElement(3, False, 1))
         out = Script()
 
-        # Verify Q != R
+        # Verify Q != ± R
         out += move(Q, pick)  # Move Q
-        out += Script.parse_string("OP_2DUP OP_CAT")
+        out += Script.parse_string("OP_OVER")
         out += move(R.shift(3), pick)  # Move R
-        out += Script.parse_string("OP_2DUP OP_CAT")
+        out += Script.parse_string("OP_OVER")
         out += roll(position=3, n_elements=1)
         out += Script.parse_string("OP_EQUAL OP_NOT OP_VERIFY")
 
