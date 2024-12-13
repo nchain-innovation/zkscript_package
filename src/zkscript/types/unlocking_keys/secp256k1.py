@@ -83,11 +83,14 @@ class Secp256k1PointMultiplicationUpToSignUnlockingKey:
         """
         out = Script()
         if append_constants:
-            out += nums_to_script([PRIME_INT, GROUP_ORDER_INT, Gx])
+            out += nums_to_script([GROUP_ORDER_INT, Gx])
             out.append_pushdata(bytes.fromhex("0220") + Gx_bytes + bytes.fromhex("02"))
+            out += nums_to_script([PRIME_INT])
 
-        out.append_pushdata(self.sig_hash_preimage)
-        out.append_pushdata(encode_num(int.from_bytes(self.h)))
+        if self.sig_hash_preimage != b"":
+            out.append_pushdata(self.sig_hash_preimage)
+        if self.h != b"":
+            out.append_pushdata(encode_num(int.from_bytes(self.h)))
         out += nums_to_script(
             [self.b, self.x_coordinate_target_times_b_inverse, self.h_times_x_coordinate_target_inverse, self.gradient]
         )
@@ -140,11 +143,14 @@ class Secp256k1PointMultiplicationUnlockingKey:
         """
         out = Script()
         if append_constants:
-            out += nums_to_script([PRIME_INT, GROUP_ORDER_INT, Gx])
+            out += nums_to_script([GROUP_ORDER_INT, Gx])
             out.append_pushdata(bytes.fromhex("0220") + Gx_bytes + bytes.fromhex("02"))
+            out += nums_to_script([PRIME_INT])
 
-        out.append_pushdata(self.sig_hash_preimage)
-        out.append_pushdata(encode_num(int.from_bytes(self.h)))
+        if self.sig_hash_preimage != b"":
+            out.append_pushdata(self.sig_hash_preimage)
+        if self.h != b"":
+            out.append_pushdata(encode_num(int.from_bytes(self.h)))
         out += nums_to_script(self.s)
         out += nums_to_script(self.gradients)
         out += nums_to_script(self.d)
