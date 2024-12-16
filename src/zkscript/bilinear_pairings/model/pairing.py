@@ -27,7 +27,7 @@ class Pairing:
             - altstack: []
 
         Stack output:
-            - stack:    [q, ..., lambdas if not verify_gradients, e(P,Q)],
+            - stack:    [q, ..., gradients if not verify_gradients, e(P,Q)],
             - altstack: []
 
         Args:
@@ -146,8 +146,8 @@ class Pairing:
             - altstack: []
 
         Stack output:
-            - stack:    [q, ..., non_verified_lambdas, e(P1,Q1) * e(P2,Q2) * e(P3,Q3)], non_verified_lambdas represents
-                all the gradients that are not verified by the script. Verified gradients are consumed.
+            - stack:    [q, ..., non_verified_gradients, e(P1,Q1) * e(P2,Q2) * e(P3,Q3)], `non_verified_gradients`
+                represents all the gradients that are not verified by the script. Verified gradients are consumed.
             - altstack: []
 
         Args:

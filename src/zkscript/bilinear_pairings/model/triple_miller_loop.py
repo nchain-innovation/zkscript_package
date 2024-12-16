@@ -404,7 +404,6 @@ class TripleMillerLoop:
             rolling_options=boolean_list_to_bitmask([verify_gradients[0], True]),
         )  # Compute 2 * T1
         verify_gradient_shift = self.EXTENSION_DEGREE if verify_gradients[0] else 0
-        # out += Script.parse_string("OP_0 OP_1 OP_EQUALVERIFY")
         # stack in:     [gradient_(2* T1 ± Q1), gradient_(2* T2 ± Q2), gradient_(2* T3 ± Q3),
         #                   gradient_(2*T2), gradient_(2*T3), P1, P2, P3, Q1, Q2, Q3, T2, T3, 2*T1]
         # altstack in:  [{f_i^2}*(ev_(l_(T1,T1))(P1)*ev_(l_(T2,T2))(P2)) *(ev_(l_(T3,T3))(P3)*ev_(l_(2*T1,± Q1))(P1)) * (ev_(l_(2*T2,± Q2))(P2)*ev_(l_(2*T3,± Q3))(P3))]  # noqa: E501
@@ -490,7 +489,6 @@ class TripleMillerLoop:
             Q=T[2],
             rolling_options=boolean_list_to_bitmask([verify_gradients[2], False, True]),
         )
-        # out += Script.parse_string("OP_0 OP_1 OP_EQUALVERIFY")
         # stack in:     [..., P1, P2, P3, Q1, Q2, Q3, (2*T1 ± Q1), (2*T2 ± Q2), (2*T3 ± Q3)]
         # altstack in:  [{f_i^2}*(ev_(l_(T1,T1))(P1)*ev_(l_(T2,T2))(P2)) *(ev_(l_(T3,T3))(P3)*ev_(l_(2*T1,± Q1))(P1)) * (ev_(l_(2*T2,± Q2))(P2)*ev_(l_(2*T3,± Q3))(P3))]  # noqa: E501
         # stack out:    [..., P1, P2, P3, Q1, Q2, Q3, (2*T1 ± Q1), (2*T2 ± Q2), (2*T3 ± Q3),
