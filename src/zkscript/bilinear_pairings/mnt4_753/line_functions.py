@@ -69,7 +69,7 @@ class LineFunctions:
                     StackFiniteFieldElement(1, False, 2),
                 )`
             rolling_options (int): Bitmask detailing which elements among `gradient`, `P`, and `Q` should be rolled.
-                Default to 7 (everything is rolled).
+                Defaults to 7 (everything is rolled).
 
         Preconditions:
             - `gradient` is the gradient through `T` and `Q`.

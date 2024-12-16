@@ -58,7 +58,7 @@ class Groth16(PairingModel):
             - stack: [.., gradients_pairing]
 
         Stack output:
-            - stack: [.., ] or fail
+            - stack: [.., 0/1]
 
         Args:
             locking_key (Groth16LockingKey): Locking key used to generate the verifier. Encapsulates the data of the
@@ -209,9 +209,9 @@ class Groth16(PairingModel):
             out += nums_to_script([el])
             out += Script.parse_string("OP_EQUALVERIFY")
 
-        # Verify that the gradients supplied for -gamma and -delta are the correct one
+        # Verify that the gradients supplied for -gamma and -delta are the correct ones
         # stack in:  [q, ..., gradients_pairing]
-        # stack out: [q, ...] or fail
+        # stack out: [q, ..., 0/1]
         out += self.__verify_hash_commitment(locking_key=locking_key, verification_hash=verification_hash)
 
         return optimise_script(out)
