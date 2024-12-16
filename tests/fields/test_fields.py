@@ -47,7 +47,7 @@ class Fq2ResidueMinusOne:
             {"x": [5, 10], "expected": [14, 9], "positive_modulo": True},
             {"x": [5, 10], "expected": [-5, -10], "positive_modulo": False},
         ],
-        "test_scalar_mul": [
+        "test_base_field_scalar_mul": [
             {"x": [5, -10], "y": [2], "expected": [10, 18], "positive_modulo": True},
             {"x": [5, -10], "y": [2], "expected": [10, -1], "positive_modulo": False},
         ],
@@ -103,7 +103,7 @@ class Fq2ResidueNotMinusOne:
             {"x": [5, 10], "expected": [14, 9], "positive_modulo": True},
             {"x": [5, 10], "expected": [-5, -10], "positive_modulo": False},
         ],
-        "test_scalar_mul": [
+        "test_base_field_scalar_mul": [
             {"x": [5, -10], "y": [2], "expected": [10, 18], "positive_modulo": True},
             {"x": [5, -10], "y": [2], "expected": [10, -1], "positive_modulo": False},
         ],
@@ -170,7 +170,7 @@ class Fq4:
                 "positive_modulo": False,
             },
         ],
-        "test_scalar_mul_fq": [
+        "test_base_field_scalar_mul": [
             {"x": [1, 2, -2, -1], "lam": [10], "expected": [10, 1, 18, 9], "positive_modulo": True},
             {"x": [1, 2, -2, -1], "lam": [10], "expected": [10, 1, -1, -10], "positive_modulo": False},
         ],
@@ -424,7 +424,7 @@ class Fq6ThreeOverTwo:
             {"x": [1, -3, 10, 18, -8, -1], "expected": [18, 3, 9, 1, 8, 1], "positive_modulo": True},
             {"x": [1, -3, 10, 18, -8, -1], "expected": [-1, 3, -10, -18, 8, 1], "positive_modulo": False},
         ],
-        "test_scalar_mul_fq": [
+        "test_base_field_scalar_mul": [
             {
                 "x": [1, -2, -3, 4, 5, -6],
                 "lam": [4],
@@ -787,31 +787,6 @@ def test_negation(config, positive_modulo, x, expected, clean_constant, is_const
 
 @pytest.mark.parametrize("clean_constant", [True, False])
 @pytest.mark.parametrize("is_constant_reused", [True, False])
-@pytest.mark.parametrize(("config", "positive_modulo", "x", "y", "expected"), generate_test_cases("test_scalar_mul"))
-def test_scalar_mul(config, positive_modulo, x, y, expected, clean_constant, is_constant_reused, save_to_json_folder):
-    unlock = nums_to_script([config.q])
-    unlock += generate_unlock(x)
-    unlock += generate_unlock(y)
-
-    lock = config.test_script.scalar_mul(
-        take_modulo=True,
-        positive_modulo=positive_modulo,
-        check_constant=True,
-        clean_constant=clean_constant,
-        is_constant_reused=is_constant_reused,
-    )
-    if is_constant_reused:
-        lock += check_constant(config.q)
-    lock += generate_verify(expected)
-
-    verify_script(lock, unlock, clean_constant)
-
-    if save_to_json_folder and clean_constant and not is_constant_reused:
-        save_scripts(str(lock), str(unlock), save_to_json_folder, config.filename, "scalar multiplication")
-
-
-@pytest.mark.parametrize("clean_constant", [True, False])
-@pytest.mark.parametrize("is_constant_reused", [True, False])
 @pytest.mark.parametrize(("config", "positive_modulo", "x", "y", "expected"), generate_test_cases("test_mul"))
 def test_mul(config, positive_modulo, x, y, expected, clean_constant, is_constant_reused, save_to_json_folder):
     unlock = nums_to_script([config.q])
@@ -963,16 +938,16 @@ def test_mul_by_one_plus_u(
 @pytest.mark.parametrize("clean_constant", [True, False])
 @pytest.mark.parametrize("is_constant_reused", [True, False])
 @pytest.mark.parametrize(
-    ("config", "positive_modulo", "x", "lam", "expected"), generate_test_cases("test_scalar_mul_fq")
+    ("config", "positive_modulo", "x", "lam", "expected"), generate_test_cases("test_base_field_scalar_mul")
 )
-def test_scalar_mul_fq(
+def test_base_field_scalar_mul(
     config, positive_modulo, x, lam, expected, clean_constant, is_constant_reused, save_to_json_folder
 ):
     unlock = nums_to_script([config.q])
     unlock += generate_unlock(x)
     unlock += generate_unlock(lam)
 
-    lock = config.test_script.fq_scalar_mul(
+    lock = config.test_script.base_field_scalar_mul(
         take_modulo=True,
         positive_modulo=positive_modulo,
         check_constant=True,

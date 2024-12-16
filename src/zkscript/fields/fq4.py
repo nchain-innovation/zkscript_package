@@ -31,8 +31,10 @@ class Fq4(PrimeFieldExtension):
     Attributes:
         MODULUS: The characteristic of the field F_q.
         BASE_FIELD (Fq2): Bitcoin script instance to perform arithmetic operations in F_q^2.
+        EXTENSION_DEGREE: The extension degree over the prime field, equal to 4.
         GAMMAS_FROBENIUS: The list of [gamma1,gamma2,...,gamma3] for the Frobenius where gammai = [gammai1],
             with gammai1 = non_residue_over_fq2.power((q**i-1)//2).
+        PRIME_FIELD: The Bitcoin Script implementation of the prime field F_q.
     """
 
     def __init__(self, q: int, base_field, gammas_frobenius: list[list[int]] | None = None):
@@ -49,64 +51,6 @@ class Fq4(PrimeFieldExtension):
         self.EXTENSION_DEGREE = 4
         self.GAMMAS_FROBENIUS = gammas_frobenius
         self.PRIME_FIELD = Fq(q)
-
-    def fq_scalar_mul(
-        self,
-        take_modulo: bool,
-        positive_modulo: bool = True,
-        check_constant: bool | None = None,
-        clean_constant: bool | None = None,
-        is_constant_reused: bool | None = None,
-    ) -> Script:
-        """Multiplication in F_q^4 by a scalar in F_q.
-
-        Stack input:
-            - stack:    [q, ..., x := (x0, x1, x2, x3), lambda], `x` is a couple of elements of F_q^2, `lambda` is an
-                element of F_q
-            - altstack: []
-
-        Stack output:
-            - stack:    [q, ..., x * lambda]
-            - altstack: []
-
-        Args:
-            take_modulo (bool): If `True`, the result is reduced modulo `q`.
-            positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
-            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
-            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
-            is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
-                after execution. Defaults to `None`.
-
-        Returns:
-            Script to multiply an element in F_q^4 by a scalar `lambda` in F_q.
-        """
-        # Fq2 implementation
-        fq2 = self.BASE_FIELD
-
-        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
-
-        # After this, the base stack is x_0 lambda, altstack = (x_1 * lambda)
-        out += Script.parse_string("OP_TUCK OP_MUL OP_TOALTSTACK")
-        out += Script.parse_string("OP_TUCK OP_MUL OP_TOALTSTACK")
-
-        if take_modulo:
-            # After this, base stack is: x_00 * lambda q x_01 * lambda altstack = (x_1 * lambda)
-            out += fq2.scalar_mul(
-                take_modulo=True,
-                positive_modulo=positive_modulo,
-                check_constant=False,
-                clean_constant=clean_constant,
-                is_constant_reused=True,
-            )
-            # Batched modulo operations: pull from altstack, rotate, mod out, repeat
-            out += mod(is_positive=positive_modulo)
-            out += mod(is_positive=positive_modulo, is_constant_reused=is_constant_reused)
-        else:
-            # After this, base stack is: (x_0 + y_0) (x_1 + y_1)
-            out += fq2.scalar_mul(take_modulo=False)
-            out += Script.parse_string("OP_FROMALTSTACK OP_FROMALTSTACK")
-
-        return out
 
     def scalar_mul(
         self,
@@ -281,7 +225,7 @@ class Fq4(PrimeFieldExtension):
             out += Script.parse_string("OP_2OVER OP_2OVER")
             out += fq2.mul(take_modulo=False, check_constant=False, clean_constant=False)
             out += Script.parse_string("OP_2")
-            out += fq2.scalar_mul(take_modulo=False, check_constant=False, clean_constant=False)
+            out += fq2.base_field_scalar_mul(take_modulo=False, check_constant=False, clean_constant=False)
             out += Script.parse_string("OP_TOALTSTACK OP_TOALTSTACK")
 
             # After this, the stack is: x1^2 * xi x0^2, altstack = 2x0*x1
@@ -317,7 +261,7 @@ class Fq4(PrimeFieldExtension):
             out += Script.parse_string("OP_2ROT OP_2ROT")  # Prepare top of the stack with x_0 x_1
             out += fq2.mul(take_modulo=False, check_constant=False, clean_constant=False)
             out += Script.parse_string("OP_2")
-            out += fq2.scalar_mul(
+            out += fq2.base_field_scalar_mul(
                 take_modulo=False, check_constant=False, clean_constant=False
             )  # Top of the stack is now 2 * x_0 * x_1 (not mod by q)
 

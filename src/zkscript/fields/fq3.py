@@ -5,15 +5,12 @@ from tx_engine import Script
 from src.zkscript.fields.fq import Fq
 from src.zkscript.fields.prime_field_extension import PrimeFieldExtension
 from src.zkscript.types.stack_elements import StackFiniteFieldElement
-from src.zkscript.util.utility_functions import check_order
 from src.zkscript.util.utility_scripts import (
     bitmask_to_boolean_list,
     bool_to_moving_function,
-    mod,
     move,
     nums_to_script,
     pick,
-    roll,
     verify_bottom_constant,
 )
 
@@ -40,6 +37,8 @@ class Fq3(PrimeFieldExtension):
     Attributes:
         MODULUS: The characteristic of the base field F_q.
         NON_RESIDUE: The non-residue element used to define the quadratic extension.
+        EXTENSION_DEGREE: The extension degree over the prime field, equal to 3.
+        PRIME_FIELD: The Bitcoin Script implementation of the prime field F_q.
     """
 
     def __init__(self, q: int, non_residue: int):
@@ -53,98 +52,6 @@ class Fq3(PrimeFieldExtension):
         self.NON_RESIDUE = non_residue
         self.EXTENSION_DEGREE = 3
         self.PRIME_FIELD = Fq(q)
-
-    def fq_scalar_mul(
-        self,
-        take_modulo: bool,
-        positive_modulo: bool = True,
-        check_constant: bool | None = None,
-        clean_constant: bool | None = None,
-        is_constant_reused: bool | None = None,
-        x: StackFiniteFieldElement = StackFiniteFieldElement(3, False, 3),  # noqa: B008
-        scalar: StackFiniteFieldElement = StackFiniteFieldElement(0, False, 1),  # noqa: B008
-        rolling_options: int = 3,
-    ) -> Script:
-        """Addition in F_q^3.
-
-        Stack input:
-            - stack:    [q, .., x := (x0, x1, x2), .., scalar, ..]
-            - altstack: []
-
-        Stack output:
-            - stack:    [q, ..., scalar * x := (scalar * x0, scalar * x1, scalar * x2)]
-            - altstack: []
-
-        Args:
-            take_modulo (bool): If `True`, the result is reduced modulo `q`.
-            positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
-            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
-            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
-            is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
-                after execution. Defaults to `None`.
-            x (StackFiniteFieldElement): The position in the stack of `x` and whether `x`.
-                Defaults to `StackFiniteFieldElement(3,False,3)`.
-            scalar (StackFiniteFieldElement): The position in the stack of `scalar` and whether `scalar` should be
-                negated when used. Defaults to `StackFiniteFieldElement(0,False,1)`.
-            rolling_options (int): Bitmask detailing which of the elements `scalar` and `x` should be removed
-                from the stack after execution. Defaults to `3` (remove everything).
-
-        Returns:
-            Script to multiply an element in F_q^3 by a scalar in F_q.
-
-        Note:
-            The function raises an assertion error if:
-                - `scalar.extension_degree` is not `1`.
-                - `x.extension_degree` is not `3`.
-                - `x.negate` is `True`.
-        """
-        assert scalar.extension_degree == 1
-        assert x.extension_degree == self.EXTENSION_DEGREE
-        assert not x.negate
-        check_order([x, scalar])
-
-        is_scalar_rolled, is_x_rolled = bitmask_to_boolean_list(rolling_options, 2)
-        is_default_position = (x == StackFiniteFieldElement(self.EXTENSION_DEGREE, False, self.EXTENSION_DEGREE)) and (
-            scalar.position == 0
-        )
-
-        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
-
-        # stack in:     [q, .., x, .., scalar, ..]
-        # stack out:    [q, .., x, .., scalar, .., scalar * x0]
-        # altstack out: [scalar * x2, scalar * x1]
-        out += move(scalar, bool_to_moving_function(is_scalar_rolled))  # Move scalar
-        out += Script.parse_string("OP_NEGATE" if scalar.negate else "")
-        if is_default_position:
-            for i in range(self.EXTENSION_DEGREE):
-                out += Script.parse_string("OP_TUCK" if i != self.EXTENSION_DEGREE - 1 else "")
-                out += Script.parse_string("OP_MUL")  # Compute scalar * xi
-                out += Script.parse_string("OP_TOALTSTACK" if i != self.EXTENSION_DEGREE - 1 else "")
-        else:
-            for i in range(self.EXTENSION_DEGREE):
-                out += move(
-                    x.shift(1 - i * is_x_rolled - is_scalar_rolled).extract_component(2 - i),
-                    bool_to_moving_function(is_x_rolled),
-                )  # Move xi
-                out += Script.parse_string("OP_OVER" if i != self.EXTENSION_DEGREE - 1 else "")
-                out += Script.parse_string("OP_MUL")  # Compute scalar * xi
-                out += Script.parse_string("OP_TOALTSTACK" if i != self.EXTENSION_DEGREE - 1 else "")
-
-        # stack in:     [q, .., x, .., scalar, .., scalar * x0]
-        # altstack in:  [scalar * x2, scalar * x1]
-        # stack out:    [q, .., x, .., scalar, .., scalar * x]
-        if take_modulo:
-            out += roll(position=-1, n_elements=1) if clean_constant else pick(position=-1, n_elements=1)
-            for i in range(self.EXTENSION_DEGREE):
-                out += mod(
-                    stack_preparation="OP_FROMALTSTACK OP_ROT" if i != 0 else "",
-                    is_positive=positive_modulo,
-                    is_constant_reused=True if i != self.EXTENSION_DEGREE - 1 else is_constant_reused,
-                )
-        else:
-            out += Script.parse_string(" ".join(["OP_FROMALTSTACK"] * (self.EXTENSION_DEGREE - 1)))
-
-        return out
 
     def square(
         self,
@@ -231,15 +138,129 @@ class Fq3(PrimeFieldExtension):
             "OP_MUL OP_MUL OP_MUL OP_FROMALTSTACK OP_ADD"
         )  # Compute x0^2 + 2 * x1 * x2 * NON_RESIDUE
 
-        if take_modulo:
-            out += roll(position=-1, n_elements=1) if clean_constant else pick(position=-1, n_elements=1)
-            for i in range(self.EXTENSION_DEGREE):
-                out += mod(
-                    stack_preparation="OP_FROMALTSTACK OP_ROT" if i != 0 else "",
-                    is_positive=positive_modulo,
-                    is_constant_reused=True if i != self.EXTENSION_DEGREE - 1 else is_constant_reused,
-                )
-        else:
-            out += Script.parse_string(" ".join(["OP_FROMALTSTACK"] * (self.EXTENSION_DEGREE - 1)))
+        out += (
+            self.take_modulo(
+                positive_modulo=positive_modulo, clean_constant=clean_constant, is_constant_reused=is_constant_reused
+            )
+            if take_modulo
+            else Script.parse_string(" ".join(["OP_FROMALTSTACK"] * (self.EXTENSION_DEGREE - 1)))
+        )
+
+        return out
+
+    def mul(
+        self,
+        take_modulo: bool,
+        positive_modulo: bool = True,
+        check_constant: bool | None = None,
+        clean_constant: bool | None = None,
+        is_constant_reused: bool | None = None,
+        x: StackFiniteFieldElement = StackFiniteFieldElement(5, False, 3),  # noqa: B008
+        y: StackFiniteFieldElement = StackFiniteFieldElement(2, False, 3),  # noqa: B008
+        rolling_options: int = 3,
+    ) -> Script:
+        """Multiplication in F_q^3.
+
+        Stack input:
+            - stack:    [q, ..., x := (x0, x1, x2), .., y := (y0, y1, y2), ..]
+            - altstack: []
+
+        Stack output:
+            - stack:    [q, ..., x * y := (
+                            x0 * y0 + (x1 * y2 + x2 * y1) * NON_RESIDUE,
+                            x2 * y2 * NON_RESIDUE + x0 * x1 + y1 * y0,
+                            x1 * y1 + x0 * y2 + x2 * y0
+                            )]
+            - altstack: []
+
+        Args:
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
+            is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
+                after execution. Defaults to `None`.
+            x (StackFiniteFieldElement): The position in the stack of `x`.
+                Defaults to `StackFiniteFieldElement(5,False,3)`.
+            y (StackFiniteFieldElement): The position in the stack of `y`.
+                Defaults to `StackFiniteFieldElement(2,False,3)`.
+            rolling_options (int): Bitmaks detailing which of `x` and `y` should be removed after the execution of the
+                script. Defaults to `3` (remove everything).
+
+        Returns:
+            Script to compute square an element in F_q^3.
+
+        Note:
+            The function raises an assertion error if `x.extension_degree` and `y.extension_degree`
+            are not equal to `3`.
+        """
+        assert x.extension_degree == self.EXTENSION_DEGREE
+        assert y.extension_degree == self.EXTENSION_DEGREE
+
+        is_x_rolled, is_y_rolled = bitmask_to_boolean_list(rolling_options, 2)
+
+        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
+
+        # stack in:     [q, .., x, .., y, ..]
+        # stack out:    [q, .., x, .., y, .., ]
+        # altstack out: [x1 * y1 + x0 * y2 + x2 * y0]
+        out += move(y.extract_component(2), pick)
+        out += move(x.shift(1).extract_component(0), pick)
+        out += Script.parse_string("OP_MUL")
+
+        out += move(y.shift(1).extract_component(1), pick)
+        out += move(x.shift(2).extract_component(1), pick)
+        out += Script.parse_string("OP_MUL OP_ADD")
+
+        out += move(y.shift(1).extract_component(0), pick)
+        out += move(x.shift(2).extract_component(2), pick)
+        out += Script.parse_string("OP_MUL OP_ADD")
+        out += Script.parse_string("OP_TOALTSTACK")
+
+        # stack in:     [q, .., x, .., y, ..]
+        # stack out:    [q, .., x, .., y, .., ]
+        # altstack out: [x1 * y1 + x0 * y2 + x2 * y0, x0 * y1 + x1 * y0 + x2 * y2 * NON_RESIDUE]
+        out += move(y.extract_component(2), pick)
+        out += move(x.shift(1).extract_component(2), pick)
+        out += Script.parse_string("OP_MUL")
+        out += nums_to_script([self.NON_RESIDUE])
+        out += Script.parse_string("OP_MUL")
+
+        out += move(y.shift(1).extract_component(1), pick)
+        out += move(x.shift(2).extract_component(0), pick)
+        out += Script.parse_string("OP_MUL OP_ADD")
+
+        out += move(y.shift(1).extract_component(0), pick)
+        out += move(x.shift(2).extract_component(1), pick)
+        out += Script.parse_string("OP_MUL OP_ADD")
+        out += Script.parse_string("OP_TOALTSTACK")
+
+        # stack in:     [q, .., x, .., y, ..]
+        # stack out:    [q, .., x, .., y, .., ]
+        # altstack out: [x1 * y1 + x0 * y2 + x2 * y0, x0 * y1 + x1 * y0 + x2 * y2 * NON_RESIDUE,
+        #                   x0 * y0 + NON_RESIDUE * (x1 * y2 + x2 * y1)]
+        out += move(y.extract_component(2), bool_to_moving_function(is_y_rolled))
+        out += move(x.shift(1 - is_y_rolled).extract_component(1), bool_to_moving_function(is_x_rolled))
+        out += Script.parse_string("OP_MUL")
+
+        out += move(y.shift(1 - is_y_rolled).extract_component(1), bool_to_moving_function(is_y_rolled))
+        out += move(x.shift(2 - 2 * is_y_rolled).extract_component(2), bool_to_moving_function(is_x_rolled))
+        out += Script.parse_string("OP_MUL OP_ADD")
+        out += nums_to_script([self.NON_RESIDUE])
+        out += Script.parse_string("OP_MUL")
+
+        out += move(y.shift(1 - 2 * is_y_rolled).extract_component(0), bool_to_moving_function(is_y_rolled))
+        out += move(
+            x.shift(2 - 3 * is_y_rolled - 2 * is_x_rolled).extract_component(0), bool_to_moving_function(is_x_rolled)
+        )
+        out += Script.parse_string("OP_MUL OP_ADD")
+
+        out += (
+            self.take_modulo(
+                positive_modulo=positive_modulo, clean_constant=clean_constant, is_constant_reused=is_constant_reused
+            )
+            if take_modulo
+            else Script.parse_string(" ".join(["OP_FROMALTSTACK"] * (self.EXTENSION_DEGREE - 1)))
+        )
 
         return out

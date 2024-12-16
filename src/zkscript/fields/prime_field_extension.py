@@ -324,6 +324,80 @@ class PrimeFieldExtension:
             rolling_options=rolling_options,
         )
 
+    def base_field_scalar_mul(
+        self,
+        take_modulo: bool,
+        positive_modulo: bool = True,
+        check_constant: bool | None = None,
+        clean_constant: bool | None = None,
+        is_constant_reused: bool | None = None,
+        x: StackFiniteFieldElement | None = None,
+        scalar: StackFiniteFieldElement | None = None,
+        rolling_options: int = 3,
+    ) -> Script:
+        """Multiplication in F_q^n by a scalar in F_q.
+
+        Stack input:
+            - stack:    [q, ..., x := (x0, .., xn), .., scalar, ..], `x` is an element in F_q^n, `scalar` is
+                an element of F_q
+            - altstack: []
+
+        Stack output:
+            - stack:    [q, ..., x * scalar]
+            - altstack: []
+
+        Args:
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
+            is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
+                after execution. Defaults to `None`.
+            x (StackFiniteFieldElement): The position in the stack of `x`.
+            scalar (StackFiniteFieldElement): The position in the stack of `scalar`.
+            rolling_options (int): Bitmask detailing which of the elements `x` and `scalar` should be removed from the
+                stack after execution. Defaults to `3` (remove everything).
+
+        Returns:
+            Script to multiply an element `x` in F_q^n by a scalar `scalar` in F_q.
+        """
+        x = x if x is not None else StackFiniteFieldElement(self.EXTENSION_DEGREE, False, self.EXTENSION_DEGREE)
+        scalar = scalar if scalar is not None else StackFiniteFieldElement(0, False, 1)
+        assert scalar.extension_degree == 1, "The extension degree of `scalar` must be 1."
+        check_order([x, scalar])
+
+        is_scalar_rolled, is_x_rolled = bitmask_to_boolean_list(rolling_options, 2)
+        is_default_config = (x.position == self.EXTENSION_DEGREE) and (scalar.position == 0)
+
+        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
+
+        # stack out:    [.., x, .., scalar, x0 * scalar]
+        # altstack out: [xn * scalar, .., x1 * scalar]
+        if is_default_config:
+            out += Script.parse_string("OP_NEGATE") if scalar.negate else Script()
+            for _ in range(self.EXTENSION_DEGREE - 1):
+                out += Script.parse_string("OP_TUCK OP_MUL OP_TOALTSTACK")
+            out += Script.parse_string("OP_MUL")
+        else:
+            out += move(scalar, bool_to_moving_function(is_scalar_rolled))  # Move scalar
+            out += Script.parse_string("OP_NEGATE") if scalar.negate else Script()
+            for i in range(self.EXTENSION_DEGREE - 1, -1, -1):
+                out += move(
+                    x.shift(1 - is_scalar_rolled - (self.EXTENSION_DEGREE - 1 - i) * is_x_rolled).extract_component(i),
+                    bool_to_moving_function(is_x_rolled),
+                )  # Move x[i]
+                out += Script.parse_string("OP_OVER OP_MUL OP_TOALTSTACK" if i != 0 else "OP_MUL OP_TOALTSTACK")
+
+        out += (
+            self.take_modulo(
+                positive_modulo=positive_modulo, clean_constant=clean_constant, is_constant_reused=is_constant_reused
+            )
+            if take_modulo
+            else Script.parse_string(" ".join(["OP_FROMALTSTACK"] * (self.EXTENSION_DEGREE - 1)))
+        )
+
+        return out
+
     def take_modulo(
         self,
         positive_modulo: bool = True,
