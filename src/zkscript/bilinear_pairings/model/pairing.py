@@ -27,7 +27,7 @@ class Pairing:
             - altstack: []
 
         Stack output:
-            - stack:    [q, ..., e(P,Q)],
+            - stack:    [q, ..., lambdas if not verify_gradients, e(P,Q)],
             - altstack: []
 
         Args:
@@ -81,13 +81,19 @@ class Pairing:
             clean_constant=False,
         )
 
+        gradient_tracker = (0 if verify_gradients else self.EXTENSION_DEGREE) * sum([1 if i == 0 else 2 for i in self.exp_miller_loop[:-1]])
+
         # This is where one would perform subgroup membership checks if they were needed
         # For Groth16, they are not, so we simply drop uQ
         out += roll(position=N_ELEMENTS_MILLER_OUTPUT + N_POINTS_TWIST - 1, n_elements=N_POINTS_TWIST)
         out += Script.parse_string(" ".join(["OP_DROP"] * N_POINTS_TWIST))
 
         out += easy_exponentiation_with_inverse_check(
-            take_modulo=True, positive_modulo=False, check_constant=False, clean_constant=False
+            take_modulo=True, positive_modulo=False, check_constant=False, clean_constant=False, 
+            f_inverse=StackFiniteFieldElement(
+                2 * self.N_ELEMENTS_MILLER_OUTPUT - 1, False, self.N_ELEMENTS_MILLER_OUTPUT
+            ).shift(gradient_tracker),
+            f=StackFiniteFieldElement(self.N_ELEMENTS_MILLER_OUTPUT - 1, False, self.N_ELEMENTS_MILLER_OUTPUT),
         )
         out += hard_exponentiation(
             take_modulo=True,
@@ -135,7 +141,8 @@ class Pairing:
             - altstack: []
 
         Stack output:
-            - stack:    [q, ..., e(P1,Q1) * e(P2,Q2) * e(P3,Q3)]
+            - stack:    [q, ..., non_verified_lambdas, e(P1,Q1) * e(P2,Q2) * e(P3,Q3)], non_verified_lambdas represents
+                all the gradients that are not verified by the script. Verified gradients are consumed.
             - altstack: []
 
         Args:
@@ -180,10 +187,10 @@ class Pairing:
             positive_modulo=False,
             check_constant=False,
             clean_constant=False,
-            f=StackFiniteFieldElement(self.N_ELEMENTS_MILLER_OUTPUT - 1, False, self.N_ELEMENTS_MILLER_OUTPUT),
             f_inverse=StackFiniteFieldElement(
-                2 * self.N_ELEMENTS_MILLER_OUTPUT - 1 + gradient_tracker, False, self.N_ELEMENTS_MILLER_OUTPUT
-            ),
+                2 * self.N_ELEMENTS_MILLER_OUTPUT - 1, False, self.N_ELEMENTS_MILLER_OUTPUT
+            ).shift(gradient_tracker),
+            f=StackFiniteFieldElement(self.N_ELEMENTS_MILLER_OUTPUT - 1, False, self.N_ELEMENTS_MILLER_OUTPUT),
         )
 
         out += hard_exponentiation(
