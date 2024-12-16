@@ -81,7 +81,9 @@ class Pairing:
             clean_constant=False,
         )
 
-        gradient_tracker = (0 if verify_gradients else self.EXTENSION_DEGREE) * sum([1 if i == 0 else 2 for i in self.exp_miller_loop[:-1]])
+        gradient_tracker = (0 if verify_gradients else self.EXTENSION_DEGREE) * sum(
+            [1 if i == 0 else 2 for i in self.exp_miller_loop[:-1]]
+        )
 
         # This is where one would perform subgroup membership checks if they were needed
         # For Groth16, they are not, so we simply drop uQ
@@ -89,7 +91,10 @@ class Pairing:
         out += Script.parse_string(" ".join(["OP_DROP"] * N_POINTS_TWIST))
 
         out += easy_exponentiation_with_inverse_check(
-            take_modulo=True, positive_modulo=False, check_constant=False, clean_constant=False, 
+            take_modulo=True,
+            positive_modulo=False,
+            check_constant=False,
+            clean_constant=False,
             f_inverse=StackFiniteFieldElement(
                 2 * self.N_ELEMENTS_MILLER_OUTPUT - 1, False, self.N_ELEMENTS_MILLER_OUTPUT
             ).shift(gradient_tracker),

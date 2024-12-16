@@ -443,7 +443,7 @@ class TripleMillerLoop:
         # stack in:     [..., gradient_(2* T2 ± Q2), gradient_(2* T3 ± Q3), ...,
         #                   gradient_(2*T3), P1, P2, P3, Q1, Q2, Q3, T3, (2*T1 ± Q1), (2*T2)]
         # altstack in:  [{f_i^2}*(ev_(l_(T1,T1))(P1)*ev_(l_(T2,T2))(P2)) *(ev_(l_(T3,T3))(P3)*ev_(l_(2*T1,± Q1))(P1)) * (ev_(l_(2*T2,± Q2))(P2)*ev_(l_(2*T3,± Q3))(P3))]  # noqa: E501
-        # stack out:    [..., gradient_(2* T2 ± Q2) if not verify_gradient[1], gradient_(2* T3 ± Q3), ..., 
+        # stack out:    [..., gradient_(2* T2 ± Q2) if not verify_gradient[1], gradient_(2* T3 ± Q3), ...,
         #                   gradient_(2*T3), P1, P2, P3, Q1, Q2, Q3, T3, (2*T1 ± Q1), (2*T2 ± Q2)]
         # altstack out: [{f_i^2}*(ev_(l_(T1,T1))(P1)*ev_(l_(T2,T2))(P2)) *(ev_(l_(T3,T3))(P3)*ev_(l_(2*T1,± Q1))(P1)) * (ev_(l_(2*T2,± Q2))(P2)*ev_(l_(2*T3,± Q3))(P3))]  # noqa: E501
         out += self.point_addition_twisted_curve(
@@ -457,7 +457,7 @@ class TripleMillerLoop:
             Q=T[1].shift(-self.N_POINTS_TWIST),
             rolling_options=boolean_list_to_bitmask([verify_gradients[1], False, True]),
         )
-        # stack in:     [..., gradient_(2* T3 ± Q3), ..., gradient_(2*T3), P1, P2, P3, Q1, Q2, Q3, T3, (2*T1 ± Q1), 
+        # stack in:     [..., gradient_(2* T3 ± Q3), ..., gradient_(2*T3), P1, P2, P3, Q1, Q2, Q3, T3, (2*T1 ± Q1),
         #                   (2*T2 ± Q2)]
         # altstack in:  [{f_i^2}*(ev_(l_(T1,T1))(P1)*ev_(l_(T2,T2))(P2)) *(ev_(l_(T3,T3))(P3)*ev_(l_(2*T1,± Q1))(P1)) * (ev_(l_(2*T2,± Q2))(P2)*ev_(l_(2*T3,± Q3))(P3))]  # noqa: E501
         # stack out:    [..., gradient_(2* T3 ± Q3), ..., gradient_(2*T3) if not verify_gradient[2], P1, P2, P3, Q1, Q2,

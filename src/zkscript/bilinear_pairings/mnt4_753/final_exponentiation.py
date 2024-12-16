@@ -37,7 +37,6 @@ class FinalExponentiation(CyclotomicExponentiation):
         is_constant_reused: bool | None = None,
         f_inverse: StackFiniteFieldElement = StackFiniteFieldElement(7, False, 4),  # noqa: B008
         f: StackFiniteFieldElement = StackFiniteFieldElement(3, False, 4),  # noqa: B008
-
     ) -> Script:
         """Easy part of the final exponentiation.
 
@@ -69,7 +68,9 @@ class FinalExponentiation(CyclotomicExponentiation):
         """
         fq4 = self.FQ4
 
-        is_default_config = (f_inverse.position == self.EXTENSION_DEGREE * 2 - 1) and (f.position == self.EXTENSION_DEGREE -1)
+        is_default_config = (f_inverse.position == self.EXTENSION_DEGREE * 2 - 1) and (
+            f.position == self.EXTENSION_DEGREE - 1
+        )
 
         out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 

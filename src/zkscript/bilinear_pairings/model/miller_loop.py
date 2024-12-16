@@ -92,7 +92,7 @@ class MillerLoop:
             verify_gradient=verify_gradient,
             gradient=gradient_doubling,
             P=T,
-            rolling_options=3,
+            rolling_options=boolean_list_to_bitmask([verify_gradient, True]),
         )
         # stack in:    [..., P, Q, 2T]
         # altstack in: [({f_i^2} * ev_(l_(T,T))(P))]
@@ -215,7 +215,7 @@ class MillerLoop:
             verify_gradient=verify_gradients,
             gradient=gradient_doubling,
             P=T,
-            rolling_options=boolean_list_to_bitmask([verify_gradients,True]),
+            rolling_options=boolean_list_to_bitmask([verify_gradients, True]),
         )  # Compute 2T
         # stack in:     [gradient_(2T ± Q), ..., P, Q, 2T]
         # altstack in:  [({f_i^2} * ev_(l_(T,T))(P) * ev_(l_(2T, ± Q))(P))^2]
@@ -230,7 +230,7 @@ class MillerLoop:
             gradient=gradient_addition.shift(-self.EXTENSION_DEGREE if verify_gradients else 0),
             P=Q.set_negate(self.exp_miller_loop[i] == -1),
             Q=T,
-            rolling_options=boolean_list_to_bitmask([verify_gradients,False, True]),
+            rolling_options=boolean_list_to_bitmask([verify_gradients, False, True]),
         )  # Compute (2T ± Q)
         # stack in:     [P, Q, (2T ± Q)]
         # altstack in:  [({f_i^2} * ev_(l_(T,T))(P) * ev_(l_(2T, ± Q))(P))^2]
@@ -426,7 +426,7 @@ class MillerLoop:
                     Q=Q,
                     T=T,
                 )
-                gradient_tracker += 2*self.EXTENSION_DEGREE if not verify_gradients else 0
+                gradient_tracker += 2 * self.EXTENSION_DEGREE if not verify_gradients else 0
         # stack in:  [P, Q, w*Q, miller(P,Q)]
         # stack out: [w*Q, miller(P,Q)]
         out += move(Q.shift(self.N_ELEMENTS_MILLER_OUTPUT), roll)  # Roll Q

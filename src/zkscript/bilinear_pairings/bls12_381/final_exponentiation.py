@@ -69,7 +69,9 @@ class FinalExponentiation(CyclotomicExponentiation):
         """
         # Fq12 implementation
         fq12 = self.FQ12
-        is_default_config = (f_inverse.position == self.EXTENSION_DEGREE * 2 - 1) and (f.position == self.EXTENSION_DEGREE -1)
+        is_default_config = (f_inverse.position == self.EXTENSION_DEGREE * 2 - 1) and (
+            f.position == self.EXTENSION_DEGREE - 1
+        )
 
         out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
