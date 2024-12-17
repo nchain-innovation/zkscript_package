@@ -2,10 +2,11 @@
 
 from tx_engine import Script
 
-from src.zkscript.types.stack_elements import StackEllipticCurvePoint, StackFiniteFieldElement
+from src.zkscript.types.stack_elements import StackEllipticCurvePoint, StackFiniteFieldElement, StackNumber
 from src.zkscript.util.utility_functions import bitmask_to_boolean_list, check_order
 from src.zkscript.util.utility_scripts import (
     bool_to_moving_function,
+    is_zero,
     mod,
     move,
     nums_to_script,
@@ -23,15 +24,133 @@ class EllipticCurveFq:
         CURVE_A: The `a` coefficient in the Short-Weierstrass equation of the curve (an element in F_q).
     """
 
-    def __init__(self, q: int, curve_a: int):
+    def __init__(self, q: int, curve_a: int, curve_b: int):
         """Initialise the elliptic curve group E(F_q).
 
         Args:
             q: The characteristic of the field F_q.
             curve_a: The `a` coefficient in the Short-Weierstrass equation of the curve (an element in F_q).
+            curve_b: The `b` coefficient in the Short-Weierstrass equation of the curve (an element in F_q).
         """
         self.MODULUS = q
         self.CURVE_A = curve_a
+        self.CURVE_B = curve_b
+
+    def evaluate_curve_equation(
+        self,
+        check_constant: bool | None = None,
+        clean_constant: bool | None = None,
+        modulus: StackNumber = StackNumber(-1, False),  # noqa: B008
+        P: StackEllipticCurvePoint = StackEllipticCurvePoint(  # noqa: B008, N803
+            StackFiniteFieldElement(1, False, 1),  # noqa: B008
+            StackFiniteFieldElement(0, False, 1),  # noqa: B008
+        ),
+        rolling_option: bool = True,
+    ) -> Script:
+        """Evaluate the curve equation on P.
+
+        This scripts computes (y_P^2 - x_P^3 + self.a * x_P + self.b mod self.MODULUS) and leaves it on the stack.
+
+        Stack input:
+            - stack:    [q, .., P, ..]
+            - altstack: []
+        Stack output:
+            - stack:    [q, .., P, .., (y_P^2 - x_P^3 + self.a * x_P + self.b mod self.MODULUS)]
+            - altstack: []
+
+        Args:
+            check_constant (bool | None): If `True`, check if `modulus` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `modulus` from the bottom of the stack. Defaults to `None`.
+            modulus: The position of `self.MODULUS` in the stack.
+            P (StackEllipticCurvePoint): The position in the stack of the point `P` for which the script
+                checks whether `P` belongs to the curve. Defaults to:
+                `StackEllipticCurvePoint(
+                    StackFiniteFieldElement(1, False, 1),
+                    StackFiniteFieldElement(0, False, 1),
+                )`
+            rolling_option (bool): If `True`, `P` is removed from the stack after the execution of the script.
+                Defaults to `True`.
+        """
+        if modulus.position > 0:
+            check_order([modulus, P])
+
+        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
+
+        out += move(P, bool_to_moving_function(rolling_option))  # Move P
+        out += Script.parse_string("OP_DUP OP_MUL")  # Compute y_P^2
+        out += Script.parse_string("OP_OVER" if self.CURVE_A else "OP_SWAP")
+        out += Script.parse_string("OP_DUP OP_DUP OP_MUL OP_MUL OP_SUB")  # Compute y_P^2 - x_P^3
+        if self.CURVE_A:
+            out += (
+                Script.parse_string("OP_SWAP") + nums_to_script([self.CURVE_A]) + Script.parse_string("OP_MUL OP_SUB")
+            )  # Compute y_P^2 - x_P^3 - self.CURVE_A * x_P
+        # Compute y_P^2 - x_P^3 - self.CURVE_A * x_P - self.CURVE_B
+        match self.CURVE_B:
+            case 1:
+                out += Script.parse_string("OP_1SUB")
+            case -1:
+                out += Script.parse_string("OP_1ADD")
+            case 0:
+                pass
+            case _:
+                out += nums_to_script([self.CURVE_B]) + Script.parse_string("OP_SUB")
+        out += move(
+            modulus.shift(1 - 2 * rolling_option if modulus.position > 0 else 0),
+            bool_to_moving_function(clean_constant),
+        )
+        out += mod(stack_preparation="", is_positive=False, is_constant_reused=False)
+
+        return out
+
+    def is_on_curve(
+        self,
+        check_constant: bool | None = None,
+        clean_constant: bool | None = None,
+        modulus: StackNumber = StackNumber(-1, False),  # noqa: B008
+        P: StackEllipticCurvePoint = StackEllipticCurvePoint(  # noqa: B008, N803
+            StackFiniteFieldElement(1, False, 1),  # noqa: B008
+            StackFiniteFieldElement(0, False, 1),  # noqa: B008
+        ),
+        rolling_option: bool = True,
+    ) -> Script:
+        """Verify that P is on the curve.
+
+        This script verifies that P is on the curve. Namely, that
+            y_P^2 = x_P^3 + self.a * x_P + self.b mod self.MODULUS.
+
+        Stack input:
+            - stack:    [q, .., P, ..]
+            - altstack: []
+        Stack output:
+            - stack:    [q, .., P, ..] or fail
+            - altstack: []
+
+        Args:
+            check_constant (bool | None): If `True`, check if `modulus` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `modulus` from the bottom of the stack. Defaults to `None`.
+            modulus (StackNumber): The position of `self.MODULUS` in the stack.
+            P (StackEllipticCurvePoint): The position in the stack of the point `P` for which the script
+                checks whether `P` belongs to the curve. Defaults to:
+                `StackEllipticCurvePoint(
+                    StackFiniteFieldElement(1, False, 1),
+                    StackFiniteFieldElement(0, False, 1),
+                )`
+            rolling_option (bool): If `True`, `P` is removed from the stack after the execution of the script.
+                Defaults to `True`.
+
+        Returns:
+            The script that verifies that `P` is on the curve.
+        """
+        out = self.evaluate_curve_equation(
+            check_constant=check_constant,
+            clean_constant=clean_constant,
+            modulus=modulus,
+            P=P,
+            rolling_option=rolling_option,
+        )
+        out += is_zero()
+
+        return out
 
     def point_algebraic_addition(
         self,
@@ -40,6 +159,7 @@ class EllipticCurveFq:
         clean_constant: bool | None,
         verify_gradient: bool = True,
         positive_modulo: bool = True,
+        modulus: StackNumber = StackNumber(-1, False),  # noqa: B008
         gradient: StackFiniteFieldElement = StackFiniteFieldElement(4, False, 1),  # noqa: B008
         P: StackEllipticCurvePoint = StackEllipticCurvePoint(  # noqa: B008, N803
             StackFiniteFieldElement(3, False, 1),  # noqa: B008
@@ -58,14 +178,13 @@ class EllipticCurveFq:
         It also handles optional checks on the curve constant and whether the constant should be cleaned or reused.
 
         Stack input:
-            - stack    = [q, .., gradient, .., P, .., Q, ..]
+            - stack    = [.., q, .., gradient, .., P, .., Q, ..]
             - altstack = []
 
         Stack output:
-            - stack    = [{q}, .., {gradient}, .., {P}, .., {Q}, .., (P_+ Q_)]
+            - stack    = [.., q, .., gradient, .., P, .., Q, .., (P_+ Q_)]
             - altstack = []
 
-        where {P} means that the element is there if it is picked, it is not there if it is rolled.
         P_ = -P not P.y.negate else P
         Q_ = -Q if Q.y.negate else Q
 
@@ -75,6 +194,7 @@ class EllipticCurveFq:
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             verify_gradient (bool): If `True`, the validity of the gradient provided is checked.
             positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
+            modulus (StackNumber): The position of `self.MODULUS` in the stack.
             gradient (StackFiniteFieldElement): The position of gradient through P_ and Q_ in the stack,
                 its length, whether it should be negated, and whether it should be rolled or picked.
                 Defaults to: StackFiniteFieldElement(4,False,1)
@@ -111,11 +231,11 @@ class EllipticCurveFq:
         check_order([gradient, P, Q])
         return (
             self.__point_algebraic_addition_verifying_gradient(
-                take_modulo, check_constant, clean_constant, positive_modulo, gradient, P, Q, rolling_options
+                take_modulo, check_constant, clean_constant, positive_modulo, modulus, gradient, P, Q, rolling_options
             )
             if verify_gradient
             else self.__point_algebraic_addition_without_verifying_gradient(
-                take_modulo, check_constant, clean_constant, positive_modulo, gradient, P, Q, rolling_options
+                take_modulo, check_constant, clean_constant, positive_modulo, modulus, gradient, P, Q, rolling_options
             )
         )
 
@@ -126,6 +246,7 @@ class EllipticCurveFq:
         clean_constant: bool | None,
         verify_gradient: bool = True,
         positive_modulo: bool = True,
+        modulus: StackNumber = StackNumber(-1, False),  # noqa: B008
         gradient: StackFiniteFieldElement = StackFiniteFieldElement(2, False, 1),  # noqa: B008
         P: StackEllipticCurvePoint = StackEllipticCurvePoint(  # noqa: B008, N803
             StackFiniteFieldElement(1, False, 1),  # noqa: B008
@@ -144,10 +265,9 @@ class EllipticCurveFq:
             - altstack = []
 
         Stack output:
-            - stack    = [{q}, .., {gradient}, .., {P}, .., 2P_]
+            - stack    = [q, .., gradient, .., P, .., 2P_]
             - altstack = []
 
-        where {P} means that the element is there if it is picked, it is not there if it is rolled.
         P_ = -P not P.y.negate else P
 
         Args:
@@ -156,6 +276,7 @@ class EllipticCurveFq:
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             verify_gradient (bool): If `True`, the validity of the gradient provided is checked.
             positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
+            modulus (StackNumber): The position of `self.MODULUS` in the stack. Defaults to `StackNumber(-1, False)`.
             gradient (StackFiniteFieldElement): The position of gradient of the line tangent at P_ in the stack,
                     its length, whether it should be negated, and whether it should be rolled or picked.
                     Defaults to: StackFiniteFieldElement(2,False,1,roll).
@@ -184,11 +305,11 @@ class EllipticCurveFq:
         check_order([gradient, P])
         return (
             self.__point_algebraic_doubling_verifying_gradient(
-                take_modulo, check_constant, clean_constant, positive_modulo, gradient, P, rolling_options
+                take_modulo, check_constant, clean_constant, positive_modulo, modulus, gradient, P, rolling_options
             )
             if verify_gradient
             else self.__point_algebraic_doubling_without_verifying_gradient(
-                take_modulo, check_constant, clean_constant, positive_modulo, gradient, P, rolling_options
+                take_modulo, check_constant, clean_constant, positive_modulo, modulus, gradient, P, rolling_options
             )
         )
 
@@ -198,6 +319,7 @@ class EllipticCurveFq:
         check_constant: bool | None,
         clean_constant: bool | None,
         positive_modulo: bool = True,
+        modulus: StackNumber = StackNumber(-1, False),  # noqa: B008
         gradient: StackFiniteFieldElement = StackFiniteFieldElement(4, False, 1),  # noqa: B008
         P: StackEllipticCurvePoint = StackEllipticCurvePoint(  # noqa: B008, N803
             StackFiniteFieldElement(3, False, 1),  # noqa: B008
@@ -219,10 +341,9 @@ class EllipticCurveFq:
             - altstack = []
 
         Stack output:
-            - stack    = [{q}, .., {gradient}, .., {P}, .., {Q}, .., (P_+ Q_)]
+            - stack    = [q, .., gradient, .., P, .., Q, .., (P_+ Q_)]
             - altstack = []
 
-        where {P} means that the element is there if it is picked, it is not there if it is rolled.
         P_ = -P not P.y.negate else P
         Q_ = -Q if Q.y.negate else Q
 
@@ -231,6 +352,7 @@ class EllipticCurveFq:
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
+            modulus (StackNumber): The position of `self.MODULUS` in the stack. Defaults to `StackNumber(-1, False)`.
             gradient (StackFiniteFieldElement): The position of gradient through P_ and Q_ in the stack,
                 its length, whether it should be negated, and whether it should be rolled or picked.
                 Defaults to: StackFiniteFieldElement(4,False,1)
@@ -299,7 +421,7 @@ class EllipticCurveFq:
             verify_gradient += Script.parse_string("OP_SUB")  # Compute gradient *(xP - xQ) - (yP_ - yQ_)
         else:
             verify_gradient += Script.parse_string("OP_ADD")  # Compute gradient *(xP - xQ) - (yP_ - yQ_)
-        verify_gradient += roll(position=-1, n_elements=1) if clean_constant else pick(position=-1, n_elements=1)
+        verify_gradient += move(modulus, bool_to_moving_function(clean_constant))
         verify_gradient += mod(stack_preparation="", is_positive=False)
         verify_gradient += Script.parse_string("OP_0 OP_EQUALVERIFY")
         verify_gradient += Script.parse_string("OP_TOALTSTACK" if take_modulo else "OP_DROP")
@@ -343,6 +465,7 @@ class EllipticCurveFq:
         check_constant: bool | None,
         clean_constant: bool | None,
         positive_modulo: bool = True,
+        modulus: StackNumber = StackNumber(-1, False),  # noqa: B008
         gradient: StackFiniteFieldElement = StackFiniteFieldElement(4, False, 1),  # noqa: B008
         P: StackEllipticCurvePoint = StackEllipticCurvePoint(  # noqa: B008, N803
             StackFiniteFieldElement(3, False, 1),  # noqa: B008
@@ -365,7 +488,7 @@ class EllipticCurveFq:
             - altstack = []
 
         Stack output:
-            - stack    = [{q}, .., {gradient}, .., {P}, .., {Q}, .., (P_+ Q_)]
+            - stack    = [q, .., gradient, .., P, .., Q, .., (P_+ Q_)]
             - altstack = []
 
         where {P} means that the element is there if it is picked, it is not there if it is rolled.
@@ -377,6 +500,7 @@ class EllipticCurveFq:
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
+            modulus (StackNumber): The position of `self.MODULUS` in the stack. Defaults to `StackNumber(-1, False)`.
             gradient (StackFiniteFieldElement): The position of gradient through P_ and Q_ in the stack,
                 its length, whether it should be negated, and whether it should be rolled or picked.
                 Defaults to: StackFiniteFieldElement(4,False,1)
@@ -446,7 +570,7 @@ class EllipticCurveFq:
         y_coordinate += Script.parse_string("OP_ADD" if P.negate else "OP_SUB")
         if take_modulo:
             y_coordinate += Script.parse_string("OP_TOALTSTACK")
-            y_coordinate += roll(position=-1, n_elements=1) if clean_constant else pick(position=-1, n_elements=1)
+            y_coordinate += move(modulus, bool_to_moving_function(clean_constant))
             y_coordinate += mod(stack_preparation="", is_positive=positive_modulo)
             y_coordinate += mod(is_constant_reused=False, is_positive=positive_modulo)
 
@@ -459,6 +583,7 @@ class EllipticCurveFq:
         check_constant: bool | None,
         clean_constant: bool | None,
         positive_modulo: bool = True,
+        modulus: StackNumber = StackNumber(-1, False),  # noqa: B008
         gradient: StackFiniteFieldElement = StackFiniteFieldElement(2, False, 1),  # noqa: B008
         P: StackEllipticCurvePoint = StackEllipticCurvePoint(  # noqa: B008, N803
             StackFiniteFieldElement(1, False, 1),  # noqa: B008
@@ -476,10 +601,9 @@ class EllipticCurveFq:
             - altstack = []
 
         Stack output:
-            - stack    = [{q}, .., {gradient}, .., {P}, .., 2P_]
+            - stack    = [q, .., gradient, .., P, .., 2P_]
             - altstack = []
 
-        where {P} means that the element is there if it is picked, it is not there if it is rolled.
         P_ = -P not P.y.negate else P
 
         Args:
@@ -487,6 +611,7 @@ class EllipticCurveFq:
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
+            modulus (StackNumber): The position of `self.MODULUS` in the stack. Defaults to `StackNumber(-1, False)`.
             gradient (StackFiniteFieldElement): The position of gradient of the line tangent at P_ in the stack,
                     its length, whether it should be negated, and whether it should be rolled or picked.
                     Defaults to: StackFiniteFieldElement(2,False,1).
@@ -537,7 +662,7 @@ class EllipticCurveFq:
             verify_gradient += nums_to_script([curve_a])
             verify_gradient += Script.parse_string("OP_ADD")
         verify_gradient += Script.parse_string("OP_ADD" if P.y.negate else "OP_SUB")
-        verify_gradient += roll(position=-1, n_elements=1) if clean_constant else pick(position=-1, n_elements=1)
+        verify_gradient += move(modulus, bool_to_moving_function(clean_constant))
         verify_gradient += mod(stack_preparation="", is_positive=False)
         verify_gradient += Script.parse_string("OP_0 OP_EQUALVERIFY")
         verify_gradient += Script.parse_string("OP_TOALTSTACK" if take_modulo else "OP_DROP")
@@ -581,6 +706,7 @@ class EllipticCurveFq:
         check_constant: bool | None,
         clean_constant: bool | None,
         positive_modulo: bool = True,
+        modulus: StackNumber = StackNumber(-1, False),  # noqa: B008
         gradient: StackFiniteFieldElement = StackFiniteFieldElement(2, False, 1),  # noqa: B008
         P: StackEllipticCurvePoint = StackEllipticCurvePoint(  # noqa: B008, N803
             StackFiniteFieldElement(1, False, 1),  # noqa: B008
@@ -610,6 +736,7 @@ class EllipticCurveFq:
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
+            modulus (StackNumber): The position of `self.MODULUS` in the stack. Defaults to `StackNumber(-1, False)`.
             gradient (StackFiniteFieldElement): The position of gradient of the line tangent at P_ in the stack,
                     its length, whether it should be negated, and whether it should be rolled or picked.
                     Defaults to: StackFiniteFieldElement(2,False,1).
@@ -662,7 +789,7 @@ class EllipticCurveFq:
         y_coordinate += Script.parse_string("OP_ADD" if P.y.negate else "OP_SUB")
         if take_modulo:
             y_coordinate += Script.parse_string("OP_TOALTSTACK")
-            y_coordinate += roll(position=-1, n_elements=1) if clean_constant else pick(position=-1, n_elements=1)
+            y_coordinate += move(modulus, bool_to_moving_function(clean_constant))
             y_coordinate += mod(stack_preparation="", is_positive=positive_modulo)
             y_coordinate += mod(is_constant_reused=False, is_positive=positive_modulo)
 
@@ -726,7 +853,7 @@ class EllipticCurveFq:
         out += Script.parse_string("OP_DUP")  # Duplicate yQ
         out += pick(position=3, n_elements=1)  # Pick yP
         out += Script.parse_string("OP_ADD")
-        out += Script.parse_string("OP_DEPTH OP_1SUB OP_PICK OP_MOD OP_0 OP_NUMNOTEQUAL")
+        out += Script.parse_string("OP_DEPTH OP_1SUB OP_PICK OP_MOD OP_0NOTEQUAL")
         out += Script.parse_string("OP_IF")
 
         # End of initial checks  ---------------------------------------------------------------------------------------

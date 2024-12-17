@@ -2,9 +2,10 @@ import pytest
 from tx_engine import Context, Script, encode_num
 from tx_engine.engine.util import GROUP_ORDER_INT
 
-from src.zkscript.types.stack_elements import StackBaseElement, StackNumber
+from src.zkscript.types.stack_elements import StackBaseElement, StackFiniteFieldElement, StackNumber
 from src.zkscript.util.utility_scripts import (
     bytes_to_unsigned,
+    enforce_mul_equal,
     int_sig_to_s_component,
     mod,
     move,
@@ -409,6 +410,193 @@ def test_bytes_to_unsigned(stack, length_stack_element, stack_element, rolling_o
     for ix, el in enumerate(expected[::-1]):
         lock.append_pushdata(bytes.fromhex(el))
         lock += Script.parse_string("OP_EQUAL" if ix == len(expected) - 1 else "OP_EQUALVERIFY")
+
+    context = Context(unlock + lock)
+    assert context.evaluate()
+    assert len(context.get_stack()) == 1
+
+
+@pytest.mark.parametrize("add_prefix", [True, False])
+@pytest.mark.parametrize(
+    ("stack", "group_order", "stack_element", "rolling_options", "expected"),
+    [
+        (
+            [
+                bytes.fromhex("01"),
+                encode_num(GROUP_ORDER_INT),
+                encode_num(23273337322559462728397485925482564225812377166088316918328726254919566391069),  # sig
+            ],
+            StackNumber(1, False),
+            StackNumber(0, False),
+            3,
+            [
+                bytes.fromhex("01"),
+                (23273337322559462728397485925482564225812377166088316918328726254919566391069).to_bytes(32),
+            ],
+        ),
+        (
+            [
+                bytes.fromhex("01"),
+                encode_num(23273337322559462728397485925482564225812377166088316918328726254919566391069),  # sig
+                encode_num(GROUP_ORDER_INT),
+            ],
+            StackNumber(0, False),
+            StackNumber(1, False),
+            3,
+            [
+                bytes.fromhex("01"),
+                (23273337322559462728397485925482564225812377166088316918328726254919566391069).to_bytes(32),
+            ],
+        ),
+        (
+            [
+                encode_num(GROUP_ORDER_INT),
+                bytes.fromhex("01"),
+                encode_num(23273337322559462728397485925482564225812377166088316918328726254919566391069),  # sig
+            ],
+            StackNumber(-1, False),
+            StackNumber(0, False),
+            3,
+            [
+                bytes.fromhex("01"),
+                (23273337322559462728397485925482564225812377166088316918328726254919566391069).to_bytes(32),
+            ],
+        ),
+        (
+            [
+                bytes.fromhex("01"),
+                encode_num(GROUP_ORDER_INT),
+                encode_num(23273337322559462728397485925482564225812377166088316918328726254919566391069),  # sig
+            ],
+            StackNumber(1, False),
+            StackNumber(0, False),
+            0,
+            [
+                bytes.fromhex("01"),
+                encode_num(GROUP_ORDER_INT),
+                encode_num(23273337322559462728397485925482564225812377166088316918328726254919566391069),  # sig
+                (23273337322559462728397485925482564225812377166088316918328726254919566391069).to_bytes(32),
+            ],
+        ),
+        (
+            [
+                bytes.fromhex("01"),
+                encode_num(GROUP_ORDER_INT),
+                encode_num(23273337322559462728397485925482564225812377166088316918328726254919566391069),  # sig
+                bytes.fromhex("02"),
+            ],
+            StackNumber(2, False),
+            StackNumber(1, False),
+            0,
+            [
+                bytes.fromhex("01"),
+                encode_num(GROUP_ORDER_INT),
+                encode_num(23273337322559462728397485925482564225812377166088316918328726254919566391069),  # sig
+                bytes.fromhex("02"),
+                (23273337322559462728397485925482564225812377166088316918328726254919566391069).to_bytes(32),
+            ],
+        ),
+        (
+            [
+                bytes.fromhex("01"),
+                encode_num(GROUP_ORDER_INT),
+                encode_num(208306889145243764628110735254800045248183311764997803938817302883604514149),  # sig
+            ],
+            StackNumber(1, False),
+            StackNumber(0, False),
+            3,
+            [
+                bytes.fromhex("01"),
+                (208306889145243764628110735254800045248183311764997803938817302883604514149).to_bytes(31),
+            ],
+        ),
+        (
+            [
+                bytes.fromhex("01"),
+                encode_num(GROUP_ORDER_INT),
+                encode_num(GROUP_ORDER_INT // 2 + 100),  # sig
+            ],
+            StackNumber(1, False),
+            StackNumber(0, False),
+            3,
+            [bytes.fromhex("01"), (GROUP_ORDER_INT - (GROUP_ORDER_INT // 2 + 100)).to_bytes(32)],
+        ),
+    ],
+)
+def test_int_sig_to_s_component(stack, group_order, stack_element, rolling_options, add_prefix, expected):
+    unlock = Script()
+    for el in stack:
+        unlock.append_pushdata(el)
+
+    lock = int_sig_to_s_component(group_order, stack_element, rolling_options, add_prefix)
+    for ix, el in enumerate(expected[::-1]):
+        lock.append_pushdata(el if ix != 0 or not add_prefix else bytes.fromhex("02" + hex(len(el))[2:]) + el)
+        lock += Script.parse_string("OP_EQUAL" if ix == len(expected) - 1 else "OP_EQUALVERIFY")
+
+    context = Context(unlock + lock)
+    assert context.evaluate()
+    assert len(context.get_stack()) == 1
+
+
+@pytest.mark.parametrize(
+    (
+        "stack",
+        "modulus",
+        "a",
+        "b",
+        "c",
+        "negate",
+        "rolling_options",
+        "leave_on_top_of_stack",
+        "equation_to_check",
+        "expected",
+    ),
+    [
+        ([17, 6, 2, 3], -1, 2, 1, 0, [False, False, False], 7, 0, 1 << 0, []),  # a = b*c
+        ([17, 6, 2, 3], -1, 2, 1, 0, [False, True, True], 7, 0, 1 << 0, []),  # a = b*c
+        ([1, 17, 1, 6, 1, 2, 1, 3], -2, 4, 2, 0, [False, False, False], 7, 0, 1 << 0, [1, 1, 1, 1]),  # a = b*c
+        ([17, 11, 2, 3], -1, 2, 1, 0, [False, False, True], 7, 0, 1 << 0, []),  # a = -b*c
+        ([17, 11, 2, 3], -1, 2, 1, 0, [False, True, False], 7, 0, 1 << 0, []),  # a = -b*c
+        ([17, 11, 2, 3], -1, 2, 1, 0, [True, False, False], 7, 0, 1 << 0, []),  # -a = b*c
+        ([17, 11, 2, 3], -1, 2, 1, 0, [True, True, True], 7, 0, 1 << 0, []),  # -a = b*c
+        ([17, 10, 9, 3], -1, 2, 1, 0, [False, False, False], 0, 0, 1 << 0, [10, 9, 3]),  # a = b*c, pick everything
+        ([17, 9, 10, 3], -1, 2, 1, 0, [False, False, False], 7, 0, 1 << 2, []),  # b = a*c
+        ([17, 9, 7, 3], -1, 2, 1, 0, [True, False, False], 7, 0, 1 << 2, []),  # b = -a*c
+        ([17, 9, 7, 3], -1, 2, 1, 0, [False, False, True], 7, 0, 1 << 2, []),  # b = -a*c
+        ([17, 9, 7, 3], -1, 2, 1, 0, [False, True, False], 7, 0, 1 << 2, []),  # -b = a*c
+        ([17, 9, 3, 10], -1, 2, 1, 0, [False, False, False], 7, 0, 1 << 1, []),  # c = a*b
+        ([17, 9, 3, 7], -1, 2, 1, 0, [True, False, False], 7, 0, 1 << 1, []),  # c = -a*b
+        ([17, 9, 3, 7], -1, 2, 1, 0, [False, True, False], 7, 0, 1 << 1, []),  # c = -a*b
+        ([17, 9, 3, 7], -1, 2, 1, 0, [False, False, True], 7, 0, 1 << 1, []),  # -c = a*b
+        ([17, 6, 2, 3], -1, 2, 1, 0, [False, False, False], 7, 1, 1 << 0, [6]),  # a = b*c, leave a
+        ([17, 6, 2, 3], -1, 2, 1, 0, [False, False, False], 7, 2, 1 << 0, [2]),  # a = b*c, leave b
+        ([17, 6, 2, 3], -1, 2, 1, 0, [False, False, False], 7, 4, 1 << 0, [3]),  # a = b*c, leave c
+        ([17, 6, 2, 3], -1, 2, 1, 0, [False, False, False], 7, 3, 1 << 0, [6, 2]),  # a = b*c, leave a, b
+        ([17, 6, 2, 3], -1, 2, 1, 0, [False, False, False], 7, 5, 1 << 0, [6, 3]),  # a = b*c, leave a, c
+        ([17, 6, 2, 3], -1, 2, 1, 0, [False, False, False], 7, 6, 1 << 0, [2, 3]),  # a = b*c, leave b, c
+        ([17, 6, 2, 3], -1, 2, 1, 0, [False, False, False], 7, 7, 1 << 0, [6, 2, 3]),  # a = b*c, leave a, b, c
+    ],
+)
+def test_enforce_mul_equal(
+    stack, modulus, a, b, c, negate, rolling_options, leave_on_top_of_stack, equation_to_check, expected
+):
+    unlock = nums_to_script(stack)
+    lock = enforce_mul_equal(
+        True,
+        False,
+        StackNumber(modulus, False),
+        StackFiniteFieldElement(a, negate[0], 1),
+        StackFiniteFieldElement(b, negate[1], 1),
+        StackFiniteFieldElement(c, negate[2], 1),
+        rolling_options,
+        leave_on_top_of_stack,
+        equation_to_check,
+    )
+    for ix, el in enumerate(expected[::-1]):
+        lock += nums_to_script([el])
+        lock += Script.parse_string("OP_EQUAL" if ix == len(expected) - 1 else "OP_EQUALVERIFY")
+    if expected == []:
+        lock += Script.parse_string("OP_1")
 
     context = Context(unlock + lock)
     assert context.evaluate()

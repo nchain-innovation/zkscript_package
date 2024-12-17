@@ -11,12 +11,14 @@ from src.zkscript.elliptic_curves.ec_operations_fq import EllipticCurveFq
 from src.zkscript.elliptic_curves.ec_operations_fq2 import EllipticCurveFq2
 from src.zkscript.elliptic_curves.ec_operations_fq_unrolled import EllipticCurveFqUnrolled
 from src.zkscript.fields.fq2 import Fq2 as Fq2ScriptModel
+from src.zkscript.types.stack_elements import StackEllipticCurvePoint, StackFiniteFieldElement
 from src.zkscript.types.unlocking_keys.unrolled_ec_multiplication import EllipticCurveFqUnrolledUnlockingKey
 from src.zkscript.util.utility_scripts import nums_to_script
 from tests.elliptic_curves.util import (
     generate_test,
     generate_test_data,
     generate_unlock,
+    generate_verify_from_list,
     generate_verify_point,
     modify_verify_modulo_check,
     save_scripts,
@@ -36,7 +38,7 @@ class Secp256k1:
         x=Fq_k1(0x79BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798),
         y=Fq_k1(0x483ADA7726A3C4655DA4FBFC0E1108A8FD17B448A68554199C47D08FFB10D4B8),
     )
-    test_script = EllipticCurveFq(q=modulus, curve_a=0)
+    test_script = EllipticCurveFq(q=modulus, curve_a=0, curve_b=7)
     test_script_unrolled = EllipticCurveFqUnrolled(q=modulus, ec_over_fq=test_script)
     # All possible combinations: ± P ± Q are tested. Refer to ./util.py
     positions_addition = [
@@ -67,6 +69,10 @@ class Secp256k1:
     )
     a = 64046112301879843941239178948101222343000413030798872646069227448863068996094
     test_data = {
+        "test_is_on_curve": [
+            {"P": P, "position": 1, "expected": []},
+            {"P": P, "position": 5, "expected": [1, 1, 1, 1]},
+        ],
         "test_addition": [
             # Test standard configuration
             generate_test(
@@ -159,7 +165,11 @@ class Secp256r1:
         x=Fq_r1(0x6B17D1F2E12C4247F8BCE6E563A440F277037D812DEB33A0F4A13945D898C296),
         y=Fq_r1(0x4FE342E2FE1A7F9B8EE7EB4A7C0F9E162BCE33576B315ECECBB6406837BF51F5),
     )
-    test_script = EllipticCurveFq(q=modulus, curve_a=0xFFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFC)
+    test_script = EllipticCurveFq(
+        q=modulus,
+        curve_a=0xFFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFC,
+        curve_b=0x5AC635D8AA3A93E7B3EBBD55769886BC651D06B0CC53B0F63BCE3C3E27D2604B,
+    )
     test_script_unrolled = EllipticCurveFqUnrolled(q=modulus, ec_over_fq=test_script)
     # All possible combinations: ± P ± Q are tested. Refer to ./util.py
     positions_addition = [
@@ -190,6 +200,10 @@ class Secp256r1:
     )
     a = 104614095137500434070196828944928516815982260532830080798264081596642730786155
     test_data = {
+        "test_is_on_curve": [
+            {"P": P, "position": 1, "expected": []},
+            {"P": P, "position": 5, "expected": [1, 1, 1, 1]},
+        ],
         "test_addition": [
             # Test standard configuration
             generate_test(
@@ -522,6 +536,8 @@ def generate_test_cases(test_name):
         if test_name in config.test_data:
             for test_data in config.test_data[test_name]:
                 match test_name:
+                    case "test_is_on_curve":
+                        out.append((config, test_data["P"], test_data["position"], test_data["expected"]))
                     case "test_addition":
                         out.append(
                             (
@@ -569,6 +585,31 @@ def generate_test_cases(test_name):
                             (config, test_data["P"], test_data["a"], test_data["expected"], test_data["max_multiplier"])
                         )
     return out
+
+
+@pytest.mark.parametrize(("config", "P", "position", "expected"), generate_test_cases("test_is_on_curve"))
+def test_is_on_curve(config, P, position, expected, save_to_json_folder):
+    unlock = nums_to_script([config.modulus])
+    unlock += nums_to_script(P.to_list())
+    unlock += nums_to_script([1] * (position - 1))
+
+    lock = config.test_script.is_on_curve(
+        check_constant=True,
+        clean_constant=True,
+        P=StackEllipticCurvePoint(
+            StackFiniteFieldElement(position, False, 1),
+            StackFiniteFieldElement(position - 1, False, 1),
+        ),
+    )
+    lock += generate_verify_from_list(expected) if expected != [] else Script.parse_string("OP_1")
+
+    context = Context(script=unlock + lock)
+    assert context.evaluate()
+    assert len(context.get_stack()) == 1
+    assert len(context.get_altstack()) == 0
+
+    if save_to_json_folder:
+        save_scripts(str(lock), str(unlock), save_to_json_folder, config.filename, "is point on curve")
 
 
 @pytest.mark.parametrize("verify_gradient", [True, False])

@@ -23,16 +23,18 @@ class Groth16(PairingModel):
         r (int): The order of G1/G2/GT.
     """
 
-    def __init__(self, pairing_model, curve_a: int, r: int):
+    def __init__(self, pairing_model, curve_a: int, curve_b: int, r: int):
         """Initialise the Groth16 class.
 
         Args:
             pairing_model: Pairing model used to instantiate Groth16.
             curve_a (int): A coefficient of the base curve over which Groth16 is instantiated.
+            curve_b (int): B coefficient of the base curve over which Groth16 is instantiated.
             r (int): The order of G1/G2/GT.
         """
         self.pairing_model = pairing_model
         self.curve_a = curve_a
+        self.curve_b = curve_b
         self.r = r
 
     def __gradients_to_hash_commitment(self, locking_key: Groth16LockingKey) -> bytes:
@@ -128,7 +130,7 @@ class Groth16(PairingModel):
         n_pub = len(locking_key.gamma_abc) - 1
 
         # Elliptic curve arithmetic
-        ec_fq = EllipticCurveFq(q=self.pairing_model.MODULUS, curve_a=self.curve_a)
+        ec_fq = EllipticCurveFq(q=self.pairing_model.MODULUS, curve_a=self.curve_a, curve_b=self.curve_b)
         # Unrolled EC arithmetic
         ec_fq_unrolled = EllipticCurveFqUnrolled(q=self.pairing_model.MODULUS, ec_over_fq=ec_fq)
         # Hash used to verify the gradients of -gamma and -delta
