@@ -5,7 +5,8 @@ from tx_engine import Script
 from src.zkscript.bilinear_pairings.bls12_381.fields import fq12_script, fq12cubic_script
 from src.zkscript.bilinear_pairings.bls12_381.parameters import exp_miller_loop
 from src.zkscript.bilinear_pairings.model.cyclotomic_exponentiation import CyclotomicExponentiation
-from src.zkscript.util.utility_scripts import pick, roll, verify_bottom_constant
+from src.zkscript.types.stack_elements import StackFiniteFieldElement
+from src.zkscript.util.utility_scripts import move, pick, roll, verify_bottom_constant
 
 
 class FinalExponentiation(CyclotomicExponentiation):
@@ -32,12 +33,14 @@ class FinalExponentiation(CyclotomicExponentiation):
         check_constant: bool | None = None,
         clean_constant: bool | None = None,
         is_constant_reused: bool | None = None,
+        f_inverse: StackFiniteFieldElement = StackFiniteFieldElement(23, False, 12),  # noqa: B008
+        f: StackFiniteFieldElement = StackFiniteFieldElement(11, False, 12),  # noqa: B008
     ) -> Script:
         """Easy part of the final exponentiation.
 
         Stack input:
-            - stack:    [q, ..., inverse(f_quadratic), f], `f` is an element in F_q^12, the cubic extension of F_q^4,
-                `f_quadratic` is the same element in the quadratic extension of F_q^6, and its inverse is also an
+            - stack:    [q, ..., inverse(f_quadratic), ..., f, ...], `f` is an element in F_q^12, the cubic extension of
+                F_q^4, `f_quadratic` is the same element in the quadratic extension of F_q^6, and its inverse is also an
                 element in the quadratic extension of F_q^6
             - altstack: []
 
@@ -52,6 +55,10 @@ class FinalExponentiation(CyclotomicExponentiation):
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
                 after execution. Defaults to `None`.
+            f_inverse (StackFiniteFieldElement): the value `f_inverse`. Defaults to
+                StackFiniteFieldElement = StackFiniteFieldElement(23, False, 12).
+            f (StackFiniteFieldElement): the value `f`. Defaults to
+                StackFiniteFieldElement = StackFiniteFieldElement(11, False, 12).
 
         Returns:
             Script to perform the easy part of the exponentiation in the pairing for BLS12-381.
@@ -62,8 +69,16 @@ class FinalExponentiation(CyclotomicExponentiation):
         """
         # Fq12 implementation
         fq12 = self.FQ12
+        is_default_config = (f_inverse.position == self.EXTENSION_DEGREE * 2 - 1) and (
+            f.position == self.EXTENSION_DEGREE - 1
+        )
 
         out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
+
+        # After this, the stack is: Inverse(f_quadratic) f
+        if not is_default_config:
+            out += move(f_inverse, roll)
+            out += move(f.shift(f_inverse.extension_degree * f_inverse.is_before(f)), roll)
 
         # After this, the stack is: Inverse(f_quadratic) f_quadratic
         check_f_inverse = pick(position=23, n_elements=12)  # Bring Inverse(f_quadratic) on top of the stack

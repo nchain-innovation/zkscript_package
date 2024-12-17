@@ -5,7 +5,7 @@ from math import ceil, log2
 from tx_engine import Script
 
 from src.zkscript.types.stack_elements import StackEllipticCurvePoint, StackFiniteFieldElement
-from src.zkscript.util.utility_functions import optimise_script
+from src.zkscript.util.utility_functions import boolean_list_to_bitmask, optimise_script
 from src.zkscript.util.utility_scripts import move, pick, roll, verify_bottom_constant
 
 
@@ -82,7 +82,7 @@ class MillerLoop:
         )
         # stack in:     [gradient_(2T), P, Q, T]
         # altstack in:  [({f_i^2} * ev_(l_(T,T))(P))]
-        # stack out:    [P, Q, 2T]
+        # stack out:    [gradient_(2T) if not verify_gradient, P, Q, 2T]
         # altstack out: [({f_i^2} * ev_(l_(T,T))(P))]
         out += self.point_doubling_twisted_curve(
             take_modulo=take_modulo[1],
@@ -92,11 +92,11 @@ class MillerLoop:
             verify_gradient=verify_gradient,
             gradient=gradient_doubling,
             P=T,
-            rolling_options=3,
+            rolling_options=boolean_list_to_bitmask([verify_gradient, True]),
         )
-        # stack in:    [P, Q, 2T]
+        # stack in:    [..., P, Q, 2T]
         # altstack in: [({f_i^2} * ev_(l_(T,T))(P))]
-        # stack out:   [P, Q, 2T, ({f_i^2} * ev_(l_(T,T))(P))]
+        # stack out:   [..., P, Q, 2T, ({f_i^2} * ev_(l_(T,T))(P))]
         out += Script.parse_string(
             " ".join(
                 ["OP_FROMALTSTACK"]
@@ -205,7 +205,7 @@ class MillerLoop:
         )
         # stack in:     [gradient_(2T ± Q), gradient_(2T), P, Q, T]
         # altstack in:  [({f_i^2} * ev_(l_(T,T))(P) * ev_(l_(2T, ± Q))(P))^2]
-        # stack out:    [gradient_(2T ± Q), P, Q, 2T]
+        # stack out:    [gradient_(2T ± Q), gradient_(2T) if not verify_gradients, P, Q, 2T]
         # altstack out: [({f_i^2} * ev_(l_(T,T))(P) * ev_(l_(2T, ± Q))(P))^2]
         out += self.point_doubling_twisted_curve(
             take_modulo=False,
@@ -215,11 +215,11 @@ class MillerLoop:
             verify_gradient=verify_gradients,
             gradient=gradient_doubling,
             P=T,
-            rolling_options=3,
+            rolling_options=boolean_list_to_bitmask([verify_gradients, True]),
         )  # Compute 2T
-        # stack in:     [gradient_(2T ± Q), P, Q, 2T]
+        # stack in:     [gradient_(2T ± Q), ..., P, Q, 2T]
         # altstack in:  [({f_i^2} * ev_(l_(T,T))(P) * ev_(l_(2T, ± Q))(P))^2]
-        # stack out:    [P, Q, (2T ± Q)]
+        # stack out:    [gradient_(2T ± Q) if not verify_gradients, ..., P, Q, (2T ± Q)]
         # altstack out: [({f_i^2} * ev_(l_(T,T))(P) * ev_(l_(2T, ± Q))(P))^2]
         out += self.point_addition_twisted_curve(
             take_modulo=take_modulo[1],
@@ -227,10 +227,10 @@ class MillerLoop:
             check_constant=False,
             clean_constant=(i == 0) and clean_constant,
             verify_gradient=verify_gradients,
-            gradient=gradient_addition.shift(-self.EXTENSION_DEGREE),
+            gradient=gradient_addition.shift(-self.EXTENSION_DEGREE if verify_gradients else 0),
             P=Q.set_negate(self.exp_miller_loop[i] == -1),
             Q=T,
-            rolling_options=5,
+            rolling_options=boolean_list_to_bitmask([verify_gradients, False, True]),
         )  # Compute (2T ± Q)
         # stack in:     [P, Q, (2T ± Q)]
         # altstack in:  [({f_i^2} * ev_(l_(T,T))(P) * ev_(l_(2T, ± Q))(P))^2]
@@ -341,6 +341,7 @@ class MillerLoop:
         )
         # stack in:  [P, Q, T]
         # stack out: [w*Q, miller(P,Q)]
+        gradient_tracker = 0
         for i in range(len(self.exp_miller_loop) - 2, -1, -1):
             positive_modulo_i = positive_modulo if i == 0 else False
             clean_constant_i = clean_constant if i == 0 else False
@@ -396,34 +397,36 @@ class MillerLoop:
                 out += self.miller_loop_output_square(take_modulo=False, check_constant=False, clean_constant=False)
 
             if self.exp_miller_loop[i] == 0:
-                # stack in:  [gradient_(2T), P, Q, T, f_i^2]
-                # stack out: [P, Q, 2T, (f_i^2 * ev_(l_(T,T))(P))]
+                # stack in:  [gradient_(2T), ..., P, Q, T, f_i^2]
+                # stack out: [gradient_(2T) if not verify_gradients, ..., P, Q, 2T, (f_i^2 * ev_(l_(T,T))(P))]
                 out += self.__one_step_without_addition(
                     i=i,
                     take_modulo=[take_modulo_miller_loop_output, take_modulo_point_multiplication],
                     positive_modulo=positive_modulo_i,
                     verify_gradient=verify_gradients,
                     clean_constant=clean_constant_i,
-                    gradient_doubling=gradient_doubling,
+                    gradient_doubling=gradient_doubling.shift(gradient_tracker),
                     P=P,
                     T=T,
                 )
+                gradient_tracker += self.EXTENSION_DEGREE if not verify_gradients else 0
             else:
-                # stack in:  [gradient_(2T ± Q), gradient_(2T), P, Q, T, f_i^2]
-                # stack out: [P, Q, (2T ± Q), (f_i^2 * ev_(l_(T,T))(P) * ev_(l_(2T, ± Q))(P))]
+                # stack in:  [gradient_(2T ± Q), gradient_(2T), ..., P, Q, T, f_i^2]
+                # stack out: [gradient_(2T ± Q) in not verify_gradients, gradient_(2T) if not_verify_gradients, ..., P,
+                #               Q, (2T ± Q), (f_i^2 * ev_(l_(T,T))(P) * ev_(l_(2T, ± Q))(P))]
                 out += self.__one_step_with_addition(
                     i=i,
                     take_modulo=[take_modulo_miller_loop_output, take_modulo_point_multiplication],
                     positive_modulo=positive_modulo_i,
                     verify_gradients=verify_gradients,
                     clean_constant=clean_constant_i,
-                    gradient_doubling=gradient_doubling,
-                    gradient_addition=gradient_addition,
+                    gradient_doubling=gradient_doubling.shift(gradient_tracker),
+                    gradient_addition=gradient_addition.shift(gradient_tracker),
                     P=P,
                     Q=Q,
                     T=T,
                 )
-
+                gradient_tracker += 2 * self.EXTENSION_DEGREE if not verify_gradients else 0
         # stack in:  [P, Q, w*Q, miller(P,Q)]
         # stack out: [w*Q, miller(P,Q)]
         out += move(Q.shift(self.N_ELEMENTS_MILLER_OUTPUT), roll)  # Roll Q

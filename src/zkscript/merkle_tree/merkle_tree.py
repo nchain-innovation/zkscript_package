@@ -51,7 +51,7 @@ class MerkleTree:
 
         Args:
             is_equal_verify (bool): If `True`, use `OP_EQUALVERIFY` in the final verification step, otherwise
-                `OP_EQUAL`. Default to `False`.
+                `OP_EQUAL`. Defaults to `False`.
 
         Returns:
             Locking script for verifying a Merkle path using a bit flag to identify right and left nodes.
