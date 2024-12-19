@@ -42,7 +42,7 @@ class Fq:
     ) -> Script:
         """Compute the algebraic sum of x and y.
 
-        The script computes `± xi ± yi` for `x` and `y` in `Fqn` and `i` the selected component.
+        The script computes `± x ± y` for `x` and `y` in `F_q`.
 
         Args:
             take_modulo (bool): If `True`, the result is reduced modulo `q`.
@@ -65,8 +65,8 @@ class Fq:
 
         out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
-        out += move(y, bool_to_moving_function(is_y_rolled))  # Move yi
-        out += move(x.shift(1 - is_y_rolled), bool_to_moving_function(is_x_rolled))  # Move xi
+        out += move(y, bool_to_moving_function(is_y_rolled))  # Move y
+        out += move(x.shift(1 - is_y_rolled), bool_to_moving_function(is_x_rolled))  # Move x
         out += Script.parse_string("OP_ADD" if not (x.negate or y.negate) or (x.negate and y.negate) else "OP_SUB")
         if (x.negate and y.negate) or (not x.negate and y.negate):
             out += Script.parse_string("OP_NEGATE")

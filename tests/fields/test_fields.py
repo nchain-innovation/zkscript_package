@@ -10,6 +10,7 @@ from src.zkscript.fields.fq2 import Fq2 as Fq2Script
 from src.zkscript.fields.fq2 import Fq2 as Fq2ScriptModel
 from src.zkscript.fields.fq2 import fq2_for_towering
 from src.zkscript.fields.fq2_over_2_residue_equal_u import Fq2Over2ResidueEqualU as Fq2Over2ResidueEqualUScript
+from src.zkscript.fields.fq3 import Fq3 as Fq3Script
 from src.zkscript.fields.fq4 import Fq4 as Fq4Script
 from src.zkscript.fields.fq4 import Fq4 as Fq4ScriptModel
 from src.zkscript.fields.fq4 import fq4_for_towering
@@ -130,6 +131,42 @@ class Fq2ResidueNotMinusOne:
         "test_mul_by_one_plus_u": [
             {"x": [5, -10], "expected": [13, 14], "positive_modulo": True},
             {"x": [5, -10], "expected": [-6, -5], "positive_modulo": False},
+        ],
+    }
+
+
+@dataclass
+class Fq3:
+    # Define Fq and Fq2
+    q = 19
+    Fq = base_field_from_modulus(q=q)
+    non_residue = Fq(3)
+    Fq3 = cubic_extension_from_base_field_and_non_residue(base_field=Fq, non_residue=non_residue)
+    # Define script run in tests
+    test_script = Fq3Script(q=q, non_residue=non_residue.to_list()[0])
+    # Define filename for saving scripts
+    filename = "fq3"
+
+    test_data = {
+        "test_addition": [
+            {"x": [5, 10, 7], "y": [2, -11, 8], "expected": [7, 18, 15], "positive_modulo": True},
+            {"x": [5, 10, 7], "y": [2, -11, 8], "expected": [7, -1, 15], "positive_modulo": False},
+        ],
+        "test_subtraction": [
+            {"x": [5, 10, 7], "y": [2, 11, 8], "expected": [3, 18, 18], "positive_modulo": True},
+            {"x": [5, 10, 7], "y": [2, 11, 8], "expected": [3, -1, -1], "positive_modulo": False},
+        ],
+        "test_base_field_scalar_mul": [
+            {"x": [5, -10, 11], "y": [2], "expected": [10, 18, 3], "positive_modulo": True},
+            {"x": [5, -10, -11], "y": [2], "expected": [10, -1, -3], "positive_modulo": False},
+        ],
+        "test_mul": [
+            {"x": [3, 2, 8], "y": [-6, 7, 10], "expected": [1, 2, 15], "positive_modulo": True},
+            {"x": [3, 2, 8], "y": [6, -7, -10], "expected": [-1, -2, 4], "positive_modulo": False},
+        ],
+        "test_square": [
+            {"x": [1, -1, 4], "expected": [15, 8, 9], "positive_modulo": True},
+            {"x": [1, -1, 4], "expected": [-4, 8, 9], "positive_modulo": False},
         ],
     }
 
@@ -681,6 +718,7 @@ def generate_test_cases(test_name):
     configurations = [
         Fq2ResidueMinusOne,
         Fq2ResidueNotMinusOne,
+        Fq3,
         Fq4,
         Fq2Over2ResidueEqualU,
         Fq6ThreeOverTwo,

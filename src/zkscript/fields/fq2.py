@@ -481,15 +481,10 @@ class Fq2(PrimeFieldExtension):
         out += Script.parse_string("OP_TOALTSTACK")
         if self.NON_RESIDUE == -1:
             out += Script.parse_string("OP_SUB")
-        elif self.NON_RESIDUE > 0:
-            # After this, the stack is: x0 + x1 * NON_RESIDUE, altstack = [x0 + x1]
-            out += nums_to_script([self.NON_RESIDUE]) + Script.parse_string(
-                "OP_MUL OP_ADD"
-            )  # Compute (x_0 + x_1 * NON_RESIDUE)
         else:
             # After this, the stack is: x0 + x1 * NON_RESIDUE, altstack = [x0 + x1]
             out += nums_to_script([self.NON_RESIDUE])
-            out += Script.parse_string("OP_NEGATE OP_MUL OP_ADD")  # Compute (x_0 + x_1 * NON_RESIDUE)
+            out += Script.parse_string("OP_MUL OP_ADD")  # Compute (x_0 + x_1 * NON_RESIDUE)
 
         out += (
             self.take_modulo(

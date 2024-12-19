@@ -30,7 +30,7 @@ class PrimeFieldExtension:
         y: StackFiniteFieldElement,
         rolling_options: int = 3,
     ) -> Script:
-        """Algebraic addition in F_q^n, where n = x.extension_degree = y.extension_degree.
+        """Algebraic addition in F_q^n, where n = x.extension_degree = y.extension_degree leaving result on altstack.
 
         Stack input:
             - stack:    [q, ..., x := (x0, .., xn), .., y := (y0, .., yn), ..]
@@ -61,9 +61,15 @@ class PrimeFieldExtension:
         """
         assert x.extension_degree == y.extension_degree, "x and y must have the same extension degree."
         is_x_rolled, is_y_rolled = bitmask_to_boolean_list(rolling_options, 2)
-        is_default_config = (
-            (x.position == 2 * x.extension_degree - 1)
-            and (y.position == y.extension_degree - 1)
+        is_extension_degree_two = x.extension_degree == 2
+        is_y_on_top = y.position == y.extension_degree - 1
+        # Default config: x, y rolled and on top of the stack
+        is_default_config = (x.position == 2 * x.extension_degree - 1) and is_y_on_top and is_x_rolled and is_y_rolled
+        # Config for x.extension_degree == 2, x.position = 5, y on top, x, y rolled
+        is_extension_degree_two_special_config = (
+            is_extension_degree_two
+            and is_y_on_top
+            and x.position == 3 * x.extension_degree - 1
             and is_x_rolled
             and is_y_rolled
         )
@@ -131,6 +137,13 @@ class PrimeFieldExtension:
                         ),
                         rolling_options=3,
                     )
+        elif is_extension_degree_two_special_config:
+            out += move(x, roll)
+            out += self.__algebraic_sum_leaving_result_on_altstack(
+                x=StackFiniteFieldElement(2 * y.extension_degree - 1, y.negate, y.extension_degree),
+                y=StackFiniteFieldElement(x.extension_degree - 1, x.negate, x.extension_degree),
+                rolling_options=3,
+            )
         else:
             for i in range(x.extension_degree):
                 out += self.PRIME_FIELD.algebraic_sum(
@@ -404,7 +417,7 @@ class PrimeFieldExtension:
         clean_constant: bool | None = None,
         is_constant_reused: bool | None = None,
     ) -> Script:
-        """Perfom modulo operation in F_q^n.
+        """Perform modulo operation in F_q^n.
 
         Stack input:
             - stack:    [q, ..., x0]

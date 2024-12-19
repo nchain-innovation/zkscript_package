@@ -21,6 +21,7 @@ class Fq12Cubic(PrimeFieldExtension):
 
     Attributes:
         MODULUS: The characteristic of the field F_q.
+        EXTENSION_DEGREE: The extension degree over the prime field, equal to 6.
         FQ2 (Fq2): Bitcoin script instance to perform arithmetic operations in F_q^2.
         FQ4 (Fq4): Bitcoin script instance to perform arithmetic operations in F_q^4.
         PRIME_FIELD: The Bitcoin Script implementation of the prime field F_q.

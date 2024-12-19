@@ -16,7 +16,7 @@ from src.zkscript.util.utility_scripts import (
 
 
 def fq3_for_towering(mul_by_non_residue):
-    """Export Fq2 class with a mul_by_non_residue method to construct towering extensions."""
+    """Export Fq3 class with a mul_by_non_residue method to construct towering extensions."""
 
     class Fq3ForTowering(Fq3):
         pass
@@ -27,7 +27,7 @@ def fq3_for_towering(mul_by_non_residue):
 
 
 class Fq3(PrimeFieldExtension):
-    """Construct Bitcoin scripts that perform arithmetic operations in F_q^3 = F_q[x] / (x^3 - non_residue).
+    """Construct Bitcoin scripts that perform arithmetic operations in F_q^3 = F_q[u] / (u^3 - non_residue).
 
     F_q^3 = F_q[u] / (u^3 - non_residue) is a cubic extension of a base field F_q.
 

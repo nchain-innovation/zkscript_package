@@ -32,6 +32,8 @@ class Fq6(PrimeFieldExtension):
     Attributes:
         MODULUS: The characteristic of the field F_q.
         BASE_FIELD (Fq2): Bitcoin script instance to perform arithmetic operations in F_q^2.
+        EXTENSION_DEGREE: The extension degree over the prime field, equal to 6.
+        PRIME_FIELD: The Bitcoin Script implementation of the prime field F_q.
     """
 
     def __init__(self, q: int, base_field):
