@@ -3,7 +3,6 @@
 from typing import Union
 
 from tx_engine import Script
-from tx_engine.engine.op_codes import OP_ADD, OP_FROMALTSTACK, OP_MUL, OP_NEGATE, OP_ROT, OP_SUB, OP_SWAP, OP_TOALTSTACK
 
 from src.zkscript.types.stack_elements import StackElements
 
@@ -23,34 +22,34 @@ def optimise_script(script: Script) -> Script:
     """
     patterns = {
         (
-            OP_TOALTSTACK,
-            OP_FROMALTSTACK,
+            "OP_TOALTSTACK",
+            "OP_FROMALTSTACK",
         ): [],
         (
-            OP_FROMALTSTACK,
-            OP_TOALTSTACK,
+            "OP_FROMALTSTACK",
+            "OP_TOALTSTACK",
         ): [],
         (
-            OP_ROT,
-            OP_ROT,
-            OP_ROT,
+            "OP_ROT",
+            "OP_ROT",
+            "OP_ROT",
         ): [],
         (
-            OP_SWAP,
-            OP_ADD,
-        ): [OP_ADD],
+            "OP_SWAP",
+            "OP_ADD",
+        ): ["OP_ADD"],
         (
-            OP_SWAP,
-            OP_MUL,
-        ): [OP_MUL],
+            "OP_SWAP",
+            "OP_MUL",
+        ): ["OP_MUL"],
         (
-            OP_SWAP,
-            OP_SUB,
-            OP_NEGATE,
-        ): [OP_SUB],
+            "OP_SWAP",
+            "OP_SUB",
+            "OP_NEGATE",
+        ): ["OP_SUB"],
     }
 
-    script_list = script.cmds
+    script_list = script.to_string().split()
     stack = []
 
     for op in script_list:
@@ -68,7 +67,7 @@ def optimise_script(script: Script) -> Script:
                     stack.extend(replacement)
                     break
 
-    return Script(stack)
+    return Script.parse_string(" ".join(stack))
 
 
 def check_order(stack_elements: list[StackElements]) -> ValueError | None:
