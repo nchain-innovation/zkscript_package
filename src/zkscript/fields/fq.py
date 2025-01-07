@@ -67,9 +67,8 @@ class Fq:
 
         out += move(y, bool_to_moving_function(is_y_rolled))  # Move y
         out += move(x.shift(1 - is_y_rolled), bool_to_moving_function(is_x_rolled))  # Move x
-        out += Script.parse_string("OP_ADD" if not (x.negate or y.negate) or (x.negate and y.negate) else "OP_SUB")
-        if (x.negate and y.negate) or (not x.negate and y.negate):
-            out += Script.parse_string("OP_NEGATE")
+        out += Script.parse_string("OP_ADD" if (x.negate == y.negate) else "OP_SUB")
+        out += Script.parse_string("OP_NEGATE" if y.negate else "")
         if take_modulo:
             out += roll(position=-1, n_elements=1) if clean_constant else roll(position=-1, n_elements=1)
             out += mod(stack_preparation="", is_positive=positive_modulo, is_constant_reused=is_constant_reused)

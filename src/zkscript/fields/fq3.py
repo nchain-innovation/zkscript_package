@@ -36,17 +36,17 @@ class Fq3(PrimeFieldExtension):
 
     Attributes:
         MODULUS: The characteristic of the base field F_q.
-        NON_RESIDUE: The non-residue element used to define the quadratic extension.
+        NON_RESIDUE: The non-residue element used to define the cubic extension.
         EXTENSION_DEGREE: The extension degree over the prime field, equal to 3.
         PRIME_FIELD: The Bitcoin Script implementation of the prime field F_q.
     """
 
     def __init__(self, q: int, non_residue: int):
-        """Initialise F_q^3, the quadratic extension of F_q.
+        """Initialise F_q^3, the cubic extension of F_q.
 
         Args:
             q: The characteristic of the base field F_q.
-            non_residue: The non-residue element used to define the quadratic extension.
+            non_residue: The non-residue element used to define the cubic extension.
         """
         self.MODULUS = q
         self.NON_RESIDUE = non_residue

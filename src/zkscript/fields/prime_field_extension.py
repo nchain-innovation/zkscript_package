@@ -43,12 +43,6 @@ class PrimeFieldExtension:
         Args:
             x (StackFiniteFieldElement): The position in the stack of `x` and whether `x` should be negated when used.
             y (StackFiniteFieldElement): The position in the stack of `y` and whether `y` should be negated when used.
-            take_modulo (bool): If `True`, the result is reduced modulo `q`.
-            positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
-            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
-            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
-            is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
-                after execution. Defaults to `None`.
             rolling_options (int): Bitmask detailing which of the elements `x` and `y` should be removed from the stack
                 after execution. Defaults to `3` (remove everything).
 
@@ -57,11 +51,15 @@ class PrimeFieldExtension:
             on the altstack.
 
         Notes:
-            The function returns an asssertion error if `x.extension_degree != y.extension_degree`
+            The function returns an assertion error if `x.extension_degree != y.extension_degree`
+            The function optimises for certain default configurations:
+                - When `x` and `y` are on top of the stack and they are both rolled.
+                - When `x.extension_degree == 2`, the top of the stack is: [.., x, *, *, y], where * denotes an
+                    element on the stack, and both `x` and `y` are rolled.
         """
         assert x.extension_degree == y.extension_degree, "x and y must have the same extension degree."
         is_x_rolled, is_y_rolled = bitmask_to_boolean_list(rolling_options, 2)
-        is_extension_degree_two = x.extension_degree == 2
+        is_extension_degree_two = x.extension_degree == 2  # noqa: PLR2004
         is_y_on_top = y.position == y.extension_degree - 1
         # Default config: x, y rolled and on top of the stack
         is_default_config = (x.position == 2 * x.extension_degree - 1) and is_y_on_top and is_x_rolled and is_y_rolled
@@ -80,6 +78,11 @@ class PrimeFieldExtension:
         # stack out:    [q, .., x, .., y, .., ± x0 ± y0]
         # altstack out: [± xn ± yn, .., ± x1 ± y1]
         if is_default_config:
+            # The match below is used to return the optimal script given the extension degree
+            # If x.extension_degree \in {2, 3, 4, 6} we have a fixed, optimised implementation
+            # If x.extension_degree == 5 or x.extension_degree > 7, then we sum up to when we are
+            # left with 4 or 6 elements, and then we fall back to the optimised script for that
+            # extension degree
             match x.extension_degree:
                 case 2 | 3:
                     for i in range(x.extension_degree):
@@ -245,14 +248,16 @@ class PrimeFieldExtension:
             - altstack: []
 
         Args:
-            x (StackFiniteFieldElement): The position in the stack of `x`.
-            y (StackFiniteFieldElement): The position in the stack of `y`.
             take_modulo (bool): If `True`, the result is reduced modulo `q`.
             positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
                 after execution. Defaults to `None`.
+            x (StackFiniteFieldElement): The position in the stack of `x`. If `None`, the function defaults to
+                `StackFiniteFieldElement(2 * self.EXTENSION_DEGREE - 1, False, self.EXTENSION_DEGREE)`.
+            y (StackFiniteFieldElement): The position in the stack of `y`. If `None`, the function defaults to
+                `StackFiniteFieldElement(self.EXTENSION_DEGREE - 1, False, self.EXTENSION_DEGREE)`.
             rolling_options (int): Bitmask detailing which of the elements `x` and `y` should be removed from the stack
                 after execution. Defaults to `3` (remove everything).
 
@@ -302,14 +307,16 @@ class PrimeFieldExtension:
             - altstack: []
 
         Args:
-            x (StackFiniteFieldElement): The position in the stack of `x`.
-            y (StackFiniteFieldElement): The position in the stack of `y`.
             take_modulo (bool): If `True`, the result is reduced modulo `q`.
             positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
                 after execution. Defaults to `None`.
+            x (StackFiniteFieldElement): The position in the stack of `x`. If `None`, the function defaults to
+                `StackFiniteFieldElement(2 * self.EXTENSION_DEGREE - 1, False, self.EXTENSION_DEGREE)`.
+            y (StackFiniteFieldElement): The position in the stack of `y`. If `None`, the function defaults to
+                `StackFiniteFieldElement(self.EXTENSION_DEGREE - 1, False, self.EXTENSION_DEGREE)`.
             rolling_options (int): Bitmask detailing which of the elements `x` and `y` should be removed from the stack
                 after execution. Defaults to `3` (remove everything).
 
@@ -366,13 +373,15 @@ class PrimeFieldExtension:
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
                 after execution. Defaults to `None`.
-            x (StackFiniteFieldElement): The position in the stack of `x`.
+            x (StackFiniteFieldElement): The position in the stack of `x`. If `None`, the function defaults to
+                `StackFiniteFieldElement(self.EXTENSION_DEGREE, False, self.EXTENSION_DEGREE)`.
             scalar (StackFiniteFieldElement): The position in the stack of `scalar`.
             rolling_options (int): Bitmask detailing which of the elements `x` and `scalar` should be removed from the
                 stack after execution. Defaults to `3` (remove everything).
 
         Returns:
             Script to multiply an element `x` in F_q^n by a scalar `scalar` in F_q.
+            The function optimises for the default configuration in which `x` is on top of the stack, and it is rolled.
         """
         x = x if x is not None else StackFiniteFieldElement(self.EXTENSION_DEGREE, False, self.EXTENSION_DEGREE)
         scalar = scalar if scalar is not None else StackFiniteFieldElement(0, False, 1)

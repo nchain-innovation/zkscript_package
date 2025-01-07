@@ -73,7 +73,7 @@ class StackNumber(StackBaseElement):
         self.negate = negate
 
     def set_negate(self, negate: bool) -> Self:
-        """Return a copy of self with negate set to negate."""
+        """Return a copy of `self` with `self.negate = negate`."""
         return StackNumber(self.position, negate)
 
 
@@ -126,7 +126,7 @@ class StackFiniteFieldElement(StackNumber):
         return False, ""
 
     def set_negate(self, negate: bool) -> Self:
-        """Return a copy of self with negate set to negate."""
+        """Return a copy of `self` with `self.negate = negate`."""
         return StackFiniteFieldElement(self.position, negate, self.extension_degree)
 
     def extract_component(self, component: int) -> Self:
@@ -199,7 +199,7 @@ class StackEllipticCurvePoint:
         return StackEllipticCurvePoint(self.x.shift(n), self.y.shift(n))
 
     def set_negate(self, negate: bool) -> Self:
-        """Return a copy of self with negate set to negate."""
+        """Return a copy of `self` with `self.negate = negate`."""
         out = deepcopy(self)
         out.y.negate = negate
         out.negate = negate
