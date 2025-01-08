@@ -312,7 +312,7 @@ def verify_bottom_constant(n: int) -> Script:
 def move(
     stack_element: StackElements, moving_function: Union[roll, pick], start_index: int = 0, end_index: int | None = None
 ) -> Script:
-    """Return the script that moves stack_element[start_index], ..., stack_element[end_index] with moving_function."""
+    """Return the script that moves stack_element[start_index], ..., stack_element[end_index-1] with moving_function."""
     length = (
         1
         if not isinstance(stack_element, (StackFiniteFieldElement, StackEllipticCurvePoint))

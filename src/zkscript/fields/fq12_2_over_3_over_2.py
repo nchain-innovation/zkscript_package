@@ -2,10 +2,12 @@
 
 from tx_engine import Script
 
+from src.zkscript.fields.fq import Fq
+from src.zkscript.fields.prime_field_extension import PrimeFieldExtension
 from src.zkscript.util.utility_scripts import mod, nums_to_script, pick, roll, verify_bottom_constant
 
 
-class Fq12:
+class Fq12(PrimeFieldExtension):
     """Construct Bitcoin scripts that perform arithmetic operations in F_q^12 = F_q^6[u] / u^2 - v.
 
     F_q^12 = F_q^6[u] / u^2 - v is a quadratic extension of F_q^6 = F_q^2[v] / v^3 - non_residue_over_fq2.
@@ -15,11 +17,14 @@ class Fq12:
 
     Attributes:
         MODULUS: The characteristic of the field F_q.
+        EXTENSION_DEGREE: The extension degree over the prime field, equal to 12.
         FQ2 (Fq2): Bitcoin script instance to perform arithmetic operations in F_q^2.
         FQ6 (Fq6): Bitcoin script instance to perform arithmetic operations in F_q^6.
         GAMMAS_FROBENIUS: The list of [gamma1,gamma2,...,gamma11] for the Frobenius where
             gammai = [gammai1, .., gammai6] with gammaij = list of coefficients of
             NON_RESIDUE_OVER_FQ2.power(j * (q**i-1)//6)
+        PRIME_FIELD: The Bitcoin Script implementation of the prime field F_q.
+
     """
 
     def __init__(self, q: int, fq2, fq6, gammas_frobenius: list[list[int]] | None = None):
@@ -34,9 +39,11 @@ class Fq12:
                 NON_RESIDUE_OVER_FQ2.power(j * (q**i-1)//6)
         """
         self.MODULUS = q
+        self.EXTENSION_DEGREE = 12
         self.FQ2 = fq2
         self.FQ6 = fq6
         self.GAMMAS_FROBENIUS = gammas_frobenius
+        self.PRIME_FIELD = Fq(q)
 
     def mul(
         self,
@@ -256,7 +263,9 @@ class Fq12:
         compute_third_component += fq2.mul(take_modulo=False, check_constant=False, clean_constant=False)
         compute_third_component += fq2.add(take_modulo=False, check_constant=False, clean_constant=False)
         compute_third_component += Script.parse_string("OP_2")
-        compute_third_component += fq2.scalar_mul(take_modulo=False, check_constant=False, clean_constant=False)
+        compute_third_component += fq2.base_field_scalar_mul(
+            take_modulo=False, check_constant=False, clean_constant=False
+        )
 
         # After this, the stack is: a b c d e f,
         # altstack = [sixthComponent, fifthComponent, fourthComponent, 2*[f^2*xi 2*[(d*e) + (a*c)] + b^2]]
@@ -273,7 +282,9 @@ class Fq12:
         compute_second_component += Script.parse_string("OP_2OVER")  # Pick f
         compute_second_component += fq2.mul(take_modulo=False, check_constant=False, clean_constant=False)
         compute_second_component += Script.parse_string("OP_2")
-        compute_second_component += fq2.scalar_mul(take_modulo=False, check_constant=False, clean_constant=False)
+        compute_second_component += fq2.base_field_scalar_mul(
+            take_modulo=False, check_constant=False, clean_constant=False
+        )
 
         # After this, the stack is: a b c d e f xi*[c^2 + 2*e*f],
         # altstack = [sixthComponent, fifthComponent, fourthComponent, thirdComponent]
@@ -290,7 +301,9 @@ class Fq12:
         compute_second_component += pick(position=13, n_elements=2)  # Pick b
         compute_second_component += fq2.mul(take_modulo=False, check_constant=False, clean_constant=False)
         compute_second_component += Script.parse_string("OP_2")
-        compute_second_component += fq2.scalar_mul(take_modulo=False, check_constant=False, clean_constant=False)
+        compute_second_component += fq2.base_field_scalar_mul(
+            take_modulo=False, check_constant=False, clean_constant=False
+        )
 
         # After this, the stack is: a b c d e f,
         # altstack = [sixthComponent, fifthComponent, fourthComponent, thirdComponent, xi*[c^2 + 2*e*f] + 2*a*b + d^2]
@@ -313,7 +326,9 @@ class Fq12:
         # After this, the stack is: a e 2*[(d*f)+(b*c)]
         compute_first_component += fq2.add(take_modulo=False, check_constant=False, clean_constant=False)
         compute_first_component += Script.parse_string("OP_2")
-        compute_first_component += fq2.scalar_mul(take_modulo=False, check_constant=False, clean_constant=False)
+        compute_first_component += fq2.base_field_scalar_mul(
+            take_modulo=False, check_constant=False, clean_constant=False
+        )
 
         # After this, the stack is: a xi*[e^2 + 2*[(d*f)+(b*c)]]
         compute_first_component += Script.parse_string("OP_2SWAP")

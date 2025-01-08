@@ -2,10 +2,12 @@
 
 from tx_engine import Script
 
+from src.zkscript.fields.fq import Fq
+from src.zkscript.fields.prime_field_extension import PrimeFieldExtension
 from src.zkscript.util.utility_scripts import mod, pick, roll, verify_bottom_constant
 
 
-class Fq12Cubic:
+class Fq12Cubic(PrimeFieldExtension):
     """Construct Bitcoin scripts that perform arithmetic operations in F_q^12 = F_q^4[v] / v^3 - non_residue_over_fq4.
 
     F_q^12 = F_q^4[v] / v^3 - non_residue_over_fq4 is a cubic extension of F_q^4 = F_q^2[u] / u^2 -
@@ -19,8 +21,10 @@ class Fq12Cubic:
 
     Attributes:
         MODULUS: The characteristic of the field F_q.
+        EXTENSION_DEGREE: The extension degree over the prime field, equal to 6.
         FQ2 (Fq2): Bitcoin script instance to perform arithmetic operations in F_q^2.
         FQ4 (Fq4): Bitcoin script instance to perform arithmetic operations in F_q^4.
+        PRIME_FIELD: The Bitcoin Script implementation of the prime field F_q.
     """
 
     def __init__(self, q: int, fq2, fq4):
@@ -32,8 +36,10 @@ class Fq12Cubic:
             fq4 (Fq4): Bitcoin script instance to perform arithmetic operations in F_q^4.
         """
         self.MODULUS = q
+        self.EXTENSION_DEGREE = 12
         self.FQ2 = fq2
         self.FQ4 = fq4
+        self.PRIME_FIELD = Fq(q)
 
     def mul(
         self,
@@ -197,7 +203,7 @@ class Fq12Cubic:
         compute_third_component = Script.parse_string("OP_2OVER OP_2OVER")  # Pick x2
         compute_third_component += pick(position=15, n_elements=4)  # Pick x0
         compute_third_component += fq4.mul(take_modulo=False, check_constant=False, clean_constant=False)
-        compute_third_component += Script.parse_string("OP_2") + fq4.fq_scalar_mul(
+        compute_third_component += Script.parse_string("OP_2") + fq4.base_field_scalar_mul(
             take_modulo=False, check_constant=False, clean_constant=False
         )
         # After this, the stack is: x0 x1 x2, altstack = [2*x2*x0 + x1^2]
@@ -212,7 +218,7 @@ class Fq12Cubic:
 
         # After this, the stack is: x0 x2 2x1 2*x1*x0
         compute_second_component = roll(position=7, n_elements=4)  # Roll x1
-        compute_second_component += Script.parse_string("OP_2") + fq4.fq_scalar_mul(
+        compute_second_component += Script.parse_string("OP_2") + fq4.base_field_scalar_mul(
             take_modulo=False, check_constant=False, clean_constant=False
         )
         compute_second_component += Script.parse_string("OP_2OVER OP_2OVER")  # Duplicate 2*x1

@@ -650,7 +650,7 @@ class EllipticCurveFq2:
         verify_gradient += fq2.mul(take_modulo=False, check_constant=False, clean_constant=False)  # Compute lamdba * yP
         verify_gradient += Script.parse_string("OP_2")
         verify_gradient += Script.parse_string("OP_NEGATE") if P.negate else Script()
-        verify_gradient += fq2.scalar_mul(take_modulo=False, check_constant=False, clean_constant=False)
+        verify_gradient += fq2.base_field_scalar_mul(take_modulo=False, check_constant=False, clean_constant=False)
         # stack in:  [q, .., gradient, .., P, .., gradient, yP, (2*gradient*yP_)]
         # stack out: [q, .., gradient, .., P, .., gradient, yP, xP, or fail]
         verify_gradient += move(P.x.shift(6 - 2 * is_p_rolled), bool_to_moving_function(is_p_rolled))  # Move xP
@@ -687,7 +687,9 @@ class EllipticCurveFq2:
         x_coordinate += roll(position=3, n_elements=2)  # Bring gradient on top
         x_coordinate += pick(position=3, n_elements=2)  # Duplicate xP
         x_coordinate += Script.parse_string("OP_2")
-        x_coordinate += fq2.scalar_mul(take_modulo=False, check_constant=False, clean_constant=False)  # Compute 2 * xP
+        x_coordinate += fq2.base_field_scalar_mul(
+            take_modulo=False, check_constant=False, clean_constant=False
+        )  # Compute 2 * xP
         x_coordinate += fq2.subtract(
             take_modulo=take_modulo,
             check_constant=False,
@@ -813,7 +815,9 @@ class EllipticCurveFq2:
         x_coordinate += move(P.x.shift(4), bool_to_moving_function(is_p_rolled))  # Bring xP on top
         x_coordinate += pick(position=1, n_elements=2)  # Duplicate xP
         x_coordinate += Script.parse_string("OP_2")
-        x_coordinate += fq2.scalar_mul(take_modulo=False, check_constant=False, clean_constant=False)  # Compute 2 * xP
+        x_coordinate += fq2.base_field_scalar_mul(
+            take_modulo=False, check_constant=False, clean_constant=False
+        )  # Compute 2 * xP
         x_coordinate += roll(position=5, n_elements=2)  # Bring gradient^2 on top
         x_coordinate += roll(position=3, n_elements=2)  # Swap 2xP and gradient^2
         x_coordinate += fq2.subtract(

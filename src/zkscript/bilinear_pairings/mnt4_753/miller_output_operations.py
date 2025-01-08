@@ -167,7 +167,7 @@ class MillerOutputOperations(Fq4ScriptModel):
         compute_second_component = Script.parse_string("OP_DUP")  # Duplicate b2
         compute_second_component += pick(position=7, n_elements=2)  # Pick a1
         compute_second_component += Script.parse_string("OP_ROT")  # Roll b2
-        compute_second_component += fq2.scalar_mul(
+        compute_second_component += fq2.base_field_scalar_mul(
             take_modulo=False, check_constant=False, clean_constant=False, is_constant_reused=False
         )
         compute_second_component += fq2.mul_by_non_residue(
@@ -193,7 +193,7 @@ class MillerOutputOperations(Fq4ScriptModel):
         compute_first_component = Script.parse_string("OP_13 OP_MUL")  # b2*13
         compute_first_component += roll(position=4, n_elements=2)  # Roll b1
         compute_first_component += Script.parse_string("OP_ROT")
-        compute_first_component += fq2.scalar_mul(
+        compute_first_component += fq2.base_field_scalar_mul(
             take_modulo=False, check_constant=False, clean_constant=False, is_constant_reused=False
         )
         compute_first_component += Script.parse_string("OP_2ROT OP_2ROT")
@@ -283,7 +283,7 @@ class MillerOutputOperations(Fq4ScriptModel):
         # After this, the stack is: a1 b1 a2 b2 (a2*b1*u), altstack = []
         compute_second_component = Script.parse_string("OP_2OVER")  # Duplicate a2
         compute_second_component += pick(position=6, n_elements=1)  # Pick b1
-        compute_second_component += fq2.scalar_mul(
+        compute_second_component += fq2.base_field_scalar_mul(
             take_modulo=False, check_constant=False, clean_constant=False, is_constant_reused=False
         )
         compute_second_component += fq2.mul_by_non_residue(
@@ -308,7 +308,7 @@ class MillerOutputOperations(Fq4ScriptModel):
         # After this, the stack is: # After this, the stack is: a1*a2 + b1*b2*13, altstack = [secondComponent]
         compute_first_component = roll(position=4, n_elements=1)  # Roll b1
         compute_first_component += Script.parse_string("OP_13 OP_MUL")  # Compute b1*13
-        compute_first_component += fq2.scalar_mul(
+        compute_first_component += fq2.base_field_scalar_mul(
             take_modulo=False, check_constant=False, clean_constant=False, is_constant_reused=False
         )
         compute_first_component += Script.parse_string("OP_2ROT OP_2ROT")

@@ -2,6 +2,8 @@
 
 from tx_engine import Script
 
+from src.zkscript.fields.fq import Fq
+from src.zkscript.fields.prime_field_extension import PrimeFieldExtension
 from src.zkscript.util.utility_scripts import mod, nums_to_script, verify_bottom_constant
 
 
@@ -16,7 +18,7 @@ def fq2_for_towering(mul_by_non_residue):
     return Fq2ForTowering
 
 
-class Fq2:
+class Fq2(PrimeFieldExtension):
     """Construct Bitcoin scripts that perform arithmetic operations in F_q^2 = F_q[x] / (x^2 - non_residue).
 
     F_q^2 = F_q[u] / (u^2 - non_residue) is a quadratic extension of a base field F_q.
@@ -27,6 +29,8 @@ class Fq2:
     Attributes:
         MODULUS: The characteristic of the base field F_q.
         NON_RESIDUE: The non-residue element used to define the quadratic extension.
+        EXTENSION_DEGREE: The extension degree over the prime field, equal to 2.
+        PRIME_FIELD: The Bitcoin Script implementation of the prime field F_q.
     """
 
     def __init__(self, q: int, non_residue: int):
@@ -38,125 +42,8 @@ class Fq2:
         """
         self.MODULUS = q
         self.NON_RESIDUE = non_residue
-
-    def add(
-        self,
-        take_modulo: bool,
-        positive_modulo: bool = True,
-        check_constant: bool | None = None,
-        clean_constant: bool | None = None,
-        is_constant_reused: bool | None = None,
-    ) -> Script:
-        """Addition in F_q^2.
-
-        Stack input:
-            - stack:    [q, ..., x := (x0, x1), y := (y0, y1)]
-            - altstack: []
-
-        Stack output:
-            - stack:    [q, ..., x + y := (x0 + y0, x1 + y1)]
-            - altstack: []
-
-        Args:
-            take_modulo (bool): If `True`, the result is reduced modulo `q`.
-            positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
-            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
-            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
-            is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
-                after execution. Defaults to `None`.
-
-        Returns:
-            Script to add two elements in F_q^2.
-        """
-        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
-
-        # After this, base stack is: x_0 y_0, altstack = (x_1 + y_1)
-        sumX1Y1 = Script.parse_string("OP_ROT OP_ADD")  # Compute (x_1 + y_1)
-        sumX1Y1 += Script.parse_string("OP_TOALTSTACK")
-
-        # After this, base stack is: (x_0 + y_0), altstack = (x_1 + y_1)
-        sumX0Y0 = Script.parse_string("OP_ADD")  # Compute (x_0 + y_0)
-
-        out += sumX1Y1 + sumX0Y0
-
-        if take_modulo:
-            batched_modulo = Script()
-
-            assert clean_constant is not None
-            assert is_constant_reused is not None
-            if clean_constant:
-                fetch_q = Script.parse_string("OP_DEPTH OP_1SUB OP_ROLL")
-            else:
-                fetch_q = Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
-
-            # After this, the stack is: q [(x_0 + y_0) % q], altstack = (x_1 + y_1)
-            batched_modulo += mod(stack_preparation="", is_positive=positive_modulo)
-            batched_modulo += mod(is_constant_reused=is_constant_reused, is_positive=positive_modulo)
-
-            out += fetch_q + batched_modulo
-        else:
-            out += Script.parse_string("OP_FROMALTSTACK")
-
-        return out
-
-    def subtract(
-        self,
-        take_modulo: bool,
-        positive_modulo: bool = True,
-        check_constant: bool | None = None,
-        clean_constant: bool | None = None,
-        is_constant_reused: bool | None = None,
-    ) -> Script:
-        """Subtraction in F_q^2.
-
-        Stack input:
-            - stack:    [q, ..., x := (x0, x1), y := (y0, y1)]
-            - altstack: []
-
-        Stack output:
-            - stack:    [q, ..., x - y := (x0 - y0, x1 - y1)]
-            - altstack: []
-
-        Args:
-            take_modulo (bool): If `True`, the result is reduced modulo `q`.
-            positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
-            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
-            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
-            is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
-                after execution. Defaults to `None`.
-
-        Returns:
-            Script to subtract two elements in F_q^2.
-        """
-        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
-
-        # After this, base stack is: x_0 y_0, altstack = [(x_1 - y_1)]
-        subX1Y1 = Script.parse_string("OP_ROT OP_SWAP OP_SUB")  # Compute (x_1 - y_1)
-        subX1Y1 += Script.parse_string("OP_TOALTSTACK")
-
-        # After this, base stack is:  x_0 - y_0, altstack = [(x_1 - y_1)]
-        subX0Y0 = Script.parse_string("OP_SUB")  # Compute (x_0 - y_0)
-
-        out += subX1Y1 + subX0Y0
-
-        if take_modulo:
-            batched_modulo = Script()
-
-            assert clean_constant is not None
-            assert is_constant_reused is not None
-            if clean_constant:
-                fetch_q = Script.parse_string("OP_DEPTH OP_1SUB OP_ROLL")
-            else:
-                fetch_q = Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
-
-            # After this, the stack is: q [(x_0 - y_0) % q], altstack = (x_1 - y_1)
-            batched_modulo += mod(stack_preparation="", is_positive=positive_modulo)
-            batched_modulo += mod(is_constant_reused=is_constant_reused, is_positive=positive_modulo)
-            out += fetch_q + batched_modulo
-        else:
-            out += Script.parse_string("OP_FROMALTSTACK")
-
-        return out
+        self.EXTENSION_DEGREE = 2
+        self.PRIME_FIELD = Fq(q)
 
     def negate(
         self,
@@ -207,66 +94,6 @@ class Fq2:
                 fetch_q = Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
 
             # After this, the stack is: q [-x0 % q], altstack = (x_1 + y_1)
-            batched_modulo += mod(is_positive=positive_modulo, stack_preparation="")
-            batched_modulo += mod(is_positive=positive_modulo, is_constant_reused=is_constant_reused)
-
-            out += fetch_q + batched_modulo
-        else:
-            out += Script.parse_string("OP_FROMALTSTACK")
-
-        return out
-
-    def scalar_mul(
-        self,
-        take_modulo: bool,
-        positive_modulo: bool = True,
-        check_constant: bool | None = None,
-        clean_constant: bool | None = None,
-        is_constant_reused: bool | None = None,
-    ) -> Script:
-        """Scalar multiplication in F_q^2.
-
-        Stack input:
-            - stack:    [q, ..., x := (x0, x1), lambda]
-            - altstack: []
-
-        Stack output:
-            - stack:    [q, ..., lambda * x := (lambda * x0, lambda * x1)]
-            - altstack: []
-
-        Args:
-            take_modulo (bool): If `True`, the result is reduced modulo `q`.
-            positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
-            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
-            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
-            is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
-                after execution. Defaults to `None`.
-
-        Returns:
-            Script to multiply an element by a scalar `lambda` in F_q^2.
-        """
-        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
-
-        # After this, the base stack is x_0 lambda, altstack = [(x_1 * lambda)]
-        X1Lambda = Script.parse_string("OP_TUCK OP_MUL")  # Compute x_0 * lambda and put it on top of the stack
-        X1Lambda += Script.parse_string("OP_TOALTSTACK")
-
-        # After this, the base stack is (x_0 * lambda), altstack = [(x_1 * lambda)]
-        X0Lambda = Script.parse_string("OP_MUL")  # Compute x_1 * lambda
-
-        out += X1Lambda + X0Lambda
-
-        if take_modulo:
-            batched_modulo = Script()
-
-            assert clean_constant is not None
-            assert is_constant_reused is not None
-            if clean_constant:
-                fetch_q = Script.parse_string("OP_DEPTH OP_1SUB OP_ROLL")
-            else:
-                fetch_q = Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
-
-            # After this, the stack is: q [(x_0 * lambda) % q], altstack = (x_1 * lambda)
             batched_modulo += mod(is_positive=positive_modulo, stack_preparation="")
             batched_modulo += mod(is_positive=positive_modulo, is_constant_reused=is_constant_reused)
 
@@ -653,35 +480,18 @@ class Fq2:
         out += Script.parse_string("OP_2DUP OP_ADD")  # Compute (x_0 + x_1)
         out += Script.parse_string("OP_TOALTSTACK")
         if self.NON_RESIDUE == -1:
-            out += Script.parse_string("OP_NEGATE OP_ADD")
-        elif self.NON_RESIDUE > 0:
-            # After this, the stack is: x0 + x1 * NON_RESIDUE, altstack = [x0 + x1]
-            out += nums_to_script([self.NON_RESIDUE]) + Script.parse_string(
-                "OP_MUL OP_ADD"
-            )  # Compute (x_0 + x_1 * NON_RESIDUE)
+            out += Script.parse_string("OP_SUB")
         else:
             # After this, the stack is: x0 + x1 * NON_RESIDUE, altstack = [x0 + x1]
-            out += Script.parse_string(
-                str(abs(self.NON_RESIDUE)) + " OP_NEGATE OP_MUL OP_ADD"
-            )  # Compute (x_0 + x_1 * NON_RESIDUE)
+            out += nums_to_script([self.NON_RESIDUE])
+            out += Script.parse_string("OP_MUL OP_ADD")  # Compute (x_0 + x_1 * NON_RESIDUE)
 
-        if take_modulo:
-            batched_modulo = Script()
-
-            assert clean_constant is not None
-            assert is_constant_reused is not None
-            if clean_constant:
-                fetch_q = Script.parse_string("OP_DEPTH OP_1SUB OP_ROLL")
-            else:
-                fetch_q = Script.parse_string("OP_DEPTH OP_1SUB OP_PICK")
-
-            # After this, the stack is: q [(x0 - x1) % q], altstack = [x0 + x1]
-            batched_modulo += mod(stack_preparation="", is_positive=positive_modulo)
-            # After this, the stack is: [(x0 - x1) % q] (x0 + x1) q
-            batched_modulo += mod(is_positive=positive_modulo, is_constant_reused=is_constant_reused)
-
-            out += fetch_q + batched_modulo
-        else:
-            out += Script.parse_string("OP_FROMALTSTACK")
+        out += (
+            self.take_modulo(
+                positive_modulo=positive_modulo, clean_constant=clean_constant, is_constant_reused=is_constant_reused
+            )
+            if take_modulo
+            else Script.parse_string(" ".join(["OP_FROMALTSTACK"] * (self.EXTENSION_DEGREE - 1)))
+        )
 
         return out
