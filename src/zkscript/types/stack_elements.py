@@ -130,7 +130,7 @@ class StackFiniteFieldElement(StackNumber):
         return StackFiniteFieldElement(self.position, negate, self.extension_degree)
 
     def extract_component(self, component: int) -> Self:
-        """Extract `self_component` from `self`."""
+        """Extract the component in position `component` from `self` as a `StackFiniteFieldElement`."""
         assert component >= 0, "Component should be positive."
         assert component < self.extension_degree, "Component should be smaller than self.extension_degree."
         return StackFiniteFieldElement(self.position - component, self.negate, 1)
@@ -154,6 +154,8 @@ class StackEllipticCurvePoint:
 
     def __init__(self, x: StackFiniteFieldElement, y: StackFiniteFieldElement):
         """Initialise StackEllipticCurvePoint, representing an elliptic curve point on the stack.
+
+        When used in an operation, the point is negated according to the truth value of `y.negate`.
 
         Args:
             x (StackFiniteFieldElement): the x coordinate of the point.
@@ -201,6 +203,7 @@ class StackEllipticCurvePoint:
     def set_negate(self, negate: bool) -> Self:
         """Return a copy of `self` with `self.negate = negate`."""
         out = deepcopy(self)
+        # We must change both out.y.negate and out.negate to be consistent with __init__
         out.y.negate = negate
         out.negate = negate
         return out
