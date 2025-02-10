@@ -45,7 +45,7 @@ class Groth16(PairingModel):
         verification_hash = b""
         for i in range(len(locking_key.gradients_pairings[0])):
             for j in range(len(locking_key.gradients_pairings[0][i])):
-                for k in range(2, 0, -1):
+                for k in range(1, -1, -1):
                     for s in range(self.pairing_model.EXTENSION_DEGREE - 1, -1, -1):
                         verification_hash = encode_num(locking_key.gradients_pairings[k][i][j][s]) + verification_hash
                         verification_hash = hash256d(verification_hash)

@@ -1,7 +1,6 @@
 import argparse
 import json
 import sys
-from enum import Enum
 from pathlib import Path
 from typing import Union
 
@@ -9,12 +8,11 @@ import tomllib
 
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 
-from elliptic_curves.fields.fq import Fq
-from elliptic_curves.instantiations.bls12_381.bls12_381 import Fr as Fr_bls12_381
-from elliptic_curves.instantiations.bls12_381.bls12_381 import bls12_381 as bls12_381_curve
-from elliptic_curves.instantiations.mnt4_753.mnt4_753 import Fr as Fr_mnt4_753
-from elliptic_curves.instantiations.mnt4_753.mnt4_753 import mnt4_753 as mnt4_753_curve
-from elliptic_curves.models.curve import BilinearPairingCurve
+from elliptic_curves.data_structures.proof import Proof
+from elliptic_curves.data_structures.vk import VerifyingKey
+from elliptic_curves.instantiations.bls12_381.bls12_381 import BLS12_381, ProofBls12381, VerifyingKeyBls12381
+from elliptic_curves.instantiations.mnt4_753.mnt4_753 import MNT4_753, ProofMnt4753, VerifyingKeyMnt4753
+from elliptic_curves.models.bilinear_pairings import BilinearPairingCurve
 from tx_engine import SIGHASH, Context, Script, Tx, TxIn, TxOut, Wallet, address_to_public_key_hash, p2pkh_script
 from tx_engine.interface.interface_factory import InterfaceFactory
 from tx_engine.interface.verify_script import ScriptFlags, verifyscript_params
@@ -57,46 +55,35 @@ def test_script_in_regtest(tx: Tx, index: int, lock: Script, flags, connection) 
     return connection.verifyscript(scripts=[test], stop_on_first_invalid=False, timeout=100000)[0]["result"] == "ok"
 
 
-class MillerLoopType(Enum):
-    TWISTED_CURVE = ("twisted_curve",)
-    BASE_CURVE = ("base_curve",)
-
-
-class DenominatorElimination(Enum):
-    NONE = ("none",)
-    QUADRATIC = ("quadratic",)
-    CUBIC = ("cubic",)
-
-
-def curve_setup(curve_arg: str) -> Union[BilinearPairingCurve, Fq, Groth16, MillerLoopType, DenominatorElimination]:
+def curve_setup(curve_arg: str) -> Union[BilinearPairingCurve, VerifyingKey, Proof, Groth16]:
     """Map command line curve argument to Python curve."""
     match curve_arg:
         case "bls12_381":
-            curve = bls12_381_curve
+            curve = BLS12_381
             groth16_script = bls12_381_groth
-            field = Fr_bls12_381
-            miller_loop_type = MillerLoopType.TWISTED_CURVE
-            denominator_elimination = DenominatorElimination.QUADRATIC
+            vk_type = VerifyingKeyBls12381
+            proof_type = ProofBls12381
         case "mnt4_753":
-            curve = mnt4_753_curve
+            curve = MNT4_753
             groth16_script = mnt4_753_groth
-            field = Fr_mnt4_753
-            miller_loop_type = MillerLoopType.TWISTED_CURVE
-            denominator_elimination = DenominatorElimination.QUADRATIC
+            vk_type = VerifyingKeyMnt4753
+            proof_type = ProofMnt4753
         case _:
             raise ValueError
 
-    return curve, groth16_script, field, miller_loop_type, denominator_elimination
+    return curve, groth16_script, vk_type, proof_type
 
 
-def load_public_inputs(public_inputs_serialized: bytes):
+def load_public_inputs(public_inputs_serialized: bytes, curve: BilinearPairingCurve):
     n_public_inputs = int.from_bytes(public_inputs_serialized[:7], byteorder="little")
-    field_length = (len(public_inputs_serialized) - 8) // n_public_inputs
+    field_length = (curve.get_order_scalar_field().bit_length() + 8) // 8
 
     index = 8
     public_inputs = []
     for _ in range(n_public_inputs):
-        public_inputs.extend(field.deserialise(public_inputs_serialized[index : index + field_length]).to_list())
+        public_inputs.extend(
+            curve.scalar_field.deserialise(public_inputs_serialized[index : index + field_length]).to_list()
+        )
         index += field_length
     return [1, *public_inputs]
 
@@ -105,55 +92,42 @@ def proof_to_unlock(
     public_statements,
     proof,
     vk,
-    curve: BilinearPairingCurve,
     groth16_script: Groth16,
-    miller_loop_type: MillerLoopType,
-    denominator_elimination: DenominatorElimination,
 ) -> Script:
-    groth16_proof = curve.prepare_groth16_proof(
-        pub=public_statements[1:],
-        proof=proof,
-        vk=vk,
-        miller_loop_type=miller_loop_type.value[0],
-        denominator_elimination=denominator_elimination.value[0],
+    prepared_proof = proof.prepare_for_zkscript(
+        vk.prepare(),
+        public_statements,
     )
 
     unlocking_key = Groth16UnlockingKey(
-        pub=groth16_proof["pub"],
-        A=groth16_proof["A"],
-        B=groth16_proof["B"],
-        C=groth16_proof["C"],
+        pub=prepared_proof.public_statements,
+        A=prepared_proof.a,
+        B=prepared_proof.b,
+        C=prepared_proof.c,
         gradients_pairings=[
-            groth16_proof["lambdas_B_exp_miller_loop"],
-            groth16_proof["lambdas_minus_gamma_exp_miller_loop"],
-            groth16_proof["lambdas_minus_delta_exp_miller_loop"],
+            prepared_proof.gradients_b,
+            prepared_proof.gradients_minus_gamma,
+            prepared_proof.gradients_minus_delta,
         ],
-        inverse_miller_output=groth16_proof["inverse_miller_loop"],
-        gradients_partial_sums=groth16_proof["lamdbas_partial_sums"],
-        gradients_multiplication=groth16_proof["lambdas_multiplications"],
+        inverse_miller_output=prepared_proof.inverse_miller_loop,
+        gradients_partial_sums=prepared_proof.gradients_msm,
+        gradients_multiplication=prepared_proof.gradients_public_statements,
     )
 
     return unlocking_key.to_unlocking_script(groth16_script, None, True)
 
 
-def vk_to_lock(public_statements, vk, curve: BilinearPairingCurve, groth16_script: Groth16) -> Script:
-    groth16_proof = curve.prepare_groth16_proof(
-        pub=public_statements[1:],
-        proof=proof,
-        vk=vk,
-        miller_loop_type=miller_loop_type.value[0],
-        denominator_elimination=denominator_elimination.value[0],
-    )
+def vk_to_lock(vk: VerifyingKey, groth16_script: Groth16) -> Script:
+    prepared_vk = vk.prepare_for_zkscript()
 
     locking_key = Groth16LockingKey(
-        alpha_beta=curve.pairing(vk["alpha"], vk["beta"]).to_list(),
-        minus_gamma=(-vk["gamma"]).to_list(),
-        minus_delta=(-vk["delta"]).to_list(),
-        gamma_abc=[s.to_list() for s in vk["gamma_abc"]],
+        alpha_beta=prepared_vk.alpha_beta,
+        minus_gamma=prepared_vk.minus_gamma,
+        minus_delta=prepared_vk.minus_delta,
+        gamma_abc=prepared_vk.gamma_abc,
         gradients_pairings=[
-            groth16_proof["lambdas_B_exp_miller_loop"],
-            groth16_proof["lambdas_minus_gamma_exp_miller_loop"],
-            groth16_proof["lambdas_minus_delta_exp_miller_loop"],
+            prepared_vk.gradients_minus_gamma,
+            prepared_vk.gradients_minus_delta,
         ],
     )
 
@@ -250,17 +224,19 @@ if __name__ == "__main__":
     test_in_regtest = args.regtest
 
     # Set up curve
-    curve, groth16_script, field, miller_loop_type, denominator_elimination = curve_setup(args.curve)
+    curve, groth16_script, vk_type, proof_type = curve_setup(args.curve)
 
     # Load proof, vk
-    proof = curve.deserialise_proof(json.load(Path.open(data_dir / "proof/proof.json"))["proof"])
-    vk = curve.deserialise_vk(json.load(Path.open(data_dir / "proof/verifying_key.json"))["verifying_key"])
+    proof = proof_type.deserialise(json.load(Path.open(data_dir / "proof/proof.json"))["proof"])
+    vk = vk_type.deserialise(json.load(Path.open(data_dir / "proof/verifying_key.json"))["verifying_key"])
     # Load public inputs
-    public_inputs = load_public_inputs(json.load(Path.open(data_dir / "proof/public_inputs.json"))["public_inputs"])
+    public_inputs = load_public_inputs(
+        json.load(Path.open(data_dir / "proof/public_inputs.json"))["public_inputs"], curve
+    )
 
     # Construct locking and unlocking scripts
-    lock = vk_to_lock(public_inputs, vk, curve, groth16_script)
-    unlock = proof_to_unlock(public_inputs, proof, vk, curve, groth16_script, miller_loop_type, denominator_elimination)
+    lock = vk_to_lock(vk, groth16_script)
+    unlock = proof_to_unlock(public_inputs[1:], proof, vk, groth16_script)
 
     context = Context(script=unlock + lock)
     assert context.evaluate(), "Evaluation using Context failed"
@@ -309,9 +285,5 @@ if __name__ == "__main__":
         save_data_to_file([spending_tx.serialize().hex()], ["spending_tx"], f"spending_tx_{data_dir}")
 
         if broadcast:
-            if curve == "mnt4_753":
-                msg = "Broadcast is not supported for curve MNT4_753 yet"
-                raise ValueError(msg)
-
             connection.broadcast_tx(tx_locked_with_zkp.serialize().hex())
             connection.broadcast_tx(spending_tx.serialize().hex())

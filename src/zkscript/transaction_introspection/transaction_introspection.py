@@ -37,7 +37,7 @@ class TransactionIntrospection:
 
     @staticmethod
     def pushtx(
-        sighash_value: SIGHASH,
+        sighash_flags: SIGHASH,
         sig_hash_preimage: StackBaseElement = StackBaseElement(0),  # noqa: B008
         rolling_option: bool = True,
         clean_constants: bool = True,
@@ -56,7 +56,7 @@ class TransactionIntrospection:
             - altstack: []
 
         Args:
-            sighash_value (SIGHASH): Sighash flag with which the message should be constructed
+            sighash_flags (SIGHASH): Sighash flag with which the message should be constructed
             sig_hash_preimage (StackBaseElement): Position in the stack of the sig_hash_preimage.
                 Defaults to StackBaseElement(0) (on top of the stack).
             rolling_option (int): Whether to roll or pick sig_hash_preimage. Defaults to `True` (roll).
@@ -120,7 +120,7 @@ class TransactionIntrospection:
         out += Script.parse_string("0x30 OP_FROMALTSTACK")
         out += nums_to_script([36])
         out += Script.parse_string("OP_ADD OP_CAT OP_SWAP OP_CAT")  # Construct DER(Gx,s)
-        out.append_pushdata(sighash_value.to_bytes())
+        out.append_pushdata(sighash_flags.to_bytes())
         out += Script.parse_string("OP_CAT")  # Append SIGHASH
 
         # stack out: [GROUP_ORDER_INT, Gx, Gx_bytes, .., sig_hash_preimage, ..,
@@ -134,7 +134,7 @@ class TransactionIntrospection:
 
     @staticmethod
     def pushtx_bit_shift(
-        sighash_value: SIGHASH,
+        sighash_flags: SIGHASH,
         sig_hash_preimage: StackBaseElement = StackBaseElement(0),  # noqa: B008
         rolling_option: bool = True,
         is_checksigverify: bool = True,
@@ -151,7 +151,7 @@ class TransactionIntrospection:
             - altstack: []
 
         Args:
-            sighash_value (SIGHASH): Sighash flag with which the message should be constructed
+            sighash_flags (SIGHASH): Sighash flag with which the message should be constructed
             sig_hash_preimage (StackBaseElement): Position in the stack of the sig_hash_preimage.
                 Defaults to StackBaseElement(0) (on top of the stack).
             rolling_option (int): Whether to roll or pick sig_hash_preimage. Defaults to `True` (roll).
@@ -190,7 +190,7 @@ class TransactionIntrospection:
             + bytes.fromhex("0220")
         )
         out += Script.parse_string("OP_SWAP OP_CAT")
-        out.append_pushdata(sighash_value.to_bytes())
+        out.append_pushdata(sighash_flags.to_bytes())
         out += Script.parse_string("OP_CAT")
 
         # stack out: [.. sig_hash_preimage .. Der(R,s) P]

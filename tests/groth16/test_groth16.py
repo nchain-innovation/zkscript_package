@@ -5,8 +5,8 @@ from pathlib import Path
 from random import randint, seed
 
 import pytest
-from elliptic_curves.instantiations.bls12_381.bls12_381 import bls12_381 as bls12_381_curve
-from elliptic_curves.instantiations.mnt4_753.mnt4_753 import mnt4_753 as mnt4_753_curve
+from elliptic_curves.instantiations.bls12_381.bls12_381 import BLS12_381, ProofBls12381, VerifyingKeyBls12381
+from elliptic_curves.instantiations.mnt4_753.mnt4_753 import MNT4_753, ProofMnt4753, VerifyingKeyMnt4753
 from tx_engine import Context
 
 from src.zkscript.groth16.bls12_381.bls12_381 import bls12_381
@@ -17,11 +17,12 @@ from src.zkscript.types.unlocking_keys.groth16 import Groth16UnlockingKey
 
 @dataclass
 class Bls12381:
-    q = bls12_381_curve.q
-    r = bls12_381_curve.r
-    g1 = bls12_381_curve.g1
-    g2 = bls12_381_curve.g2
-    val_miller_loop = bls12_381_curve.val_miller_loop
+    q = BLS12_381.g1_field.get_modulus()
+    r = BLS12_381.g1_curve.scalar_field.get_modulus()
+    g1 = BLS12_381.g1_curve.get_generator()
+    g2 = BLS12_381.g2_curve.get_generator()
+    val_miller_loop = BLS12_381.pairing_engine.miller_loop_engine.val_miller_loop
+    pairing_curve = BLS12_381
 
     # Dummy ZKP
     # Generated with secrets.randbelow(r - 1) + 1
@@ -100,27 +101,23 @@ class Bls12381:
             sum_gamma_abc[j] += gamma_abc[i].multiply(pub_statements[j][i])
 
     alpha_beta = [
-        bls12_381_curve.triple_pairing(A, sum_gamma_abc[0], C, B, -gamma, -delta),
-        bls12_381_curve.triple_pairing(A, sum_gamma_abc[1], C, B, -gamma, -delta),
+        BLS12_381.pairing([A, sum_gamma_abc[0], C], [B, -gamma, -delta]),
+        BLS12_381.pairing([A, sum_gamma_abc[1], C], [B, -gamma, -delta]),
     ]
 
-    vk = {"alpha": alpha, "beta": beta, "gamma": gamma, "delta": delta, "gamma_abc": gamma_abc}
+    vk = VerifyingKeyBls12381(alpha, beta, gamma, delta, gamma_abc)
 
-    groth16_proof = [
-        bls12_381_curve.prepare_groth16_proof(
-            pub=pub_statements[0][1:],
-            proof={"a": A, "b": B, "c": C},
-            vk=vk,
-            miller_loop_type="twisted_curve",
-            denominator_elimination="quadratic",
-        ),
-        bls12_381_curve.prepare_groth16_proof(
-            pub=pub_statements[1][1:],
-            proof={"a": A, "b": B, "c": C},
-            vk=vk,
-            miller_loop_type="twisted_curve",
-            denominator_elimination="quadratic",
-        ),
+    proof = ProofBls12381(
+        A,
+        B,
+        C,
+    )
+
+    cache_vk = vk.prepare()
+    prepared_vk = vk.prepare_for_zkscript(cache_vk)
+    prepared_proofs = [
+        proof.prepare_for_zkscript(cache_vk, pub_statements[0][1:]),
+        proof.prepare_for_zkscript(cache_vk, pub_statements[1][1:]),
     ]
 
     test_script = bls12_381
@@ -130,11 +127,12 @@ class Bls12381:
 
 @dataclass
 class Mnt4753:
-    q = mnt4_753_curve.q
-    r = mnt4_753_curve.r
-    g1 = mnt4_753_curve.g1
-    g2 = mnt4_753_curve.g2
-    val_miller_loop = mnt4_753_curve.val_miller_loop
+    q = MNT4_753.g1_field.get_modulus()
+    r = MNT4_753.g1_curve.scalar_field.get_modulus()
+    g1 = MNT4_753.g1_curve.get_generator()
+    g2 = MNT4_753.g2_curve.get_generator()
+    val_miller_loop = MNT4_753.pairing_engine.miller_loop_engine.val_miller_loop
+    pairing_curve = MNT4_753
 
     # Dummy ZKP
     # Generated with secrets.randbelow(r - 1) + 1
@@ -212,27 +210,23 @@ class Mnt4753:
             sum_gamma_abc[j] += gamma_abc[i].multiply(pub_statements[j][i])
 
     alpha_beta = [
-        mnt4_753_curve.triple_pairing(A, sum_gamma_abc[0], C, B, -gamma, -delta),
-        mnt4_753_curve.triple_pairing(A, sum_gamma_abc[1], C, B, -gamma, -delta),
+        MNT4_753.pairing([A, sum_gamma_abc[0], C], [B, -gamma, -delta]),
+        MNT4_753.pairing([A, sum_gamma_abc[1], C], [B, -gamma, -delta]),
     ]
 
-    vk = {"alpha": alpha, "beta": beta, "gamma": gamma, "delta": delta, "gamma_abc": gamma_abc}
+    vk = VerifyingKeyMnt4753(alpha, beta, gamma, delta, gamma_abc)
 
-    groth16_proof = [
-        mnt4_753_curve.prepare_groth16_proof(
-            pub=pub_statements[0][1:],
-            proof={"a": A, "b": B, "c": C},
-            vk=vk,
-            miller_loop_type="twisted_curve",
-            denominator_elimination="quadratic",
-        ),
-        mnt4_753_curve.prepare_groth16_proof(
-            pub=pub_statements[1][1:],
-            proof={"a": A, "b": B, "c": C},
-            vk=vk,
-            miller_loop_type="twisted_curve",
-            denominator_elimination="quadratic",
-        ),
+    proof = ProofMnt4753(
+        A,
+        B,
+        C,
+    )
+
+    cache_vk = vk.prepare()
+    prepared_vk = vk.prepare_for_zkscript(cache_vk)
+    prepared_proofs = [
+        proof.prepare_for_zkscript(cache_vk, pub_statements[0][1:]),
+        proof.prepare_for_zkscript(cache_vk, pub_statements[1][1:]),
     ]
 
     test_script = mnt4_753
@@ -240,15 +234,15 @@ class Mnt4753:
     filename = "mnt4_753"
 
 
-def generate_random_tests(curve, groth16, filename, is_minimal_example):
-    A = curve.g1.multiply(randint(1, curve.r - 1))  # noqa: S311
-    B = curve.g2.multiply(randint(1, curve.r - 1))  # noqa: S311
-    C = curve.g1.multiply(randint(1, curve.r - 1))  # noqa: S311
+def generate_random_tests(curve, verifying_key_type, proof_type, groth16, filename, is_minimal_example):
+    A = curve.pairing_curve.g1_curve.generate_random_point()
+    B = curve.pairing_curve.g2_curve.generate_random_point()
+    C = curve.pairing_curve.g1_curve.generate_random_point()
 
-    alpha = curve.g1.multiply(randint(1, curve.r - 1))  # noqa: S311
-    beta = curve.g2.multiply(randint(1, curve.r - 1))  # noqa: S311
-    gamma = curve.g2.multiply(randint(1, curve.r - 1))  # noqa: S311
-    delta = curve.g2.multiply(randint(1, curve.r - 1))  # noqa: S311
+    alpha = curve.pairing_curve.g1_curve.generate_random_point()
+    beta = curve.pairing_curve.g2_curve.generate_random_point()
+    gamma = curve.pairing_curve.g2_curve.generate_random_point()
+    delta = curve.pairing_curve.g2_curve.generate_random_point()
 
     if is_minimal_example:
         dlog_gamma_abc = [15, 23, 11] if filename == "bls12_381" else [7, 19]
@@ -269,27 +263,37 @@ def generate_random_tests(curve, groth16, filename, is_minimal_example):
     for i in range(len(gamma_abc)):
         sum_gamma_abc += gamma_abc[i].multiply(pub_statement[i])
 
-    vk = {"alpha": alpha, "beta": beta, "gamma": gamma, "delta": delta, "gamma_abc": gamma_abc}
+    vk = verifying_key_type(alpha, beta, gamma, delta, gamma_abc)
 
-    groth16_proof = curve.prepare_groth16_proof(
-        pub=pub_statement[1:],
-        proof={"a": A, "b": B, "c": C},
-        vk=vk,
-        miller_loop_type="twisted_curve",
-        denominator_elimination="quadratic",
+    proof = proof_type(
+        A,
+        B,
+        C,
     )
 
-    alpha_beta = curve.triple_pairing(A, sum_gamma_abc, C, B, -gamma, -delta)
+    cache_vk = vk.prepare()
+    prepared_vk = vk.prepare_for_zkscript(cache_vk)
+    prepared_proof = proof.prepare_for_zkscript(cache_vk, pub_statement[1:])
 
-    return (alpha_beta, vk, groth16_proof, groth16, filename, max_multipliers, is_minimal_example)
+    alpha_beta = curve.pairing_curve.pairing([A, sum_gamma_abc, C], [B, -gamma, -delta])
+
+    return (alpha_beta, prepared_vk, prepared_proof, groth16, filename, max_multipliers, is_minimal_example)
 
 
 def generate_test_cases(test_num, is_minimal_example=False, rnd_seed=42):
     # Parse and return config and the test_data for each config
     seed(rnd_seed)
     return [
-        *[generate_random_tests(bls12_381_curve, bls12_381, "bls12_381", is_minimal_example) for _ in range(test_num)],
-        *[generate_random_tests(mnt4_753_curve, mnt4_753, "mnt4_753", is_minimal_example) for _ in range(test_num)],
+        *[
+            generate_random_tests(
+                Bls12381, VerifyingKeyBls12381, ProofBls12381, bls12_381, "bls12_381", is_minimal_example
+            )
+            for _ in range(test_num)
+        ],
+        *[
+            generate_random_tests(Mnt4753, VerifyingKeyMnt4753, ProofMnt4753, mnt4_753, "mnt4_753", is_minimal_example)
+            for _ in range(test_num)
+        ],
     ]
 
 
@@ -312,68 +316,67 @@ def save_scripts(lock, unlock, save_to_json_folder, filename, test_name):
 
 
 @pytest.mark.parametrize(
-    ("test_script", "vk", "alpha_beta", "groth16_proof", "max_multipliers", "filename"),
+    ("test_script", "prepared_vk", "alpha_beta", "prepared_proof", "max_multipliers", "filename"),
     [
         (
             Bls12381.test_script,
-            Bls12381.vk,
+            Bls12381.prepared_vk,
             Bls12381.alpha_beta[0],
-            Bls12381.groth16_proof[0],
+            Bls12381.prepared_proofs[0],
             Bls12381.max_multipliers[0],
             Bls12381.filename,
         ),
         (
             Bls12381.test_script,
-            Bls12381.vk,
+            Bls12381.prepared_vk,
             Bls12381.alpha_beta[1],
-            Bls12381.groth16_proof[1],
+            Bls12381.prepared_proofs[1],
             Bls12381.max_multipliers[1],
             Bls12381.filename,
         ),
         (
             Mnt4753.test_script,
-            Mnt4753.vk,
+            Mnt4753.prepared_vk,
             Mnt4753.alpha_beta[0],
-            Mnt4753.groth16_proof[0],
+            Mnt4753.prepared_proofs[0],
             Mnt4753.max_multipliers[0],
             Mnt4753.filename,
         ),
         (
             Mnt4753.test_script,
-            Mnt4753.vk,
+            Mnt4753.prepared_vk,
             Mnt4753.alpha_beta[1],
-            Mnt4753.groth16_proof[1],
+            Mnt4753.prepared_proofs[1],
             Mnt4753.max_multipliers[1],
             Mnt4753.filename,
         ),
     ],
 )
-def test_groth16(test_script, vk, alpha_beta, groth16_proof, max_multipliers, filename, save_to_json_folder):
+def test_groth16(test_script, prepared_vk, alpha_beta, prepared_proof, max_multipliers, filename, save_to_json_folder):
     unlocking_key = Groth16UnlockingKey(
-        pub=groth16_proof["pub"],
-        A=groth16_proof["A"],
-        B=groth16_proof["B"],
-        C=groth16_proof["C"],
+        pub=prepared_proof.public_statements,
+        A=prepared_proof.a,
+        B=prepared_proof.b,
+        C=prepared_proof.c,
         gradients_pairings=[
-            groth16_proof["lambdas_B_exp_miller_loop"],
-            groth16_proof["lambdas_minus_gamma_exp_miller_loop"],
-            groth16_proof["lambdas_minus_delta_exp_miller_loop"],
+            prepared_proof.gradients_b,
+            prepared_proof.gradients_minus_gamma,
+            prepared_proof.gradients_minus_delta,
         ],
-        inverse_miller_output=groth16_proof["inverse_miller_loop"],
-        gradients_partial_sums=groth16_proof["lamdbas_partial_sums"],
-        gradients_multiplication=groth16_proof["lambdas_multiplications"],
+        inverse_miller_output=prepared_proof.inverse_miller_loop,
+        gradients_partial_sums=prepared_proof.gradients_msm,
+        gradients_multiplication=prepared_proof.gradients_public_statements,
     )
     unlock = unlocking_key.to_unlocking_script(test_script, max_multipliers, True)
 
     locking_key = Groth16LockingKey(
         alpha_beta=alpha_beta.to_list(),
-        minus_gamma=(-vk["gamma"]).to_list(),
-        minus_delta=(-vk["delta"]).to_list(),
-        gamma_abc=[s.to_list() for s in vk["gamma_abc"]],
+        minus_gamma=prepared_vk.minus_gamma,
+        minus_delta=prepared_vk.minus_delta,
+        gamma_abc=prepared_vk.gamma_abc,
         gradients_pairings=[
-            groth16_proof["lambdas_B_exp_miller_loop"],
-            groth16_proof["lambdas_minus_gamma_exp_miller_loop"],
-            groth16_proof["lambdas_minus_delta_exp_miller_loop"],
+            prepared_vk.gradients_minus_gamma,
+            prepared_vk.gradients_minus_delta,
         ],
     )
     lock = test_script.groth16_verifier(
@@ -386,8 +389,8 @@ def test_groth16(test_script, vk, alpha_beta, groth16_proof, max_multipliers, fi
 
     context = Context(script=unlock + lock)
     assert context.evaluate()
-    assert len(context.get_stack()) == 1
-    assert len(context.get_altstack()) == 0
+    assert context.get_stack().size() == 1
+    assert context.get_altstack().size() == 0
 
     if save_to_json_folder:
         save_scripts(str(lock), str(unlock), save_to_json_folder, filename, "groth16")
@@ -395,45 +398,51 @@ def test_groth16(test_script, vk, alpha_beta, groth16_proof, max_multipliers, fi
 
 @pytest.mark.slow
 @pytest.mark.parametrize(
-    ("alpha_beta", "vk", "groth16_proof", "test_script", "filename", "max_multipliers", "is_minimal_example"),
+    ("alpha_beta", "prepared_vk", "prepared_proof", "test_script", "filename", "max_multipliers", "is_minimal_example"),
     [
         # *generate_test_cases(test_num=1, is_minimal_example=False, rnd_seed=42),
         *generate_test_cases(test_num=1, is_minimal_example=True, rnd_seed=42),
     ],
 )
 def test_groth16_slow(
-    alpha_beta, vk, groth16_proof, test_script, filename, max_multipliers, is_minimal_example, save_to_json_folder
+    alpha_beta,
+    prepared_vk,
+    prepared_proof,
+    test_script,
+    filename,
+    max_multipliers,
+    is_minimal_example,
+    save_to_json_folder,
 ):
     unlocking_key = Groth16UnlockingKey(
-        pub=groth16_proof["pub"],
-        A=groth16_proof["A"],
-        B=groth16_proof["B"],
-        C=groth16_proof["C"],
+        pub=prepared_proof.public_statements,
+        A=prepared_proof.a,
+        B=prepared_proof.b,
+        C=prepared_proof.c,
         gradients_pairings=[
-            groth16_proof["lambdas_B_exp_miller_loop"],
-            groth16_proof["lambdas_minus_gamma_exp_miller_loop"],
-            groth16_proof["lambdas_minus_delta_exp_miller_loop"],
+            prepared_proof.gradients_b,
+            prepared_proof.gradients_minus_gamma,
+            prepared_proof.gradients_minus_delta,
         ],
-        inverse_miller_output=groth16_proof["inverse_miller_loop"],
-        gradients_partial_sums=groth16_proof["lamdbas_partial_sums"],
-        gradients_multiplication=groth16_proof["lambdas_multiplications"],
+        inverse_miller_output=prepared_proof.inverse_miller_loop,
+        gradients_partial_sums=prepared_proof.gradients_msm,
+        gradients_multiplication=prepared_proof.gradients_public_statements,
     )
     unlock = unlocking_key.to_unlocking_script(test_script, max_multipliers, True)
 
     locking_key = Groth16LockingKey(
         alpha_beta=alpha_beta.to_list(),
-        minus_gamma=(-vk["gamma"]).to_list(),
-        minus_delta=(-vk["delta"]).to_list(),
-        gamma_abc=[s.to_list() for s in vk["gamma_abc"]],
+        minus_gamma=prepared_vk.minus_gamma,
+        minus_delta=prepared_vk.minus_delta,
+        gamma_abc=prepared_vk.gamma_abc,
         gradients_pairings=[
-            groth16_proof["lambdas_B_exp_miller_loop"],
-            groth16_proof["lambdas_minus_gamma_exp_miller_loop"],
-            groth16_proof["lambdas_minus_delta_exp_miller_loop"],
+            prepared_vk.gradients_minus_gamma,
+            prepared_vk.gradients_minus_delta,
         ],
     )
     lock = test_script.groth16_verifier(
         locking_key,
-        modulo_threshold=200 * 8,
+        modulo_threshold=1,
         max_multipliers=max_multipliers,
         check_constant=True,
         clean_constant=True,
@@ -441,8 +450,8 @@ def test_groth16_slow(
 
     context = Context(script=unlock + lock)
     assert context.evaluate()
-    assert len(context.get_stack()) == 1
-    assert len(context.get_altstack()) == 0
+    assert context.get_stack().size() == 1
+    assert context.get_altstack().size() == 0
 
     if is_minimal_example:
         sys.stdout.write(

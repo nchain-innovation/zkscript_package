@@ -17,9 +17,8 @@ class Groth16LockingKey:
             where pub[i] is is i-th public statement.
         gradients_pairings (list[list[list[list[int]]]]): list of gradients required to compute the pairings
             in the Groth16 verification equation. The meaning of the lists is:
-                - gradients_pairings[0]: gradients required to compute w*B
-                - gradients_pairings[1]: gradients required to compute w*(-gamma)
-                - gradients_pairings[2]: gradients required to compute w*(-delta)
+                - gradients_pairings[0]: gradients required to compute w*(-gamma)
+                - gradients_pairings[1]: gradients required to compute w*(-delta)
     """
 
     alpha_beta: list[int]
