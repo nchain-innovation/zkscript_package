@@ -1,9 +1,11 @@
 """Bitcoin scripts that perform arithmetic operations over the elliptic curve E(F_q)."""
 
+from math import ceil, log2
+
 from tx_engine import Script
 
 from src.zkscript.types.stack_elements import StackEllipticCurvePoint, StackFiniteFieldElement
-from src.zkscript.util.utility_functions import bitmask_to_boolean_list, check_order
+from src.zkscript.util.utility_functions import bitmask_to_boolean_list, boolean_list_to_bitmask, check_order
 from src.zkscript.util.utility_scripts import (
     bool_to_moving_function,
     mod,
@@ -681,7 +683,7 @@ class EllipticCurveFq:
         It also handles optional checks on the curve constant and whether the constant should be cleaned or reused.
 
         Stack input:
-            - stack    = [q, .., gradient P Q]
+            - stack    = [q, .., gradient, P, Q]
             - altstack = []
 
         Stack output:
@@ -788,19 +790,22 @@ class EllipticCurveFq:
             "OP_MUL OP_FROMALTSTACK OP_SUB"
         )  # Compute gradient (x_P - x_(P+Q)) - y_P
 
-        # After this, the stack is: (P+Q) q, altstack = [Verify(gradient)]
-        out += compute_x_coordinate + compute_y_coordinate + pick(position=-1, n_elements=1)
+        # After this, the stack is: (P+Q), altstack = [Verify(gradient)]
+        out += compute_x_coordinate + compute_y_coordinate
 
-        # If needed, mod out
-        # After this, the stack is: (P+Q) q, altstack = [Verify(gradient)] with the coefficients in Fq (if executed)
         if take_modulo:
-            batched_modulo = mod(stack_preparation="", is_positive=positive_modulo)  # Mod y
-            batched_modulo += mod(stack_preparation="OP_TOALTSTACK", is_positive=positive_modulo)  # Mod x
-            batched_modulo += Script.parse_string("OP_FROMALTSTACK OP_ROT")
-            out += batched_modulo
+            out += Script.parse_string("OP_TOALTSTACK")
+            out += pick(position=-1, n_elements=1)
+            out += mod(stack_preparation="", is_mod_on_top=True, is_positive=positive_modulo, is_constant_reused=True)
+            out += mod(is_positive=positive_modulo, is_constant_reused=False)
 
         verify_gradient = Script.parse_string("OP_FROMALTSTACK")
-        verify_gradient += mod(stack_preparation="", is_mod_on_top=False, is_constant_reused=False, is_positive=False)
+        verify_gradient += mod(
+            stack_preparation="OP_DEPTH OP_1SUB OP_PICK",
+            is_mod_on_top=True,
+            is_constant_reused=False,
+            is_positive=False,
+        )
         verify_gradient += Script.parse_string("OP_0 OP_EQUALVERIFY")
 
         # Check gradient was correct
@@ -826,7 +831,360 @@ class EllipticCurveFq:
 
         # End of termination conditions --------------------------------------------------------------------------------
 
+        out += roll(position=-1, n_elements=1) + Script.parse_string("OP_DROP") if clean_constant else Script()
+
+        return out
+
+    def multi_addition(
+        self,
+        n_points: int,
+        points_on_altstack: bool,
+        take_modulo: bool,
+        check_constant: bool | None = None,
+        clean_constant: bool | None = None,
+        positive_modulo: bool = True,
+    ) -> Script:
+        r"""Addition of `n_points` in E(F_q).
+
+        Stack input:
+            - stack:    [gradient(P_n, \sum_(i=1)^(n-1) P_i, P_n , ..,
+                            gradient(P_3, P_2 + P_1), P_3, gradient(P_2, P_1), P_2, P_1] if not points_on_altstack
+                                else [gradient(P_n, \sum_(i=1)^(n-1) P_i, ..,
+                                        gradient(P_3, P_2 + P_1), gradient(P_2, P_1)]
+            - altstack: [] if not points_on_altstack else [P_n, P_(n-1), .., P_1]
+
+        Stack output:
+            - stack:    [P_1 + .. + P_n]
+            - altstack: []
+
+        Args:
+            n_points (int): The number of points to be summed.
+            points_on_altstack (bool): If `True`, the script fetches the points from the altstack. Otherwise,
+                it expects them on the stack.
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
+            positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
+
+        Returns:
+            A Bitcoin script that computes the sum of of `n_points` elliptic curve points.
+        """
+        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
+
+        if points_on_altstack:
+            out += self.__multi_addition_from_altstack(n_points, take_modulo, False, clean_constant, positive_modulo)
+        else:
+            out += self.__multi_addition_from_stack(n_points, take_modulo, False, clean_constant, positive_modulo)
+
+        return out
+
+    def __multi_addition_from_stack(
+        self,
+        n: int,
+        take_modulo: bool,
+        check_constant: bool | None = None,
+        clean_constant: bool | None = None,
+        positive_modulo: bool = True,
+    ) -> Script:
+        r"""Addition of `n_points` in E(F_q).
+
+        Stack input:
+            - stack:    [gradient(P_n, \sum_(i=1)^(n-1) P_i, P_n , ..,
+                            gradient(P_3, P_2 + P_1), P_3, gradient(P_2, P_1), P_2, P_1]
+            - altstack: []
+
+        Stack output:
+            - stack:    [P_1 + P_2 + .. + P_n]
+            - altstack: []
+
+        Args:
+            n (int): The number of points to be summed.
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
+            positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
+
+        Returns:
+            A Bitcoin script that computes the sum of of `n_points` elliptic curve points taken from the stack.
+        """
+        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
+
+        # stack in:  [gradient(P_n, \sum_(i=1)^(n-1) P_i, P_n , ..,
+        #               gradient(P_3, P_2 + P_1), P_3, gradient(P_2, P_1), P_2, P_1]
+        # stack out: [P_1 + .. + P_n]
+        for _ in range(n - 1):
+            out += self.point_addition_with_unknown_points(
+                take_modulo=False, positive_modulo=False, check_constant=False, clean_constant=False
+            )
+
+        if take_modulo:
+            # Check if the output is the point at infinity, in that case do nothing
+            out += Script.parse_string("OP_2DUP OP_CAT 0x0000 OP_EQUAL OP_NOT OP_IF")
+            out += Script.parse_string("OP_TOALTSTACK")
+            out += pick(position=-1, n_elements=1)
+            out += mod(stack_preparation="", is_positive=positive_modulo)
+            out += mod(is_positive=positive_modulo, is_constant_reused=False)
+            out += Script.parse_string("OP_ENDIF")
+
+        out += roll(position=-1, n_elements=1) + Script.parse_string("OP_DROP") if clean_constant else Script()
+
+        return out
+
+    def __multi_addition_from_altstack(
+        self,
+        n: int,
+        take_modulo: bool,
+        check_constant: bool | None = None,
+        clean_constant: bool | None = None,
+        positive_modulo: bool = True,
+    ) -> Script:
+        r"""Addition of `n_points` in E(F_q).
+
+        Stack input:
+            - stack:    [gradient(P_n, \sum_(i=1)^(n-1) P_i, .., gradient(P_3, P_2 + P_1), gradient(P_2, P_1)]
+            - altstack: [P_1, P_2, P_3, .., P_n]
+
+        Stack output:
+            - stack:    [P_1 + P_2 + .. + P_n]
+            - altstack: []
+
+        Args:
+            n (int): The number of points to be summed.
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
+            positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
+
+        Returns:
+            A Bitcoin script that computes the sum of of `n_points` elliptic curve points taken from the altstack.
+        """
+        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
+
+        # stack in:     [gradient(P_n, \sum_(i=1)^(n-1) P_i, .., gradient(P_3, P_2 + P_1), gradient(P_2, P_1)]
+        # altstack in:  [P_1, P_2, P_3, .., P_n]
+        # stack out:    [gradient(P_n, \sum_(i=1)^(n-1) P_i, .., gradient(P_3, P_2 + P_1), gradient(P_2, P_1), P_1]
+        # altstack out: [P_2, P_3, .., P_n]
+        out += Script.parse_string("OP_FROMALTSTACK OP_FROMALTSTACK")
+
+        # stack in:     [gradient(P_n, \sum_(i=1)^(n-1) P_i, .., gradient(P_3, P_2 + P_1), gradient(P_2, P_1), P_1]
+        # altstack in:  [P_2, P_3, .., P_n]
+        # stack out:    [P_1 + .. + P_n]
+        # altstack out: []
+        for _ in range(n - 1):
+            out += Script.parse_string("OP_FROMALTSTACK OP_FROMALTSTACK")
+            out += self.point_addition_with_unknown_points(
+                take_modulo=False, positive_modulo=False, check_constant=False, clean_constant=False
+            )
+
+        if take_modulo:
+            # Check if the output is the point at infinity, in that case do nothing
+            out += Script.parse_string("OP_2DUP OP_CAT 0x0000 OP_EQUAL OP_NOT OP_IF")
+            out += Script.parse_string("OP_TOALTSTACK")
+            out += pick(position=-1, n_elements=1)
+            out += mod(stack_preparation="", is_positive=positive_modulo)
+            out += mod(is_positive=positive_modulo, is_constant_reused=False)
+            out += Script.parse_string("OP_ENDIF")
+
+        out += roll(position=-1, n_elements=1) + Script.parse_string("OP_DROP") if clean_constant else Script()
+
+        return out
+
+    def unrolled_multiplication(
+        self,
+        max_multiplier: int,
+        modulo_threshold: int,
+        check_constant: bool | None = None,
+        clean_constant: bool | None = None,
+        positive_modulo: bool = True,
+    ) -> Script:
+        """Unrolled double-and-add scalar multiplication loop in E(F_q).
+
+        Stack input:
+            - stack:    [q, ..., marker_a_is_zero, gradient_operations, P := (xP, yP)], `marker_a_is_zero` is `OP_1`
+                if a == 0, `gradient_operations` contains the list of gradients and operational steps obtained from the
+                self.unrolled_multiplication_input method, `P` is a point on E(F_q)
+            - altstack: []
+
+        Stack output:
+            - stack:    [q, ..., P, aP]
+            - altstack: []
+
+        Args:
+            max_multiplier (int): The maximum value of the scalar `a`.
+            modulo_threshold (int): Bit-length threshold. Values whose bit-length exceeds it are reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
+            positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
+
+        Returns:
+            Script to multiply a point on E(F_q) using double-and-add scalar multiplication.
+
+        Notes:
+            The formula for EC point addition `P + Q` where `Q != -P` and `P` and `Q` are not the point at infinity,
+            where the curve is in short Weierstrass form, is:
+                `x_(P+Q) = lambda^2 - x_P - x_Q`
+                `y_(P+Q) = -y_P + (x_(P+Q) - x_P) * lambda`
+            where lambda is the gradient of the line through P and Q. Then, we have (with q exchanged for current_size
+            in future steps):
+
+            `log_2(abs(x_(P+Q)) <= log_2(q^2 + 2q) = log_2(q) + log_2(q+2) <= 2 log_2(q+2)`
+            `log_2(abs(y_(P+Q)) <= log_2(q + (q^2 + 3q) * q) = log_2(q + q^3 + 3q^2) <= log_2(q) + log_2(1 + q^2 + 3q)`
+
+            At every step we check that the next operation doesn't make `log_2(q) + log_2(1 + q^2 + 3q) >
+            modulo_threshold`.
+        """
+        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
+
+        # stack in:  [marker_a_is_zero, [lambdas,a], P]
+        # stack out: [marker_a_is_zero, [lambdas,a], P, T]
+        set_T = Script.parse_string("OP_2DUP")
+        out += set_T
+
+        size_q = ceil(log2(self.MODULUS))
+        current_size = size_q
+
+        # Compute aP
+        # stack in:  [marker_a_is_zero,, [lambdas, a], P, T]
+        # stack out: [marker_a_s_zero, P, aP]
+        for i in range(int(log2(max_multiplier)) - 1, -1, -1):
+            # This is an approximation, but I'm quite sure it works.
+            # We always have to take into account both operations
+            # because we don't know which ones are going to be executed.
+            size_after_operations = 2 * 4 * current_size
+            positive_modulo_i = False
+
+            if size_after_operations > modulo_threshold or i == 0:
+                take_modulo = True
+                current_size = size_q
+                positive_modulo_i = positive_modulo and i == 0
+            else:
+                take_modulo = False
+                current_size = size_after_operations
+
+            # Roll marker to decide whether to execute the loop and the auxiliary data
+            # stack in:  [auxiliary_data, marker_doubling, P, T]
+            # stack out: [auxiliary_data, P, T, marker_doubling]
+            out += roll(position=4, n_elements=1)
+
+            # stack in:  [auxiliary_data, P, T, marker_doubling]
+            # stack out: [P, T] if marker_doubling = 0, else [P, 2T]
+            out += Script.parse_string("OP_IF")  # Check marker for executing iteration
+            out += self.point_algebraic_doubling(
+                take_modulo=take_modulo,
+                check_constant=False,
+                clean_constant=False,
+                verify_gradient=True,
+                gradient=StackFiniteFieldElement(4, False, 1),
+                P=StackEllipticCurvePoint(
+                    StackFiniteFieldElement(1, False, 1),
+                    StackFiniteFieldElement(0, False, 1),
+                ),
+                rolling_options=boolean_list_to_bitmask([True, True]),
+            )  # Compute 2T
+
+            # Roll marker for addition and auxiliary data addition
+            # stack in:  [auxiliary_data_addition, marker_addition, P, 2T]
+            # stack out: [auxiliary_data_addition, P, 2T, marker_addition]
+            out += roll(position=4, n_elements=1)
+
+            # Check marker for +P and compute 2T + P if marker is 1
+            # stack in:  [auxiliary_data_addition, P, 2T, marker_addition]
+            # stack out: [P, 2T, if marker_addition = 0, else P, (2T+P)]
+            out += Script.parse_string("OP_IF")
+            out += self.point_algebraic_addition(
+                take_modulo=take_modulo,
+                check_constant=False,
+                clean_constant=False,
+                verify_gradient=True,
+                positive_modulo=positive_modulo_i,
+                gradient=StackFiniteFieldElement(4, False, 1),
+                P=StackEllipticCurvePoint(
+                    StackFiniteFieldElement(3, False, 1),
+                    StackFiniteFieldElement(2, False, 1),
+                ),
+                Q=StackEllipticCurvePoint(
+                    StackFiniteFieldElement(1, False, 1),
+                    StackFiniteFieldElement(0, False, 1),
+                ),
+                rolling_options=boolean_list_to_bitmask([True, False, True]),
+            )  # Compute 2T + P
+            out += Script.parse_string("OP_ENDIF OP_ENDIF")  # Conclude the conditional branches
+
+        # Check if a == 0
+        # stack in:  [marker_a_is_zero, P, aP]
+        # stack out: [P, 0x00, 0x00 if a == 0, else P aP]
+        out += roll(position=4, n_elements=1)
+        out += Script.parse_string("OP_IF")
+        out += Script.parse_string("OP_2DROP 0x00 0x00")
+        out += Script.parse_string("OP_ENDIF")
+
         if clean_constant:
             out += Script.parse_string("OP_DEPTH OP_1SUB OP_ROLL OP_DROP")
+
+        return out
+
+    def multi_scalar_multiplication_with_fixed_bases(
+        self,
+        bases: list[list[int]],
+        max_multipliers: list[int],
+        modulo_threshold: int,
+        take_modulo: bool,
+        check_constant: bool | None = None,
+        clean_constant: bool | None = None,
+        positive_modulo: bool = True,
+    ) -> Script:
+        r"""Multi-scalar multiplication script in E(F_q) with fixed bases.
+
+        Stack in:
+            - stack:    [gradient[a_1 * P_1, \sum_(i=2)^(n) a_i * P_i], .., gradient[a_n * P_n, a_(n-1) * P_(n-1)],
+                            a_n, gradients[a_n, P_n], .., a_2, gradients[a_2, P_2], a_1, gradients[a_1, P_1]]
+            - altstack: []
+
+        Stack output:
+            - stack:    [a_1 * P_1 + .. + a_n * P_n]
+            - altstack: []
+
+        Above, gradients[a_i, P_i] are the gradients required to execute `self.unrolled_multiplication` on input:
+            stack: [a_i, gradients[a_i, P_i] P_i]
+        While `P_i` are the fixed bases
+
+        Returns:
+            A Bitcoin script that computes a multi scalar multiplication with fixed bases.
+        """
+        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
+
+        # stack in:     [gradient[a_1 * P_1, \sum_(i=2)^(n) a_i * P_i], .., gradient[a_n * P_n, a_(n-1) * P_(n-1)],
+        #                   a_n, gradients[a_n, P_n], .., a_2, gradients[a_2, P_2], a_1, gradients[a_1, P_1]]
+        # stack out:    [gradient[a_1 * P_1, \sum_(i=2)^(n) a_i * P_i], .., gradient[a_n * P_n, a_(n-1) * P_(n-1)]]
+        # altstack out: [a_1 * P_1, .., a_n * P_n]
+        for base, multiplier in zip(bases, max_multipliers):
+            assert len(base) != 0
+            # Load `base` to the stack
+            out += nums_to_script(base)
+            # Compute a_i * P_i
+            out += self.unrolled_multiplication(
+                max_multiplier=multiplier,
+                modulo_threshold=modulo_threshold,
+                check_constant=False,
+                clean_constant=False,
+                positive_modulo=False,
+            )
+            # Put a_i * P_i on the altstack
+            out += Script.parse_string("OP_TOALTSTACK OP_TOALTSTACK")
+            # Drop P_i
+            out += Script.parse_string("OP_2DROP")
+
+        # stack in:     [gradient[a_1 * P_1, \sum_(i=2)^(n) a_i * P_i], .., gradient[a_n * P_n, a_(n-1) * P_(n-1)],
+        #                   a_n * P_n]
+        # altstack in:  [a_1 * P_1, .., a_(n-1) * P_(n-1), a_n * P_n]
+        # stack out:    [a_1 * P_1 + .. + a_n * P_n]
+        out += self.multi_addition(
+            n_points=len(bases),
+            points_on_altstack=True,
+            take_modulo=take_modulo,
+            check_constant=False,
+            clean_constant=clean_constant,
+            positive_modulo=positive_modulo,
+        )
 
         return out

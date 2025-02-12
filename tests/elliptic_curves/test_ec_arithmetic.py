@@ -4,12 +4,17 @@ import pytest
 from elliptic_curves.fields.prime_field import PrimeField
 from elliptic_curves.fields.quadratic_extension import QuadraticExtension
 from elliptic_curves.models.ec import ShortWeierstrassEllipticCurve
+from elliptic_curves.util.zkscript import (
+    multi_addition_gradients,
+    multi_scalar_multiplication_with_fixed_bases_gradients,
+    unrolled_multiplication_gradients,
+)
 from tx_engine import Context, Script
 
 from src.zkscript.elliptic_curves.ec_operations_fq import EllipticCurveFq
 from src.zkscript.elliptic_curves.ec_operations_fq2 import EllipticCurveFq2
-from src.zkscript.elliptic_curves.ec_operations_fq_unrolled import EllipticCurveFqUnrolled
 from src.zkscript.fields.fq2 import Fq2 as Fq2Script
+from src.zkscript.types.unlocking_keys.msm_with_fixed_bases import MsmWithFixedBasesUnlockingKey
 from src.zkscript.types.unlocking_keys.unrolled_ec_multiplication import EllipticCurveFqUnrolledUnlockingKey
 from src.zkscript.util.utility_scripts import nums_to_script
 from tests.elliptic_curves.util import (
@@ -37,7 +42,6 @@ class Secp256k1:
         infinity=False,
     )
     test_script = EllipticCurveFq(q=modulus, curve_a=0)
-    test_script_unrolled = EllipticCurveFqUnrolled(q=modulus, ec_over_fq=test_script)
     # All possible combinations: ± P ± Q are tested. Refer to ./util.py
     positions_addition = [
         {"modulus": 5, "gradient": 4, "P": 3, "Q": 1},
@@ -130,7 +134,7 @@ class Secp256k1:
         "test_addition_slow": generate_test_data(modulus, P, Q, positions_addition),
         "test_doubling_slow": generate_test_data(modulus, P, P, positions_doubling),
         "test_addition_unknown_points": [
-            # {"P": P, "Q": Q, "expected": P + Q},
+            {"P": P, "Q": Q, "expected": P + Q},
             {"P": P, "Q": -P, "expected": point_at_infinity},
             {"P": P, "Q": point_at_infinity, "expected": P},
             {"P": point_at_infinity, "Q": Q, "expected": Q},
@@ -139,6 +143,19 @@ class Secp256k1:
             {"P": P, "a": a, "expected": P.multiply(a), "max_multiplier": order},
             {"P": P, "a": 0, "expected": P.multiply(0), "max_multiplier": order},
             {"P": P, "a": order // 4, "expected": P.multiply(order // 4), "max_multiplier": order // 2},
+        ],
+        "test_multi_addition": [
+            {"points": [P, Q, P, Q], "expected": P + Q + P + Q},
+            {"points": [P, Q, point_at_infinity], "expected": P + Q},
+            {"points": [point_at_infinity, P, Q], "expected": P + Q},
+            {"points": [P, -P, P, -P], "expected": point_at_infinity},
+        ],
+        "test_multi_scalar_multiplication_with_fixed_bases": [
+            {"scalars": [1, 1, 1, 1], "bases": [P, Q, P, Q], "expected": P + Q + P + Q},
+            {"scalars": [1, 0, 1, 1], "bases": [P, Q, P, Q], "expected": P + P + Q},
+            {"scalars": [1, 2, 2, 1], "bases": [P, Q, P, Q], "expected": P.multiply(3) + Q.multiply(3)},
+            {"scalars": [0, 0, 0, 0], "bases": [P, Q, P, Q], "expected": point_at_infinity},
+            {"scalars": [2, 3, 4, 5], "bases": [P, (Q + P), P, Q], "expected": P.multiply(9) + Q.multiply(8)},
         ],
     }
 
@@ -161,7 +178,6 @@ class Secp256r1:
         infinity=False,
     )
     test_script = EllipticCurveFq(q=modulus, curve_a=0xFFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFC)
-    test_script_unrolled = EllipticCurveFqUnrolled(q=modulus, ec_over_fq=test_script)
     # All possible combinations: ± P ± Q are tested. Refer to ./util.py
     positions_addition = [
         {"modulus": 5, "gradient": 4, "P": 3, "Q": 1},
@@ -263,6 +279,19 @@ class Secp256r1:
             {"P": P, "a": a, "expected": P.multiply(a), "max_multiplier": order},
             {"P": P, "a": 0, "expected": P.multiply(0), "max_multiplier": order},
             {"P": P, "a": order // 4, "expected": P.multiply(order // 4), "max_multiplier": order // 2},
+        ],
+        "test_multi_addition": [
+            {"points": [P, Q, P, Q], "expected": P + Q + P + Q},
+            {"points": [P, Q, secp256r1.infinity()], "expected": P + Q},
+            {"points": [secp256r1.infinity(), P, Q], "expected": P + Q},
+            {"points": [P, -P, P, -P], "expected": secp256r1.infinity()},
+        ],
+        "test_multi_scalar_multiplication_with_fixed_bases": [
+            {"scalars": [1, 1, 1, 1], "bases": [P, Q, P, Q], "expected": P + Q + P + Q},
+            {"scalars": [1, 0, 1, 1], "bases": [P, Q, P, Q], "expected": P + P + Q},
+            {"scalars": [1, 2, 2, 1], "bases": [P, Q, P, Q], "expected": P.multiply(3) + Q.multiply(3)},
+            {"scalars": [0, 0, 0, 0], "bases": [P, Q, P, Q], "expected": point_at_infinity},
+            {"scalars": [2, 3, 4, 5], "bases": [P, (Q + P), P, Q], "expected": P.multiply(9) + Q.multiply(8)},
         ],
     }
 
@@ -575,6 +604,10 @@ def generate_test_cases(test_name):
                         out.append(
                             (config, test_data["P"], test_data["a"], test_data["expected"], test_data["max_multiplier"])
                         )
+                    case "test_multi_addition":
+                        out.append((config, test_data["points"], test_data["expected"]))
+                    case "test_multi_scalar_multiplication_with_fixed_bases":
+                        out.append((config, test_data["scalars"], test_data["bases"], test_data["expected"]))
     return out
 
 
@@ -723,11 +756,12 @@ def test_doubling_slow(
 @pytest.mark.parametrize(("config", "P", "Q", "expected"), generate_test_cases("test_addition_unknown_points"))
 def test_addition_unknown_points(config, P, Q, positive_modulo, expected, save_to_json_folder):  # noqa: N803
     unlock = nums_to_script([config.modulus])
-    # if the modulo is positive or the point is at infinity, we need the modulo for the modified verification script
+    # If the modulo is positive or the point is at infinity
+    # we don't need the modulo for the modified verification script
     clean_constant = positive_modulo or expected.is_infinity()
-    # if config.infinity not in {P, Q, expected}:
-    #     gradient = P.gradient(Q)
-    #     unlock += nums_to_script(lam.to_list())
+    if not (P.is_infinity() or Q.is_infinity() or expected.is_infinity()):
+        gradient = P.gradient(Q)
+        unlock += nums_to_script(gradient.to_list())
 
     unlock += generate_unlock(P, degree=config.degree)
     unlock += generate_unlock(Q, degree=config.degree)
@@ -756,15 +790,13 @@ def test_addition_unknown_points(config, P, Q, positive_modulo, expected, save_t
     ("config", "P", "a", "expected", "max_multiplier"), generate_test_cases("test_multiplication_unrolled")
 )
 def test_multiplication_unrolled(config, P, a, expected, max_multiplier, save_to_json_folder):  # noqa: N803
-    binary_expansion_a = [int(bin(a)[j]) for j in range(2, len(bin(a)))][::-1]
-    gradients = [[s.to_list() for s in el] for el in P.gradients(binary_expansion_a)] if a else None
     unlocking_key = EllipticCurveFqUnrolledUnlockingKey(
-        P=P.to_list(), a=a, gradients=gradients, max_multiplier=max_multiplier
+        P=P.to_list(), a=a, gradients=unrolled_multiplication_gradients(a, P).as_data(), max_multiplier=max_multiplier
     )
 
-    unlock = unlocking_key.to_unlocking_script(config.test_script_unrolled, load_modulus=True)
+    unlock = unlocking_key.to_unlocking_script(config.test_script, load_modulus=True)
 
-    lock = config.test_script_unrolled.unrolled_multiplication(
+    lock = config.test_script.unrolled_multiplication(
         max_multiplier=max_multiplier, modulo_threshold=1, check_constant=True, clean_constant=True
     )
     lock += generate_verify_point(expected, degree=config.degree) + Script.parse_string("OP_VERIFY")
@@ -777,3 +809,107 @@ def test_multiplication_unrolled(config, P, a, expected, max_multiplier, save_to
 
     if save_to_json_folder:
         save_scripts(str(lock), str(unlock), save_to_json_folder, config.filename, "unrolled multiplication")
+
+
+@pytest.mark.parametrize("positive_modulo", [True, False])
+@pytest.mark.parametrize("points_on_altstack", [True, False])
+@pytest.mark.parametrize(("config", "points", "expected"), generate_test_cases("test_multi_addition"))
+def test_multi_addition(config, points, expected, positive_modulo, points_on_altstack, save_to_json_folder):
+    unlock = nums_to_script([config.modulus])
+    # If the modulo is positive or the point is at infinity
+    # we don't need the modulo for the modified verification script
+    clean_constant = positive_modulo or expected.is_infinity()
+
+    # Compute the gradients
+    gradients = multi_addition_gradients(points).as_data()
+    if points_on_altstack:
+        # Load the gradients
+        for gradient in gradients[::-1]:
+            if len(gradient) != 0:
+                unlock += nums_to_script(gradient)
+        # Load the points
+        for point in points[::-1]:
+            unlock += generate_unlock(point, degree=config.degree)
+            unlock += Script.parse_string("OP_TOALTSTACK OP_TOALTSTACK")
+    else:
+        for i, point in enumerate(points[:0:-1]):
+            if len(gradients[::-1][i]) != 0:
+                unlock += nums_to_script(gradients[::-1][i])
+            unlock += generate_unlock(point, degree=config.degree)
+        unlock += generate_unlock(points[0], degree=config.degree)
+
+    lock = config.test_script.multi_addition(
+        n_points=len(points),
+        points_on_altstack=points_on_altstack,
+        take_modulo=True,
+        check_constant=True,
+        clean_constant=clean_constant,
+        positive_modulo=positive_modulo,
+    )
+
+    verification_script = generate_verify_point(expected, degree=config.degree)
+    lock += (
+        verification_script
+        if clean_constant
+        else modify_verify_modulo_check(verification_script) + Script.parse_string("OP_SWAP OP_DROP")
+    )
+
+    context = Context(script=unlock + lock)
+    assert context.evaluate()
+    assert context.get_stack().size() == 1
+    assert context.get_altstack().size() == 0
+
+    if save_to_json_folder:
+        save_scripts(str(lock), str(unlock), save_to_json_folder, config.filename, "multi addition")
+
+
+@pytest.mark.parametrize("positive_modulo", [True, False])
+@pytest.mark.parametrize(
+    ("config", "scalars", "bases", "expected"), generate_test_cases("test_multi_scalar_multiplication_with_fixed_bases")
+)
+def test_multi_scalar_multiplication_with_fixed_bases(
+    config, scalars, bases, expected, positive_modulo, save_to_json_folder
+):
+    # If the modulo is positive or the point is at infinity
+    # we don't need the modulo for the modified verification script
+    clean_constant = positive_modulo or expected.is_infinity()
+
+    gradients_multiplications, gradients_additions = multi_scalar_multiplication_with_fixed_bases_gradients(
+        scalars, bases
+    ).as_data()
+
+    unlocking_key = MsmWithFixedBasesUnlockingKey.from_data(
+        scalars=scalars,
+        gradients_multiplications=gradients_multiplications,
+        max_multipliers=[config.order] * len(bases),
+        gradients_additions=gradients_additions,
+    )
+
+    unlock = unlocking_key.to_unlocking_script(config.test_script, load_modulus=True)
+
+    lock = config.test_script.multi_scalar_multiplication_with_fixed_bases(
+        bases=[base.to_list() for base in bases],
+        max_multipliers=[config.order] * len(bases),
+        modulo_threshold=1,
+        take_modulo=True,
+        check_constant=True,
+        clean_constant=clean_constant,
+        positive_modulo=positive_modulo,
+    )
+
+    verification_script = generate_verify_point(expected, degree=config.degree)
+    lock += (
+        verification_script
+        if clean_constant
+        else modify_verify_modulo_check(verification_script) + Script.parse_string("OP_SWAP OP_DROP")
+    )
+
+    context = Context(script=unlock + lock)
+    assert context.evaluate()
+    assert context.get_stack().size() == 1
+    assert context.get_altstack().size() == 0
+
+    if save_to_json_folder:
+        save_scripts(
+            str(lock), str(unlock), save_to_json_folder, config.filename, "multi scalar multiplication with fixed bases"
+        )

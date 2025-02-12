@@ -1,11 +1,11 @@
-"""Unlocking keys for EllipticCurveFqUnrolled."""
+"""Unlocking key for `unrolled_multiplication` in EllipticCurveFq."""
 
 from dataclasses import dataclass
 from math import log2
 
 from tx_engine import Script
 
-from src.zkscript.elliptic_curves.ec_operations_fq_unrolled import EllipticCurveFqUnrolled
+from src.zkscript.elliptic_curves.ec_operations_fq import EllipticCurveFq
 from src.zkscript.util.utility_scripts import nums_to_script
 
 
@@ -17,7 +17,8 @@ class EllipticCurveFqUnrolledUnlockingKey:
     `self.unrolled_multiplication` method.
 
     Args:
-        P (list[int]): The elliptic curve point multiplied.
+        P (list[int] | None): The elliptic curve point multiplied. If `None`, it means that `P` is hard-coded in the
+            locking script.
         a (int): The scalar `a` used to multiply `P`.
         gradients (list[list[list[int]]]): The sequence of gradients as required to execute the double-and-add scalar
             multiplication.
@@ -69,36 +70,38 @@ class EllipticCurveFqUnrolledUnlockingKey:
 
     Example:
         >>> from src.zkscript.elliptic_curves.ec_operations_fq import EllipticCurveFq
+        >>> from src.zkscript.types.unlocking_keys.unrolled_ec_multiplication import EllipticCurveFqUnrolledUnlockingKey
         >>>
         >>> P = [6, 11]
         >>> ec_curve = EllipticCurveFq(q=17, curve_a=0)
-        >>> ec_curve_unrolled = EllipticCurveFqUnrolled(q=17, ec_over_fq=ec_curve)
         >>> a = 3
-        >>> lambdas = [[[8], [10]]]
-        >>> ec_curve_unrolled.unrolled_multiplication_input(P, a, lambdas, max_multiplier=8)
+        >>> gradients = [[[8], [10]]]
+        >>> unlocking_key = EllipticCurveFqUnrolledUnlockingKey(P, a, gradients, 8)
+        >>> unlocking_key.to_unlocking_script()
         0x11 OP_0 OP_10 OP_1 OP_8 OP_1 OP_0 OP_0 OP_6 OP_11
 
             ^     ^          ^         ^    ^    ^    ^    ^
             q   marker     adding   double pass pass  xP   yP
     """
 
-    P: list[int]
+    P: list[int] | None
     a: int
     gradients: list[list[list[int]]] | None
     max_multiplier: int
 
-    def to_unlocking_script(self, unrolled_ec_over_fq: EllipticCurveFqUnrolled, load_modulus=True) -> Script:
+    def to_unlocking_script(self, ec_over_fq: EllipticCurveFq, load_modulus=True, load_P=True) -> Script:  # noqa: N803
         """Return the unlocking script required by unrolled_multiplication script.
 
         Args:
-            unrolled_ec_over_fq (EllipticCurveFqUnrolled): The instantiation of unrolled ec arithmetic
-                over Fq used to construct the unrolled_multiplication locking script.
+            ec_over_fq (EllipticCurveFq): The instantiation of ec arithmetic over Fq used to
+                construct the unrolled_multiplication locking script.
             load_modulus (bool): Whether or not to load the modulus on the stack. Defaults to `True`.
-
+            load_P (bool): Whether or not to load `P` in the unlocking script. Set to `False` if `P`
+                is hard-coded in the locking script.
         """
         M = int(log2(self.max_multiplier))
 
-        out = nums_to_script([unrolled_ec_over_fq.MODULUS]) if load_modulus else Script()
+        out = nums_to_script([ec_over_fq.MODULUS]) if load_modulus else Script()
 
         # Add the gradients
         if self.a == 0:
@@ -123,6 +126,6 @@ class EllipticCurveFqUnrolledUnlockingKey:
             out += Script.parse_string(" ".join(["OP_0"] * (M - N)))
 
         # Load P
-        out += nums_to_script(self.P)
+        out += nums_to_script(self.P) if load_P else Script()
 
         return out
