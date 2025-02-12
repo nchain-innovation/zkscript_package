@@ -133,7 +133,7 @@ def vk_to_lock(vk: VerifyingKey, groth16_script: Groth16) -> Script:
     )
     return groth16_script.groth16_verifier(
         locking_key,
-        modulo_threshold=1,
+        modulo_threshold=200*8,
         check_constant=True,
         clean_constant=True,
     )
