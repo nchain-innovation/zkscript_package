@@ -99,7 +99,8 @@ def proof_to_unlock(
         public_statements,
     )
 
-    unlocking_key = Groth16UnlockingKey(
+    unlocking_key = Groth16UnlockingKey.from_data(
+        groth16_model=groth16_script,
         pub=prepared_proof.public_statements,
         A=prepared_proof.a,
         B=prepared_proof.b,
@@ -109,13 +110,13 @@ def proof_to_unlock(
             prepared_proof.gradients_minus_gamma,
             prepared_proof.gradients_minus_delta,
         ],
+        gradients_multiplications=prepared_proof.gradients_multiplications,
+        max_multipliers=None,
+        gradients_additions=prepared_proof.gradients_additions,
         inverse_miller_output=prepared_proof.inverse_miller_loop,
-        gradients_partial_sums=prepared_proof.gradients_msm,
-        gradients_multiplication=prepared_proof.gradients_public_statements,
+        gradient_gamma_abc_zero=prepared_proof.gradient_gamma_abc_zero,
     )
-
-    return unlocking_key.to_unlocking_script(groth16_script, None, True)
-
+    return unlocking_key.to_unlocking_script(groth16_script, True)
 
 def vk_to_lock(vk: VerifyingKey, groth16_script: Groth16) -> Script:
     prepared_vk = vk.prepare_for_zkscript()
@@ -130,10 +131,9 @@ def vk_to_lock(vk: VerifyingKey, groth16_script: Groth16) -> Script:
             prepared_vk.gradients_minus_delta,
         ],
     )
-
     return groth16_script.groth16_verifier(
-        locking_key=locking_key,
-        modulo_threshold=200 * 8,
+        locking_key,
+        modulo_threshold=1,
         check_constant=True,
         clean_constant=True,
     )
