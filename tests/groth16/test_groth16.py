@@ -11,14 +11,14 @@ from tx_engine import Context
 
 from src.zkscript.groth16.bls12_381.bls12_381 import bls12_381
 from src.zkscript.groth16.mnt4_753.mnt4_753 import mnt4_753
-from src.zkscript.types.locking_keys.groth16 import Groth16LockingKey
-from src.zkscript.types.unlocking_keys.groth16 import Groth16UnlockingKey
+from src.zkscript.types.locking_keys.groth16 import Groth16LockingKey, Groth16LockingKeyWithPrecomputedMsm
+from src.zkscript.types.unlocking_keys.groth16 import Groth16UnlockingKey, Groth16UnlockingKeyWithPrecomputedMsm
 
 
 @dataclass
 class Bls12381:
     q = BLS12_381.g1_field.get_modulus()
-    r = BLS12_381.g1_curve.scalar_field.get_modulus()
+    r = BLS12_381.scalar_field.get_modulus()
     g1 = BLS12_381.g1_curve.get_generator()
     g2 = BLS12_381.g2_curve.get_generator()
     val_miller_loop = BLS12_381.pairing_engine.miller_loop_engine.val_miller_loop
@@ -128,7 +128,7 @@ class Bls12381:
 @dataclass
 class Mnt4753:
     q = MNT4_753.g1_field.get_modulus()
-    r = MNT4_753.g1_curve.scalar_field.get_modulus()
+    r = MNT4_753.scalar_field.get_modulus()
     g1 = MNT4_753.g1_curve.get_generator()
     g2 = MNT4_753.g2_curve.get_generator()
     val_miller_loop = MNT4_753.pairing_engine.miller_loop_engine.val_miller_loop
@@ -353,7 +353,8 @@ def save_scripts(lock, unlock, save_to_json_folder, filename, test_name):
     ],
 )
 def test_groth16(test_script, prepared_vk, alpha_beta, prepared_proof, max_multipliers, filename, save_to_json_folder):
-    unlocking_key = Groth16UnlockingKey(
+    unlocking_key = Groth16UnlockingKey.from_data(
+        groth16_model=test_script,
         pub=prepared_proof.public_statements,
         A=prepared_proof.a,
         B=prepared_proof.b,
@@ -363,11 +364,13 @@ def test_groth16(test_script, prepared_vk, alpha_beta, prepared_proof, max_multi
             prepared_proof.gradients_minus_gamma,
             prepared_proof.gradients_minus_delta,
         ],
+        gradients_multiplications=prepared_proof.gradients_multiplications,
+        max_multipliers=max_multipliers,
+        gradients_additions=prepared_proof.gradients_additions,
         inverse_miller_output=prepared_proof.inverse_miller_loop,
-        gradients_partial_sums=prepared_proof.gradients_msm,
-        gradients_multiplication=prepared_proof.gradients_public_statements,
+        gradient_gamma_abc_zero=prepared_proof.gradient_gamma_abc_zero,
     )
-    unlock = unlocking_key.to_unlocking_script(test_script, max_multipliers, True)
+    unlock = unlocking_key.to_unlocking_script(test_script, True)
 
     locking_key = Groth16LockingKey(
         alpha_beta=alpha_beta.to_list(),
@@ -383,6 +386,92 @@ def test_groth16(test_script, prepared_vk, alpha_beta, prepared_proof, max_multi
         locking_key,
         modulo_threshold=1,
         max_multipliers=max_multipliers,
+        check_constant=True,
+        clean_constant=True,
+    )
+
+    context = Context(script=unlock + lock)
+    assert context.evaluate()
+    assert context.get_stack().size() == 1
+    assert context.get_altstack().size() == 0
+
+    if save_to_json_folder:
+        save_scripts(str(lock), str(unlock), save_to_json_folder, filename, "groth16")
+
+
+@pytest.mark.parametrize(
+    ("test_script", "prepared_vk", "alpha_beta", "precomputed_msm", "prepared_proof", "filename"),
+    [
+        (
+            Bls12381.test_script,
+            Bls12381.prepared_vk,
+            Bls12381.alpha_beta[0],
+            Bls12381.sum_gamma_abc[0],
+            Bls12381.prepared_proofs[0],
+            Bls12381.filename,
+        ),
+        (
+            Bls12381.test_script,
+            Bls12381.prepared_vk,
+            Bls12381.alpha_beta[1],
+            Bls12381.sum_gamma_abc[1],
+            Bls12381.prepared_proofs[1],
+            Bls12381.filename,
+        ),
+        (
+            Mnt4753.test_script,
+            Mnt4753.prepared_vk,
+            Mnt4753.alpha_beta[0],
+            Mnt4753.sum_gamma_abc[0],
+            Mnt4753.prepared_proofs[0],
+            Mnt4753.filename,
+        ),
+        (
+            Mnt4753.test_script,
+            Mnt4753.prepared_vk,
+            Mnt4753.alpha_beta[1],
+            Mnt4753.sum_gamma_abc[1],
+            Mnt4753.prepared_proofs[1],
+            Mnt4753.filename,
+        ),
+    ],
+)
+def test_groth16_with_precomputed_msm(
+    test_script,
+    prepared_vk,
+    alpha_beta,
+    precomputed_msm,
+    prepared_proof,
+    filename,
+    save_to_json_folder,
+):
+    unlocking_key = Groth16UnlockingKeyWithPrecomputedMsm(
+        pub=prepared_proof.public_statements,
+        A=prepared_proof.a,
+        B=prepared_proof.b,
+        C=prepared_proof.c,
+        gradients_pairings=[
+            prepared_proof.gradients_b,
+            prepared_proof.gradients_minus_gamma,
+            prepared_proof.gradients_minus_delta,
+        ],
+        inverse_miller_output=prepared_proof.inverse_miller_loop,
+        precomputed_msm=precomputed_msm.to_list(),
+    )
+    unlock = unlocking_key.to_unlocking_script(test_script, True)
+
+    locking_key = Groth16LockingKeyWithPrecomputedMsm(
+        alpha_beta=alpha_beta.to_list(),
+        minus_gamma=prepared_vk.minus_gamma,
+        minus_delta=prepared_vk.minus_delta,
+        gradients_pairings=[
+            prepared_vk.gradients_minus_gamma,
+            prepared_vk.gradients_minus_delta,
+        ],
+    )
+    lock = test_script.groth16_verifier_with_precomputed_msm(
+        locking_key,
+        modulo_threshold=1,
         check_constant=True,
         clean_constant=True,
     )
@@ -414,7 +503,8 @@ def test_groth16_slow(
     is_minimal_example,
     save_to_json_folder,
 ):
-    unlocking_key = Groth16UnlockingKey(
+    unlocking_key = Groth16UnlockingKey.from_data(
+        groth16_model=test_script,
         pub=prepared_proof.public_statements,
         A=prepared_proof.a,
         B=prepared_proof.b,
@@ -424,11 +514,13 @@ def test_groth16_slow(
             prepared_proof.gradients_minus_gamma,
             prepared_proof.gradients_minus_delta,
         ],
+        gradients_multiplications=prepared_proof.gradients_multiplications,
+        max_multipliers=max_multipliers,
+        gradients_additions=prepared_proof.gradients_additions,
         inverse_miller_output=prepared_proof.inverse_miller_loop,
-        gradients_partial_sums=prepared_proof.gradients_msm,
-        gradients_multiplication=prepared_proof.gradients_public_statements,
+        gradient_gamma_abc_zero=prepared_proof.gradient_gamma_abc_zero,
     )
-    unlock = unlocking_key.to_unlocking_script(test_script, max_multipliers, True)
+    unlock = unlocking_key.to_unlocking_script(test_script, True)
 
     locking_key = Groth16LockingKey(
         alpha_beta=alpha_beta.to_list(),
@@ -442,7 +534,7 @@ def test_groth16_slow(
     )
     lock = test_script.groth16_verifier(
         locking_key,
-        modulo_threshold=1,
+        modulo_threshold=200 * 8,
         max_multipliers=max_multipliers,
         check_constant=True,
         clean_constant=True,
