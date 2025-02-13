@@ -147,7 +147,6 @@ class Groth16UnlockingKeyWithPrecomputedMsm:
     r"""Class encapsulating the data required to generate unlocking script for Groth16 verifier with precomputed msm.
 
     Attributes:
-        pub (list[int]): list of public statements.
         A (list[int]): Component of the zk proof.
         B (list[int]): Component of the zk proof.
         C (list[int]): Component of the zk proof.
@@ -161,7 +160,6 @@ class Groth16UnlockingKeyWithPrecomputedMsm:
         precomputed_msm: the sum \sum_(i=0)^l a_i * gamma_abc[i]
     """
 
-    pub: list[int]
     A: list[int]
     B: list[int]
     C: list[int]

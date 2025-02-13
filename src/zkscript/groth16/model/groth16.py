@@ -8,7 +8,7 @@ from src.zkscript.bilinear_pairings.model.model_definition import PairingModel
 # Script implementations
 # EC arithmetic
 from src.zkscript.elliptic_curves.ec_operations_fq import EllipticCurveFq
-from src.zkscript.types.locking_keys.groth16 import Groth16LockingKey
+from src.zkscript.types.locking_keys.groth16 import Groth16LockingKey, Groth16LockingKeyWithPrecomputedMsm
 from src.zkscript.util.utility_functions import optimise_script
 from src.zkscript.util.utility_scripts import nums_to_script, roll, verify_bottom_constant
 
@@ -179,7 +179,7 @@ class Groth16(PairingModel):
 
     def groth16_verifier_with_precomputed_msm(
         self,
-        locking_key: Groth16LockingKey,
+        locking_key: Groth16LockingKeyWithPrecomputedMsm,
         modulo_threshold: int,
         check_constant: bool | None = None,
         clean_constant: bool | None = None,
