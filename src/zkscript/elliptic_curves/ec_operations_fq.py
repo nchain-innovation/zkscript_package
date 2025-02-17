@@ -844,7 +844,7 @@ class EllipticCurveFq:
         clean_constant: bool | None = None,
         positive_modulo: bool = True,
     ) -> Script:
-        r"""Addition of `n_points` in E(F_q).
+        r"""Sum `n_points` elliptic curve points P_1, .., P_n on E(F_q).
 
         Stack input:
             - stack:    [gradient(P_n, \sum_(i=1)^(n-1) P_i, P_n , ..,
@@ -1123,7 +1123,7 @@ class EllipticCurveFq:
 
         return out
 
-    def multi_scalar_multiplication_with_fixed_bases(
+    def msm_with_fixed_bases(
         self,
         bases: list[list[int]],
         max_multipliers: list[int],
@@ -1134,6 +1134,12 @@ class EllipticCurveFq:
         positive_modulo: bool = True,
     ) -> Script:
         r"""Multi-scalar multiplication script in E(F_q) with fixed bases.
+
+        This function returns the script that computes a multi-scalar multiplication. That is,
+        it computes the operation:
+            ((a_1, .., a_n), (P_1, .., P_n)) --> \sum_(i=1)^n a_i P_i
+        where the a_i's are the scalars, and the P_i's are the bases. The script hard-codes the bases.
+
 
         Stack in:
             - stack:    [gradient[a_1 * P_1, \sum_(i=2)^(n) a_i * P_i], .., gradient[a_n * P_n, a_(n-1) * P_(n-1)],
@@ -1147,6 +1153,16 @@ class EllipticCurveFq:
         Above, gradients[a_i, P_i] are the gradients required to execute `self.unrolled_multiplication` on input:
             stack: [a_i, gradients[a_i, P_i] P_i]
         While `P_i` are the fixed bases
+
+        Args:
+            bases (list[list[int]]): The bases of the multi scalar multiplication, passed as a list of coordinates.
+                `bases[i]` is `bases[i] = [x, y]` the list of the coordinates of P_i.
+            max_multipliers (list[int]): `max_mupliers[i]` is the maximum value allowed for `a_i`.
+            modulo_threshold (int): Bit-length threshold. Values whose bit-length exceeds it are reduced modulo `q`.
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
+            positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
 
         Returns:
             A Bitcoin script that computes a multi scalar multiplication with fixed bases.

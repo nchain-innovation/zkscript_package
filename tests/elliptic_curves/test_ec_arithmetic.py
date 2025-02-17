@@ -150,7 +150,7 @@ class Secp256k1:
             {"points": [point_at_infinity, P, Q], "expected": P + Q},
             {"points": [P, -P, P, -P], "expected": point_at_infinity},
         ],
-        "test_multi_scalar_multiplication_with_fixed_bases": [
+        "test_msm_with_fixed_bases": [
             {"scalars": [1, 1, 1, 1], "bases": [P, Q, P, Q], "expected": P + Q + P + Q},
             {"scalars": [1, 0, 1, 1], "bases": [P, Q, P, Q], "expected": P + P + Q},
             {"scalars": [1, 2, 2, 1], "bases": [P, Q, P, Q], "expected": P.multiply(3) + Q.multiply(3)},
@@ -286,7 +286,7 @@ class Secp256r1:
             {"points": [secp256r1.infinity(), P, Q], "expected": P + Q},
             {"points": [P, -P, P, -P], "expected": secp256r1.infinity()},
         ],
-        "test_multi_scalar_multiplication_with_fixed_bases": [
+        "test_msm_with_fixed_bases": [
             {"scalars": [1, 1, 1, 1], "bases": [P, Q, P, Q], "expected": P + Q + P + Q},
             {"scalars": [1, 0, 1, 1], "bases": [P, Q, P, Q], "expected": P + P + Q},
             {"scalars": [1, 2, 2, 1], "bases": [P, Q, P, Q], "expected": P.multiply(3) + Q.multiply(3)},
@@ -606,7 +606,7 @@ def generate_test_cases(test_name):
                         )
                     case "test_multi_addition":
                         out.append((config, test_data["points"], test_data["expected"]))
-                    case "test_multi_scalar_multiplication_with_fixed_bases":
+                    case "test_msm_with_fixed_bases":
                         out.append((config, test_data["scalars"], test_data["bases"], test_data["expected"]))
     return out
 
@@ -864,12 +864,8 @@ def test_multi_addition(config, points, expected, positive_modulo, points_on_alt
 
 
 @pytest.mark.parametrize("positive_modulo", [True, False])
-@pytest.mark.parametrize(
-    ("config", "scalars", "bases", "expected"), generate_test_cases("test_multi_scalar_multiplication_with_fixed_bases")
-)
-def test_multi_scalar_multiplication_with_fixed_bases(
-    config, scalars, bases, expected, positive_modulo, save_to_json_folder
-):
+@pytest.mark.parametrize(("config", "scalars", "bases", "expected"), generate_test_cases("test_msm_with_fixed_bases"))
+def test_msm_with_fixed_bases(config, scalars, bases, expected, positive_modulo, save_to_json_folder):
     # If the modulo is positive or the point is at infinity
     # we don't need the modulo for the modified verification script
     clean_constant = positive_modulo or expected.is_infinity()
@@ -887,7 +883,7 @@ def test_multi_scalar_multiplication_with_fixed_bases(
 
     unlock = unlocking_key.to_unlocking_script(config.test_script, load_modulus=True)
 
-    lock = config.test_script.multi_scalar_multiplication_with_fixed_bases(
+    lock = config.test_script.msm_with_fixed_bases(
         bases=[base.to_list() for base in bases],
         max_multipliers=[config.order] * len(bases),
         modulo_threshold=1,

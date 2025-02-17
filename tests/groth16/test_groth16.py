@@ -446,7 +446,6 @@ def test_groth16_with_precomputed_msm(
     save_to_json_folder,
 ):
     unlocking_key = Groth16UnlockingKeyWithPrecomputedMsm(
-        pub=prepared_proof.public_statements,
         A=prepared_proof.a,
         B=prepared_proof.b,
         C=prepared_proof.c,

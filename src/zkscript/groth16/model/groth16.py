@@ -143,7 +143,7 @@ class Groth16(PairingModel):
         # stack out:    [q, ..., inverse_miller_loop_triple_pairing, gradients_pairing, A, B, C,
         #                    gradient[gamma_abc[0], sum_(i=1)^l a_i * gamma_abc[i]],
         #                       sum_(i=1)^l a_i * gamma_abc[i]]
-        out += ec_fq.multi_scalar_multiplication_with_fixed_bases(
+        out += ec_fq.msm_with_fixed_bases(
             bases=locking_key.gamma_abc[1:],
             max_multipliers=max_multipliers,
             modulo_threshold=modulo_threshold,
