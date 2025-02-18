@@ -146,8 +146,8 @@ class Secp256k1:
         ],
         "test_multi_addition": [
             {"points": [P, Q, P, Q], "expected": P + Q + P + Q},
-            {"points": [P, Q, point_at_infinity], "expected": P + Q},
-            {"points": [point_at_infinity, P, Q], "expected": P + Q},
+            {"points": [P, Q, P, point_at_infinity], "expected": P + Q + P},
+            {"points": [point_at_infinity, P, Q, Q], "expected": P + Q + Q},
             {"points": [P, -P, P, -P], "expected": point_at_infinity},
         ],
         "test_msm_with_fixed_bases": [
@@ -282,9 +282,9 @@ class Secp256r1:
         ],
         "test_multi_addition": [
             {"points": [P, Q, P, Q], "expected": P + Q + P + Q},
-            {"points": [P, Q, secp256r1.infinity()], "expected": P + Q},
-            {"points": [secp256r1.infinity(), P, Q], "expected": P + Q},
-            {"points": [P, -P, P, -P], "expected": secp256r1.infinity()},
+            {"points": [P, Q, P, point_at_infinity], "expected": P + Q + P},
+            {"points": [point_at_infinity, P, Q, Q], "expected": P + Q + Q},
+            {"points": [P, -P, P, -P], "expected": point_at_infinity},
         ],
         "test_msm_with_fixed_bases": [
             {"scalars": [1, 1, 1, 1], "bases": [P, Q, P, Q], "expected": P + Q + P + Q},
@@ -811,10 +811,10 @@ def test_multiplication_unrolled(config, P, a, expected, max_multiplier, save_to
         save_scripts(str(lock), str(unlock), save_to_json_folder, config.filename, "unrolled multiplication")
 
 
+@pytest.mark.parametrize("n_points_on_altstack", [0, 1, 2, 3, 4])
 @pytest.mark.parametrize("positive_modulo", [True, False])
-@pytest.mark.parametrize("points_on_altstack", [True, False])
 @pytest.mark.parametrize(("config", "points", "expected"), generate_test_cases("test_multi_addition"))
-def test_multi_addition(config, points, expected, positive_modulo, points_on_altstack, save_to_json_folder):
+def test_multi_addition(config, points, expected, positive_modulo, n_points_on_altstack, save_to_json_folder):
     unlock = nums_to_script([config.modulus])
     # If the modulo is positive or the point is at infinity
     # we don't need the modulo for the modified verification script
@@ -822,25 +822,28 @@ def test_multi_addition(config, points, expected, positive_modulo, points_on_alt
 
     # Compute the gradients
     gradients = multi_addition_gradients(points).as_data()
-    if points_on_altstack:
-        # Load the gradients
-        for gradient in gradients[::-1]:
-            if len(gradient) != 0:
-                unlock += nums_to_script(gradient)
-        # Load the points
-        for point in points[::-1]:
-            unlock += generate_unlock(point, degree=config.degree)
-            unlock += Script.parse_string("OP_TOALTSTACK OP_TOALTSTACK")
-    else:
-        for i, point in enumerate(points[:0:-1]):
-            if len(gradients[::-1][i]) != 0:
-                unlock += nums_to_script(gradients[::-1][i])
-            unlock += generate_unlock(point, degree=config.degree)
+    # Prepare unlocking script
+    n_points = len(points)
+    n_points_on_stack = n_points - n_points_on_altstack
+    # Load gradients for points on the altstack
+    for gradient in gradients[max(n_points_on_stack - 1, 0) :][::-1]:
+        unlock += nums_to_script(gradient)
+    # Load gradients for points on stack
+    for gradient, point in zip(
+        reversed(gradients[: max(n_points_on_stack - 1, 0)]), reversed(points[1:n_points_on_stack])
+    ):
+        unlock += nums_to_script(gradient)
+        unlock += generate_unlock(point, degree=config.degree)
+    if n_points_on_stack != 0:
         unlock += generate_unlock(points[0], degree=config.degree)
+    # Load points on altstack
+    for point in points[n_points_on_stack:][::-1]:
+        unlock += generate_unlock(point, degree=config.degree)
+        unlock += Script.parse_string("OP_TOALTSTACK OP_TOALTSTACK")
 
     lock = config.test_script.multi_addition(
-        n_points=len(points),
-        points_on_altstack=points_on_altstack,
+        n_points_on_stack=n_points_on_stack,
+        n_points_on_altstack=n_points_on_altstack,
         take_modulo=True,
         check_constant=True,
         clean_constant=clean_constant,

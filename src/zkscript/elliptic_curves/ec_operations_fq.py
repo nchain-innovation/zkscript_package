@@ -837,140 +837,68 @@ class EllipticCurveFq:
 
     def multi_addition(
         self,
-        n_points: int,
-        points_on_altstack: bool,
+        n_points_on_stack: int,
+        n_points_on_altstack: int,
         take_modulo: bool,
         check_constant: bool | None = None,
         clean_constant: bool | None = None,
         positive_modulo: bool = True,
     ) -> Script:
-        r"""Sum `n_points` elliptic curve points P_1, .., P_n on E(F_q).
+        r"""Sum `n := n_points_on_stack + n_points_on_altstack` elliptic curve points P_1, .., P_n on E(F_q).
 
         Stack input:
-            - stack:    [gradient(P_n, \sum_(i=1)^(n-1) P_i, P_n , ..,
-                            gradient(P_3, P_2 + P_1), P_3, gradient(P_2, P_1), P_2, P_1] if not points_on_altstack
-                                else [gradient(P_n, \sum_(i=1)^(n-1) P_i, ..,
-                                        gradient(P_3, P_2 + P_1), gradient(P_2, P_1)]
-            - altstack: [] if not points_on_altstack else [P_n, P_(n-1), .., P_1]
+            - stack:    [gradient(P_n, \sum_(i=1)^(n-1) P_i), ..,
+                            gradient(P_(n_points_on_stack+1), \sum_(i=1)^(n_points_on_stack) P_i),
+                                gradient(P_(n_points_on_stack), \sum_(i=1)^(n_points_on_stack-1) P_i),
+                                    P_(n_points_on_stack),
+                                        .., gradient(P_3, P_2 + P_1), P_3, gradient(P_2, P_1), P_2, P_1]
+            - altstack: [P_n, .., P_(n_points_on_stack+2), P_(n_points_on_stack+1)]
 
         Stack output:
             - stack:    [P_1 + .. + P_n]
             - altstack: []
 
         Args:
-            n_points (int): The number of points to be summed.
-            points_on_altstack (bool): If `True`, the script fetches the points from the altstack. Otherwise,
-                it expects them on the stack.
+            n_points_on_stack (int): The number of points on the stack to be summed.
+            n_points_on_altstack (int): The number of points on the altstack to be summed.
             take_modulo (bool): If `True`, the result is reduced modulo `q`.
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
 
         Returns:
-            A Bitcoin script that computes the sum of of `n_points` elliptic curve points.
+            A Bitcoin script that computes the sum of of `n := n_points_on_stack + n_points_on_altstack`
+            elliptic curve points.
         """
         out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
-        if points_on_altstack:
-            out += self.__multi_addition_from_altstack(n_points, take_modulo, False, clean_constant, positive_modulo)
-        else:
-            out += self.__multi_addition_from_stack(n_points, take_modulo, False, clean_constant, positive_modulo)
-
-        return out
-
-    def __multi_addition_from_stack(
-        self,
-        n: int,
-        take_modulo: bool,
-        check_constant: bool | None = None,
-        clean_constant: bool | None = None,
-        positive_modulo: bool = True,
-    ) -> Script:
-        r"""Addition of `n_points` in E(F_q).
-
-        Stack input:
-            - stack:    [gradient(P_n, \sum_(i=1)^(n-1) P_i, P_n , ..,
-                            gradient(P_3, P_2 + P_1), P_3, gradient(P_2, P_1), P_2, P_1]
-            - altstack: []
-
-        Stack output:
-            - stack:    [P_1 + P_2 + .. + P_n]
-            - altstack: []
-
-        Args:
-            n (int): The number of points to be summed.
-            take_modulo (bool): If `True`, the result is reduced modulo `q`.
-            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
-            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
-            positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
-
-        Returns:
-            A Bitcoin script that computes the sum of of `n_points` elliptic curve points taken from the stack.
-        """
-        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
-
-        # stack in:  [gradient(P_n, \sum_(i=1)^(n-1) P_i, P_n , ..,
-        #               gradient(P_3, P_2 + P_1), P_3, gradient(P_2, P_1), P_2, P_1]
-        # stack out: [P_1 + .. + P_n]
-        for _ in range(n - 1):
+        # stack in:       [gradient(P_n, \sum_(i=1)^(n-1) P_i), ..,
+        #                    gradient(P_(n_points_on_stack+1), \sum_(i=1)^(n_points_on_stack) P_i),
+        #                        gradient(P_(n_points_on_stack), \sum_(i=1)^(n_points_on_stack-1) P_i),
+        #                            P_(n_points_on_stack),
+        #                               .., gradient(P_3, P_2 + P_1), P_3, gradient(P_2, P_1), P_2, P_1]
+        # altstack in:   [P_n, .., P_(n_points_on_stack+2), P_(n_points_on_stack+1)]
+        # stack out:     [gradient(P_n, \sum_(i=1)^(n-1) P_i), ..,
+        #                    gradient(P_(n_points_on_stack+1), \sum_(i=1)^(n_points_on_stack) P_i),
+        #                       P_1 + .. + P_(n_points_on_stack)]
+        # altstack out:  [P_n, .., P_(n_points_on_stack+2), P_(n_points_on_stack+1)]
+        for _ in range(n_points_on_stack - 1):
             out += self.point_addition_with_unknown_points(
                 take_modulo=False, positive_modulo=False, check_constant=False, clean_constant=False
             )
 
-        if take_modulo:
-            # Check if the output is the point at infinity, in that case do nothing
-            out += Script.parse_string("OP_2DUP OP_CAT 0x0000 OP_EQUAL OP_NOT OP_IF")
-            out += Script.parse_string("OP_TOALTSTACK")
-            out += pick(position=-1, n_elements=1)
-            out += mod(stack_preparation="", is_positive=positive_modulo)
-            out += mod(is_positive=positive_modulo, is_constant_reused=False)
-            out += Script.parse_string("OP_ENDIF")
+        # Handle the case in which the were no points on the stack
+        if n_points_on_stack == 0:
+            out += Script.parse_string("OP_FROMALTSTACK OP_FROMALTSTACK")
+            n_points_on_altstack -= 1
 
-        out += roll(position=-1, n_elements=1) + Script.parse_string("OP_DROP") if clean_constant else Script()
-
-        return out
-
-    def __multi_addition_from_altstack(
-        self,
-        n: int,
-        take_modulo: bool,
-        check_constant: bool | None = None,
-        clean_constant: bool | None = None,
-        positive_modulo: bool = True,
-    ) -> Script:
-        r"""Addition of `n_points` in E(F_q).
-
-        Stack input:
-            - stack:    [gradient(P_n, \sum_(i=1)^(n-1) P_i, .., gradient(P_3, P_2 + P_1), gradient(P_2, P_1)]
-            - altstack: [P_1, P_2, P_3, .., P_n]
-
-        Stack output:
-            - stack:    [P_1 + P_2 + .. + P_n]
-            - altstack: []
-
-        Args:
-            n (int): The number of points to be summed.
-            take_modulo (bool): If `True`, the result is reduced modulo `q`.
-            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
-            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
-            positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
-
-        Returns:
-            A Bitcoin script that computes the sum of of `n_points` elliptic curve points taken from the altstack.
-        """
-        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
-
-        # stack in:     [gradient(P_n, \sum_(i=1)^(n-1) P_i, .., gradient(P_3, P_2 + P_1), gradient(P_2, P_1)]
-        # altstack in:  [P_1, P_2, P_3, .., P_n]
-        # stack out:    [gradient(P_n, \sum_(i=1)^(n-1) P_i, .., gradient(P_3, P_2 + P_1), gradient(P_2, P_1), P_1]
-        # altstack out: [P_2, P_3, .., P_n]
-        out += Script.parse_string("OP_FROMALTSTACK OP_FROMALTSTACK")
-
-        # stack in:     [gradient(P_n, \sum_(i=1)^(n-1) P_i, .., gradient(P_3, P_2 + P_1), gradient(P_2, P_1), P_1]
-        # altstack in:  [P_2, P_3, .., P_n]
-        # stack out:    [P_1 + .. + P_n]
-        # altstack out: []
-        for _ in range(n - 1):
+        # stack in:      [gradient(P_n, \sum_(i=1)^(n-1) P_i), ..,
+        #                    gradient(P_(n_points_on_stack+1), \sum_(i=1)^(n_points_on_stack) P_i),
+        #                       P_1 + .. + P_(n_points_on_stack)]
+        # altstack in:   [P_n, .., P_(n_points_on_stack+2), P_(n_points_on_stack+1)]
+        # stack out:     [P_1 + .. + P_n]
+        # altstack out:  []
+        for _ in range(n_points_on_altstack):
             out += Script.parse_string("OP_FROMALTSTACK OP_FROMALTSTACK")
             out += self.point_addition_with_unknown_points(
                 take_modulo=False, positive_modulo=False, check_constant=False, clean_constant=False
@@ -1195,8 +1123,8 @@ class EllipticCurveFq:
         # altstack in:  [a_1 * P_1, .., a_(n-1) * P_(n-1), a_n * P_n]
         # stack out:    [a_1 * P_1 + .. + a_n * P_n]
         out += self.multi_addition(
-            n_points=len(bases),
-            points_on_altstack=True,
+            n_points_on_stack=0,
+            n_points_on_altstack=len(bases),
             take_modulo=take_modulo,
             check_constant=False,
             clean_constant=clean_constant,
