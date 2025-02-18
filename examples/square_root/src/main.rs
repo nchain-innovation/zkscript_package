@@ -32,8 +32,8 @@ impl<F: PrimeField> ConstraintSynthesizer<F> for KnowledgeOfSquareRoot<F> {
     }
 }
 
-type ScalarField = ScalarFieldBls;
-type Curve = Bls12_381;
+type ScalarField = ScalarFieldMnt;
+type Curve = MNT4_753;
 
 fn main() -> Result<(), Box<dyn std::error::Error>>{
     // Randomness

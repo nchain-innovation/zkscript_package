@@ -31,7 +31,7 @@ def save_scripts(lock, unlock, save_to_json_folder, filename, test_name):
 
 
 @pytest.mark.parametrize(
-    "sighash_value",
+    "sighash_flags",
     [
         SIGHASH.ALL_FORKID,
         SIGHASH.SINGLE_FORKID,
@@ -43,9 +43,9 @@ def save_scripts(lock, unlock, save_to_json_folder, filename, test_name):
 )
 @pytest.mark.parametrize("security", [2, 3])
 @pytest.mark.parametrize("is_opcodeseparator", [True, False])
-def test_pushtx_bit_shift(sighash_value, security, is_opcodeseparator, save_to_json_folder):
+def test_pushtx_bit_shift(sighash_flags, security, is_opcodeseparator, save_to_json_folder):
     lock = TransactionIntrospection.pushtx_bit_shift(
-        sighash_value=sighash_value,
+        sighash_flags=sighash_flags,
         sig_hash_preimage=StackBaseElement(0),
         rolling_option=1,
         is_checksigverify=False,
@@ -58,16 +58,16 @@ def test_pushtx_bit_shift(sighash_value, security, is_opcodeseparator, save_to_j
 
     unlocking_key = PushTxBitShiftUnlockingKey(tx=tx, index=0, script_pubkey=lock, prev_amount=prev_amount)
 
-    tx_in.script_sig = unlocking_key.to_unlocking_script(sighash_value=sighash_value, security=security)
+    tx_in.script_sig = unlocking_key.to_unlocking_script(sighash_flags=sighash_flags, security=security)
 
     message = sig_hash_preimage(
-        tx=tx, index=0, script_pubkey=lock, prev_amount=prev_amount, sighash_value=sighash_value
+        tx=tx, index=0, script_pubkey=lock, prev_amount=prev_amount, sighash_flags=sighash_flags
     )
 
     context = Context(tx_in.script_sig + lock, z=hash256d(message))
     assert context.evaluate()
-    assert len(context.get_stack()) == 1
-    assert len(context.get_altstack()) == 0
+    assert context.get_stack().size() == 1
+    assert context.get_altstack().size() == 0
 
     if save_to_json_folder:
         save_scripts(
@@ -76,7 +76,7 @@ def test_pushtx_bit_shift(sighash_value, security, is_opcodeseparator, save_to_j
 
 
 @pytest.mark.parametrize(
-    "sighash_value",
+    "sighash_flags",
     [
         SIGHASH.ALL_FORKID,
         SIGHASH.SINGLE_FORKID,
@@ -87,9 +87,9 @@ def test_pushtx_bit_shift(sighash_value, security, is_opcodeseparator, save_to_j
     ],
 )
 @pytest.mark.parametrize("is_opcodeseparator", [True, False])
-def test_pushtx(sighash_value, is_opcodeseparator, save_to_json_folder):
+def test_pushtx(sighash_flags, is_opcodeseparator, save_to_json_folder):
     lock = TransactionIntrospection.pushtx(
-        sighash_value=sighash_value,
+        sighash_flags=sighash_flags,
         sig_hash_preimage=StackBaseElement(0),
         rolling_option=1,
         clean_constants=True,
@@ -103,16 +103,16 @@ def test_pushtx(sighash_value, is_opcodeseparator, save_to_json_folder):
 
     unlocking_key = PushTxUnlockingKey(tx=tx, index=0, script_pubkey=lock, prev_amount=prev_amount)
 
-    tx_in.script_sig = unlocking_key.to_unlocking_script(sighash_value=sighash_value, append_constants=True)
+    tx_in.script_sig = unlocking_key.to_unlocking_script(sighash_flags=sighash_flags, append_constants=True)
 
     message = sig_hash_preimage(
-        tx=tx, index=0, script_pubkey=lock, prev_amount=prev_amount, sighash_value=sighash_value
+        tx=tx, index=0, script_pubkey=lock, prev_amount=prev_amount, sighash_flags=sighash_flags
     )
 
     context = Context(tx_in.script_sig + lock, z=hash256d(message))
     assert context.evaluate()
-    assert len(context.get_stack()) == 1
-    assert len(context.get_altstack()) == 0
+    assert context.get_stack().size() == 1
+    assert context.get_altstack().size() == 0
 
     if save_to_json_folder:
         save_scripts(str(lock), str(tx_in.script_sig), save_to_json_folder, "transaction_introspection", "pushtx")

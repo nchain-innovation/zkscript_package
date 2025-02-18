@@ -61,7 +61,7 @@ def test_roll(position, n_elements, stack, expected):
     context = Context(script=unlock + lock)
 
     assert context.evaluate()
-    assert len(context.get_altstack()) == 0
+    assert context.get_altstack().size() == 0
 
 
 @pytest.mark.parametrize(
@@ -87,7 +87,7 @@ def test_pick(position, n_elements, stack, expected):
     context = Context(script=unlock + lock)
 
     assert context.evaluate()
-    assert len(context.get_altstack()) == 0
+    assert context.get_altstack().size() == 0
 
 
 @pytest.mark.parametrize(("position", "n_elements"), [(1, 3), (10, 12), (10, 15)])
@@ -144,7 +144,7 @@ def test_mod(stack_preparation, is_mod_on_top, is_positive, is_constant_reused, 
     context = Context(script=unlock + lock)
 
     assert context.evaluate()
-    assert len(context.get_altstack()) == 0
+    assert context.get_altstack().size() == 0
 
 
 @pytest.mark.parametrize(
@@ -165,7 +165,7 @@ def test_verify_bottom_constant(n, stack):
     context = Context(script=unlock + lock)
 
     assert context.evaluate()
-    assert len(context.get_altstack()) == 0
+    assert context.get_altstack().size() == 0
 
 
 @pytest.mark.parametrize(
@@ -229,7 +229,7 @@ def test_reverse_endianness_fixed_length(stack, length, stack_element, rolling_o
 
     context = Context(unlock + lock)
     assert context.evaluate()
-    assert len(context.get_stack()) == 1
+    assert context.get_stack().size() == 1
 
 
 @pytest.mark.parametrize(
@@ -264,7 +264,7 @@ def test_reverse_endianness_bounded_length(stack, max_length, stack_element, rol
 
     context = Context(unlock + lock)
     assert context.evaluate()
-    assert len(context.get_stack()) == 1
+    assert context.get_stack().size() == 1
 
 
 @pytest.mark.parametrize("add_prefix", [True, False])
@@ -386,7 +386,7 @@ def test_int_sig_to_s_component(stack, group_order, stack_element, rolling_optio
 
     context = Context(unlock + lock)
     assert context.evaluate()
-    assert len(context.get_stack()) == 1
+    assert context.get_stack().size() == 1
 
 
 @pytest.mark.parametrize(
@@ -412,4 +412,4 @@ def test_bytes_to_unsigned(stack, length_stack_element, stack_element, rolling_o
 
     context = Context(unlock + lock)
     assert context.evaluate()
-    assert len(context.get_stack()) == 1
+    assert context.get_stack().size() == 1

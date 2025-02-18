@@ -1,7 +1,7 @@
 import json
 from itertools import product
 from pathlib import Path
-from typing import Dict, List, Union
+from typing import Union
 
 from tx_engine import Script
 
@@ -10,11 +10,11 @@ from src.zkscript.util.utility_functions import boolean_list_to_bitmask
 from src.zkscript.util.utility_scripts import nums_to_script
 
 
-def generate_verify_from_list(elements: List[int]) -> Script:
+def generate_verify_from_list(elements: list[int]) -> Script:
     """Generate verification script for the list `elements`.
 
     Args:
-        elements (List[int]): The list of elements for which to generate the verification script.
+        elements (list[int]): The list of elements for which to generate the verification script.
     """
     out = Script()
     for ix, el in enumerate(elements[::-1]):
@@ -60,12 +60,12 @@ def modify_verify_modulo_check(old_verification_script):
     )
 
 
-def generate_extended_list(elements: List[List[int]], positions_elements: List[int], filler: int = 1) -> List[int]:
+def generate_extended_list(elements: list[list[int]], positions_elements: list[int], filler: int = 1) -> list[int]:
     """Take a list of element a fills it with the filler element.
 
     Args:
-        elements (List[List[int]]): the list of elements (each being a list itself) to be extended.
-        positions_elements (List[int]): the positions that the elements should take in the extended list.
+        elements (list[list[int]]): the list of elements (each being a list itself) to be extended.
+        positions_elements (list[int]): the positions that the elements should take in the extended list.
         filler (int = 1): the filler element.
 
     Example:
@@ -105,10 +105,10 @@ def generate_test(
     modulus: int,
     P,  # noqa: N803
     Q,  # noqa: N803
-    positions: Dict[str, int],
-    negations: Dict[str, bool],
-    rolls: Dict[str, bool],
-) -> Dict[str, Union[Script, StackEllipticCurvePoint, StackFiniteFieldElement]]:
+    positions: dict[str, int],
+    negations: dict[str, bool],
+    rolls: dict[str, bool],
+) -> dict[str, Union[Script, StackEllipticCurvePoint, StackFiniteFieldElement]]:
     """Generate test case from modulus, P, Q, their positions and whether they should be negated and rolled.
 
     The function constructs the arguments we must supply to point_algebraic_addition and point_algebraic_doubling
@@ -119,13 +119,13 @@ def generate_test(
         modulus (int): The characteristic of the field over which the elliptic curve E is defined.
         P: A point P on E.
         Q: A point Q on E.
-        positions (Dict[str,int]): A dictionary where each key corresponds to one of the arguments
+        positions (dict[str,int]): A dictionary where each key corresponds to one of the arguments
             of point_algebraic_addition/point_algebraic_doubling. The value corresponding to the key is
             the position that element should occupy in the stack.
-        negations (Dict[str,bool]): A dictionary where each key corresponds to one of the arguments
+        negations (dict[str,bool]): A dictionary where each key corresponds to one of the arguments
             of point_algebraic_addition/point_algebraic_doubling. The value corresponding to the key decides
             whether the script should tackle the case ±P (±Q).
-        rolls (Dict[str,bool]): A dictionary where each key corresponds to one of the arguments
+        rolls (dict[str,bool]): A dictionary where each key corresponds to one of the arguments
             of point_algebraic_addition/point_algebraic_doubling. The value corresponding to the key decides
             whether the script should roll P (Q).
     """
@@ -133,7 +133,7 @@ def generate_test(
     P_ = -P if negations["P"] else P
     Q_ = P_ if P == Q else (-Q if negations["Q"] else Q)
 
-    gradient = P_.get_lambda(Q_)
+    gradient = P_.gradient(Q_)
 
     unlocking_script = (
         [[modulus], gradient.to_list(), P.to_list(), Q.to_list()]
@@ -251,8 +251,8 @@ def generate_test_data(
     modulus: int,
     P,  # noqa: N803
     Q,  # noqa: N803
-    positions: List[Dict[str, int]],
-) -> List[Dict[str, Union[Script, StackFiniteFieldElement, StackEllipticCurvePoint]]]:
+    positions: list[dict[str, int]],
+) -> list[dict[str, Union[Script, StackFiniteFieldElement, StackEllipticCurvePoint]]]:
     """Generate test cases starting from modulus, P, Q and the positions modulus, gradient, P and Q should be in.
 
     The function constructs the arguments we must supply to point_algebraic_addition and point_algebraic_doubling
@@ -264,7 +264,7 @@ def generate_test_data(
         modulus (int): The characteristic of the field over which the elliptic curve E is defined.
         P: A point P on E.
         Q: A point Q on E.
-        positions (List[Dict[str,int]): A list of dictionaries. The function iterates over the items
+        positions (list[dict[str,int]): A list of dictionaries. The function iterates over the items
             in the list to generate different test data. Each element in the list is a dictionary, and each
             key in the dictionary corresponds to one of the arguments of point_algebraic_addition or
             point_algebraic_doubling. The value corresponding to the key is the position that element should

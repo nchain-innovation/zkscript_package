@@ -28,11 +28,11 @@ class PushTxUnlockingKey:
     script_pubkey: Script
     prev_amount: int
 
-    def to_unlocking_script(self, sighash_value: SIGHASH, append_constants: bool) -> Script:
+    def to_unlocking_script(self, sighash_flags: SIGHASH, append_constants: bool) -> Script:
         """Construct unlocking script for the `pushtx` method.
 
         Args:
-            sighash_value (SIGHASH): The sighash flag with which the PUSHTX locking script was constructed.
+            sighash_flags (SIGHASH): The sighash flag with which the PUSHTX locking script was constructed.
             append_constants (bool): Whether or not to append the required constants at the beginning of the script.
         """
         sig_hash_preimage = tx_to_sig_hash_preimage(
@@ -40,7 +40,7 @@ class PushTxUnlockingKey:
             self.index,
             self.script_pubkey,
             self.prev_amount,
-            sighash_value,
+            sighash_flags,
         )
 
         out = Script()
@@ -70,11 +70,11 @@ class PushTxBitShiftUnlockingKey:
     script_pubkey: Script
     prev_amount: int
 
-    def to_unlocking_script(self, sighash_value: SIGHASH, security: int) -> Union[Tx, Script]:
+    def to_unlocking_script(self, sighash_flags: SIGHASH, security: int) -> Union[Tx, Script]:
         """Construct unlocking script for the `pushtx_bit_shift` method.
 
         Args:
-            sighash_value (SIGHASH): The sighash flag with which the PUSHTX_BIT_SHIFT locking script was constructed.
+            sighash_flags (SIGHASH): The sighash flag with which the PUSHTX_BIT_SHIFT locking script was constructed.
             security (int): The security value with which the PUSHTX_BIT_SHIFT locking script was constructed.
         """
         assert security in [2, 3], f"Security parameter must be 2 or 3, security: {security}"
@@ -85,7 +85,7 @@ class PushTxBitShiftUnlockingKey:
             self.index,
             self.script_pubkey,
             self.prev_amount,
-            sighash_value,
+            sighash_flags,
         )
         sig_hash = hash256d(sig_hash_preimage)
         sig_hash_int = int.from_bytes(sig_hash)
@@ -98,7 +98,7 @@ class PushTxBitShiftUnlockingKey:
                 self.index,
                 self.script_pubkey,
                 self.prev_amount,
-                sighash_value,
+                sighash_flags,
             )
             sig_hash = hash256d(sig_hash_preimage)
             sig_hash_int = int.from_bytes(sig_hash)

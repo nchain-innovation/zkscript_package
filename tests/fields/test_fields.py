@@ -1,21 +1,18 @@
 from dataclasses import dataclass
 
 import pytest
-from elliptic_curves.fields.cubic_extension import cubic_extension_from_base_field_and_non_residue
-from elliptic_curves.fields.fq import base_field_from_modulus
-from elliptic_curves.fields.quadratic_extension import quadratic_extension_from_base_field_and_non_residue
+from elliptic_curves.fields.cubic_extension import CubicExtension
+from elliptic_curves.fields.prime_field import PrimeField
+from elliptic_curves.fields.quadratic_extension import QuadraticExtension
 from tx_engine import Context
 
 from src.zkscript.fields.fq2 import Fq2 as Fq2Script
-from src.zkscript.fields.fq2 import Fq2 as Fq2ScriptModel
 from src.zkscript.fields.fq2 import fq2_for_towering
 from src.zkscript.fields.fq2_over_2_residue_equal_u import Fq2Over2ResidueEqualU as Fq2Over2ResidueEqualUScript
 from src.zkscript.fields.fq3 import Fq3 as Fq3Script
 from src.zkscript.fields.fq4 import Fq4 as Fq4Script
-from src.zkscript.fields.fq4 import Fq4 as Fq4ScriptModel
 from src.zkscript.fields.fq4 import fq4_for_towering
 from src.zkscript.fields.fq6_3_over_2 import Fq6 as Fq6Script
-from src.zkscript.fields.fq6_3_over_2 import Fq6 as Fq6ScriptModel
 from src.zkscript.fields.fq6_3_over_2 import fq6_for_towering
 from src.zkscript.fields.fq12_2_over_3_over_2 import Fq12 as Fq12Script
 from src.zkscript.fields.fq12_3_over_2_over_2 import Fq12Cubic as Fq12CubicScript
@@ -27,11 +24,11 @@ from tests.fields.util import check_constant, generate_unlock, generate_verify, 
 class Fq2ResidueMinusOne:
     # Define Fq and Fq2
     q = 19
-    Fq = base_field_from_modulus(q=q)
+    Fq = PrimeField(q)
     non_residue = Fq(-1)
-    Fq2 = quadratic_extension_from_base_field_and_non_residue(base_field=Fq, non_residue=non_residue)
+    Fq2 = QuadraticExtension(base_field=Fq, non_residue=non_residue)
     # Define script run in tests
-    test_script = Fq2Script(q=q, non_residue=non_residue.to_list()[0])
+    test_script = Fq2Script(q=q, non_residue=non_residue.to_int())
     # Define filename for saving scripts
     filename = "fq2_non_residue_is_minus_one"
 
@@ -83,11 +80,11 @@ class Fq2ResidueMinusOne:
 class Fq2ResidueNotMinusOne:
     # Define Fq and Fq2
     q = 19
-    Fq = base_field_from_modulus(q=q)
+    Fq = PrimeField(q)
     non_residue = Fq(3)
-    Fq2 = quadratic_extension_from_base_field_and_non_residue(base_field=Fq, non_residue=non_residue)
+    Fq2 = QuadraticExtension(base_field=Fq, non_residue=non_residue)
     # Define script run in tests
-    test_script = Fq2Script(q=q, non_residue=non_residue.to_list()[0])
+    test_script = Fq2Script(q=q, non_residue=non_residue.to_int())
     # Define filename for saving scripts
     filename = "fq2_non_residue_is_not_minus_one"
 
@@ -139,11 +136,11 @@ class Fq2ResidueNotMinusOne:
 class Fq3:
     # Define Fq and Fq2
     q = 19
-    Fq = base_field_from_modulus(q=q)
+    Fq = PrimeField(q)
     non_residue = Fq(3)
-    Fq3 = cubic_extension_from_base_field_and_non_residue(base_field=Fq, non_residue=non_residue)
+    Fq3 = CubicExtension(base_field=Fq, non_residue=non_residue)
     # Define script run in tests
-    test_script = Fq3Script(q=q, non_residue=non_residue.to_list()[0])
+    test_script = Fq3Script(q=q, non_residue=non_residue.to_int())
     # Define filename for saving scripts
     filename = "fq3"
 
@@ -175,15 +172,15 @@ class Fq3:
 class Fq4:
     # Define Fq and Fq2
     q = 19
-    Fq = base_field_from_modulus(q=q)
+    Fq = PrimeField(q)
     NON_RESIDUE = Fq(2)
-    Fq2 = quadratic_extension_from_base_field_and_non_residue(base_field=Fq, non_residue=NON_RESIDUE)
+    Fq2 = QuadraticExtension(base_field=Fq, non_residue=NON_RESIDUE)
     # Define Fq4, non_residue = 1 + u
     NON_RESIDUE_FQ2 = Fq2(Fq(1), Fq(1))
-    Fq4 = quadratic_extension_from_base_field_and_non_residue(base_field=Fq2, non_residue=NON_RESIDUE_FQ2)
+    Fq4 = QuadraticExtension(base_field=Fq2, non_residue=NON_RESIDUE_FQ2)
     # Define fq2_script
-    Fq2Script = fq2_for_towering(mul_by_non_residue=Fq2ScriptModel.mul_by_one_plus_u)
-    fq2_script = Fq2Script(q=q, non_residue=NON_RESIDUE.to_list()[0])
+    Fq2Script = fq2_for_towering(mul_by_non_residue=Fq2Script.mul_by_one_plus_u)
+    fq2_script = Fq2Script(q=q, non_residue=NON_RESIDUE.to_int())
     gammas_frobenius = []
     for j in range(1, 4):
         gammas_frobenius.append(NON_RESIDUE_FQ2.power((q**j - 1) // 2).to_list())
@@ -334,17 +331,15 @@ class Fq4:
 class Fq2Over2ResidueEqualU:
     # Define Fq and Fq2
     q = 19
-    Fq = base_field_from_modulus(q=q)
+    Fq = PrimeField(q)
     NON_RESIDUE = Fq(2)
-    Fq2 = quadratic_extension_from_base_field_and_non_residue(base_field=Fq, non_residue=NON_RESIDUE)
+    Fq2 = QuadraticExtension(base_field=Fq, non_residue=NON_RESIDUE)
     # Define Fq2Over2ResidueEqualU
     NON_RESIDUE_FQ2 = Fq2.u()
-    Fq2Over2ResidueEqualU = quadratic_extension_from_base_field_and_non_residue(
-        base_field=Fq2, non_residue=NON_RESIDUE_FQ2
-    )
+    Fq2Over2ResidueEqualU = QuadraticExtension(base_field=Fq2, non_residue=NON_RESIDUE_FQ2)
     # Define fq2_script
-    Fq2Script = fq2_for_towering(mul_by_non_residue=Fq2ScriptModel.mul_by_one_plus_u)
-    fq2_script = Fq2Script(q=q, non_residue=NON_RESIDUE.to_list()[0])
+    Fq2Script = fq2_for_towering(mul_by_non_residue=Fq2Script.mul_by_one_plus_u)
+    fq2_script = Fq2Script(q=q, non_residue=NON_RESIDUE.to_int())
     gammas_frobenius = []
     for j in range(1, 4):
         gammas_frobenius.append(NON_RESIDUE_FQ2.power((q**j - 1) // 2).to_list())
@@ -414,15 +409,15 @@ class Fq2Over2ResidueEqualU:
 class Fq6ThreeOverTwo:
     # Define Fq and Fq2
     q = 19
-    Fq = base_field_from_modulus(q=q)
+    Fq = PrimeField(q)
     NON_RESIDUE = Fq(3)
-    Fq2 = quadratic_extension_from_base_field_and_non_residue(base_field=Fq, non_residue=NON_RESIDUE)
+    Fq2 = QuadraticExtension(base_field=Fq, non_residue=NON_RESIDUE)
     # Define Fq6
     NON_RESIDUE_FQ2 = Fq2(Fq(1), Fq(1))
-    Fq6 = cubic_extension_from_base_field_and_non_residue(base_field=Fq2, non_residue=NON_RESIDUE_FQ2)
+    Fq6 = CubicExtension(base_field=Fq2, non_residue=NON_RESIDUE_FQ2)
     # Define fq2_script
-    Fq2Script = fq2_for_towering(mul_by_non_residue=Fq2ScriptModel.mul_by_one_plus_u)
-    fq2_script = Fq2Script(q=q, non_residue=NON_RESIDUE.to_list()[0])
+    Fq2Script = fq2_for_towering(mul_by_non_residue=Fq2Script.mul_by_one_plus_u)
+    fq2_script = Fq2Script(q=q, non_residue=NON_RESIDUE.to_int())
     # Define script run in tests
     test_script = Fq6Script(q=q, base_field=fq2_script)
     # Define filename for saving scripts
@@ -534,20 +529,20 @@ class Fq6ThreeOverTwo:
 class Fq12TwoOverThreeOverTwo:
     # Define Fq and Fq2
     q = 19
-    Fq = base_field_from_modulus(q=q)
+    Fq = PrimeField(q)
     NON_RESIDUE = Fq(3)
-    Fq2 = quadratic_extension_from_base_field_and_non_residue(base_field=Fq, non_residue=NON_RESIDUE)
+    Fq2 = QuadraticExtension(base_field=Fq, non_residue=NON_RESIDUE)
     # Define Fq6
     NON_RESIDUE_FQ2 = Fq2(Fq(1), Fq(1))
-    Fq6 = cubic_extension_from_base_field_and_non_residue(base_field=Fq2, non_residue=NON_RESIDUE_FQ2)
+    Fq6 = CubicExtension(base_field=Fq2, non_residue=NON_RESIDUE_FQ2)
     # Define Fq12
     NON_RESIDUE_FQ6 = Fq6.v()
-    Fq12 = quadratic_extension_from_base_field_and_non_residue(base_field=Fq6, non_residue=NON_RESIDUE_FQ6)
+    Fq12 = QuadraticExtension(base_field=Fq6, non_residue=NON_RESIDUE_FQ6)
     # Define fq2_script
-    Fq2Script = fq2_for_towering(mul_by_non_residue=Fq2ScriptModel.mul_by_one_plus_u)
-    fq2_script = Fq2Script(q=q, non_residue=NON_RESIDUE.to_list()[0])
+    Fq2Script = fq2_for_towering(mul_by_non_residue=Fq2Script.mul_by_one_plus_u)
+    fq2_script = Fq2Script(q=q, non_residue=NON_RESIDUE.to_int())
     # Define fq6_script
-    Fq6Script = fq6_for_towering(mul_by_non_residue=Fq6ScriptModel.mul_by_v)
+    Fq6Script = fq6_for_towering(mul_by_non_residue=Fq6Script.mul_by_v)
     fq6_script = Fq6Script(q=q, base_field=fq2_script)
     # Define gammas for Frobenius
     gammas_frobenius = []
@@ -643,20 +638,20 @@ class Fq12TwoOverThreeOverTwo:
 class Fq12ThreeOverTwoOverTwo:
     # Define Fq and Fq2
     q = 19
-    Fq = base_field_from_modulus(q=q)
+    Fq = PrimeField(q)
     NON_RESIDUE = Fq(2)
-    Fq2 = quadratic_extension_from_base_field_and_non_residue(base_field=Fq, non_residue=NON_RESIDUE)
+    Fq2 = QuadraticExtension(base_field=Fq, non_residue=NON_RESIDUE)
     # Define Fq4
     NON_RESIDUE_FQ2 = Fq2(Fq(1), Fq(1))
-    Fq4 = quadratic_extension_from_base_field_and_non_residue(base_field=Fq2, non_residue=NON_RESIDUE_FQ2)
+    Fq4 = QuadraticExtension(base_field=Fq2, non_residue=NON_RESIDUE_FQ2)
     # Define Fq12
     NON_RESIDUE_FQ4 = Fq4.u()
-    Fq12 = cubic_extension_from_base_field_and_non_residue(base_field=Fq4, non_residue=NON_RESIDUE_FQ4)
+    Fq12 = CubicExtension(base_field=Fq4, non_residue=NON_RESIDUE_FQ4)
     # Define fq2_script
-    Fq2Script = fq2_for_towering(mul_by_non_residue=Fq2ScriptModel.mul_by_one_plus_u)
-    fq2_script = Fq2Script(q=q, non_residue=NON_RESIDUE.to_list()[0])
+    Fq2Script = fq2_for_towering(mul_by_non_residue=Fq2Script.mul_by_one_plus_u)
+    fq2_script = Fq2Script(q=q, non_residue=NON_RESIDUE.to_int())
     # Define fq4_script
-    Fq4Script = fq4_for_towering(mul_by_non_residue=Fq4ScriptModel.mul_by_u)
+    Fq4Script = fq4_for_towering(mul_by_non_residue=Fq4Script.mul_by_u)
     fq4_script = Fq4Script(q=q, base_field=fq2_script)
     # Define script run in tests
     test_script = Fq12CubicScript(q=q, fq2=fq2_script, fq4=fq4_script)
@@ -741,12 +736,12 @@ def verify_script(lock, unlock, clean_constant):
     context = Context(script=unlock + lock)
 
     assert context.evaluate()
-    assert len(context.get_altstack()) == 0
+    assert context.get_altstack().size() == 0
 
     if clean_constant:
-        assert len(context.get_stack()) == 1
+        assert context.get_stack().size() == 1
     else:
-        assert len(context.get_stack()) == 2
+        assert context.get_stack().size() == 2
 
 
 @pytest.mark.parametrize("clean_constant", [True, False])
