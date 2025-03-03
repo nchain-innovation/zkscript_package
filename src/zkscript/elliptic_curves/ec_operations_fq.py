@@ -924,6 +924,7 @@ class EllipticCurveFq:
         check_constant: bool | None = None,
         clean_constant: bool | None = None,
         positive_modulo: bool = True,
+        fixed_length_unlock: bool = False,
     ) -> Script:
         """Unrolled double-and-add scalar multiplication loop in E(F_q).
 
@@ -943,6 +944,8 @@ class EllipticCurveFq:
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
+            fixed_length_unlock (bool): If `True`, the unlocking script is expected to be padded to a fixed length
+                (dependent on the `max_multiplier`). Defaults to `False`.
 
         Returns:
             Script to multiply a point on E(F_q) using double-and-add scalar multiplication.
@@ -965,14 +968,13 @@ class EllipticCurveFq:
 
         # stack in:  [marker_a_is_zero, [lambdas,a], P]
         # stack out: [marker_a_is_zero, [lambdas,a], P, T]
-        set_T = Script.parse_string("OP_2DUP")
-        out += set_T
+        out += Script.parse_string("OP_2DUP")
 
         size_q = ceil(log2(self.MODULUS))
         current_size = size_q
 
         # Compute aP
-        # stack in:  [marker_a_is_zero,, [lambdas, a], P, T]
+        # stack in:  [marker_a_is_zero, [lambdas, a], P, T]
         # stack out: [marker_a_s_zero, P, aP]
         for i in range(int(log2(max_multiplier)) - 1, -1, -1):
             # This is an approximation, but I'm quite sure it works.
@@ -1034,9 +1036,19 @@ class EllipticCurveFq:
                     StackFiniteFieldElement(1, False, 1),
                     StackFiniteFieldElement(0, False, 1),
                 ),
-                rolling_options=boolean_list_to_bitmask([True, False, True]),
+                rolling_options=boolean_list_to_bitmask([not fixed_length_unlock, False, True]),
             )  # Compute 2T + P
-            out += Script.parse_string("OP_ENDIF OP_ENDIF")  # Conclude the conditional branches
+
+            # Conclude the conditional branches and clear auxiliary data
+            if fixed_length_unlock:
+                out += (
+                    Script.parse_string("OP_ENDIF OP_ELSE")
+                    + roll(position=5, n_elements=2)
+                    + Script.parse_string("OP_2DROP OP_ENDIF")
+                )
+                out += roll(position=4, n_elements=1) + Script.parse_string("OP_DROP")
+            else:
+                out += Script.parse_string("OP_ENDIF OP_ENDIF")
 
         # Check if a == 0
         # stack in:  [marker_a_is_zero, P, aP]
@@ -1060,6 +1072,7 @@ class EllipticCurveFq:
         check_constant: bool | None = None,
         clean_constant: bool | None = None,
         positive_modulo: bool = True,
+        extractable_scalars: bool = False,
     ) -> Script:
         r"""Multi-scalar multiplication script in E(F_q) with fixed bases.
 
@@ -1087,6 +1100,8 @@ class EllipticCurveFq:
                 `bases[i]` is `bases[i] = [x, y]` the list of the coordinates of P_i.
             max_multipliers (list[int]): `max_mupliers[i]` is the maximum value allowed for `a_i`.
             modulo_threshold (int): Bit-length threshold. Values whose bit-length exceeds it are reduced modulo `q`.
+            extractable_scalars (bool): If `True`, the unrolled_multiplication scripts are constructed with
+                `fixed_length_unlock = True`, so that the scalars are extractable in script. Defaults to `False`.
             take_modulo (bool): If `True`, the result is reduced modulo `q`.
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
@@ -1112,6 +1127,7 @@ class EllipticCurveFq:
                 check_constant=False,
                 clean_constant=False,
                 positive_modulo=False,
+                fixed_length_unlock=extractable_scalars,
             )
             # Put a_i * P_i on the altstack
             out += Script.parse_string("OP_TOALTSTACK OP_TOALTSTACK")
