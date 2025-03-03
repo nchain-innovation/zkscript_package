@@ -52,13 +52,17 @@ class MsmWithFixedBasesUnlockingKey:
             gradients_additions=gradients_additions,
         )
 
-    def to_unlocking_script(self, ec_over_fq: EllipticCurveFq, load_modulus=True) -> Script:
-        """Return the unlocking script required by msm_with_fixed_bases script.
+    def to_unlocking_script(
+        self, ec_over_fq: EllipticCurveFq, load_modulus=True, extractable_scalars: bool = False
+    ) -> Script:
+        """Return the unlocking script required by multi_scalar_multiplication_with_fixed_bases script.
 
         Args:
             ec_over_fq (EllipticCurveFq): The instantiation of ec arithmetic over Fq used to
                 construct the unrolled_multiplication locking script.
             load_modulus (bool): Whether or not to load the modulus on the stack. Defaults to `True`.
+            extractable_scalars (bool): If `True`, the unlocking scripts for the unrolled multiplications ar
+                constructed with `fixed_length_unlock = True`.
 
         """
         out = nums_to_script([ec_over_fq.modulus]) if load_modulus else Script()
@@ -69,6 +73,8 @@ class MsmWithFixedBasesUnlockingKey:
 
         # Load the unlocking scripts for the scalar multiplications
         for key in self.scalar_multiplications_keys[::-1]:
-            out += key.to_unlocking_script(ec_over_fq=ec_over_fq, load_modulus=False, load_P=False)
+            out += key.to_unlocking_script(
+                ec_over_fq=ec_over_fq, fixed_length_unlock=extractable_scalars, load_modulus=False, load_P=False
+            )
 
         return out

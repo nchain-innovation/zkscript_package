@@ -315,6 +315,7 @@ def save_scripts(lock, unlock, save_to_json_folder, filename, test_name):
             json.dump(data, f, indent=4)
 
 
+@pytest.mark.parametrize("extractable_inputs", [True, False])
 @pytest.mark.parametrize(
     ("test_script", "prepared_vk", "alpha_beta", "prepared_proof", "max_multipliers", "filename"),
     [
@@ -352,7 +353,16 @@ def save_scripts(lock, unlock, save_to_json_folder, filename, test_name):
         ),
     ],
 )
-def test_groth16(test_script, prepared_vk, alpha_beta, prepared_proof, max_multipliers, filename, save_to_json_folder):
+def test_groth16(
+    test_script,
+    prepared_vk,
+    alpha_beta,
+    prepared_proof,
+    max_multipliers,
+    extractable_inputs,
+    filename,
+    save_to_json_folder,
+):
     unlocking_key = Groth16UnlockingKey.from_data(
         groth16_model=test_script,
         pub=prepared_proof.public_statements,
@@ -370,7 +380,7 @@ def test_groth16(test_script, prepared_vk, alpha_beta, prepared_proof, max_multi
         inverse_miller_output=prepared_proof.inverse_miller_loop,
         gradient_gamma_abc_zero=prepared_proof.gradient_gamma_abc_zero,
     )
-    unlock = unlocking_key.to_unlocking_script(test_script, True)
+    unlock = unlocking_key.to_unlocking_script(test_script, True, extractable_inputs)
 
     locking_key = Groth16LockingKey(
         alpha_beta=alpha_beta.to_list(),
@@ -385,6 +395,7 @@ def test_groth16(test_script, prepared_vk, alpha_beta, prepared_proof, max_multi
     lock = test_script.groth16_verifier(
         locking_key,
         modulo_threshold=1,
+        extractable_inputs=extractable_inputs,
         max_multipliers=max_multipliers,
         check_constant=True,
         clean_constant=True,
@@ -485,6 +496,7 @@ def test_groth16_with_precomputed_msm(
 
 
 @pytest.mark.slow
+@pytest.mark.parametrize("extractable_inputs", [True, False])
 @pytest.mark.parametrize(
     ("alpha_beta", "prepared_vk", "prepared_proof", "test_script", "filename", "max_multipliers", "is_minimal_example"),
     [
@@ -499,6 +511,7 @@ def test_groth16_slow(
     test_script,
     filename,
     max_multipliers,
+    extractable_inputs,
     is_minimal_example,
     save_to_json_folder,
 ):
@@ -519,7 +532,7 @@ def test_groth16_slow(
         inverse_miller_output=prepared_proof.inverse_miller_loop,
         gradient_gamma_abc_zero=prepared_proof.gradient_gamma_abc_zero,
     )
-    unlock = unlocking_key.to_unlocking_script(test_script, True)
+    unlock = unlocking_key.to_unlocking_script(test_script, True, extractable_inputs)
 
     locking_key = Groth16LockingKey(
         alpha_beta=alpha_beta.to_list(),
@@ -534,6 +547,7 @@ def test_groth16_slow(
     lock = test_script.groth16_verifier(
         locking_key,
         modulo_threshold=200 * 8,
+        extractable_inputs=extractable_inputs,
         max_multipliers=max_multipliers,
         check_constant=True,
         clean_constant=True,

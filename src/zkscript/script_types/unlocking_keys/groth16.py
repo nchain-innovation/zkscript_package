@@ -103,6 +103,7 @@ class Groth16UnlockingKey:
         self,
         groth16_model: Groth16,
         load_modulus: bool = True,
+        extractable_inputs: bool = False,
     ) -> Script:
         r"""Return the script needed to execute the groth16_verifier script.
 
@@ -111,6 +112,8 @@ class Groth16UnlockingKey:
             max_multipliers (list[int] | None): The integer n such that |pub[i]| <= n for all i. If passed as
                 None, then n = groth16_model.r.
             load_modulus (bool): Whether or not to load the modulus. Defaults to `True`.
+            extractable_inputs (bool): If `True`, the unlocking scripts for msm is constructed with
+                `extractable_scalars = True`.
         """
         ec_fq = EllipticCurveFq(groth16_model.pairing_model.modulus, groth16_model.curve_a, groth16_model.curve_b)
 
@@ -137,6 +140,7 @@ class Groth16UnlockingKey:
         out += self.msm_key.to_unlocking_script(
             ec_over_fq=ec_fq,
             load_modulus=False,
+            extractable_scalars=extractable_inputs,
         )
 
         return out
