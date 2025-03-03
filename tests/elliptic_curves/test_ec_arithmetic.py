@@ -827,18 +827,25 @@ def test_addition_unknown_points(config, P, Q, positive_modulo, expected, save_t
         save_scripts(str(lock), str(unlock), save_to_json_folder, config.filename, "point addition with unknown points")
 
 
+@pytest.mark.parametrize("fixed_length_unlock", [True, False])
 @pytest.mark.parametrize(
     ("config", "P", "a", "expected", "max_multiplier"), generate_test_cases("test_multiplication_unrolled")
 )
-def test_multiplication_unrolled(config, P, a, expected, max_multiplier, save_to_json_folder):  # noqa: N803
+def test_multiplication_unrolled(config, P, a, expected, max_multiplier, fixed_length_unlock, save_to_json_folder):  # noqa: N803
     unlocking_key = EllipticCurveFqUnrolledUnlockingKey(
         P=P.to_list(), a=a, gradients=unrolled_multiplication_gradients(a, P).as_data(), max_multiplier=max_multiplier
     )
 
-    unlock = unlocking_key.to_unlocking_script(config.test_script, load_modulus=True)
+    unlock = unlocking_key.to_unlocking_script(
+        config.test_script, fixed_length_unlock=fixed_length_unlock, load_modulus=True
+    )
 
     lock = config.test_script.unrolled_multiplication(
-        max_multiplier=max_multiplier, modulo_threshold=1, check_constant=True, clean_constant=True
+        max_multiplier=max_multiplier,
+        modulo_threshold=1,
+        check_constant=True,
+        clean_constant=True,
+        fixed_length_unlock=fixed_length_unlock,
     )
     lock += generate_verify_point(expected, degree=config.degree) + Script.parse_string("OP_VERIFY")
     lock += generate_verify_point(P, degree=config.degree)
