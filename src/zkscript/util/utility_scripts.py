@@ -34,6 +34,7 @@ from tx_engine.engine.op_codes import (
     OP_EQUALVERIFY,
     OP_HASH256,
     OP_MOD,
+    OP_MUL,
     OP_OVER,
     OP_PICK,
     OP_ROLL,
@@ -709,5 +710,40 @@ def is_mod_equal_to(
     out += Script([OP_MOD])
     out += nums_to_script([target])
     out += Script([OP_EQUALVERIFY] if is_verify else [OP_EQUAL])
+
+    return out
+
+def unsigned_from_bits(
+    stack_elements: list[StackBaseElement],
+    rolling_options: int,
+) -> Script:
+    r"""Script to turn a list of `m` bits into a single `m`-bit unsigned integer.
+
+    Stack input:
+        - stack: [.., stack_elements[0], .., stack_elements[1], .., stack_elements[m-1], ..]
+
+    Stack output:
+        - stack: [.., stack_elements[0], .., stack_elements[1], .., stack_elements[m], .., n]
+            where n := \sum_(i=0)^(m-1) 2^i * stack_elements[i]
+
+    Args:
+        stack_elements (list[StackBaseElement]): The positions of the `m` bits in the stack.
+        rolling_options (int): The rolling options for the stack elements, encoded as a bitmask.
+
+    Returns:
+        The script to turn `m` bits into a single `m`-bit unsigned integer.
+    """
+    check_order(stack_elements)
+
+    m = len(stack_elements)
+    list_rolling_options = bitmask_to_boolean_list(rolling_options, m)
+
+    out = move(stack_elements[-1], bool_to_moving_function(list_rolling_options[-1]))
+    shift = 0 if list_rolling_options[-1] else 1
+    for i in range(m - 2, -1, -1):
+        out += Script([OP_2, OP_MUL])
+        out += move(stack_elements[i].shift(shift), bool_to_moving_function(list_rolling_options[i]))
+        out += Script([OP_ADD])
+        shift += -list_rolling_options[i]
 
     return out
