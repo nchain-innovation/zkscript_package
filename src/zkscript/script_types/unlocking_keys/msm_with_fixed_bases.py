@@ -1,13 +1,16 @@
 """Unlocking key for `multi_scalar_multiplication_with_fixed_bases` in EllipticCurveFq."""
 
 from dataclasses import dataclass
+from math import log2
 from typing import Self
 
 from tx_engine import Script
 
 from src.zkscript.elliptic_curves.ec_operations_fq import EllipticCurveFq
 from src.zkscript.script_types.unlocking_keys.unrolled_ec_multiplication import EllipticCurveFqUnrolledUnlockingKey
+from src.zkscript.script_types.stack_elements import StackBaseElement
 from src.zkscript.util.utility_scripts import nums_to_script
+from src.zkscript.util.utility_scripts import bool_to_moving_function, move, nums_to_script
 
 
 @dataclass
@@ -17,11 +20,13 @@ class MsmWithFixedBasesUnlockingKey:
     Args:
         scalar_multiplications_keys (list[EllipticCurveFqUnrolledUnlockingKey]): `scalar_multiplications_keys[i]` is the
             unlocking key required to compute `scalars[i] * bases[i]`
+        max_multipliers (list[int]): `max_multipliers[i]` is the the maximum value of the i-th scalar.
         gradients_additions (list[list[int]]): `gradients_additions[i]` is the gradient required to compute the addition
             `bases[n-i-2] + (\sum_(j=n-i-1)^(n-1) bases[j]`
     """
 
     scalar_multiplications_keys: list[EllipticCurveFqUnrolledUnlockingKey]
+    max_multipliers: list[int]
     gradients_additions: list[list[int]]
 
     @staticmethod
@@ -49,6 +54,7 @@ class MsmWithFixedBasesUnlockingKey:
 
         return MsmWithFixedBasesUnlockingKey(
             scalar_multiplications_keys=scalar_multiplications_keys,
+            max_multipliers=max_multipliers,
             gradients_additions=gradients_additions,
         )
 
@@ -76,5 +82,34 @@ class MsmWithFixedBasesUnlockingKey:
             out += key.to_unlocking_script(
                 ec_over_fq=ec_over_fq, fixed_length_unlock=extractable_scalars, load_modulus=False, load_P=False
             )
+
+        return out
+
+    def extract_scalar_as_unsigned(self, index: int, rolling_option: bool) -> Script:
+        """Return the script that extracts the scalar at position `index` as an unsigned number.
+
+        Args:
+            index (int): The index of the scalar to extract.
+            rolling_option (bool): If `True`, the bits are rolled.
+        """
+        assert index < len(self.max_multipliers), "Index out of bounds"
+
+        M = int(log2(self.max_multipliers[index]))
+        n_blocks = sum([int(log2(self.max_multipliers[i])) for i in range(index + 1)])
+        front = StackBaseElement(n_blocks * 4 + index - 4)
+        rear = StackBaseElement(n_blocks * 4 + index - 2)
+
+        out = Script()
+
+        # Extract the bits
+        # stack out: [.., rear[0], front[0], .., rear[M-1], front[M-1]]
+        for i in range(M):
+            out += move(rear.shift(-2 * i), bool_to_moving_function(rolling_option))
+            out += move(front.shift(-2 * i + 1), bool_to_moving_function(rolling_option))
+
+        out += Script.parse_string("OP_1")
+        out += Script.parse_string(
+            " ".join(["OP_SWAP OP_IF OP_2 OP_MUL OP_SWAP OP_IF OP_1ADD OP_ENDIF OP_ELSE OP_NIP OP_ENDIF"] * M)
+        )
 
         return out

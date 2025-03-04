@@ -28,6 +28,7 @@ generator = secp256k1(
 test_script = EllipticCurveFq(q=modulus, curve_a=0)
 
 
+@pytest.mark.parametrize("base_loaded", [True, False])
 @pytest.mark.parametrize(
     ("P", "a", "max_multiplier", "expected"),
     [
@@ -63,17 +64,18 @@ test_script = EllipticCurveFq(q=modulus, curve_a=0)
         ),
     ],
 )
-def test_extract_scalar_as_unsigned(P, a, expected, max_multiplier):  # noqa: N803
+def test_extract_scalar_as_unsigned(base_loaded, P, a, max_multiplier, expected):  # noqa: N803
     unlocking_key = EllipticCurveFqUnrolledUnlockingKey(
         P=P.to_list(), a=a, gradients=unrolled_multiplication_gradients(a, P).as_data(), max_multiplier=max_multiplier
     )
 
-    script = unlocking_key.to_unlocking_script(test_script, fixed_length_unlock=True, load_modulus=True)
-    script += unlocking_key.extract_scalar_as_unsigned(rolling_option=True)
+    script = unlocking_key.to_unlocking_script(
+        test_script, fixed_length_unlock=True, load_modulus=True, load_P=base_loaded
+    )
+    script += unlocking_key.extract_scalar_as_unsigned(rolling_option=True, base_loaded=base_loaded)
     script += nums_to_script([expected]) + Script.parse_string("OP_EQUALVERIFY")
-    script += Script.parse_string(" ".join(["OP_DROP"] * (int(log2(max_multiplier)) * 2 + 4)))
+    script += Script.parse_string(" ".join(["OP_DROP"] * (int(log2(max_multiplier)) * 2 + 2 + 2 * base_loaded)))
     script += Script.parse_string("OP_1")
-
     context = Context(script=script)
     assert context.evaluate()
     assert context.get_stack().size() == 1
