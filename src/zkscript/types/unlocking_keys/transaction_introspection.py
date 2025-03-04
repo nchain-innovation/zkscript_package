@@ -34,7 +34,7 @@ class PushTxUnlockingKey:
         Args:
             sighash_flags (SIGHASH): The sighash flag with which the PUSHTX locking script was constructed.
             is_sig_hash_preimage (bool): If `True`, it loads on the stack the sig_hash_preimage. Else,
-                it loads sha256(sha256(sig_hash_preimage))
+                it loads sha256(sha256(sig_hash_preimage)) (as a number).
             append_constants (bool): Whether or not to append the required constants at the beginning of the script.
         """
         sig_hash_preimage = tx_to_sig_hash_preimage(
@@ -49,7 +49,10 @@ class PushTxUnlockingKey:
         if append_constants:
             out += nums_to_script([GROUP_ORDER_INT, Gx])
             out.append_pushdata(Gx_bytes)
-        out.append_pushdata(sig_hash_preimage if is_sig_hash_preimage else hash256d(sig_hash_preimage))
+        if is_sig_hash_preimage:
+            out.append_pushdata(sig_hash_preimage)
+        else:
+            out += nums_to_script([int.from_bytes(hash256d(sig_hash_preimage))])
 
         return out
 

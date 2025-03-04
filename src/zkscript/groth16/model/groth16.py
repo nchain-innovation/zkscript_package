@@ -2,6 +2,8 @@
 
 from tx_engine import Script, encode_num, hash256d
 
+from src.zkscript.bilinear_pairings.model.model_definition import PairingModel
+
 # Pairing
 # Script implementations
 # EC arithmetic
@@ -20,7 +22,7 @@ class Groth16:
         r (int): The order of G1/G2/GT.
     """
 
-    def __init__(self, pairing_model, curve_a: int, r: int):
+    def __init__(self, pairing_model: PairingModel, curve_a: int, r: int):
         """Initialise the Groth16 class.
 
         Args:

@@ -109,8 +109,6 @@ class Groth16UnlockingKey:
 
         Args:
             groth16_model (Groth16): The Groth16 script model used to construct the groth16_verifier script.
-            max_multipliers (list[int] | None): The integer n such that |pub[i]| <= n for all i. If passed as
-                None, then n = groth16_model.r.
             load_modulus (bool): Whether or not to load the modulus. Defaults to `True`.
             extractable_inputs (bool): If `True`, the unlocking scripts for msm is constructed with
                 `extractable_scalars = True`.
