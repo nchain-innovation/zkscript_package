@@ -65,7 +65,7 @@ class TransactionIntrospection:
                 from the stack after execution. Defaults to `True`.
             verify_constants (bool): Whether or not to verify the constants used for the script.
             is_sig_hash_preimage (bool): If `True`, the script expects `data` to be the sig_hash_preimage.
-                Else, it expects it to be the double sha256 digest of the sig_hash_preimage.
+                Else, it expects it to be the double sha256 digest of the sig_hash_preimage (as a number).
             is_checksigverify (bool): Whether to execute OP_CHECKSIGVERIFY or OP_CHECKSIG. Defaults
                 to `True` (OP_CHECKSIGVERIFY).
             is_opcodeseparator (bool): Whether to prepend the signature verification with an
@@ -106,8 +106,7 @@ class TransactionIntrospection:
         # stack out: [GROUP_ORDER_INT, Gx, Gx_bytes, .., data, ..,
         #               Gx_bytes, 0x0220||Gx_bytes||02, h]
         out += move(data.shift(2), bool_to_moving_function(rolling_option))
-        out += Script.parse_string("OP_HASH256") if is_sig_hash_preimage else Script()
-        out += bytes_to_unsigned(32)
+        out += Script.parse_string("OP_HASH256") + bytes_to_unsigned(32) if is_sig_hash_preimage else Script()
 
         # Compute the s part of the signature
         # stack out: [GROUP_ORDER_INT, Gx, Gx_bytes, .., data, ..,
@@ -168,7 +167,7 @@ class TransactionIntrospection:
                 Defaults to StackBaseElement(0) (on top of the stack).
             rolling_option (int): Whether to roll or pick `data`. Defaults to `True` (roll).
             is_sig_hash_preimage (bool): If `True`, the script expects `data` to be the sig_hash_preimage.
-                Else, it expects it to be the double sha256 digest of the sig_hash_preimage.
+                Else, it expects it to be the double sha256 digest of the sig_hash_preimage (as a bytestring).
             is_checksigverify (bool): Whether to execute OP_CHECKSIGVERIFY or OP_CHECKSIG. Defaults
                 to `True` (OP_CHECKSIGVERIFY).
             is_opcodeseparator (bool): Whether to prepend the signature verification with an
