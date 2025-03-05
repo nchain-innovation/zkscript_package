@@ -85,7 +85,7 @@ class Groth16:
         self,
         locking_key: Groth16LockingKey,
         modulo_threshold: int,
-        extractable_inputs: bool = False,
+        extractable_inputs: int = 0,
         max_multipliers: list[int] | None = None,
         check_constant: bool | None = None,
         clean_constant: bool | None = None,
@@ -116,8 +116,8 @@ class Groth16:
             locking_key (Groth16LockingKey): Locking key used to generate the verifier. Encapsulates the data of the
                 CRS needed by the verifier.
             modulo_threshold (int): Bit-length threshold. Values whose bit-length exceeds it are reduced modulo `q`.
-            extractable_inputs (bool): If `True`, the msm script is constructed with `extractable_scalars = True`
-                so that the public inputs can be extracted in script. Defaults to `False`.
+            extractable_inputs (int): The number of public inputs which should be extractable in script.
+                Defaults to `0`.
             max_multipliers (list[int]): List where each element max_multipliers[i] is the max value of the i-th public
                 statement.
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.

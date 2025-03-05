@@ -1199,7 +1199,7 @@ class EllipticCurveFq:
         check_constant: bool | None = None,
         clean_constant: bool | None = None,
         positive_modulo: bool = True,
-        extractable_scalars: bool = False,
+        extractable_scalars: int = 0,
     ) -> Script:
         r"""Multi-scalar multiplication script in E(F_q) with fixed bases.
 
@@ -1207,7 +1207,6 @@ class EllipticCurveFq:
         it computes the operation:
             ((a_1, .., a_n), (P_1, .., P_n)) --> \sum_(i=1)^n a_i P_i
         where the a_i's are the scalars, and the P_i's are the bases. The script hard-codes the bases.
-
 
         Stack in:
             - stack:    [gradient[a_1 * P_1, \sum_(i=2)^(n) a_i * P_i], .., gradient[a_n * P_n, a_(n-1) * P_(n-1)],
@@ -1227,12 +1226,12 @@ class EllipticCurveFq:
                 `bases[i]` is `bases[i] = [x, y]` the list of the coordinates of P_i.
             max_multipliers (list[int]): `max_mupliers[i]` is the maximum value allowed for `a_i`.
             modulo_threshold (int): Bit-length threshold. Values whose bit-length exceeds it are reduced modulo `q`.
-            extractable_scalars (bool): If `True`, the unrolled_multiplication scripts are constructed with
-                `fixed_length_unlock = True`, so that the scalars are extractable in script. Defaults to `False`.
             take_modulo (bool): If `True`, the result is reduced modulo `q`.
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
+            extractable_scalars (int): The number of scalars that should be extractable in script. Defaults to 0.
+                The extractable scalars are the first to be multiplied, i.e., the last to be loaded on the stack.
 
         Returns:
             A Bitcoin script that computes a multi scalar multiplication with fixed bases.
@@ -1243,7 +1242,7 @@ class EllipticCurveFq:
         #                   a_n, gradients[a_n, P_n], .., a_2, gradients[a_2, P_2], a_1, gradients[a_1, P_1]]
         # stack out:    [gradient[a_1 * P_1, \sum_(i=2)^(n) a_i * P_i], .., gradient[a_n * P_n, a_(n-1) * P_(n-1)]]
         # altstack out: [a_1 * P_1, .., a_n * P_n]
-        for base, multiplier in zip(bases, max_multipliers):
+        for i, (base, multiplier) in enumerate(zip(bases, max_multipliers)):
             assert len(base) != 0
             # Load `base` to the stack
             out += nums_to_script(base)
@@ -1254,7 +1253,7 @@ class EllipticCurveFq:
                 check_constant=False,
                 clean_constant=False,
                 positive_modulo=False,
-                fixed_length_unlock=extractable_scalars,
+                fixed_length_unlock=(i < extractable_scalars),
             )
             # Put a_i * P_i on the altstack
             out += Script.parse_string("OP_TOALTSTACK OP_TOALTSTACK")
