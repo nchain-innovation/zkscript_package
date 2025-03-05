@@ -107,11 +107,9 @@ class RefTx:
         # stack out:    [.., u_stx, sighash(stx)]
         # altstack out: [sighash(stx)]
         for i in range(n_chunks):
-            out += MsmWithFixedBasesUnlockingKey(
-                scalar_multiplications_keys=[],
-                max_multipliers=max_multipliers,
-                gradients_additions=[],
-            ).extract_scalar_as_unsigned(index=i, rolling_option=False)
+            out += MsmWithFixedBasesUnlockingKey.extract_scalar_as_unsigned(
+                max_multipliers=max_multipliers, index=i, rolling_option=False
+            )
             if i != 0:
                 out += nums_to_script([bytes_sighash_chunks]) + Script.parse_string("OP_SPLIT OP_DROP")
             out += Script.parse_string("OP_TOALTSTACK")
