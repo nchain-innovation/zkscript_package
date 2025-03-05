@@ -103,15 +103,14 @@ class Groth16UnlockingKey:
         self,
         groth16_model: Groth16,
         load_modulus: bool = True,
-        extractable_inputs: bool = False,
+        extractable_inputs: int = 0,
     ) -> Script:
         r"""Return the script needed to execute the groth16_verifier script.
 
         Args:
             groth16_model (Groth16): The Groth16 script model used to construct the groth16_verifier script.
             load_modulus (bool): Whether or not to load the modulus. Defaults to `True`.
-            extractable_inputs (bool): If `True`, the unlocking scripts for msm is constructed with
-                `extractable_scalars = True`.
+            extractable_inputs (int): The number of inputs that are extractable in script. Defaults to `0`.
         """
         ec_fq = EllipticCurveFq(groth16_model.pairing_model.modulus, groth16_model.curve_a, groth16_model.curve_b)
 

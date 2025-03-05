@@ -59,7 +59,7 @@ class MsmWithFixedBasesUnlockingKey:
         )
 
     def to_unlocking_script(
-        self, ec_over_fq: EllipticCurveFq, load_modulus=True, extractable_scalars: bool = False
+        self, ec_over_fq: EllipticCurveFq, load_modulus=True, extractable_scalars: int = 0
     ) -> Script:
         """Return the unlocking script required by multi_scalar_multiplication_with_fixed_bases script.
 
@@ -67,20 +67,26 @@ class MsmWithFixedBasesUnlockingKey:
             ec_over_fq (EllipticCurveFq): The instantiation of ec arithmetic over Fq used to
                 construct the unrolled_multiplication locking script.
             load_modulus (bool): Whether or not to load the modulus on the stack. Defaults to `True`.
-            extractable_scalars (bool): If `True`, the unlocking scripts for the unrolled multiplications ar
-                constructed with `fixed_length_unlock = True`.
+            extractable_scalars (int): The number of scalars that are extractable in script. Defaults to `0`.
+                Indexing starts counting from the first scalar, i.e., the last loaded on the stack.
 
         """
-        out = nums_to_script([ec_over_fq.modulus]) if load_modulus else Script()
+        n_keys = len(self.scalar_multiplications_keys)
+        assert extractable_scalars <= n_keys, "Index out of bounds"
+
+        out = nums_to_script([ec_over_fq.MODULUS]) if load_modulus else Script()
 
         # Load the gradients for the additions
         for gradient in self.gradients_additions[::-1]:
             out += nums_to_script(gradient) if len(gradient) != 0 else Script()
 
         # Load the unlocking scripts for the scalar multiplications
-        for key in self.scalar_multiplications_keys[::-1]:
+        for i, key in enumerate(self.scalar_multiplications_keys[::-1]):
             out += key.to_unlocking_script(
-                ec_over_fq=ec_over_fq, fixed_length_unlock=extractable_scalars, load_modulus=False, load_P=False
+                ec_over_fq=ec_over_fq,
+                fixed_length_unlock=(n_keys - extractable_scalars <= i),
+                load_modulus=False,
+                load_P=False,
             )
 
         return out
