@@ -91,17 +91,20 @@ class MsmWithFixedBasesUnlockingKey:
 
         return out
 
-    def extract_scalar_as_unsigned(self, index: int, rolling_option: bool) -> Script:
+    @staticmethod
+    def extract_scalar_as_unsigned(max_multipliers: list[int], index: int, rolling_option: bool) -> Script:
         """Return the script that extracts the scalar at position `index` as an unsigned number.
 
         Args:
+            max_multipliers (list[int]): `max_multipliers[i]` is the maximum multiplier allowed for the
+                multiplication of the i-th base point
             index (int): The index of the scalar to extract.
             rolling_option (bool): If `True`, the bits are rolled.
         """
-        assert index < len(self.max_multipliers), "Index out of bounds"
+        assert index < len(max_multipliers), "Index out of bounds"
 
-        M = int(log2(self.max_multipliers[index]))
-        n_blocks = sum([int(log2(self.max_multipliers[i])) for i in range(index + 1)])
+        M = int(log2(max_multipliers[index]))
+        n_blocks = sum([int(log2(max_multipliers[i])) for i in range(index + 1)])
         front = StackBaseElement(n_blocks * 4 + index - 4)
         rear = StackBaseElement(n_blocks * 4 + index - 2)
 

@@ -72,7 +72,9 @@ def test_extract_scalar_as_unsigned(base_loaded, P, a, max_multiplier, expected)
     script = unlocking_key.to_unlocking_script(
         test_script, fixed_length_unlock=True, load_modulus=True, load_P=base_loaded
     )
-    script += unlocking_key.extract_scalar_as_unsigned(rolling_option=True, base_loaded=base_loaded)
+    script += EllipticCurveFqUnrolledUnlockingKey.extract_scalar_as_unsigned(
+        max_multiplier=unlocking_key.max_multiplier, rolling_option=True, base_loaded=base_loaded
+    )
     script += nums_to_script([expected]) + Script.parse_string("OP_EQUALVERIFY")
     script += Script.parse_string(" ".join(["OP_DROP"] * (int(log2(max_multiplier)) * 2 + 2 + 2 * base_loaded)))
     script += Script.parse_string("OP_1")

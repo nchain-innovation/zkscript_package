@@ -61,8 +61,10 @@ def test_msm_with_fixed_bases(scalars, bases, max_multipliers, index):
         gradients_additions=gradients_additions,
     )
 
-    script = unlocking_key.to_unlocking_script(test_script, load_modulus=True, extractable_scalars=True)
-    script += unlocking_key.extract_scalar_as_unsigned(index=index, rolling_option=True)
+    script = unlocking_key.to_unlocking_script(test_script, load_modulus=True, extractable_scalars=3)
+    script += MsmWithFixedBasesUnlockingKey.extract_scalar_as_unsigned(
+        max_multipliers=unlocking_key.max_multipliers, index=index, rolling_option=True
+    )
     script += nums_to_script([expected]) + Script.parse_string("OP_EQUALVERIFY")
     script += Script.parse_string("OP_DROP")  # Drop modulus
     script += Script.parse_string(" ".join(["OP_DROP"] * len(gradients_additions)))  # Drop gradients addition

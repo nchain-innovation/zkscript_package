@@ -144,15 +144,17 @@ class EllipticCurveFqUnrolledUnlockingKey:
 
         return out
 
-    def extract_scalar_as_unsigned(self, rolling_option: bool, base_loaded: bool = True) -> Script:
+    @staticmethod
+    def extract_scalar_as_unsigned(max_multiplier: int, rolling_option: bool, base_loaded: bool = True) -> Script:
         """Return the script that extracts the scalar from the stack as an unsigned number.
 
         Args:
+            max_multiplier (int): The maximum value of the scalar.
             rolling_option (bool): If `True`, the bits are rolled.
             base_loaded (bool): If `True`, the script assumes that the base was loaded on the stack by the
                 unlocking script. Defaults to `True`.
         """
-        M = int(log2(self.max_multiplier))
+        M = int(log2(max_multiplier))
         front = StackBaseElement(M * 4 - 2 - 2 * (1 - base_loaded))
         rear = StackBaseElement(M * 4 - 2 * (1 - base_loaded))
 
