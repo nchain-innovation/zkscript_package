@@ -8,6 +8,13 @@ from src.zkscript.types.locking_keys.reftx import RefTxLockingKey
 from src.zkscript.types.unlocking_keys.msm_with_fixed_bases import MsmWithFixedBasesUnlockingKey
 from src.zkscript.util.utility_scripts import nums_to_script
 
+BYTES_32 = 32
+BYTES_16 = 16
+BYTES_8 = 8
+BYTES_4 = 4
+BYTES_2 = 2
+BYTES_1 = 1
+
 
 class RefTx:
     """RefTx Bitcoin Script.
@@ -34,19 +41,17 @@ class RefTx:
         # Compute the byte size of self.groth_model.r
         byte_size_r = self.groth16_model.r.bit_length() // 8
         # Compute the max multiplier for the chunks in which sighash is split
-        return (
-            32
-            if byte_size_r > 32
-            else 16
-            if byte_size_r > 16
-            else 8
-            if byte_size_r > 8
-            else 4
-            if byte_size_r > 4
-            else 2
-            if byte_size_r > 2
-            else 1
-        )
+        if byte_size_r > BYTES_32:
+            return BYTES_32
+        if byte_size_r > BYTES_16:
+            return BYTES_16
+        if byte_size_r > BYTES_8:
+            return BYTES_8
+        if byte_size_r > BYTES_4:
+            return BYTES_4
+        if byte_size_r > BYTES_2:
+            return BYTES_2
+        return BYTES_1
 
     def __multipliers(
         self,
@@ -121,7 +126,7 @@ class RefTx:
         out += self.groth16_model.groth16_verifier(
             locking_key=locking_key.to_groth16_key(),
             modulo_threshold=modulo_threshold,
-            extractable_inputs=2,
+            extractable_inputs=n_chunks,
             max_multipliers=max_multipliers,
             check_constant=check_constant,
             clean_constant=True,
@@ -132,7 +137,8 @@ class RefTx:
         # altstack in:  [sighash(stx)]
         # stack out:    [0/1]
         # altstack out: []
-        out += Script.parse_string("OP_FROMALTSTACK OP_FROMALTSTACK OP_CAT")
+        out += Script.parse_string(" ".join(["OP_FROMALTSTACK"] * n_chunks))
+        out += Script.parse_string(" ".join(["OP_CAT"] * (n_chunks - 1)))
         out += TransactionIntrospection.pushtx(
             sighash_flags=sighash_flags,
             is_sig_hash_preimage=False,
