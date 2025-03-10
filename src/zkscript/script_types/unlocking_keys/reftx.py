@@ -11,6 +11,13 @@ from src.zkscript.script_types.unlocking_keys.groth16 import Groth16UnlockingKey
 from src.zkscript.script_types.unlocking_keys.msm_with_fixed_bases import MsmWithFixedBasesUnlockingKey
 from src.zkscript.util.utility_scripts import nums_to_script
 
+BYTES_32 = 32
+BYTES_16 = 16
+BYTES_8 = 8
+BYTES_4 = 4
+BYTES_2 = 2
+BYTES_1 = 1
+
 
 @dataclass
 class RefTxUnlockingKey:
@@ -32,34 +39,42 @@ class RefTxUnlockingKey:
     __groth16_unlocking_key: Groth16UnlockingKey
 
     @staticmethod
-    def __multipliers(groth16_model, pub: list[int], max_multipliers: list[int] | None = None) -> list[int]:
+    def __bytes_sighash_chunks(groth16_model: Groth16) -> int:
+        """Compute the number of bytes of each chunk of the sighash.
+
+        Args:
+            groth16_model (Groth16): The Groth16 script model used to construct the reftx script.
+        """
+        # Compute the byte size of self.groth_model.r
+        byte_size_r = groth16_model.r.bit_length() // 8
+        # Compute the max multiplier for the chunks in which sighash is split
+        if byte_size_r > BYTES_32:
+            return BYTES_32
+        if byte_size_r > BYTES_16:
+            return BYTES_16
+        if byte_size_r > BYTES_8:
+            return BYTES_8
+        if byte_size_r > BYTES_4:
+            return BYTES_4
+        if byte_size_r > BYTES_2:
+            return BYTES_2
+        return BYTES_1
+
+    @staticmethod
+    def __multipliers(groth16_model: Groth16, pub: list[int], max_multipliers: list[int] | None = None) -> list[int]:
         """Compute the max multipliers for Groth16.
 
         Args:
-            groth16_model (Groth16): The Groth16 script model used to construct the groth16_verifier script.
+            groth16_model (Groth16): The Groth16 script model used to construct the reftx script.
             pub (list[int]): The list of public statements: (sighash(stx), u_stx).
             max_multipliers (list[int]): `max_multipliers[i]` is the maximum multiplier allowed for the
                 multiplication of gamma_abc[i]
         """
         # Compute the byte size of self.groth_model.r
-        byte_size_r = groth16_model.r.bit_length() // 8
-        # Compute the max multiplier for the chunks in which sighash is split
-        multiplier_sighash = (
-            32
-            if byte_size_r > 32
-            else 16
-            if byte_size_r > 16
-            else 8
-            if byte_size_r > 8
-            else 4
-            if byte_size_r > 4
-            else 2
-            if byte_size_r > 2
-            else 1
-        )
-        n_chunks = 32 // multiplier_sighash
+        bytes_sighash_chunks = RefTxUnlockingKey.__bytes_sighash_chunks(groth16_model)
+        n_chunks = 32 // bytes_sighash_chunks
         max_multipliers = max_multipliers if max_multipliers is not None else [groth16_model.r] * (len(pub) - n_chunks)
-        return [*[2 ** (multiplier_sighash * 8)] * n_chunks, *max_multipliers]
+        return [*[2 ** (bytes_sighash_chunks * 8)] * n_chunks, *max_multipliers]
 
     @staticmethod
     def from_data(
@@ -78,7 +93,7 @@ class RefTxUnlockingKey:
         r"""Construct an instance of `Self` from the provided data.
 
         Args:
-            groth16_model (Groth16): The Groth16 script model used to construct the groth16_verifier script.
+            groth16_model (Groth16): The Groth16 script model used to construct the reftx script.
             pub (list[int]): The list of public statements: (sighash(stx), u_stx).
             A (list[int]): The value of `A` in the proof.
             B (list[int]): The value of `B` in the proof.
@@ -133,13 +148,19 @@ class RefTxUnlockingKey:
             load_constants (bool): If `True`, it loads to the stack the constants needed to execute the
                 RefTx locking script. Defauls to `True`.
         """
+        # Compute bytes sighash chunks and number of chunks
+        bytes_sighash_chunks = self.__bytes_sighash_chunks(groth16_model)
+        n_chunks = 32 // bytes_sighash_chunks
+
         out = nums_to_script([groth16_model.pairing_model.MODULUS]) if load_constants else Script()
         if load_constants:
             out += nums_to_script([GROUP_ORDER_INT, Gx])
             out.append_pushdata(Gx_bytes)
 
         out += self.__groth16_unlocking_key.to_unlocking_script(
-            groth16_model=groth16_model, load_modulus=False, extractable_inputs=2
+            groth16_model=groth16_model,
+            load_modulus=False,
+            extractable_inputs=n_chunks,
         )
 
         return out
