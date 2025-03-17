@@ -1,4 +1,4 @@
-# NFT with recursive Groth16
+ # NFT with recursive Groth16
 
 This folder provides a Proof-of-Concept implementation of an NFT protocol based on recursive Groth16.
 The folder contains two subfolders:
