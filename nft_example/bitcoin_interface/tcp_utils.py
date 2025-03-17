@@ -7,7 +7,7 @@ from elliptic_curves.instantiations.mnt4_753.mnt4_753 import MNT4_753, ProofMnt4
 from tx_engine import SIGHASH, Script, Tx, TxOut, Wallet
 from tx_engine.interface.blockchain_interface import BlockchainInterface
 
-from nft_example.python.tx_engine_utils import (
+from nft_example.bitcoin_interface.tx_engine_utils import (
     p2pk,
     prepend_signature,
     spend_p2pk,
