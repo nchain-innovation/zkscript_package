@@ -9,14 +9,14 @@ ark-mnt4-753 = {version = "0.3.0", features = ["r1cs"]}
 ark-mnt6-753 = {version = "0.3.0", features = ["r1cs"]}
 ark-mnt4-298 = {version = "0.3.0", features = ["r1cs"]}
 ark-mnt6-298 = {version = "0.3.0", features = ["r1cs"]}
-ark-pcd = { git = "ssh://git@github.com/BarbacoviF/pcd.git", branch = "barbacovif/use-short-weierstrass-curve", version = "0.1.0" }
+ark-pcd = { git = "https://github.com/BarbacoviF/pcd.git", branch = "barbacovif/use-short-weierstrass-curve", version = "0.1.0" }
 ark-r1cs-std = {version = "0.3.0", features=["parallel"]}
 ark-serialize = "0.3.0"
-bitcoin_r1cs = { git = "ssh://git@github.com/nchain-innovation/bitcoin_r1cs.git", branch = "ark-3.0"}
+bitcoin_r1cs = { git = "https://github.com/nchain-innovation/bitcoin_r1cs.git", branch = "ark-3.0"}
 chain_gang = { git = "https://github.com/nchain-innovation/chain-gang.git", tag = "v0.6.15", package = "chain-gang"}
 rand_chacha = "0.3.1"
 serde_json = "1.0.137"
-transaction_chain_proof = { git = "ssh://git@github.com/nchain-innovation/transaction_chain_proof.git"}
+transaction_chain_proof = { git = "https://github.com/nchain-innovation/transaction_chain_proof.git"}
 serde = "1.0.217"
 toml = "0.8.19"
 ark-ff = "0.3.0"
