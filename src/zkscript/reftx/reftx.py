@@ -115,8 +115,7 @@ class RefTx:
             out += MsmWithFixedBasesUnlockingKey.extract_scalar_as_unsigned(
                 max_multipliers=max_multipliers, index=i, rolling_option=False
             )
-            if i != 0:
-                out += nums_to_script([bytes_sighash_chunks]) + Script.parse_string("OP_SPLIT OP_DROP")
+            out += nums_to_script([bytes_sighash_chunks]) + Script.parse_string("OP_SPLIT OP_DROP")
             out += Script.parse_string("OP_TOALTSTACK")
 
         # stack in:     [.., q, .., u_stx, sighash(stx)]
@@ -137,8 +136,8 @@ class RefTx:
         # altstack in:  [sighash(stx)]
         # stack out:    [0/1]
         # altstack out: []
-        out += Script.parse_string(" ".join(["OP_FROMALTSTACK"] * n_chunks))
-        out += Script.parse_string(" ".join(["OP_CAT"] * (n_chunks - 1)))
+        out += Script.parse_string("OP_FROMALTSTACK")
+        out += Script.parse_string(" ".join(["OP_FROMALTSTACK OP_SWAP OP_CAT"] * (n_chunks - 1)))
         out += TransactionIntrospection.pushtx(
             sighash_flags=sighash_flags,
             is_sig_hash_preimage=False,
