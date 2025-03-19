@@ -54,7 +54,7 @@ class Bls12381:
     sighash = sig_hash(tx, 0, Script(), 100, SIGHASH.ALL_FORKID)
 
     # Dummy sighash chunks
-    sighash_chunks = [int.from_bytes(sighash[:16]), int.from_bytes(sighash[16:])]
+    sighash_chunks = [int.from_bytes(sighash[:16], "little"), int.from_bytes(sighash[16:], "little")]
 
     # Dummy parameters public inputs
     n_pub_l_out = 2
@@ -198,7 +198,7 @@ class Mnt4753:
     sighash = sig_hash(tx, 0, Script(), 100, SIGHASH.ALL_FORKID)
 
     # Dummy sighash chunks
-    sighash_chunks = [int.from_bytes(sighash)]
+    sighash_chunks = [int.from_bytes(sighash, "little")]
 
     # Dummy parameters public inputs
     n_pub_l_out = 2

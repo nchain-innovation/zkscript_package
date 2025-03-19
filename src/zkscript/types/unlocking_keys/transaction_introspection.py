@@ -52,7 +52,7 @@ class PushTxUnlockingKey:
         if is_sig_hash_preimage:
             out.append_pushdata(sig_hash_preimage)
         else:
-            out += nums_to_script([int.from_bytes(hash256d(sig_hash_preimage))])
+            out.append_pushdata(hash256d(sig_hash_preimage))
 
         return out
 
