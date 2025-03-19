@@ -1,0 +1,12 @@
+proof_name = "proof_base_case"
+
+[chain_parameters]
+chain_index = 0
+
+[public_inputs]
+outpoint_txid = "10cba1dac2876846a8f11d1aed3df40b15f1b622670c63da178da14535b8eea4"
+genesis_txid = "10cba1dac2876846a8f11d1aed3df40b15f1b622670c63da178da14535b8eea4"
+
+[witness]
+tx = ""
+prior_proof_path = ""
