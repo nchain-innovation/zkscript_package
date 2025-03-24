@@ -79,7 +79,7 @@ fn main() {
             save_to_file(&data_to_serialisation(&vk), "data/keys/vk.bin").unwrap();
         },
     Commands::Prove => {
-        let proving_data = ProvingData::load("data/proving_data.toml").unwrap();
+        let proving_data = ProvingData::load("proving_data.toml").unwrap();
         let genesis_txid = FieldArray::<1, ScalarFieldMNT4, Config>::new([
             ScalarFieldMNT4::from_le_bytes_mod_order(
                 &Hash256::decode(&proving_data.genesis_txid).unwrap().0,
