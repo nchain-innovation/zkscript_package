@@ -8,7 +8,7 @@ from src.zkscript.types.stack_elements import StackEllipticCurvePoint, StackFini
 from src.zkscript.util.utility_functions import bitmask_to_boolean_list, boolean_list_to_bitmask, check_order
 from src.zkscript.util.utility_scripts import (
     bool_to_moving_function,
-    is_zero,
+    is_equal_to,
     mod,
     move,
     nums_to_script,
@@ -150,7 +150,7 @@ class EllipticCurveFq:
             P=P,
             rolling_option=rolling_option,
         )
-        out += is_zero()
+        out += is_equal_to(target=0)
 
         return out
 

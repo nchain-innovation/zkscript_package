@@ -26,9 +26,8 @@ from src.zkscript.util.utility_scripts import (
     compute_mul_sub,
     enforce_mul_equal,
     int_sig_to_s_component,
-    is_not_zero,
-    is_not_zero_modulo,
-    is_zero,
+    is_equal_to,
+    is_mod_equal_to,
     mod,
     move,
     nums_to_script,
@@ -104,7 +103,7 @@ class Secp256k1:
 
         # Verify that `sig_hash_preimage` is the sig_hash_preimage of the spending transaction
         out += TransactionIntrospection.pushtx(
-            sighash_value=SIGHASH.ALL_FORKID,
+            sighash_flags=SIGHASH.ALL_FORKID,
             sig_hash_preimage=sig_hash_preimage.shift(-is_h_rolled),
             rolling_option=is_sig_hash_preimage_rolled,
             clean_constants=clean_constants,
@@ -228,7 +227,7 @@ class Secp256k1:
         elif isinstance(A, StackBaseElement):
             out += move(A.shift(1), bool_to_moving_function(is_A_rolled))  # Move A
         else:
-            msg = "Type not supported for A: type(A): type(A)"
+            msg = f"The stack element type of A is not supported: {type(A)}"
             raise ValueError(msg)
 
         out += Script.parse_string("OP_CHECKSIGVERIFY")
@@ -315,7 +314,8 @@ class Secp256k1:
             rolling_options=0,
             permutation=1 << 2,
         )
-        out += is_not_zero()
+        out += is_equal_to(target=0, is_verify=False)
+        out += Script.parse_string("OP_NOT OP_VERIFY")
 
         # Prepare A and -A
         # stack in:  [GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, .., sig_hash_preimage, .., h .., a, .., A, ..]
@@ -577,7 +577,7 @@ class Secp256k1:
                 rolling_option=False,
             )
         out += Script.parse_string(" ".join(["OP_CAT"] * i))
-        out += is_zero()
+        out += is_equal_to(target=0)
 
         # Verify that MODULUS - GROUP_ORDER < Q_x < GROUP_ORDER
         out += move(Q.x, pick)  # Pick Q_x
@@ -608,7 +608,8 @@ class Secp256k1:
         out += Script.parse_string("OP_TOALTSTACK OP_TOALTSTACK")
 
         # Verify that b != 0 mod n
-        out += is_not_zero_modulo(clean_constant=False, stack_element=b, rolling_option=False)
+        out += is_mod_equal_to(clean_constant=False, stack_element=b, target=0, is_verify=False, rolling_option=False)
+        out += Script.parse_string("OP_NOT OP_VERIFY")
 
         # Verify x_coordinate_target_times_b_inverse * b = Q.x mod GROUP_ORDER
         # stack in:     [GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, .., h, .., b,
@@ -926,12 +927,18 @@ class Secp256k1:
                 rolling_option=False,
             )
         out += Script.parse_string(" ".join(["OP_CAT"] * i))
-        out += is_zero()
+        out += is_equal_to(target=0)
 
         # Verify that b != 0 mod n
-        out += is_not_zero_modulo(
-            clean_constant=False, modulus=StackNumber(-2, False), stack_element=b, rolling_option=False
+        out += is_mod_equal_to(
+            clean_constant=False,
+            modulus=StackNumber(-2, False),
+            stack_element=b,
+            target=0,
+            is_verify=False,
+            rolling_option=False,
         )
+        out += Script.parse_string("OP_NOT OP_VERIFY")
 
         # Verify that MODULUS - GROUP_ORDER < Q_x < GROUP_ORDER
         out += move(Q.x, pick)  # Pick Q_x

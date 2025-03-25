@@ -14,6 +14,7 @@ from tx_engine import Context, Script
 from src.zkscript.elliptic_curves.ec_operations_fq import EllipticCurveFq
 from src.zkscript.elliptic_curves.ec_operations_fq2 import EllipticCurveFq2
 from src.zkscript.fields.fq2 import Fq2 as Fq2Script
+from src.zkscript.types.stack_elements import StackEllipticCurvePoint, StackFiniteFieldElement
 from src.zkscript.types.unlocking_keys.msm_with_fixed_bases import MsmWithFixedBasesUnlockingKey
 from src.zkscript.types.unlocking_keys.unrolled_ec_multiplication import EllipticCurveFqUnrolledUnlockingKey
 from src.zkscript.util.utility_scripts import nums_to_script
@@ -42,7 +43,7 @@ class Secp256k1:
         y=Fq_k1(0x483ADA7726A3C4655DA4FBFC0E1108A8FD17B448A68554199C47D08FFB10D4B8),
         infinity=False,
     )
-    test_script = EllipticCurveFq(q=modulus, curve_a=0)
+    test_script = EllipticCurveFq(q=modulus, curve_a=0, curve_b=7)
     # All possible combinations: ± P ± Q are tested. Refer to ./util.py
     positions_addition = [
         {"modulus": 5, "gradient": 4, "P": 3, "Q": 1},
@@ -644,8 +645,8 @@ def test_is_on_curve(config, P, position, expected, save_to_json_folder):
 
     context = Context(script=unlock + lock)
     assert context.evaluate()
-    assert len(context.get_stack()) == 1
-    assert len(context.get_altstack()) == 0
+    assert context.get_stack().size() == 1
+    assert context.get_altstack().size() == 0
 
     if save_to_json_folder:
         save_scripts(str(lock), str(unlock), save_to_json_folder, config.filename, "is point on curve")

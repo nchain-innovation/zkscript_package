@@ -38,7 +38,7 @@ from src.zkscript.util.utility_scripts import nums_to_script
 
 secp256k1_MODULUS = 115792089237316195423570985008687907853269984665640564039457584007908834671663
 # Script class for operations on secp256k1
-secp256k1_script = EllipticCurveFq(q=secp256k1_MODULUS,curve_a=0)
+secp256k1_script = EllipticCurveFq(q=secp256k1_MODULUS,curve_a=0,curve_b=7)
 
 secp256k1_generator = [0x79BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798, 0x483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8]
 secp256k1_double_generator = [0xc6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5,0x1ae168fea63dc339a3c58419466ceaeef7f632653266d0e1236431a950cfe52a]
@@ -78,7 +78,7 @@ context = Context(script = unlock + lock)
 assert(context.evaluate())
 ```
 
-**Note:** `ec_operations_fq2` works in the same way as per `ec_operations_fq`, with the difference that when we instantiate an object of the class `ElliptiCurveFq2` we need to supply the instantiation of the Bitcoin Script arithmetic in `Fq2`.
+**Note:** `ec_operations_fq2` works in the same way as per `ec_operations_fq`, with the difference that when we instantiate an object of the class `EllipticCurveFq2` we need to supply the instantiation of the Bitcoin Script arithmetic in `Fq2`.
 
 # Unrolled EC arithmetic
 

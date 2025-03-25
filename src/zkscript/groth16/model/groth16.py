@@ -133,7 +133,7 @@ class Groth16(PairingModel):
         )
 
         # Elliptic curve arithmetic
-        ec_fq = EllipticCurveFq(q=self.pairing_model.MODULUS, curve_a=self.curve_a)
+        ec_fq = EllipticCurveFq(q=self.pairing_model.MODULUS, curve_a=self.curve_a, curve_b=self.curve_b)
 
         out = verify_bottom_constant(self.pairing_model.MODULUS) if check_constant else Script()
 

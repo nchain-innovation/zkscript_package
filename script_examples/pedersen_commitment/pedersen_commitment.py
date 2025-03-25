@@ -76,6 +76,12 @@ class PedersenCommitmentSecp256k1:
         out += Script.parse_string("OP_TOALTSTACK OP_TOALTSTACK")
 
         # Verify that R = rS
+        # We want to roll everything except: GROUP_ORDER, Gx, S
+        # GROUP_ORDER is the zero-th element: 1 << 0 = 1
+        # Gx is the first element: 1 << 1
+        # S is the 14th element: 1 << 14
+        # (the positions are relative to the `verify_point_multiplication` method)
+        # Thus, roll everything: (1 << 15) - 1 except those positions (i.e., XOR them)
         out += Secp256k1.verify_point_multiplication(
             check_constants=True,
             clean_constants=False,
@@ -91,6 +97,7 @@ class PedersenCommitmentSecp256k1:
             out += Script.parse_string("OP_EQUALVERIFY")
 
         # Verify that Q = mP
+        # We want to roll everything except P, which is the 14th element
         out += Secp256k1.verify_point_multiplication(
             check_constants=False,
             clean_constants=True,

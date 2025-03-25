@@ -10,7 +10,7 @@ from src.zkscript.util.utility_scripts import nums_to_script
 
 
 @dataclass
-class PedersenCommitmentSecp256k1OpeningKey:
+class PedersenCommitmentSecp256k1UnlockingKey:
     """Class encapsulating the data required to open a Pedersen commitment.
 
     The commitment is purportedly of the form: Q + R, where Q = mG, R = rH.
@@ -39,8 +39,8 @@ class PedersenCommitmentSecp256k1OpeningKey:
         assert self.randomness_opening_data.sig_hash_preimage == b""
         assert self.randomness_opening_data.h == b""
 
-    def to_opening_script(self, append_constants: bool = True) -> Script:
-        """Generate the opening script for the commitment Commit(m,r) = mG + rH.
+    def to_unlocking_script(self, append_constants: bool = True) -> Script:
+        """Generate the unlocking script for the commitment Commit(m,r) = mG + rH.
 
         Args:
             append_constants (bool): If `True`, the constants needed to execute the method

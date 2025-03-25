@@ -2,30 +2,32 @@ import json
 from pathlib import Path
 
 import pytest
-from elliptic_curves.fields.fq import base_field_from_modulus
-from elliptic_curves.models.curve import Curve
-from elliptic_curves.models.ec import elliptic_curve_from_curve
+from elliptic_curves.fields.prime_field import PrimeField
+from elliptic_curves.models.ec import ShortWeierstrassEllipticCurve
 from tx_engine import Context, encode_num, hash256d
 
 from script_examples.pedersen_commitment.pedersen_commitment import PedersenCommitmentSecp256k1
-from script_examples.pedersen_commitment.pedersen_opening_key import (
-    PedersenCommitmentSecp256k1OpeningKey,
+from script_examples.pedersen_commitment.pedersen_unlocking_key import (
+    PedersenCommitmentSecp256k1UnlockingKey,
     Secp256k1PointMultiplicationUnlockingKey,
 )
 
 modulus = 115792089237316195423570985008687907853269984665640564039457584007908834671663
 order = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141
-Fq_k1 = base_field_from_modulus(q=modulus)
-Fr_k1 = base_field_from_modulus(q=order)
-secp256k1, _ = elliptic_curve_from_curve(curve=Curve(a=Fq_k1(0), b=Fq_k1(7)))
-
+Fq_k1 = PrimeField(modulus)
+Fr_k1 = PrimeField(order)
+secp256k1 = ShortWeierstrassEllipticCurve(a=Fq_k1(0), b=Fq_k1(7))
+degree = 1
+point_at_infinity = secp256k1.infinity()
 generator = secp256k1(
     x=Fq_k1(0x79BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798),
     y=Fq_k1(0x483ADA7726A3C4655DA4FBFC0E1108A8FD17B448A68554199C47D08FFB10D4B8),
+    infinity=False,
 )
 random_point = secp256k1(
     x=Fq_k1(0xD6765EA876740CE709C9CFF7789CBF621609E8CA79134B0C0BA0768E8D3EC7B2),
     y=Fq_k1(0xDF16ACCBBA6D8D44882E95FB0D2BA4E210ABE58A32AD4F0BCC4843204E9C0F8D),
+    infinity=False,
 )
 
 dummy_sig_hash_preimage = int.to_bytes(
@@ -82,9 +84,9 @@ def points_to_multiplication_unlocking_data(sighash: bytes, m: int, G, Q, P):  #
     D.append(G.multiply(m))
 
     gradients = []
-    gradients.append(P.get_lambda(-D[0]))
-    gradients.append(P.get_lambda(-D[1]))
-    gradients.append(Q.get_lambda(D[2]))
+    gradients.append(P.gradient(-D[0]))
+    gradients.append(P.gradient(-D[1]))
+    gradients.append(Q.gradient(D[2]))
 
     return Secp256k1PointMultiplicationUnlockingKey(
         sig_hash_preimage=b"",
@@ -134,19 +136,19 @@ def test_pedersen_commitment(
     base_point_opening_data = points_to_multiplication_unlocking_data(sig_hash, m, generator, Q, P)
     randomness_opening_data = points_to_multiplication_unlocking_data(sig_hash, r, generator, R, S)
 
-    opening_key = PedersenCommitmentSecp256k1OpeningKey(
+    opening_key = PedersenCommitmentSecp256k1UnlockingKey(
         sig_hash_preimage=sig_hash_preimage,
         h=sig_hash,
-        gradient=Q.get_lambda(R).to_list()[0],
+        gradient=Q.gradient(R).to_list()[0],
         base_point_opening_data=base_point_opening_data,
         randomness_opening_data=randomness_opening_data,
     )
-    unlock = opening_key.to_opening_script(append_constants=True)
+    unlock = opening_key.to_unlocking_script(append_constants=True)
 
     context = Context(unlock + lock, z=sig_hash)
     assert context.evaluate()
-    assert len(context.get_stack()) == 1
-    assert len(context.get_altstack()) == 0
+    assert context.get_stack().size() == 1
+    assert context.get_altstack().size() == 0
 
     if save_to_json_folder:
         save_scripts(str(lock), str(unlock), save_to_json_folder, "Pedersen", "pedersen_commitment")

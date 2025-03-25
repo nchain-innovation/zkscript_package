@@ -26,6 +26,9 @@ def stack_elliptic_curve_point_to_compressed_pubkey(
 ) -> Script:
     """Return the script that transforms A = (x,y) into a compressed public key.
 
+    If A = (x,y), its compressed form is: 02||x if y is even, else 03||x, where || denotes string
+    concatenation.
+
     Stack input:
         - stack:    [.., A, ..]
         - altstack: []

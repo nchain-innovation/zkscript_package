@@ -5,7 +5,6 @@ from typing import Union
 from tx_engine import Script, encode_num, hash256d
 from tx_engine.engine.op_codes import (
     OP_0,
-    OP_0NOTEQUAL,
     OP_1,
     OP_1NEGATE,
     OP_2,
@@ -30,6 +29,7 @@ from tx_engine.engine.op_codes import (
     OP_ADD,
     OP_CAT,
     OP_DUP,
+    OP_EQUAL,
     OP_EQUALVERIFY,
     OP_HASH256,
     OP_MOD,
@@ -39,7 +39,6 @@ from tx_engine.engine.op_codes import (
     OP_ROT,
     OP_SWAP,
     OP_TUCK,
-    OP_VERIFY,
 )
 
 from src.zkscript.types.stack_elements import (
@@ -534,9 +533,9 @@ def compute_mul_sub(
         leave_on_top_of_stack (int): Bitmask deciding which of the elements `a`, `b`, `c` should be left
             on top of the stack after the execution of the script. Defaults to `0`: don't leave anything.
         permutation (int): The permutation of (a,b,c) to evaluate f(x,y,z) at:
-            - 1 << 0: f(a,b,c) = (a - bc) % modulus
-            - 1 << 1: f(c,a,b) = (ab - c) % modulus
-            - 1 << 2: f(b,a,c) = (b - ac) % modulus
+            * 1 << 0: f(a,b,c) = (a - bc) % modulus
+            * 1 << 1: f(c,a,b) = (ab - c) % modulus
+            * 1 << 2: f(b,a,c) = (b - ac) % modulus
     """
     if modulus.position > 0:
         check_order([modulus, a, b, c])
@@ -593,7 +592,7 @@ def enforce_mul_equal(
     leave_on_top_of_stack: int = 0,
     equation_to_check: int = 1,
 ) -> Script:
-    """Enforce that the polynomial f(x,y,z) = (xy - z) % modulus is zero at one of the permutations of (a,b,c).
+    """Enforce that the polynomial `f(x,y,z) = (xy - z) % modulus = 0` at one of the permutations of (a,b,c).
 
     Stack input:
         - stack:    [.., modulus, .., a, .., b, .., c, ..]
@@ -619,9 +618,9 @@ def enforce_mul_equal(
         leave_on_top_of_stack (int): Bitmask deciding which of the elements `a`, `b`, `c` should be left
             on top of the stack after the execution of the script. Defaults to `0`: don't leave anything.
         equation_to_check (int): Which equation to check:
-            - 1 << 0: a = b*c % modulus
-            - 1 << 1: c = a*b % modulus
-            - 1 << 2: b = a*c % modulus
+            * 1 << 0: a = b*c % modulus
+            * 1 << 1: c = a*b % modulus
+            * 1 << 2: b = a*c % modulus
 
     """
     out = compute_mul_sub(
@@ -635,38 +634,46 @@ def enforce_mul_equal(
         leave_on_top_of_stack=leave_on_top_of_stack,
         permutation=equation_to_check,
     )
-    out += is_zero()
+    out += is_equal_to(target=0)
 
     return out
 
 
-def is_zero(
+def is_equal_to(
     stack_element: StackBaseElement = StackBaseElement(0),  # noqa: B008
+    target: int = 0,
+    is_verify: bool = True,
     rolling_option: bool = True,
 ) -> Script:
-    """Verify that `stack_element` is equal to zero.
+    """Check whether `stack_element` is equal to `target`.
 
     Args:
         stack_element (StackBaseElement): The position in the stack of the element for which the script checks
             `stack_element` = 0 mod `modulus`.
+        target (int): The target value for `stack_element`. Defaults to `0`.
+        is_verify (bool): If `True`, it asserts that the equality holds. Else, it leaves the result on the stack.
+            Defaults to `True`.
         rolling_option (bool): If `True`, `stack_element` is removed from the stack after the execution.
 
     Returns:
-        The script that verifies if `stack_element` is equal to zero.
+        The script that checks whether `stack_element` is equal to `target`.
     """
     out = move(stack_element, bool_to_moving_function(rolling_option))  # Move stack_element
-    out += Script([OP_0, OP_EQUALVERIFY])
+    out += nums_to_script([target])
+    out += Script([OP_EQUALVERIFY] if is_verify else [OP_EQUAL])
 
     return out
 
 
-def is_zero_modulo(
+def is_mod_equal_to(
     clean_constant: bool,
     modulus: StackBaseElement = StackNumber(-1, False),  # noqa: B008
     stack_element: StackBaseElement = StackBaseElement(0),  # noqa: B008
+    target: int = 0,
+    is_verify: bool = True,
     rolling_option: bool = True,
 ) -> Script:
-    """Verify that `stack_element` is equal to zero modulo `modulus`.
+    """Check whether `stack_element = target % modulus`.
 
     Args:
         clean_constant (bool): If `True`, `modulus` is removed from the stack after the execution.
@@ -674,66 +681,23 @@ def is_zero_modulo(
             `StackNumber(-1,False)`
         stack_element (StackBaseElement): The position in the stack of the element for which the script checks
             `stack_element` = 0 mod `modulus`.
+        target (int): The target value for `stack_element`. Defaults to `0`.
+        is_verify (bool): If `True`, it asserts that the equality holds. Else, it leaves the result on the stack.
+            Defaults to `True`.
         rolling_option (bool): If `True`, `stack_element` is removed from the stack after the execution.
 
     Returns:
-        The script that verifies if `stack_element` is equal to zero modulo `modulus` (or straight equality with
-        zero if `modulus = None`).
+        The script that checks whether `stack_element = target % modulus`.
+
+    Note: This script fails if `stack_element` is negative as `OP_MOD` returns the modulo class in (-modulus, modulus).
     """
     if modulus.position > 0:
         check_order([modulus, stack_element])
 
     out = move(stack_element, bool_to_moving_function(rolling_option))  # Move stack_element
     out += move(modulus.shift(1 if modulus.position > 0 else 0), bool_to_moving_function(clean_constant))
-    out += Script([OP_MOD, OP_0, OP_EQUALVERIFY])
-
-    return out
-
-
-def is_not_zero(
-    stack_element: StackBaseElement = StackBaseElement(0),  # noqa: B008
-    rolling_option: bool = True,
-) -> Script:
-    """Verify that `stack_element` is not equal to zero.
-
-    Args:
-        stack_element (StackBaseElement): The position in the stack of the element for which the script checks
-            `stack_element` != 0.
-        rolling_option (bool): If `True`, `stack_element` is removed from the stack after the execution.
-
-    Returns:
-        The script that verifies if `stack_element` is not equal to zero.
-    """
-    out = move(stack_element, bool_to_moving_function(rolling_option))  # Move stack_element
-    out += Script([OP_0NOTEQUAL, OP_VERIFY])
-
-    return out
-
-
-def is_not_zero_modulo(
-    clean_constant: bool,
-    modulus: StackBaseElement = StackNumber(-1, False),  # noqa: B008
-    stack_element: StackBaseElement = StackBaseElement(0),  # noqa: B008
-    rolling_option: bool = True,
-) -> Script:
-    """Verify that `stack_element` is not equal to zero modulo `modulus`.
-
-    Args:
-        clean_constant (bool): If `True`, `modulus` is removed from the stack after the execution.
-        modulus (StackBaseElement | None): The position in the stack of `modulus`. Defaults to
-            `StackNumber(-1,False)`
-        stack_element (StackBaseElement): The position in the stack of the element for which the script checks
-            `stack_element` != 0 mod `modulus`.
-        rolling_option (bool): If `True`, `stack_element` is removed from the stack after the execution.
-
-    Returns:
-        The script that verifies if `stack_element` is not equal to zero modulo `modulus`.
-    """
-    if modulus.position > 0:
-        check_order([modulus, stack_element])
-
-    out = move(stack_element, bool_to_moving_function(rolling_option))  # Move stack_element
-    out += move(modulus.shift(1 if modulus.position > 0 else 0), bool_to_moving_function(clean_constant))
-    out += Script([OP_MOD, OP_0NOTEQUAL, OP_VERIFY])
+    out += Script([OP_MOD])
+    out += nums_to_script([target])
+    out += Script([OP_EQUALVERIFY] if is_verify else [OP_EQUAL])
 
     return out

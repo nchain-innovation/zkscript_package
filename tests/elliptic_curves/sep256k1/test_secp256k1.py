@@ -1,7 +1,6 @@
 import pytest
-from elliptic_curves.fields.fq import base_field_from_modulus
-from elliptic_curves.models.curve import Curve
-from elliptic_curves.models.ec import elliptic_curve_from_curve
+from elliptic_curves.fields.prime_field import PrimeField
+from elliptic_curves.models.ec import ShortWeierstrassEllipticCurve
 from tx_engine import Context, Script, hash256d
 
 from src.zkscript.elliptic_curves.secp256k1.secp256k1 import Secp256k1
@@ -15,12 +14,15 @@ from src.zkscript.util.utility_scripts import nums_to_script
 
 modulus = 115792089237316195423570985008687907853269984665640564039457584007908834671663
 order = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141
-Fq_k1 = base_field_from_modulus(q=modulus)
-Fr_k1 = base_field_from_modulus(q=order)
-secp256k1, _ = elliptic_curve_from_curve(curve=Curve(a=Fq_k1(0), b=Fq_k1(7)))
+Fq_k1 = PrimeField(modulus)
+Fr_k1 = PrimeField(order)
+secp256k1 = ShortWeierstrassEllipticCurve(a=Fq_k1(0), b=Fq_k1(7))
+degree = 1
+point_at_infinity = secp256k1.infinity()
 generator = secp256k1(
     x=Fq_k1(0x79BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798),
     y=Fq_k1(0x483ADA7726A3C4655DA4FBFC0E1108A8FD17B448A68554199C47D08FFB10D4B8),
+    infinity=False,
 )
 
 signature_prefix = bytes.fromhex("0220") + generator.x.x.to_bytes(32) + bytes.fromhex("02")
@@ -79,7 +81,7 @@ def test_verify_base_point_multiplication_up_to_epsilon(a, A, additional_constan
 
     context = Context(unlock + lock, z=dummy_sighash)
     assert context.evaluate()
-    assert len(context.get_stack()) == 1
+    assert context.get_stack().size() == 1
 
 
 @pytest.mark.parametrize(("a", "A"), [(2, generator.multiply(2)), (10, generator.multiply(10))])
@@ -96,7 +98,7 @@ def test_verify_base_point(a, A):  # noqa: N803
 
     context = Context(unlock + lock, z=dummy_sighash)
     assert context.evaluate()
-    assert len(context.get_stack()) == 1
+    assert context.get_stack().size() == 1
 
 
 @pytest.mark.parametrize("negate", [True, False])
@@ -111,7 +113,7 @@ def test_verify_point_multiplication_up_to_sign(b, P, negate):  # noqa: N803
     Q = P.multiply(b)
     h_times_x_coordinate_target_inverse = Fr_k1(h) * Fr_k1(Q.x.x).invert()
     h_times_x_coordinate_target_inverse_times_G = generator.multiply(h_times_x_coordinate_target_inverse.x)
-    gradient = P.get_lambda(-h_times_x_coordinate_target_inverse_times_G)
+    gradient = P.gradient(-h_times_x_coordinate_target_inverse_times_G)
     x_coordinate_target_times_b_inverse = Fr_k1(Q.x.x) * Fr_k1(b).invert()
 
     lock = Secp256k1.verify_point_multiplication_up_to_sign(
@@ -134,7 +136,7 @@ def test_verify_point_multiplication_up_to_sign(b, P, negate):  # noqa: N803
 
     context = Context(unlock + lock, z=dummy_sighash)
     assert context.evaluate()
-    assert len(context.get_stack()) == 1
+    assert context.get_stack().size() == 1
 
 
 @pytest.mark.parametrize(("b", "P"), [(3, generator.multiply(10)), (110, generator.multiply(547))])
@@ -155,9 +157,9 @@ def test_verify_point_multiplication(b, P):  # noqa: N803
     D.append(generator.multiply(b))
 
     gradients = []
-    gradients.append(P.get_lambda(-D[0]))
-    gradients.append(P.get_lambda(-D[1]))
-    gradients.append(Q.get_lambda(D[2]))
+    gradients.append(P.gradient(-D[0]))
+    gradients.append(P.gradient(-D[1]))
+    gradients.append(Q.gradient(D[2]))
 
     lock = Secp256k1.verify_point_multiplication(
         True,
@@ -180,4 +182,4 @@ def test_verify_point_multiplication(b, P):  # noqa: N803
 
     context = Context(unlock + lock, z=dummy_sighash)
     assert context.evaluate()
-    assert len(context.get_stack()) == 1
+    assert context.get_stack().size() == 1
