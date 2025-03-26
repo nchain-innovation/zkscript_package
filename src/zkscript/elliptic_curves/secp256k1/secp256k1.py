@@ -128,10 +128,11 @@ class Secp256k1:
         r"""Verify that A = (± a + additional_constant + epsilon)G.
 
         This script verifies that A = (± a + additional_constant + epsilon)G, where:
-        - A is a point on E
-        - a is a scalar
-        - G is the generator of secp256k1.
-        - epsilon is either 0 or -2*h/Gx -2(a + additional_constant)
+            * A is a point on E
+            * a is a scalar
+            * additional_constant is a scalar
+            * G is the generator of secp256k1.
+            * epsilon is either 0 or -2*h/Gx -2(a + additional_constant)
 
         Stack input:
             - stack:    [GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, .., h .., a .., A]
@@ -248,11 +249,12 @@ class Secp256k1:
         ),
         rolling_options: int = (1 << 3) - 1,
     ) -> Script:
-        """Verify that A = (a+additional_constant)G.
+        """Verify that A = (a + additional_constant)G without performing validity checks on the data.
 
-        This script verifies that A = aG, where:
-        - a is a scalar
-        - G is the generator of secp256k1.
+        This script verifies that A = (a + additional_constant) G, where:
+            * a is a scalar
+            * additional_constant is a scalar
+            * G is the generator of secp256k1
 
         Stack input:
             - stack: [GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, .., h .., a .., A, ..]
@@ -266,11 +268,11 @@ class Secp256k1:
             check_constants (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constants (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             additional_constant (int): The additional constant for which the script verifies
-                A = (± a + additional_constant + epsilon)G. Defaults to `0`.
+                A = (a + additional_constant)G. Defaults to `0`.
             h (StackFiniteFieldElement): The position of the sighash of the transaction in which the script is executed.
                 Defaults to `StackFiniteFieldElement(3, False, 1)`.
             a (StackFiniteFieldElement): The position of the constant `a` for which the script verifies
-                A = aG. Defaults to `StackFiniteFieldElement(2, False, 1)`.
+                A = (a + additional_constant)G. Defaults to `StackFiniteFieldElement(2, False, 1)`.
             A (StackEllipticCurvePoint): The position of the point on E for which the script
                 verifies A = aG. Defaults to
                 `StackEllipticCurvePoint(
@@ -281,7 +283,7 @@ class Secp256k1:
                 from the stack after execution.
 
         Returns:
-            The script that verifies A = aG.
+            The script that verifies A = (a + additional_constant)G.
 
         Notes:
             This script does not verify that `A` is on secp256k1.
@@ -374,12 +376,13 @@ class Secp256k1:
         ),
         rolling_options: int = (1 << 4) - 1,
     ) -> Script:
-        """Verify that A = (a+additional_constant)G.
+        """Verify that A = (a + additional_constant)G.
 
-        This script verifies that A = aG, where:
-        - A is a point on E.
-        - a is a scalar
-        - G is the generator of secp256k1.
+        This script verifies that A = (a+additional_constant)G, where:
+            * A is a point on E
+            * a is a scalar
+            * additional_constant is a scalar
+            * G is the generator of secp256k1
 
         Stack input:
             - stack: [GROUP_ORDER, Gx, 0x0220||Gx_bytes||02, MODULUS, .., h .., a .., A, ..]
@@ -393,13 +396,13 @@ class Secp256k1:
             check_constants (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constants (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             additional_constant (int): The additional constant for which the script verifies
-                A = (± a + additional_constant + epsilon)G. Defaults to `0`.
+                A = (a + additional_constant)G. Defaults to `0`.
             sig_hash_preimage (StackBaseElement): The position in the stack of `sig_hash_preimage` of the spending
                 transaction. Defaults to `StackBaseElement(4)`
             h (StackFiniteFieldElement): The position of the sighash of the transaction in which the script is executed.
                 Defaults to `StackFiniteFieldElement(3, False, 1)`.
             a (StackFiniteFieldElement): The position of the constant `a` for which the script verifies
-                A = aG. Defaults to `StackFiniteFieldElement(2, False, 1)`.
+                A = (a + additional_constant)G. Defaults to `StackFiniteFieldElement(2, False, 1)`.
             A (StackEllipticCurvePoint): The position of the point on E for which the script
                 verifies A = aG. Defaults to
                 `StackEllipticCurvePoint(
@@ -410,7 +413,7 @@ class Secp256k1:
                 should be removed from the stack after execution.
 
         Returns:
-            The script that verifies A = aG.
+            The script that verifies A = (a + additional_constant)G.
         """
         check_order([sig_hash_preimage, h, a, A])
         is_sig_hash_preimage_rolled, is_h_rolled, is_a_rolled, is_A_rolled = bitmask_to_boolean_list(rolling_options, 4)
@@ -538,7 +541,7 @@ class Secp256k1:
             The script that verifies Q = ± b * P.
 
         Note:
-            This function does not handle the case in which b = 0 mod n.
+            This function can only be used on b != 0 mod GROUP_ORDER.
         """
         check_order(
             [
@@ -607,7 +610,7 @@ class Secp256k1:
         )
         out += Script.parse_string("OP_TOALTSTACK OP_TOALTSTACK")
 
-        # Verify that b != 0 mod n
+        # Verify that b != 0 mod GROUP_ORDER
         out += is_mod_equal_to(clean_constant=False, stack_element=b, target=0, is_verify=False, rolling_option=False)
         out += Script.parse_string("OP_NOT OP_VERIFY")
 
@@ -898,8 +901,9 @@ class Secp256k1:
 
         Notes:
             This script removes MODULUS from the bottom of the stack after execution.
-            This script does not handle the case b = 0 mod GROUP_ORDER.
-            This script only handles the case MODULUS - GROUP_ORDER < Q_x, (Q + bG)_x < GROUP_ORDER.
+            This script can only be used on:
+                * b != 0 mod GROUP_ORDER.
+                * MODULUS - GROUP_ORDER < Q_x, (Q + bG)_x < GROUP_ORDER.
         """
         check_order([h, *s, *gradients, *d, *D, Q, b, P])
         list_rolling_options = bitmask_to_boolean_list(rolling_options, 15)
@@ -929,7 +933,7 @@ class Secp256k1:
         out += Script.parse_string(" ".join(["OP_CAT"] * i))
         out += is_equal_to(target=0)
 
-        # Verify that b != 0 mod n
+        # Verify that b != 0 mod GROUP_ORDER
         out += is_mod_equal_to(
             clean_constant=False,
             modulus=StackNumber(-2, False),

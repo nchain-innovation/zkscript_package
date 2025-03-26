@@ -47,6 +47,11 @@ def optimise_script(script: Script) -> Script:
             "OP_SUB",
             "OP_NEGATE",
         ): ["OP_SUB"],
+        (
+            "OP_0",
+            "OP_EQUAL",
+            "OP_NOT",
+        ): ["OP_0NOTEQUAL"],
     }
 
     script_list = script.to_string().split()
