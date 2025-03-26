@@ -17,7 +17,7 @@ The library currently contains implementations of pairings and Groth16 for:
 - [BLS12-381](src/zkscript/groth16/bls12_381/bls12_381.py)
 - [MNT4-753](src/zkscript/groth16/mnt4_753/mnt4_753.py)
 
-Please, refer to the [notes](./notes/bilinear_pairings.tex) for a walkthrough of the implementation of bilinear pairings and Groth6 in Bitcoin Script.
+Please, refer to the [notes](./notes/bilinear_pairings.tex) for a walkthrough of the implementation of bilinear pairings and Groth16 in Bitcoin Script.
 
 Additionally, the library contains the following scripts:
 

@@ -1,0 +1,8 @@
+proof_path = "proof_recursive_fourth_step"
+
+[chain_parameters]
+chain_index = 0
+
+[public_inputs]
+outpoint_txid = "b540e7a57901002bc640c481426b4d59f245507955cf5d08902d358a428d2825"
+genesis_txid = "4857fbb2da973cab3a42cf42bc705b56a8748d2ea0fa1527abfa54021ec2f86c"
