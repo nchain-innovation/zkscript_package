@@ -500,7 +500,7 @@ def test_groth16_with_precomputed_msm(
 @pytest.mark.parametrize(
     ("alpha_beta", "prepared_vk", "prepared_proof", "test_script", "filename", "max_multipliers", "is_minimal_example"),
     [
-        # *generate_test_cases(test_num=1, is_minimal_example=False, rnd_seed=42),
+        *generate_test_cases(test_num=1, is_minimal_example=False, rnd_seed=42),
         *generate_test_cases(test_num=1, is_minimal_example=True, rnd_seed=42),
     ],
 )

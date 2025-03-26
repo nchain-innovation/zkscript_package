@@ -25,7 +25,7 @@ generator = secp256k1(
     y=Fq_k1(0x483ADA7726A3C4655DA4FBFC0E1108A8FD17B448A68554199C47D08FFB10D4B8),
     infinity=False,
 )
-test_script = EllipticCurveFq(q=modulus, curve_a=0)
+test_script = EllipticCurveFq(q=modulus, curve_a=0, curve_b=7)
 
 
 @pytest.mark.parametrize("base_loaded", [True, False])

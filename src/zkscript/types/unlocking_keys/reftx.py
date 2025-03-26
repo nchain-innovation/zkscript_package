@@ -155,7 +155,7 @@ class RefTxUnlockingKey:
         out = nums_to_script([groth16_model.pairing_model.MODULUS]) if load_constants else Script()
         if load_constants:
             out += nums_to_script([GROUP_ORDER_INT, Gx])
-            out.append_pushdata(Gx_bytes)
+            out.append_pushdata(bytes.fromhex("0220") + Gx_bytes + bytes.fromhex("02"))
 
         out += self.__groth16_unlocking_key.to_unlocking_script(
             groth16_model=groth16_model,
