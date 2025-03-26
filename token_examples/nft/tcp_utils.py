@@ -1,3 +1,5 @@
+"""Utilities to facilitate the deployment of NTFs using Transaction Chain Proof."""
+
 import sys
 from pathlib import Path
 
@@ -23,21 +25,21 @@ from token_examples.tx_engine_utils import (
 
 def load_vk(path: str):
     """Load VerifyingKey."""
-    with open(path, "rb") as f:
+    with Path.open(path, "rb") as f:
         vk_bytes = list(f.read())
     return VerifyingKeyMnt4753.deserialise(vk_bytes[8:])
 
 
 def load_proof(path: str):
     """Load Proof."""
-    with open(path, "rb") as f:
+    with Path.open(path, "rb") as f:
         proof_bytes = list(f.read())
     return ProofMnt4753.deserialise(proof_bytes[8:])
 
 
 def load_processed_input(path: str):
     """Load input for ZKP, pre-hashed for PCD."""
-    with open(path, "rb") as f:
+    with Path.open(path, "rb") as f:
         processed_input_bytes = list(f.read())
     length = (MNT4_753.scalar_field.get_modulus().bit_length() + 8) // 8
 
@@ -50,7 +52,7 @@ def load_processed_input(path: str):
         inputs.append(MNT4_753.scalar_field.deserialise(processed_input_bytes[index : index + length]))
         index += length
 
-    return [input.to_int() for input in inputs]
+    return [element.to_int() for element in inputs]
 
 
 def proof_to_unlocking_script(path_proof: str, path_input: str, path_vk: str):
@@ -82,8 +84,8 @@ def vk_and_input_to_script(path_input: str, path_vk: str):
     assert len(vk.gamma_abc) == len(processed_input) + 1
 
     precomputed_msm = vk.gamma_abc[0]
-    for base, input in zip(vk.gamma_abc[1:], processed_input):
-        precomputed_msm += base.multiply(input)
+    for base, scalar in zip(vk.gamma_abc[1:], processed_input):
+        precomputed_msm += base.multiply(scalar)
 
     prepared_vk = vk.prepare_for_zkscript()
 
@@ -99,7 +101,6 @@ def vk_and_input_to_script(path_input: str, path_vk: str):
     )
 
 
-# Execute the swap between a token transaction and a BSV output
 def execute_swap(
     token_txid: str,
     bsv_txid: str,
@@ -108,6 +109,7 @@ def execute_swap(
     bsv_pub_key: Wallet,
     network: BlockchainInterface,
 ) -> list[str]:
+    """Execute the swap between a token transaction and a BSV output."""
     token_tx = tx_from_id(token_txid, network)
     bsv_tx = tx_from_id(bsv_txid, network)
 
@@ -132,7 +134,6 @@ def execute_swap(
     return swap_tx, network.broadcast_tx(swap_tx.serialize().hex())
 
 
-# Spend a Groth16 verifier to a P2PK
 def spend_zkp_to_output(
     tx: Tx,
     index: int,
@@ -145,6 +146,7 @@ def spend_zkp_to_output(
     fee_rate: int,
     network: BlockchainInterface,
 ):
+    """Spend a Groth16 verifier to a P2PK."""
     unlocking_script_zkp = proof_to_unlocking_script(path_proof, path_input, path_vk)
     input_zkp = tx_to_input(tx, index, unlocking_script_zkp)
 
@@ -174,10 +176,10 @@ def spend_zkp_to_output(
     return spending_tx, network.broadcast_tx(spending_tx.serialize().hex())
 
 
-# Spend a P2PK to a Groth16 verifier with precomputed msm
 def p2pk_to_groth16(
     tx: Tx, index: int, path_input: str, path_vk: str, public_key: Wallet, fee_rate: int, network: BlockchainInterface
 ):
+    """Spend a P2PK to a Groth16 verifier with precomputed msm."""
     locking_script = vk_and_input_to_script(path_input, path_vk)
     amount = tx.tx_outs[index].amount
     return spend_p2pk(
