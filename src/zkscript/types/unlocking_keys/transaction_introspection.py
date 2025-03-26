@@ -46,7 +46,7 @@ class PushTxUnlockingKey:
         out = Script()
         if append_constants:
             out += nums_to_script([GROUP_ORDER_INT, Gx])
-            out.append_pushdata(Gx_bytes)
+            out.append_pushdata(bytes.fromhex("0220") + Gx_bytes + bytes.fromhex("02"))
         out.append_pushdata(sig_hash_preimage)
 
         return out
