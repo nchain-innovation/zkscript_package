@@ -46,7 +46,6 @@ Then, the keys can be used to prove/verify statements about _any_ NFT generated 
 To perform the setup, create a file `setup.toml` and fill it as follows<sup><a href="#footnote2">2</a></sup>
 
 ```toml
-[chain_parameters]
 chain_index = 0
 ```
 
@@ -60,7 +59,7 @@ This will generate proving and verifying keys in the folder `data/keys` (which w
 
 ### Prove
 
-To prove that `utxo` at transaction `Tx` and index `chain_index` is a token UTXO for the NFT `(genesis_txid, chain_index)`, create a file `prove.toml` and fill it as follows:
+To prove that `utxo` at transaction `Tx` and index `chain_index` is a token UTXO for the NFT `(genesis_txid, chain_index)`, create a file `prove.toml`<sup><a href="#footnote4">4</a></sup> and fill it as follows:
 
 ```toml
 proof_name = "PROOF_NAME"
@@ -98,7 +97,7 @@ Example `prove.toml` files are provided in the folder `/configs/`.
 
 ### Verify
 
-To verify that a proof `proof` asserts that `utxo` is a token UTXO for the NFT `(genesis_txid, chain_index)`, create a file `verify.toml` and fill it as follows:
+To verify that a proof `proof` asserts that `utxo` is a token UTXO for the NFT `(genesis_txid, chain_index)`, create a file `verify.toml`<sup><a href="#footnote4">4</a></sup> and fill it as follows:
 
 ```toml
 proof_path = "PROOF_NAME"
@@ -134,3 +133,5 @@ Example `verify.toml` files are provided in the folder `/configs/`.
 [<a name="footnote2">2</a>]: We use `chain_index = 0` for simplicity. You can change this to `1` without any problem. If you wish to change it to something else, you will need to modify the [transaction configuration](./src/nft/groth16_nft.rs#L57)
 
 [<a name="footnote3">3</a>]: Alice must have received such a proof, as the person holding the token before her either generated the proof without needing a prior base (they held the `(genesis_txid, chain_index)`) or they themselves received a proof of validity for the token UTXO, and then generated a proof.
+
+[<a name="footnote4">4</a>]: The configuration files contained in [configs](./configs/) are filled with the data used to generate the proofs for the transaction chain starting at `4857fbb2da973cab3a42cf42bc705b56a8748d2ea0fa1527abfa54021ec2f86c` with chain index `0`. See also the associated [`README`](./configs/README.md).
