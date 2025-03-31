@@ -62,13 +62,13 @@ class RefTxUnlockingKey:
 
     @staticmethod
     def __multipliers(groth16_model: Groth16, pub: list[int], max_multipliers: list[int] | None = None) -> list[int]:
-        """Compute the max multipliers for Groth16.
+        """Append the max multipliers for sighash(stx).
 
         Args:
             groth16_model (Groth16): The Groth16 script model used to construct the reftx script.
             pub (list[int]): The list of public statements: (sighash(stx), u_stx).
             max_multipliers (list[int]): `max_multipliers[i]` is the maximum multiplier allowed for the
-                multiplication of gamma_abc[i]
+                multiplication of gamma_abc[i], only considering the ones for u_stx.
         """
         # Compute the byte size of self.groth_model.r
         bytes_sighash_chunks = RefTxUnlockingKey.__bytes_sighash_chunks(groth16_model)
@@ -106,7 +106,7 @@ class RefTxUnlockingKey:
             gradients_multiplications (list[list[list[int]]]): the gradients to execute the script
                 `unrolled_multiplication` that computes `pub[i] * gamma_abc[i]`
             max_multipliers (list[int]): `max_multipliers[i]` is the maximum multiplier allowed for the
-                multiplication of gamma_abc[i]
+                multiplication of gamma_abc[i], only considering u_stx.
             gradients_additions (list[int]): `gradients_additions[i]` is the gradient of the addition
                 `gamma_abc[n-i-2] + (\sum_(j=n-i-1)^(n-1) gamma_abc[j]`
             inverse_miller_output (list[int]): the inverse of
