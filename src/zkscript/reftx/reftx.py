@@ -97,9 +97,9 @@ class RefTx:
             The locking script required by RefTx.
 
         Note:
-            The public inputs to the RefTx circuit are (l_out, u_stx, sighash(stx)). When we talk about
-            public inputs above (in the max_multipliers), we only consider (l_out, u_stx). The max_multipliers for
-            sighash(stx) are computed automatically.
+            The public inputs to the RefTx circuit are (l_out, sighash(stx), u_stx). When we talk about
+            public inputs above (in the max_multipliers), we only consider u_stx. The max_multipliers for
+            sighash(stx) are computed automatically, and l_out is hard-coded in the locking script.
         """
         # Compute bytes sighash chunks and number of chunks
         bytes_sighash_chunks = self.__bytes_sighash_chunks()
@@ -108,9 +108,15 @@ class RefTx:
         max_multipliers = self.__multipliers(locking_key=locking_key, max_multipliers=max_multipliers)
 
         out = Script()
-        # stack in:     [.., u_stx, sighash(stx)]
-        # stack out:    [.., u_stx, sighash(stx)]
-        # altstack out: [sighash(stx)]
+        
+        # Extract the sighash from the unlocking script
+        # msm_data(**) is the data required to execute the multi scalar multiplication on **
+        # chunks(sighash(stx)) are the chunks in which the sighash is split when supplied in 
+        # the unlocking script of RefTx
+        #
+        # stack in:     [.., msm_data(u_stx), msm_data(sighash(stx))]
+        # stack out:    [.., msm_data(u_stx), msm_data(sighash(stx))]
+        # altstack out: [chunks(sighash(stx))]
         for i in range(n_chunks):
             out += MsmWithFixedBasesUnlockingKey.extract_scalar_as_unsigned(
                 max_multipliers=max_multipliers, index=i, rolling_option=False
@@ -118,10 +124,10 @@ class RefTx:
             out += nums_to_script([bytes_sighash_chunks]) + Script.parse_string("OP_SPLIT OP_DROP")
             out += Script.parse_string("OP_TOALTSTACK")
 
-        # stack in:     [.., q, .., u_stx, sighash(stx)]
-        # altstack in:  [sighash(stx)]
-        # stack out:    [..]
-        # altstack out: [sighash(stx)]
+        # stack in:     [.., q, .., msm_data(u_stx), msm_data(sighash(stx))]
+        # altstack in:  [chunks(sighash(stx))]
+        # stack out:    [..] of fail
+        # altstack out: [chunks(sighash(stx))]
         out += self.groth16_model.groth16_verifier(
             locking_key=locking_key.to_groth16_key(),
             modulo_threshold=modulo_threshold,
@@ -133,7 +139,7 @@ class RefTx:
         out += Script.parse_string("OP_VERIFY")
 
         # stack in:     [..]
-        # altstack in:  [sighash(stx)]
+        # altstack in:  [chunks(sighash(stx))]
         # stack out:    [0/1]
         # altstack out: []
         out += Script.parse_string("OP_FROMALTSTACK")
