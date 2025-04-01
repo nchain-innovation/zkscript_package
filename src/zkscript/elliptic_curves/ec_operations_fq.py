@@ -24,6 +24,7 @@ class EllipticCurveFq:
     Attributes:
         MODULUS: The characteristic of the field F_q.
         CURVE_A: The `a` coefficient in the Short-Weierstrass equation of the curve (an element in F_q).
+        CURVE_B: The `b` coefficient in the Short-Weierstrass equation of the curve (an element in F_q).
     """
 
     def __init__(self, q: int, curve_a: int, curve_b: int):
@@ -223,7 +224,6 @@ class EllipticCurveFq:
                 - `clean_constant` or `check_constant` are not provided when required.
                 - `gradient` comes after `P` in the stack
                 - `P` comes after `Q` in the stack
-                - `stack_elements` is not None, but it does not contain all the keys `gradient`, `P`, `Q`
 
         Preconditions:
             - The input points `P` and `Q` must be on the elliptic curve.

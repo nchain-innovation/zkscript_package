@@ -45,6 +45,7 @@ from src.zkscript.types.stack_elements import (
     StackBaseElement,
     StackElements,
     StackEllipticCurvePoint,
+    StackEllipticCurvePointProjective,
     StackFiniteFieldElement,
     StackNumber,
 )
@@ -62,7 +63,9 @@ patterns_to_roll = {
     (2, 1): [OP_ROT],
     (2, 2): [OP_ROT, OP_ROT],
     (3, 2): [OP_2SWAP],
+    (3, 3): [OP_3, OP_ROLL, OP_2SWAP],
     (5, 2): [OP_2ROT],
+    (5, 3): [OP_2ROT, OP_5, OP_ROLL],
     (5, 4): [OP_2ROT, OP_2ROT],
 }
 op_range = range(-1, 17)
@@ -344,9 +347,11 @@ def move(
     """Return the script that moves stack_element[start_index], ..., stack_element[end_index-1] with moving_function."""
     length = (
         1
-        if not isinstance(stack_element, (StackFiniteFieldElement, StackEllipticCurvePoint))
+        if not isinstance(stack_element, (StackFiniteFieldElement, StackEllipticCurvePoint, StackEllipticCurvePointProjective))
         else 2 * stack_element.x.extension_degree
         if isinstance(stack_element, StackEllipticCurvePoint)
+        else 3 * stack_element.x.extension_degree
+        if isinstance(stack_element, StackEllipticCurvePointProjective)
         else stack_element.extension_degree
     )
     if end_index is None:
