@@ -1092,8 +1092,7 @@ class EllipticCurveFq:
 
         # stack in:  [marker_a_is_zero, [lambdas,a], P]
         # stack out: [marker_a_is_zero, [lambdas,a], P, T]
-        set_T = Script.parse_string("OP_2DUP")
-        out += set_T
+        out += Script.parse_string("OP_2DUP")
 
         size_q = ceil(log2(self.MODULUS))
         current_size = size_q
@@ -1129,6 +1128,7 @@ class EllipticCurveFq:
                 check_constant=False,
                 clean_constant=False,
                 verify_gradient=True,
+                positive_modulo=positive_modulo_i,
                 gradient=StackFiniteFieldElement(4, False, 1),
                 P=StackEllipticCurvePoint(
                     StackFiniteFieldElement(1, False, 1),

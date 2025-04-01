@@ -10,6 +10,7 @@ from src.zkscript.util.utility_functions import bitmask_to_boolean_list, boolean
 from src.zkscript.util.utility_scripts import (
     bool_to_moving_function,
     is_equal_to,
+    is_mod_equal_to,
     mod,
     move,
     nums_to_script,
@@ -273,7 +274,7 @@ class EllipticCurveFqProjective:
         """
         out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
-        # Bring P on top of the stack, so we can assumed the stack is [x1, y1, z1]
+        # Bring P on top of the stack, so we can assume the stack is [x1, y1, z1]
         out += move(P, bool_to_moving_function(rolling_option))
     
         if self.CURVE_A:
@@ -312,7 +313,7 @@ class EllipticCurveFqProjective:
             # altstack in:  [8 * s^3]
             # stack out:    [x1, y1, s, B]
             # altstack out: [8 * s^3]
-            out += pick(position=1, n_elements=1) # Duplicate s
+            out += pick(position=0, n_elements=1) # Duplicate s
             out += pick(position=3, n_elements=2) # Pick x1, y1
             out += Script.parse_string("OP_MUL OP_MUL")
             # stack in:     [x1, y1, s, B]
@@ -352,6 +353,172 @@ class EllipticCurveFqProjective:
             out += Script.parse_string("OP_FROMALTSTACK OP_FROMALTSTACK")
 
         return out
+
+    def unrolled_multiplication(
+        self,
+        max_multiplier: int,
+        check_constant: bool | None = None,
+        clean_constant: bool | None = None,
+        positive_modulo: bool = True,
+    ) -> Script:
+        """Unrolled double-and-add scalar multiplication loop in E(F_q).
+
+        Stack input:
+            - stack:    [q, ..., marker_a_is_zero, P := (xP, yP, zP)], `marker_a_is_zero` is `OP_1`
+                if a == 0, `P` is a point on E(F_q)
+            - altstack: []
+
+        Stack output:
+            - stack:    [q, ..., P, aP]
+            - altstack: []
+
+        Args:
+            max_multiplier (int): The maximum value of the scalar `a`.
+            modulo_threshold (int): Bit-length threshold. Values whose bit-length exceeds it are reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
+            positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
+
+        Returns:
+            Script to multiply a point on E(F_q) in projective coordinates using double-and-add scalar multiplication.
+        """
+        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
+
+        # stack in:  [marker_a_is_zero, P]
+        # stack out: [marker_a_is_zero, P, T]
+        out += Script.parse_string("OP_3DUP")
+
+        # Compute aP
+        # stack in:  [marker_a_is_zero, P, T]
+        # stack out: [marker_a_s_zero, P, aP]
+        for i in range(int(log2(max_multiplier)) - 1, -1, -1):
+            # Roll marker to decide whether to execute the loop and the auxiliary data
+            # stack in:  [auxiliary_data, marker_doubling, P, T]
+            # stack out: [auxiliary_data, P, T, marker_doubling]
+            out += roll(position=6, n_elements=1)
+
+            # stack in:  [auxiliary_data, P, T, marker_doubling]
+            # stack out: [P, T] if marker_doubling = 0, else [P, 2T]
+            out += Script.parse_string("OP_IF")  # Check marker for executing iteration
+            out += self.point_algebraic_doubling(
+                take_modulo=True,
+                check_constant=False,
+                clean_constant=False,
+                positive_modulo=positive_modulo and (i==0),
+                rolling_option=True,
+            )  # Compute 2T
+
+            # Roll marker for addition and auxiliary data addition
+            # stack in:  [auxiliary_data_addition, marker_addition, P, 2T]
+            # stack out: [auxiliary_data_addition, P, 2T, marker_addition]
+            out += roll(position=6, n_elements=1)
+
+            # Check marker for +P and compute 2T + P if marker is 1
+            # stack in:  [auxiliary_data_addition, P, 2T, marker_addition]
+            # stack out: [P, 2T, if marker_addition = 0, else P, (2T+P)]
+            out += Script.parse_string("OP_IF")
+            out += self.point_algebraic_addition(
+                take_modulo=True,
+                check_constant=False,
+                clean_constant=False,
+                positive_modulo=positive_modulo and (i==0),
+                rolling_options=boolean_list_to_bitmask([False, True]),
+            )  # Compute 2T + P
+            out += Script.parse_string("OP_ENDIF OP_ENDIF")  # Conclude the conditional branches
+
+        # Check if a == 0
+        # stack in:  [marker_a_is_zero, P, aP]
+        # stack out: [P, 0, 1, 0 if a == 0, else P aP]
+        out += roll(position=6, n_elements=1)
+        out += Script.parse_string("OP_IF")
+        out += Script.parse_string("OP_DROP OP_2DROP OP_0 OP_1 OP_0")
+        out += Script.parse_string("OP_ENDIF")
+
+        if clean_constant:
+            out += Script.parse_string("OP_DEPTH OP_1SUB OP_ROLL OP_DROP")
+
+        return out
+
+    def to_affine(
+        self,
+        take_modulo: bool,
+        check_constant: bool | None = None,
+        clean_constant: bool | None = None,
+        positive_modulo: bool = True,
+        z_inverse: StackFiniteFieldElement = StackFiniteFieldElement(3, False, 1), # noqa: B008
+        P: StackEllipticCurvePointProjective = StackEllipticCurvePointProjective(  # noqa: B008, N803
+            StackFiniteFieldElement(2, False, 1),  # noqa: B008
+            StackFiniteFieldElement(1, False, 1),  # noqa: B008
+            StackFiniteFieldElement(0, False, 1),  # noqa: B008
+        ),
+        rolling_options: int = 3,
+    ) -> Script:
+        """Transform the elliptic curve point `P` into its affine form.
+
+        Args:
+            take_modulo (bool): If `True`, the result is reduced modulo q.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
+            positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
+            z_inverse (StackFiniteFieldElement): The position of the inverse of the z-coordinate of `P` in the stack.
+                Defaults to `StackFiniteFieldElement(3, False, 1)`.
+            P (StackEllipticCurvePointProjective): The position of the point `P` in the stack,
+                its length, whether it should be negated, and whether it should be rolled or picked.
+                Defaults to: StackEllipticCurvePointProjective(
+                    StackFiniteFieldElement(2,False,1)
+                    StackFiniteFieldElement(1,False,1),
+                    StackFiniteFieldElement(0,False,1)
+                    )
+            rolling_options (int): A bitmask specifying which arguments should be rolled on which should
+                be picked. The bits of the bitmask correspond to whether the i-th argument should be
+                rolled or not. Defaults to 3 (all elements are rolled).
+        """
+        check_order([z_inverse, P])
+        is_z_inverse_rolled, is_p_rolled = bitmask_to_boolean_list(rolling_options, 2)
+
+        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
+
+        # stack in: [q, .., z_inverse, .., x, y, z, ..]
+        # stack out: [q, .., z_inverse, .., x, y, z, .., x * z_inverse, y * z_inverse, q]
+        # altstack out: [z, z_inverse]
+        out += move(P, bool_to_moving_function(is_p_rolled))
+        out += Script.parse_string("OP_TOALTSTACK")
+        out += move(z_inverse.shift(2 - 3 * is_p_rolled), bool_to_moving_function(is_z_inverse_rolled))
+        out += Script.parse_string("OP_DUP OP_TOALTSTACK OP_TUCK OP_MUL OP_TOALTSTACK OP_MUL")
+
+        if take_modulo:
+            out += roll(position=-1, n_elements=1) if clean_constant else pick(position=-1, n_elements=1)
+            out += mod(stack_preparation="",is_positive=positive_modulo, is_constant_reused=True)
+            out += mod(is_positive=positive_modulo, is_constant_reused=True)
+        
+        # stack in: [q, .., z_inverse, .., x, y, z, .., x * z_inverse, y * z_inverse, q]
+        # altstack in: [z, z_inverse]
+        # stack out: [q, .., z_inverse, .., x, y, z, .., x * z_inverse, y * z_inverse] or fail
+        # altstack out: []
+        out += Script.parse_string("OP_FROMALTSTACK OP_FROMALTSTACK")
+
+        # Check that z != 0
+        out += is_equal_to(
+            target=0,
+            is_verify=False,
+            rolling_option=False,
+        )
+        out += Script.parse_string("OP_NOT OP_VERIFY")
+
+        # Check that z * z_inverse = 1 mod q
+        out += Script.parse_string("OP_MUL")
+        out += is_mod_equal_to(
+            clean_constant=True,
+            modulus=StackNumber(1, False),
+            target=1,
+            is_verify=True,
+            rolling_option=True,
+        )
+
+        return out
+
+
+
 
 
 
