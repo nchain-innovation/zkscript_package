@@ -22,6 +22,7 @@ from src.zkscript.util.utility_functions import bitmask_to_boolean_list, boolean
         (["OP_TOALTSTACK"] * 10000 + ["OP_FROMALTSTACK"] * 10000, []),
         ([], []),
         (["OP_0", "OP_EQUAL", "OP_NOT", "OP_1"], ["OP_0NOTEQUAL", "OP_1"]),
+        (["OP_1", "OP_SWAP", "OP_TUCK"], ["OP_1", "OP_OVER"]),
     ],
 )
 def test_optimise_script(script, expected):

@@ -146,8 +146,8 @@ class EllipticCurveFqProjective:
             check_constant=False,
             clean_constant=False,
             is_constant_reused=False,
-            x=StackFiniteFieldElement(1, P.y.negate, 1),
-            y=StackFiniteFieldElement(0, not Q.y.negate, 1)
+            x=StackFiniteFieldElement(1, Q.y.negate, 1),
+            y=StackFiniteFieldElement(0, not P.y.negate, 1)
         )
         # stack in:  [(x2*z1), (z1*z2), (x1*z2), (y1*z2), u]
         # stack out: [(z1*z2), (y1*z2), u, (x1*z2), v := x2*z1 - x1*z2, v^3, v^3]
@@ -348,9 +348,13 @@ class EllipticCurveFqProjective:
             out += move(modulus, bool_to_moving_function(clean_constant))
             out += mod(stack_preparation="", is_positive=positive_modulo)
             out += mod(is_positive=positive_modulo)
-            out += mod(is_positive=positive_modulo, is_constant_reused=False)
+            out += mod(
+                stack_preparation="OP_FROMALTSTACK OP_NEGATE OP_ROT" if P.negate else "OP_FROMALTSTACK OP_ROT",
+                is_positive=positive_modulo,
+                is_constant_reused=False
+            )
         else:
-            out += Script.parse_string("OP_FROMALTSTACK OP_FROMALTSTACK")
+            out += Script.parse_string("OP_FROMALTSTACK OP_FROMALTSTACK OP_NEGATE" if P.negate else "OP_FROMALTSTACK OP_FROMALTSTACK")
 
         return out
 
