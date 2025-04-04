@@ -53,7 +53,7 @@ class MsmWithFixedBasesUnlockingKey:
         )
 
     def to_unlocking_script(self, ec_over_fq: EllipticCurveFq, load_modulus=True) -> Script:
-        """Return the unlocking script required by multi_scalar_multiplication_with_fixed_bases script.
+        """Return the unlocking script required by msm_with_fixed_bases script.
 
         Args:
             ec_over_fq (EllipticCurveFq): The instantiation of ec arithmetic over Fq used to

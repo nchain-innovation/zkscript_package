@@ -284,7 +284,7 @@ class Secp256r1:
         "test_addition_slow": generate_test_data(modulus, P, Q, positions_addition),
         "test_doubling_slow": generate_test_data(modulus, P, P, positions_doubling),
         "test_addition_unknown_points": [
-            # {"P": P, "Q": Q, "expected": P + Q},
+            {"P": P, "Q": Q, "expected": P + Q},
             {"P": P, "Q": -P, "expected": point_at_infinity},
             {"P": P, "Q": point_at_infinity, "expected": P},
             {"P": point_at_infinity, "Q": Q, "expected": Q},

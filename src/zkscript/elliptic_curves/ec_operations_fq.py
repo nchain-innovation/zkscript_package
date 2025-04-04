@@ -827,7 +827,7 @@ class EllipticCurveFq:
             A Bitcoin script that compute the sum of `P` and `Q`, handling all possibilities.
 
         Preconditions:
-            - P and Q are points on F_q
+            - P and Q are points on E(F_q)
             - If P != -Q, then gradient is the gradient of the line through P and Q
             - If P = -Q or P is the point at infinity, or Q is the point at infinity, then do not put gradient
 
@@ -1195,7 +1195,6 @@ class EllipticCurveFq:
             ((a_1, .., a_n), (P_1, .., P_n)) --> \sum_(i=1)^n a_i P_i
         where the a_i's are the scalars, and the P_i's are the bases. The script hard-codes the bases.
 
-
         Stack in:
             - stack:    [gradient[a_1 * P_1, \sum_(i=2)^(n) a_i * P_i], .., gradient[a_n * P_n, a_(n-1) * P_(n-1)],
                             a_n, gradients[a_n, P_n], .., a_2, gradients[a_2, P_2], a_1, gradients[a_1, P_1]]
@@ -1212,7 +1211,7 @@ class EllipticCurveFq:
         Args:
             bases (list[list[int]]): The bases of the multi scalar multiplication, passed as a list of coordinates.
                 `bases[i]` is `bases[i] = [x, y]` the list of the coordinates of P_i.
-            max_multipliers (list[int]): `max_mupliers[i]` is the maximum value allowed for `a_i`.
+            max_multipliers (list[int]): `max_multipliers[i]` is the maximum value allowed for `a_i`.
             modulo_threshold (int): Bit-length threshold. Values whose bit-length exceeds it are reduced modulo `q`.
             take_modulo (bool): If `True`, the result is reduced modulo `q`.
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.

@@ -13,6 +13,7 @@ from tx_engine.engine.op_codes import (
     OP_2ROT,
     OP_2SWAP,
     OP_3,
+    OP_3DUP,
     OP_4,
     OP_5,
     OP_6,
@@ -55,6 +56,7 @@ patterns_to_pick = {
     (0, 1): [OP_DUP],
     (1, 1): [OP_OVER],
     (1, 2): [OP_2DUP],
+    (2, 3): [OP_3DUP],
     (3, 2): [OP_2OVER],
     (3, 4): [OP_2OVER, OP_2OVER],
 }
@@ -347,7 +349,9 @@ def move(
     """Return the script that moves stack_element[start_index], ..., stack_element[end_index-1] with moving_function."""
     length = (
         1
-        if not isinstance(stack_element, (StackFiniteFieldElement, StackEllipticCurvePoint, StackEllipticCurvePointProjective))
+        if not isinstance(
+            stack_element, (StackFiniteFieldElement, StackEllipticCurvePoint, StackEllipticCurvePointProjective)
+        )
         else 2 * stack_element.x.extension_degree
         if isinstance(stack_element, StackEllipticCurvePoint)
         else 3 * stack_element.x.extension_degree
@@ -694,7 +698,8 @@ def is_mod_equal_to(
     Returns:
         The script that checks whether `stack_element = target % modulus`.
 
-    Note: This script fails if `stack_element` is negative as `OP_MOD` returns the modulo class in (-modulus, modulus).
+    Note:
+        When setting the target, remember that `OP_MOD` returns the residue class in (-modulus, modulus).
     """
     if modulus.position > 0:
         check_order([modulus, stack_element])
