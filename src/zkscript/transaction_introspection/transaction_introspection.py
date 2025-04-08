@@ -3,7 +3,7 @@
 from tx_engine import SIGHASH, Script, encode_num, hash256d
 from tx_engine.engine.util import GROUP_ORDER_INT, Gx, Gx_bytes
 
-from src.zkscript.types.stack_elements import StackBaseElement
+from src.zkscript.script_types.stack_elements import StackBaseElement
 from src.zkscript.util.utility_scripts import (
     bool_to_moving_function,
     bytes_to_unsigned,

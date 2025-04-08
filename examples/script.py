@@ -20,8 +20,8 @@ from tx_engine.interface.verify_script import ScriptFlags, verifyscript_params
 from src.zkscript.groth16.bls12_381.bls12_381 import bls12_381 as bls12_381_groth
 from src.zkscript.groth16.mnt4_753.mnt4_753 import mnt4_753 as mnt4_753_groth
 from src.zkscript.groth16.model.groth16 import Groth16
-from src.zkscript.types.locking_keys.groth16 import Groth16LockingKey
-from src.zkscript.types.unlocking_keys.groth16 import Groth16UnlockingKey
+from src.zkscript.script_types.locking_keys.groth16 import Groth16LockingKey
+from src.zkscript.script_types.unlocking_keys.groth16 import Groth16UnlockingKey
 
 verification_flags = 1
 for f in ScriptFlags._member_names_[1:-2]:
@@ -118,6 +118,7 @@ def proof_to_unlock(
     )
     return unlocking_key.to_unlocking_script(groth16_script, True)
 
+
 def vk_to_lock(vk: VerifyingKey, groth16_script: Groth16) -> Script:
     prepared_vk = vk.prepare_for_zkscript()
 
@@ -133,7 +134,7 @@ def vk_to_lock(vk: VerifyingKey, groth16_script: Groth16) -> Script:
     )
     return groth16_script.groth16_verifier(
         locking_key,
-        modulo_threshold=200*8,
+        modulo_threshold=200 * 8,
         check_constant=True,
         clean_constant=True,
     )

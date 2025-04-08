@@ -4,7 +4,10 @@ import pytest
 from tx_engine import Context
 
 from src.zkscript.merkle_tree.merkle_tree import MerkleTree as MerkleTreeScript
-from src.zkscript.types.unlocking_keys.merkle_tree import MerkleTreeBitFlagsUnlockingKey, MerkleTreeTwoAuxUnlockingKey
+from src.zkscript.script_types.unlocking_keys.merkle_tree import (
+    MerkleTreeBitFlagsUnlockingKey,
+    MerkleTreeTwoAuxUnlockingKey,
+)
 from tests.fields.util import save_scripts
 
 

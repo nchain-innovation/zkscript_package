@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from tx_engine import Script, encode_num
 from tx_engine.engine.util import GROUP_ORDER_INT, PRIME_INT, Gx, Gx_bytes
 
-from src.zkscript.types.unlocking_keys.secp256k1 import Secp256k1PointMultiplicationUnlockingKey
+from src.zkscript.script_types.unlocking_keys.secp256k1 import Secp256k1PointMultiplicationUnlockingKey
 from src.zkscript.util.utility_scripts import nums_to_script
 
 

@@ -3,7 +3,7 @@
 from tx_engine import Script
 
 from src.zkscript.elliptic_curves.secp256k1.secp256k1 import Secp256k1
-from src.zkscript.types.stack_elements import (
+from src.zkscript.script_types.stack_elements import (
     StackBaseElement,
     StackEllipticCurvePoint,
     StackFiniteFieldElement,

@@ -14,9 +14,9 @@ from tx_engine import Context, Script
 from src.zkscript.elliptic_curves.ec_operations_fq import EllipticCurveFq
 from src.zkscript.elliptic_curves.ec_operations_fq2 import EllipticCurveFq2
 from src.zkscript.fields.fq2 import Fq2 as Fq2Script
-from src.zkscript.types.stack_elements import StackEllipticCurvePoint, StackFiniteFieldElement
-from src.zkscript.types.unlocking_keys.msm_with_fixed_bases import MsmWithFixedBasesUnlockingKey
-from src.zkscript.types.unlocking_keys.unrolled_ec_multiplication import EllipticCurveFqUnrolledUnlockingKey
+from src.zkscript.script_types.stack_elements import StackEllipticCurvePoint, StackFiniteFieldElement
+from src.zkscript.script_types.unlocking_keys.msm_with_fixed_bases import MsmWithFixedBasesUnlockingKey
+from src.zkscript.script_types.unlocking_keys.unrolled_ec_multiplication import EllipticCurveFqUnrolledUnlockingKey
 from src.zkscript.util.utility_scripts import nums_to_script
 from tests.elliptic_curves.util import (
     generate_test,

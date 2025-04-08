@@ -4,7 +4,7 @@ from typing import Union
 
 from tx_engine import Script
 
-from src.zkscript.types.stack_elements import StackElements
+from src.zkscript.script_types.stack_elements import StackElements
 
 
 def optimise_script(script: Script) -> Script:
@@ -55,7 +55,7 @@ def optimise_script(script: Script) -> Script:
         (
             "OP_SWAP",
             "OP_TUCK",
-        ): ["OP_OVER"]
+        ): ["OP_OVER"],
     }
 
     script_list = script.to_string().split()
@@ -92,11 +92,11 @@ def check_order(stack_elements: list[StackElements]) -> ValueError | None:
     for i in range(len(stack_elements) - 1):
         overlaps, msg = stack_elements[i].overlaps_on_the_right(stack_elements[i + 1])
         if overlaps:
-            msg = f"{msg}\nIndex of self: {i}, index of other: {i+1}"
+            msg = f"{msg}\nIndex of self: {i}, index of other: {i + 1}"
             raise ValueError(msg)
     for i in range(len(stack_elements) - 1):
         if not stack_elements[i].is_before(stack_elements[i + 1]):
-            msg = f"Elements {i}: {stack_elements[i]} is not before element {i+1}: {stack_elements[i+1]}"
+            msg = f"Elements {i}: {stack_elements[i]} is not before element {i + 1}: {stack_elements[i + 1]}"
             raise ValueError(msg)
 
     return

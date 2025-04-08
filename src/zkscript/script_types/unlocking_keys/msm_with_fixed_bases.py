@@ -6,7 +6,7 @@ from typing import Self
 from tx_engine import Script
 
 from src.zkscript.elliptic_curves.ec_operations_fq import EllipticCurveFq
-from src.zkscript.types.unlocking_keys.unrolled_ec_multiplication import EllipticCurveFqUnrolledUnlockingKey
+from src.zkscript.script_types.unlocking_keys.unrolled_ec_multiplication import EllipticCurveFqUnrolledUnlockingKey
 from src.zkscript.util.utility_scripts import nums_to_script
 
 

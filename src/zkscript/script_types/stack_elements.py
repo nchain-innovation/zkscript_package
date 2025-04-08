@@ -121,7 +121,7 @@ class StackFiniteFieldElement(StackNumber):
             msg = "Self and other overlap: "
             msg += f"self.position: {self.position}, self.extension_degree: {self.extension_degree}, other.position: {
                 other.position
-                }"
+            }"
             return True, msg
         return False, ""
 
@@ -207,7 +207,8 @@ class StackEllipticCurvePoint:
         out.y.negate = negate
         out.negate = negate
         return out
-    
+
+
 @dataclass(init=False)
 class StackEllipticCurvePointProjective:
     """Elliptic curve point on the stack comprising three finite field elements.
@@ -300,4 +301,6 @@ class StackEllipticCurvePointProjective:
         return out
 
 
-type StackElements = Union[StackBaseElement, StackNumber, StackFiniteFieldElement, StackEllipticCurvePoint, StackEllipticCurvePointProjective]
+type StackElements = Union[
+    StackBaseElement, StackNumber, StackFiniteFieldElement, StackEllipticCurvePoint, StackEllipticCurvePointProjective
+]

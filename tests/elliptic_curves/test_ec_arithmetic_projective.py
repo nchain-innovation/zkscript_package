@@ -6,13 +6,15 @@ from elliptic_curves.models.ec import ShortWeierstrassEllipticCurve
 from tx_engine import Context, Script
 
 from src.zkscript.elliptic_curves.ec_operations_fq_projective import EllipticCurveFqProjective
-from src.zkscript.types.stack_elements import (
+from src.zkscript.script_types.stack_elements import (
     StackEllipticCurvePointProjective,
     StackFiniteFieldElement,
     StackNumber,
 )
-from src.zkscript.types.unlocking_keys.msm_with_fixed_bases_projective import MsmWithFixedBasesProjectiveUnlockingKey
-from src.zkscript.types.unlocking_keys.unrolled_projective_ec_multiplication import (
+from src.zkscript.script_types.unlocking_keys.msm_with_fixed_bases_projective import (
+    MsmWithFixedBasesProjectiveUnlockingKey,
+)
+from src.zkscript.script_types.unlocking_keys.unrolled_projective_ec_multiplication import (
     EllipticCurveFqProjectiveUnrolledUnlockingKey,
 )
 from src.zkscript.util.utility_scripts import nums_to_script

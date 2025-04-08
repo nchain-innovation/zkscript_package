@@ -4,7 +4,7 @@ from math import ceil, log2
 
 from tx_engine import Script
 
-from src.zkscript.types.stack_elements import StackEllipticCurvePoint, StackFiniteFieldElement
+from src.zkscript.script_types.stack_elements import StackEllipticCurvePoint, StackFiniteFieldElement
 from src.zkscript.util.utility_functions import boolean_list_to_bitmask, optimise_script
 from src.zkscript.util.utility_scripts import move, pick, roll, verify_bottom_constant
 

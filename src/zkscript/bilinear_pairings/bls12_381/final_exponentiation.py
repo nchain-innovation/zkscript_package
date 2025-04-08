@@ -5,7 +5,7 @@ from tx_engine import Script
 from src.zkscript.bilinear_pairings.bls12_381.fields import fq12_script, fq12cubic_script
 from src.zkscript.bilinear_pairings.bls12_381.parameters import exp_miller_loop
 from src.zkscript.bilinear_pairings.model.cyclotomic_exponentiation import CyclotomicExponentiation
-from src.zkscript.types.stack_elements import StackFiniteFieldElement
+from src.zkscript.script_types.stack_elements import StackFiniteFieldElement
 from src.zkscript.util.utility_scripts import move, pick, roll, verify_bottom_constant
 
 

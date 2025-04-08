@@ -2,7 +2,7 @@ import re
 
 import pytest
 
-from src.zkscript.types.stack_elements import (
+from src.zkscript.script_types.stack_elements import (
     StackBaseElement,
     StackEllipticCurvePoint,
     StackFiniteFieldElement,

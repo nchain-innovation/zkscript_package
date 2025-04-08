@@ -5,7 +5,11 @@ from math import log2
 from tx_engine import Script
 
 from src.zkscript.fields.fq import Fq
-from src.zkscript.types.stack_elements import StackEllipticCurvePointProjective, StackFiniteFieldElement, StackNumber
+from src.zkscript.script_types.stack_elements import (
+    StackEllipticCurvePointProjective,
+    StackFiniteFieldElement,
+    StackNumber,
+)
 from src.zkscript.util.utility_functions import bitmask_to_boolean_list, boolean_list_to_bitmask, check_order
 from src.zkscript.util.utility_scripts import (
     bool_to_moving_function,
@@ -660,7 +664,7 @@ class EllipticCurveFqProjective:
         # altstack out:  [P_n, .., P_(n_points_on_stack+2), P_(n_points_on_stack+1)]
         for i in range(n_points_on_stack - 1):
             out += self.point_addition_with_unknown_points(
-                take_modulo=(i % 3 == 2), positive_modulo=False, check_constant=False, clean_constant=False
+                take_modulo=(i % 3 - 2 == 0), positive_modulo=False, check_constant=False, clean_constant=False
             )
 
         # Handle the case in which the were no points on the stack
@@ -675,7 +679,7 @@ class EllipticCurveFqProjective:
         for i in range(n_points_on_altstack):
             out += Script.parse_string("OP_FROMALTSTACK OP_FROMALTSTACK OP_FROMALTSTACK")
             out += self.point_addition_with_unknown_points(
-                take_modulo=(i % 3 == 2), positive_modulo=False, check_constant=False, clean_constant=False
+                take_modulo=(i % 3 - 2 == 0), positive_modulo=False, check_constant=False, clean_constant=False
             )
 
         if take_modulo:

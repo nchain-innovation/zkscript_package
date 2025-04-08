@@ -42,7 +42,7 @@ from tx_engine.engine.op_codes import (
     OP_TUCK,
 )
 
-from src.zkscript.types.stack_elements import (
+from src.zkscript.script_types.stack_elements import (
     StackBaseElement,
     StackElements,
     StackEllipticCurvePoint,
