@@ -14,4 +14,4 @@ The class `MerkleTree` implements two scripts for Merkle path verification:
 The scripts differ for the type of data that the spender must supply to satisfy the locking script.
 We refer the reader to the documentation and to the blogpost [Merkle trees in Bitcoin Script](https://hackmd.io/@federicobarbacovi/BybFoBplJx) for a detailed explanation.
 
-The unlocking scripts for the methods contained in the class  `MerkleTree` can be generated using the unlocking keys found in [src/zkscript/types/unlocking_keys/merkle_tree](../src/zkscript/types/unlocking_keys/merkle_tree.py).
+The unlocking scripts for the methods contained in the class  `MerkleTree` can be generated using the unlocking keys found in [src/zkscript/script_types/unlocking_keys/merkle_tree](../src/zkscript/script_types/unlocking_keys/merkle_tree.py).
