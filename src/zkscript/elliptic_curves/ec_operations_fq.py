@@ -21,6 +21,10 @@ from src.zkscript.util.utility_scripts import (
 class EllipticCurveFq:
     """Construct Bitcoin scripts that perform arithmetic operations over the elliptic curve E(F_q).
 
+    Arithmetic is performed in affine coordinates. Points are represented on the stack as a list of two
+    numbers: P := [x, y], except for the point at infinity, which is encoded as [0x00, 0x00]. Note that
+    the points are 0x00, not OP_0.
+
     Attributes:
         MODULUS: The characteristic of the field F_q.
         CURVE_A: The `a` coefficient in the Short-Weierstrass equation of the curve (an element in F_q).

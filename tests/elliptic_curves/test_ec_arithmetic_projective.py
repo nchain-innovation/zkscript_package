@@ -105,6 +105,11 @@ class Secp256k1:
             {"P": P, "Q": point_at_infinity, "expected": P},
             {"P": point_at_infinity, "Q": Q, "expected": Q},
             {"P": P, "Q": negate(P), "expected": point_at_infinity},
+            {
+                "P": P,
+                "Q": [base_field(2) * P[0], base_field(2) * -P[1], base_field(2) * P[2]],
+                "expected": point_at_infinity,
+            },
         ],
         "test_multi_addition": [
             *generate_multi_addition_tests([P, Q, P, Q], base_field),
@@ -275,6 +280,11 @@ class Secp256r1:
             {"P": P, "Q": point_at_infinity, "expected": P},
             {"P": point_at_infinity, "Q": Q, "expected": Q},
             {"P": P, "Q": negate(P), "expected": point_at_infinity},
+            {
+                "P": P,
+                "Q": [base_field(2) * P[0], base_field(2) * -P[1], base_field(2) * P[2]],
+                "expected": point_at_infinity,
+            },
         ],
         "test_multi_addition": [
             *generate_multi_addition_tests([P, Q, P, Q], base_field),
@@ -528,7 +538,7 @@ def test_multiplication_unrolled(config, P, a, expected, max_multiplier, save_to
             lock += nums_to_script([el])
             lock += Script.parse_string("OP_EQUALVERIFY")
     else:
-        lock += Script.parse_string("0x00 OP_EQUALVERIFY 0x01 OP_EQUALVERIFY 0x00 OP_EQUALVERIFY")
+        lock += Script.parse_string("0x00 OP_EQUALVERIFY 0x00 OP_EQUALVERIFY 0x00 OP_EQUALVERIFY")
     for el in proj_to_list(P)[::-1]:
         lock += nums_to_script([el])
         lock += Script.parse_string("OP_EQUALVERIFY")
@@ -547,16 +557,16 @@ def test_multiplication_unrolled(config, P, a, expected, max_multiplier, save_to
 def test_addition_unknown_points(config, P, Q, expected, save_to_json_folder):
     unlock = nums_to_script([config.modulus])
     unlock += (
-        nums_to_script(proj_to_list(P)) if config.point_at_infinity != P else Script.parse_string("0x00 0x01 0x00")
+        nums_to_script(proj_to_list(P)) if config.point_at_infinity != P else Script.parse_string("0x00 0x00 0x00")
     )
     unlock += (
-        nums_to_script(proj_to_list(Q)) if config.point_at_infinity != Q else Script.parse_string("0x00 0x01 0x00")
+        nums_to_script(proj_to_list(Q)) if config.point_at_infinity != Q else Script.parse_string("0x00 0x00 0x00")
     )
     lock = config.test_script.point_addition_with_unknown_points(
         take_modulo=True, check_constant=True, clean_constant=True, positive_modulo=True
     )
     if expected == config.point_at_infinity:
-        lock += Script.parse_string("0x00 OP_EQUALVERIFY 0x01 OP_EQUALVERIFY 0x00 OP_EQUALVERIFY")
+        lock += Script.parse_string("0x00 OP_EQUALVERIFY 0x00 OP_EQUALVERIFY 0x00 OP_EQUALVERIFY")
     else:
         for el in expected[::-1]:
             lock += nums_to_script(el.to_list())
@@ -627,7 +637,7 @@ def test_multi_addition(config, points, expected, n_points_on_altstack, save_to_
         if point != config.point_at_infinity:
             unlock += nums_to_script(proj_to_list(point))
         else:
-            unlock += Script.parse_string("0x00 0x01 0x00")
+            unlock += Script.parse_string("0x00 0x00 0x00")
         if i >= n_points - n_points_on_altstack:
             unlock += Script.parse_string("OP_TOALTSTACK OP_TOALTSTACK OP_TOALTSTACK")
 
@@ -645,7 +655,7 @@ def test_multi_addition(config, points, expected, n_points_on_altstack, save_to_
             lock += nums_to_script([el])
             lock += Script.parse_string("OP_EQUALVERIFY")
     else:
-        lock += Script.parse_string("0x00 OP_EQUALVERIFY 0x01 OP_EQUALVERIFY 0x00 OP_EQUALVERIFY")
+        lock += Script.parse_string("0x00 OP_EQUALVERIFY 0x00 OP_EQUALVERIFY 0x00 OP_EQUALVERIFY")
     lock += Script.parse_string("OP_1")
 
     context = Context(script=unlock + lock)
@@ -677,7 +687,7 @@ def test_msm_with_fixed_bases(config, scalars, bases, expected, save_to_json_fol
             lock += nums_to_script([el])
             lock += Script.parse_string("OP_EQUALVERIFY")
     else:
-        lock += Script.parse_string("0x00 OP_EQUALVERIFY 0x01 OP_EQUALVERIFY 0x00 OP_EQUALVERIFY")
+        lock += Script.parse_string("0x00 OP_EQUALVERIFY 0x00 OP_EQUALVERIFY 0x00 OP_EQUALVERIFY")
     lock += Script.parse_string("OP_1")
 
     context = Context(script=unlock + lock)

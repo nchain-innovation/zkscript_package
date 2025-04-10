@@ -27,7 +27,10 @@ from src.zkscript.util.utility_scripts import (
 class EllipticCurveFqProjective:
     """Construct Bitcoin scripts that perform arithmetic operations over the elliptic curve E(F_q).
 
-    Arithmetic is performed in projective coordinates.
+    Arithmetic is performed in projective coordinates. Points are represented on the stack as a list of three
+    numbers: P := [x, y, z], except for the point at infinity, which is encoded as [0x00, 0x00, 0x00]. Note that
+    the points are 0x00, not OP_0. We choose this encoding to be consistent with the affine encoding, which is
+    [0x00, 0x00]
 
     Attributes:
         MODULUS: The characteristic of the field F_q.
@@ -69,8 +72,11 @@ class EllipticCurveFqProjective:
         """Perform algebraic addition of points on an elliptic curve defined over Fq.
 
         This function computes the algebraic addition of P and Q for elliptic curve points `P` and `Q` in projective
-        coordinates.
-        It also handles optional checks on the curve constant and whether the constant should be cleaned or reused.
+        coordinates. It also handles optional checks on the curve constant and whether the constant
+        should be cleaned or reused.
+
+        The formulas we use do not handle the point at infinity, so this script should only be used when we
+        are sure that on the stack the points are not the point at infinity.
 
         Stack input:
             - stack    = [.., q, .., P, .., Q, ..]
@@ -115,7 +121,8 @@ class EllipticCurveFqProjective:
             ValueError: If either of the following happens:
                 - `clean_constant` or `check_constant` are not provided when required.
                 - `P` comes after `Q` in the stack
-                - `stack_elements` is not None, but it does not contain all the keys `gradient`, `P`, `Q`
+                - `Q` is not rolled
+                - `Q` is not in the default position
 
         Preconditions:
             - The input points `P` and `Q` must be on the elliptic curve.
@@ -126,8 +133,11 @@ class EllipticCurveFqProjective:
         is_p_rolled, is_q_rolled = bitmask_to_boolean_list(rolling_options, 2)
 
         # Checks for unimplemented cases
-        if (not is_q_rolled) | (Q.position != 2):
-            msg = "The following options are not implemented:\n\t- Q is not rolled\n\t- Q is not on top of the stack"
+        if not is_q_rolled:
+            msg = "The current implementation only supports rolling Q."
+            raise ValueError(msg)
+        if Q.position != 2:
+            msg = "The current implementation only supports Q in position 2."
             raise ValueError(msg)
 
         out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
@@ -193,8 +203,8 @@ class EllipticCurveFqProjective:
         out += Script.parse_string("OP_2 OP_MUL OP_ADD")
         out += roll(position=3, n_elements=1)  # Roll z1*z2*u^2
         out += Script.parse_string("OP_SUB OP_NEGATE")  # Compute A
-        # stack out:    [u, v, (x1*z2*v^2), A := u^2*z1*z2 - v^3 - 2*v^2*x1*x2]
-        # altstack out: [(v^3*z1*z2), (v^3*y1*z2)]
+        # stack in:     [u, v, (x1*z2*v^2), A := u^2*z1*z2 - v^3 - 2*v^2*x1*x2]
+        # altstack in:  [(v^3*z1*z2), (v^3*y1*z2)]
         # stack out:    [vA]
         # altstack out: [(v^3*z1*z2), u * (v^2 * x1 * z2  - A) - v^3 * y1 * z2]
         out += Script.parse_string("OP_TUCK OP_SUB")
@@ -237,8 +247,11 @@ class EllipticCurveFqProjective:
         """Perform algebraic doubling of points on an elliptic curve defined over Fq.
 
         This function computes the algebraic doubling of P for elliptic curve point `P` in projective
-        coordinates.
-        It also handles optional checks on the curve constant and whether the constant should be cleaned or reused.
+        coordinates. It also handles optional checks on the curve constant and whether the constant
+        should be cleaned or reused.
+
+        The formulas we use do not handle the point at infinity, so this script should only be used when we
+        are sure that on the stack the point is not the point at infinity.
 
         Stack input:
             - stack    = [.., q, .., P, ..]
@@ -284,7 +297,7 @@ class EllipticCurveFqProjective:
         # Bring P on top of the stack, so we can assume the stack is [x1, y1, z1]
         out += move(P, bool_to_moving_function(rolling_option))
 
-        if self.CURVE_A:
+        if self.CURVE_A != 0:
             # stack in:  [x1, y1, z1]
             # stack out: [x1, y1, (z1^2 * a), s := (y1 * z1)]
             out += pick(position=1, n_elements=2)  # Duplicate y1, z1
@@ -356,14 +369,12 @@ class EllipticCurveFqProjective:
             out += mod(stack_preparation="", is_positive=positive_modulo)
             out += mod(is_positive=positive_modulo)
             out += mod(
-                stack_preparation="OP_FROMALTSTACK OP_NEGATE OP_ROT" if P.negate else "OP_FROMALTSTACK OP_ROT",
+                stack_preparation=f"OP_FROMALTSTACK {"OP_NEGATE" if P.negate else ""} OP_ROT",
                 is_positive=positive_modulo,
                 is_constant_reused=False,
             )
         else:
-            out += Script.parse_string(
-                "OP_FROMALTSTACK OP_FROMALTSTACK OP_NEGATE" if P.negate else "OP_FROMALTSTACK OP_FROMALTSTACK"
-            )
+            out += Script.parse_string(f"OP_FROMALTSTACK {"OP_NEGATE" if P.negate else ""} OP_ROT")
 
         return out
 
@@ -441,10 +452,10 @@ class EllipticCurveFqProjective:
 
         # Check if a == 0
         # stack in:  [marker_a_is_zero, P, aP]
-        # stack out: [P, 0x00, 0x01, 0x00 if a == 0, else P aP]
+        # stack out: [P, 0x00, 0x00, 0x00 if a == 0, else P aP]
         out += roll(position=6, n_elements=1)
         out += Script.parse_string("OP_IF")
-        out += Script.parse_string("OP_DROP OP_2DROP 0x00 0x01 0x00")
+        out += Script.parse_string("OP_DROP OP_2DROP 0x00 0x00 0x00")
         out += Script.parse_string("OP_ENDIF")
 
         if clean_constant:
@@ -562,7 +573,7 @@ class EllipticCurveFqProjective:
             - P and Q are points on E(F_q) in projective coordinates.
 
         Notes:
-            If P = -Q, then we return 0x00 0x01 0x00
+            If P = -Q, then we return 0x00 0x00 0x00
             The order is important, as we carrying out computations in the projective space. The result is Q + P,
             not P + Q (the classes of the points are equivalent, but they are not equal on the nose).
         """
@@ -572,28 +583,41 @@ class EllipticCurveFqProjective:
         # stack in: [q, .., P, Q]
         # stack out: [q, .., P, Q] or move to OP_ELSE branch
         out += pick(position=2, n_elements=3)
-        out += Script.parse_string("OP_CAT OP_CAT 0x000100 OP_EQUAL OP_NOT")
+        out += Script.parse_string("OP_CAT OP_CAT 0x000000 OP_EQUAL OP_NOT")
         out += Script.parse_string("OP_IF")
 
         # Check if P is the point at infinity
         # stack in: [q, .., P, Q]
         # stack out: [q, .., Q, P] or move to OP_ELSE branch
         out += roll(position=5, n_elements=3) + pick(position=2, n_elements=3)
-        out += Script.parse_string("OP_CAT OP_CAT 0x000100 OP_EQUAL OP_NOT")
+        out += Script.parse_string("OP_CAT OP_CAT 0x000000 OP_EQUAL OP_NOT")
         out += Script.parse_string("OP_IF")
 
-        # Check if P = - Q
+        # Check if P = - Q: (xP * zQ == xQ * zP) and (yP * zQ + yQ * zP == 0)
         # stack in: [q, .., Q, P]
         # stack out: [Q, .., Q, P] or move to OP_ELSE branch
-        out += pick(position=1, n_elements=1) + pick(position=5, n_elements=1)
-        out += Script.parse_string("OP_ADD")
+        out += pick(position=2, n_elements=3)  # Duplicate P
+        out += Script.parse_string("OP_TUCK")  # Duplicate zP
+        out += pick(position=8, n_elements=2)  # Duplicate yQ zQ
+        out += Script.parse_string(
+            "OP_DUP OP_TOALTSTACK OP_TOALTSTACK OP_MUL OP_SWAP OP_FROMALTSTACK OP_MUL OP_ADD"
+        )  # Compute yP * zQ + yQ * zP
         out += is_mod_equal_to(
             clean_constant=False,
             target=0,
             is_verify=False,
             rolling_option=True,
         )
-        out += Script.parse_string("OP_NOT OP_IF")
+        out += Script.parse_string("OP_FROMALTSTACK OP_2SWAP")
+        out += pick(position=9, n_elements=1)  # Duplicate xQ
+        out += Script.parse_string("OP_MUL OP_ROT OP_ROT OP_MUL OP_SUB")
+        out += is_mod_equal_to(
+            clean_constant=False,
+            target=0,
+            is_verify=False,
+            rolling_option=True,
+        )
+        out += Script.parse_string("OP_BOOLAND OP_NOT OP_IF")
 
         # Compute Q + P
         # stack in: [q, .., Q, P]
@@ -609,7 +633,7 @@ class EllipticCurveFqProjective:
         # Come here if P = - Q
         # stack in: [q, .., Q, P]
         # stack out: [q, .., 0x00, 0x01, 0x00]
-        out += Script.parse_string("OP_ELSE OP_2DROP OP_2DROP OP_2DROP 0x00 0x01 0x00 OP_ENDIF")
+        out += Script.parse_string("OP_ELSE OP_2DROP OP_2DROP OP_2DROP 0x00 0x00 0x00 OP_ENDIF")
 
         # Come here if P is the point at infinity
         # stack in: [q, .., Q, P]
@@ -684,7 +708,7 @@ class EllipticCurveFqProjective:
 
         if take_modulo:
             # Check if the output is the point at infinity, in that case do nothing
-            out += Script.parse_string("OP_3DUP OP_CAT OP_CAT 0x000100 OP_EQUAL OP_NOT OP_IF")
+            out += Script.parse_string("OP_3DUP OP_CAT OP_CAT 0x000000 OP_EQUAL OP_NOT OP_IF")
             out += Script.parse_string("OP_TOALTSTACK OP_TOALTSTACK")
             out += pick(position=-1, n_elements=1)
             out += mod(stack_preparation="", is_positive=positive_modulo)

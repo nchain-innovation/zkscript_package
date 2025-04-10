@@ -10,7 +10,7 @@ def add(lhs: list[PrimeField], rhs: list[PrimeField], field: PrimeField) -> list
         return lhs
     if lhs == [field.zero(), field.identity(), field.zero()]:
         return rhs
-    if lhs[1] == -rhs[1]:
+    if (lhs[0] * rhs[2] == rhs[0] * lhs[2]) and (lhs[1] * rhs[2] + lhs[2] * rhs[1] == field.zero()):
         return [field.zero(), field.identity(), field.zero()]
     # lhs = [x, y, z]
     u = lhs[2] * rhs[1] - lhs[1] * rhs[2]  # y2 * z1 - y1 * z2

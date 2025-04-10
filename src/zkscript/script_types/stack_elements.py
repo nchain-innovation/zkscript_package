@@ -164,7 +164,7 @@ class StackEllipticCurvePoint:
         different_lengths = False
 
         overlaps, msg = x.overlaps_on_the_right(y)  # Note: if overlaps = False, then x.is_before(y) = True
-        msg = "\n" * overlaps + msg  # Nice alignment
+        msg = "\n" + msg if overlaps else ""  # Nice alignment
         if x.extension_degree != y.extension_degree:
             msg += "\nThe extension degrees of the x and y coordinates do not match: "
             msg += f"x.extension_degree: {x.extension_degree}, y.extension_degree: {y.extension_degree}"
@@ -241,28 +241,29 @@ class StackEllipticCurvePointProjective:
         """
         different_lengths = False
 
+        error_msg = ""
         overlaps_x_y, msg = x.overlaps_on_the_right(y)  # Note: if overlaps = False, then x.is_before(y) = True
-        msg = "\n" * overlaps_x_y + msg  # Nice alignment
+        error_msg += "\n" + msg if overlaps_x_y else ""  # Nice alignment
         overlaps_x_z, msg = x.overlaps_on_the_right(z)  # Note: if overlaps = False, then x.is_before(z) = True
-        msg = "\n" * overlaps_x_z + msg  # Nice alignment
+        error_msg += "\n" + msg if overlaps_x_z else ""  # Nice alignment
         overlaps_y_z, msg = y.overlaps_on_the_right(z)  # Note: if overlaps = False, then y.is_before(z) = True
-        msg = "\n" * overlaps_y_z + msg  # Nice alignment
-        overlaps = overlaps_x_y | overlaps_x_z | overlaps_y_z
+        error_msg += "\n" + msg if overlaps_y_z else ""  # Nice alignment
+        overlaps = overlaps_x_y or overlaps_x_z or overlaps_y_z
         if x.extension_degree != y.extension_degree:
-            msg += "\nThe extension degrees of the x and y coordinates do not match: "
-            msg += f"x.extension_degree: {x.extension_degree}, y.extension_degree: {y.extension_degree}"
+            error_msg += "\nThe extension degrees of the x and y coordinates do not match: "
+            error_msg += f"x.extension_degree: {x.extension_degree}, y.extension_degree: {y.extension_degree}"
             different_lengths = True
         elif x.extension_degree != z.extension_degree:
-            msg += "\nThe extension degrees of the x and z coordinates do not match: "
-            msg += f"x.extension_degree: {x.extension_degree}, y.extension_degree: {z.extension_degree}"
+            error_msg += "\nThe extension degrees of the x and z coordinates do not match: "
+            error_msg += f"x.extension_degree: {x.extension_degree}, y.extension_degree: {z.extension_degree}"
             different_lengths = True
         elif y.extension_degree != z.extension_degree:
-            msg += "\nThe extension degrees of the y and z coordinates do not match: "
-            msg += f"y.extension_degree: {y}.extension_degree, y.extension_degree: {z.extension_degree}"
+            error_msg += "\nThe extension degrees of the y and z coordinates do not match: "
+            error_msg += f"y.extension_degree: {y}.extension_degree, y.extension_degree: {z.extension_degree}"
             different_lengths = True
         if overlaps or different_lengths:
-            msg = f"Defining StackEllipticCurvePoint with \n x: {x}, \n y: {y}, \n z: {z}\nErrors:{msg}"
-            raise ValueError(msg)
+            error_msg = f"Defining StackEllipticCurvePoint with \n x: {x}, \n y: {y}, \n z: {z}\nErrors:{error_msg}"
+            raise ValueError(error_msg)
 
         self.x = x
         self.y = y
