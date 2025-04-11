@@ -11,8 +11,8 @@ from tx_engine import Context
 
 from src.zkscript.groth16.bls12_381.bls12_381 import bls12_381
 from src.zkscript.groth16.mnt4_753.mnt4_753 import mnt4_753
-from src.zkscript.types.locking_keys.groth16 import Groth16LockingKey, Groth16LockingKeyWithPrecomputedMsm
-from src.zkscript.types.unlocking_keys.groth16 import Groth16UnlockingKey, Groth16UnlockingKeyWithPrecomputedMsm
+from src.zkscript.script_types.locking_keys.groth16 import Groth16LockingKey, Groth16LockingKeyWithPrecomputedMsm
+from src.zkscript.script_types.unlocking_keys.groth16 import Groth16UnlockingKey, Groth16UnlockingKeyWithPrecomputedMsm
 
 
 @dataclass
@@ -488,7 +488,7 @@ def test_groth16_with_precomputed_msm(
 @pytest.mark.parametrize(
     ("alpha_beta", "prepared_vk", "prepared_proof", "test_script", "filename", "max_multipliers", "is_minimal_example"),
     [
-        # *generate_test_cases(test_num=1, is_minimal_example=False, rnd_seed=42),
+        *generate_test_cases(test_num=1, is_minimal_example=False, rnd_seed=42),
         *generate_test_cases(test_num=1, is_minimal_example=True, rnd_seed=42),
     ],
 )

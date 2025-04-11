@@ -6,7 +6,7 @@ from typing import Self
 from tx_engine import Script
 
 from src.zkscript.elliptic_curves.ec_operations_fq import EllipticCurveFq
-from src.zkscript.types.unlocking_keys.unrolled_ec_multiplication import EllipticCurveFqUnrolledUnlockingKey
+from src.zkscript.script_types.unlocking_keys.unrolled_ec_multiplication import EllipticCurveFqUnrolledUnlockingKey
 from src.zkscript.util.utility_scripts import nums_to_script
 
 
@@ -53,7 +53,7 @@ class MsmWithFixedBasesUnlockingKey:
         )
 
     def to_unlocking_script(self, ec_over_fq: EllipticCurveFq, load_modulus=True) -> Script:
-        """Return the unlocking script required by multi_scalar_multiplication_with_fixed_bases script.
+        """Return the unlocking script required by msm_with_fixed_bases script.
 
         Args:
             ec_over_fq (EllipticCurveFq): The instantiation of ec arithmetic over Fq used to

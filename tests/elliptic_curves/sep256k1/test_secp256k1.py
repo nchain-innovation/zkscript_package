@@ -4,8 +4,8 @@ from elliptic_curves.models.ec import ShortWeierstrassEllipticCurve
 from tx_engine import Context, Script, hash256d
 
 from src.zkscript.elliptic_curves.secp256k1.secp256k1 import Secp256k1
-from src.zkscript.types.stack_elements import StackBaseElement, StackEllipticCurvePoint, StackFiniteFieldElement
-from src.zkscript.types.unlocking_keys.secp256k1 import (
+from src.zkscript.script_types.stack_elements import StackBaseElement, StackEllipticCurvePoint, StackFiniteFieldElement
+from src.zkscript.script_types.unlocking_keys.secp256k1 import (
     Secp256k1BasePointMultiplicationUnlockingKey,
     Secp256k1PointMultiplicationUnlockingKey,
     Secp256k1PointMultiplicationUpToSignUnlockingKey,

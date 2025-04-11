@@ -2,7 +2,7 @@
 
 from tx_engine import Script
 
-from src.zkscript.types.stack_elements import (
+from src.zkscript.script_types.stack_elements import (
     StackEllipticCurvePoint,
     StackFiniteFieldElement,
     StackNumber,

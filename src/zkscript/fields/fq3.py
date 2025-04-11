@@ -4,7 +4,7 @@ from tx_engine import Script
 
 from src.zkscript.fields.fq import Fq
 from src.zkscript.fields.prime_field_extension import PrimeFieldExtension
-from src.zkscript.types.stack_elements import StackFiniteFieldElement
+from src.zkscript.script_types.stack_elements import StackFiniteFieldElement
 from src.zkscript.util.utility_scripts import (
     bitmask_to_boolean_list,
     bool_to_moving_function,

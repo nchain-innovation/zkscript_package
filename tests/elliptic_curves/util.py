@@ -5,7 +5,7 @@ from typing import Union
 
 from tx_engine import Script
 
-from src.zkscript.types.stack_elements import StackEllipticCurvePoint, StackFiniteFieldElement
+from src.zkscript.script_types.stack_elements import StackEllipticCurvePoint, StackFiniteFieldElement
 from src.zkscript.util.utility_functions import boolean_list_to_bitmask
 from src.zkscript.util.utility_scripts import nums_to_script
 

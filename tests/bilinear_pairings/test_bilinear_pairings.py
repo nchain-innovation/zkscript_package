@@ -35,11 +35,11 @@ from src.zkscript.bilinear_pairings.mnt4_753.miller_output_operations import (
     miller_output_ops as miller_output_ops_mnt4_753,
 )
 from src.zkscript.bilinear_pairings.mnt4_753.mnt4_753 import mnt4_753
-from src.zkscript.types.unlocking_keys.miller_loops import (
+from src.zkscript.script_types.unlocking_keys.miller_loops import (
     MillerLoopUnlockingKey,
     TripleMillerLoopUnlockingKey,
 )
-from src.zkscript.types.unlocking_keys.pairings import (
+from src.zkscript.script_types.unlocking_keys.pairings import (
     SinglePairingUnlockingKey,
     TriplePairingUnlockingKey,
 )

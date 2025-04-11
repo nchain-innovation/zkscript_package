@@ -14,9 +14,9 @@ from tx_engine import Context, Script
 from src.zkscript.elliptic_curves.ec_operations_fq import EllipticCurveFq
 from src.zkscript.elliptic_curves.ec_operations_fq2 import EllipticCurveFq2
 from src.zkscript.fields.fq2 import Fq2 as Fq2Script
-from src.zkscript.types.stack_elements import StackEllipticCurvePoint, StackFiniteFieldElement
-from src.zkscript.types.unlocking_keys.msm_with_fixed_bases import MsmWithFixedBasesUnlockingKey
-from src.zkscript.types.unlocking_keys.unrolled_ec_multiplication import EllipticCurveFqUnrolledUnlockingKey
+from src.zkscript.script_types.stack_elements import StackEllipticCurvePoint, StackFiniteFieldElement
+from src.zkscript.script_types.unlocking_keys.msm_with_fixed_bases import MsmWithFixedBasesUnlockingKey
+from src.zkscript.script_types.unlocking_keys.unrolled_ec_multiplication import EllipticCurveFqUnrolledUnlockingKey
 from src.zkscript.util.utility_scripts import nums_to_script
 from tests.elliptic_curves.util import (
     generate_test,
@@ -284,7 +284,7 @@ class Secp256r1:
         "test_addition_slow": generate_test_data(modulus, P, Q, positions_addition),
         "test_doubling_slow": generate_test_data(modulus, P, P, positions_doubling),
         "test_addition_unknown_points": [
-            # {"P": P, "Q": Q, "expected": P + Q},
+            {"P": P, "Q": Q, "expected": P + Q},
             {"P": P, "Q": -P, "expected": point_at_infinity},
             {"P": P, "Q": point_at_infinity, "expected": P},
             {"P": point_at_infinity, "Q": Q, "expected": Q},

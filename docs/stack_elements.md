@@ -1,6 +1,6 @@
 #  Stack Elements
 
-To standardise the arguments supplied to the functions generating the scripts, we have defined three classes (see [stack_elements.py](../src/zkscript/types/stack_elements.py)):
+To standardise the arguments supplied to the functions generating the scripts, we have defined three classes (see [stack_elements.py](../src/zkscript/script_types/stack_elements.py)):
 - `StackBaseElement`: a class representing an element on the stack. It has the following attributes:
     - `position`: the position of the element in the stack
 - `StackNumber`: a class representing an integer on the stack. It has the following attributes:
@@ -12,6 +12,12 @@ To standardise the arguments supplied to the functions generating the scripts, w
 - `StackEllipticCurvePoint`: a class representing an elliptic curve point on the stack. It has two attributes:
     - `x`: a `StackFiniteFieldElement` representing the x-coordinate of the point
     - `y`: a `StackFiniteFieldElement` representing the y-coordinate of the point
+    - `position`: the position of the point in the stack (equal to `x.position`)
+    - `negate`: whether the point should be negated when used in a script (equal to `y.negate`)
+- `StackEllipticCurvePointProjective`: a class representing an elliptic curve point on the stack. It has two attributes:
+    - `x`: a `StackFiniteFieldElement` representing the x-coordinate of the point
+    - `y`: a `StackFiniteFieldElement` representing the y-coordinate of the point
+    - `z`: a `StackFiniteFieldElement` representing the y-coordinate of the point
     - `position`: the position of the point in the stack (equal to `x.position`)
     - `negate`: whether the point should be negated when used in a script (equal to `y.negate`)
 
@@ -84,4 +90,19 @@ StackEllipticCurvePoint(
 Represents an elliptic curve point $P = (x,y)$, where $x, y \in \mathbb{F}_q$, that should not be negated when used in a script, and that is positioned as follows:
 ```
 [.., x, y, a, b]
+```
+
+## Examples: StackEllipticCurvePointProjective
+
+```
+StackEllipticCurvePointProjective(
+    StackFiniteFieldElement(position=3,negate=False,extension_degree=1)
+    StackFiniteFieldElement(position=2,negate=False,extension_degree=1)
+    StackFiniteFieldElement(position=1,negate=False,extension_degree=1)
+)
+```
+
+Represents an elliptic curve point $P = (x,y,z)$, where $x, y \in \mathbb{F}_q$, that should not be negated when used in a script, and that is positioned as follows:
+```
+[.., x, y, z, a]
 ```

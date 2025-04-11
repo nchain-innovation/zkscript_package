@@ -121,7 +121,7 @@ class StackFiniteFieldElement(StackNumber):
             msg = "Self and other overlap: "
             msg += f"self.position: {self.position}, self.extension_degree: {self.extension_degree}, other.position: {
                 other.position
-                }"
+            }"
             return True, msg
         return False, ""
 
@@ -164,7 +164,7 @@ class StackEllipticCurvePoint:
         different_lengths = False
 
         overlaps, msg = x.overlaps_on_the_right(y)  # Note: if overlaps = False, then x.is_before(y) = True
-        msg = "\n" * overlaps + msg  # Nice alignment
+        msg = "\n" + msg if overlaps else ""  # Nice alignment
         if x.extension_degree != y.extension_degree:
             msg += "\nThe extension degrees of the x and y coordinates do not match: "
             msg += f"x.extension_degree: {x.extension_degree}, y.extension_degree: {y.extension_degree}"
@@ -209,4 +209,99 @@ class StackEllipticCurvePoint:
         return out
 
 
-type StackElements = Union[StackBaseElement, StackNumber, StackFiniteFieldElement, StackEllipticCurvePoint]
+@dataclass(init=False)
+class StackEllipticCurvePointProjective:
+    """Elliptic curve point on the stack comprising three finite field elements.
+
+    StackEllipticCurvePointProjective represent an elliptic curve point in projective coordinates.
+
+    Attributes:
+        x (StackFiniteFieldElement): the x coordinate of the point.
+        y (StackFiniteFieldElement): the y coordinate of the point.
+        z (StackFiniteFieldElement): the y coordinate of the point.
+        position (int): the position of the point in the stack (equal to x.position).
+        negate (bool): whether the point should be negated when used in a script (equal to y.negate).
+    """
+
+    x: StackFiniteFieldElement
+    y: StackFiniteFieldElement
+    z: StackFiniteFieldElement
+    position: int
+    negate: bool
+
+    def __init__(self, x: StackFiniteFieldElement, y: StackFiniteFieldElement, z: StackFiniteFieldElement):
+        """Initialise StackEllipticCurvePointProjective.
+
+        When used in an operation, the point is negated according to the truth value of `y.negate`.
+
+        Args:
+            x (StackFiniteFieldElement): the x coordinate of the point.
+            y (StackFiniteFieldElement): the y coordinate of the point.
+            z (StackFiniteFieldElement): the y coordinate of the point.
+        """
+        different_lengths = False
+
+        error_msg = ""
+        overlaps_x_y, msg = x.overlaps_on_the_right(y)  # Note: if overlaps = False, then x.is_before(y) = True
+        error_msg += "\n" + msg if overlaps_x_y else ""  # Nice alignment
+        overlaps_x_z, msg = x.overlaps_on_the_right(z)  # Note: if overlaps = False, then x.is_before(z) = True
+        error_msg += "\n" + msg if overlaps_x_z else ""  # Nice alignment
+        overlaps_y_z, msg = y.overlaps_on_the_right(z)  # Note: if overlaps = False, then y.is_before(z) = True
+        error_msg += "\n" + msg if overlaps_y_z else ""  # Nice alignment
+        overlaps = overlaps_x_y or overlaps_x_z or overlaps_y_z
+        if x.extension_degree != y.extension_degree:
+            error_msg += "\nThe extension degrees of the x and y coordinates do not match: "
+            error_msg += f"x.extension_degree: {x.extension_degree}, y.extension_degree: {y.extension_degree}"
+            different_lengths = True
+        elif x.extension_degree != z.extension_degree:
+            error_msg += "\nThe extension degrees of the x and z coordinates do not match: "
+            error_msg += f"x.extension_degree: {x.extension_degree}, y.extension_degree: {z.extension_degree}"
+            different_lengths = True
+        elif y.extension_degree != z.extension_degree:
+            error_msg += "\nThe extension degrees of the y and z coordinates do not match: "
+            error_msg += f"y.extension_degree: {y}.extension_degree, y.extension_degree: {z.extension_degree}"
+            different_lengths = True
+        if overlaps or different_lengths:
+            error_msg = f"Defining StackEllipticCurvePoint with \n x: {x}, \n y: {y}, \n z: {z}\nErrors:{error_msg}"
+            raise ValueError(error_msg)
+
+        self.x = x
+        self.y = y
+        self.z = z
+        self.position = self.x.position
+        self.negate = y.negate
+
+    def overlaps_on_the_right(self, other) -> tuple[bool, str]:
+        """Check whether the end of self overlaps with the beginning of other.
+
+        The method checks whether all the elements: (self[0], .., self[self.length-1]) are before the elements
+        (other[0], .., other[other.length-1]) in the stack. If other is StackEllipticCurvePoint, then the function
+        substitutes other with other.x.
+        """
+        return self.z.overlaps_on_the_right(other)
+
+    def is_before(self, other) -> bool:
+        """Check whether self comes before other in the stack.
+
+        The method checks whether all the elements: (self.y[0], .., self.y[self.length-1]) are before the elements
+        (other[0], .., other[other.length-1]) in the stack. If other is StackEllipticCurvePoint, then the function
+        substitutes other with other.x.
+        """
+        return self.z.is_before(other)
+
+    def shift(self, n: int) -> Self:
+        """Return a copy of self shifted by n in the stack."""
+        return StackEllipticCurvePointProjective(self.x.shift(n), self.y.shift(n), self.z.shift(n))
+
+    def set_negate(self, negate: bool) -> Self:
+        """Return a copy of `self` with `self.negate = negate`."""
+        out = deepcopy(self)
+        # We must change both out.y.negate and out.negate to be consistent with __init__
+        out.y.negate = negate
+        out.negate = negate
+        return out
+
+
+type StackElements = Union[
+    StackBaseElement, StackNumber, StackFiniteFieldElement, StackEllipticCurvePoint, StackEllipticCurvePointProjective
+]

@@ -4,7 +4,7 @@ from math import ceil, log2
 
 from tx_engine import Script
 
-from src.zkscript.types.stack_elements import StackEllipticCurvePoint, StackFiniteFieldElement, StackNumber
+from src.zkscript.script_types.stack_elements import StackEllipticCurvePoint, StackFiniteFieldElement, StackNumber
 from src.zkscript.util.utility_functions import bitmask_to_boolean_list, boolean_list_to_bitmask, check_order
 from src.zkscript.util.utility_scripts import (
     bool_to_moving_function,
@@ -21,9 +21,14 @@ from src.zkscript.util.utility_scripts import (
 class EllipticCurveFq:
     """Construct Bitcoin scripts that perform arithmetic operations over the elliptic curve E(F_q).
 
+    Arithmetic is performed in affine coordinates. Points are represented on the stack as a list of two
+    numbers: P := [x, y], except for the point at infinity, which is encoded as [0x00, 0x00]. Note that
+    the points are 0x00, not OP_0.
+
     Attributes:
         MODULUS: The characteristic of the field F_q.
         CURVE_A: The `a` coefficient in the Short-Weierstrass equation of the curve (an element in F_q).
+        CURVE_B: The `b` coefficient in the Short-Weierstrass equation of the curve (an element in F_q).
     """
 
     def __init__(self, q: int, curve_a: int, curve_b: int):
@@ -223,7 +228,6 @@ class EllipticCurveFq:
                 - `clean_constant` or `check_constant` are not provided when required.
                 - `gradient` comes after `P` in the stack
                 - `P` comes after `Q` in the stack
-                - `stack_elements` is not None, but it does not contain all the keys `gradient`, `P`, `Q`
 
         Preconditions:
             - The input points `P` and `Q` must be on the elliptic curve.
@@ -827,7 +831,7 @@ class EllipticCurveFq:
             A Bitcoin script that compute the sum of `P` and `Q`, handling all possibilities.
 
         Preconditions:
-            - P and Q are points on F_q
+            - P and Q are points on E(F_q)
             - If P != -Q, then gradient is the gradient of the line through P and Q
             - If P = -Q or P is the point at infinity, or Q is the point at infinity, then do not put gradient
 
@@ -1092,8 +1096,7 @@ class EllipticCurveFq:
 
         # stack in:  [marker_a_is_zero, [lambdas,a], P]
         # stack out: [marker_a_is_zero, [lambdas,a], P, T]
-        set_T = Script.parse_string("OP_2DUP")
-        out += set_T
+        out += Script.parse_string("OP_2DUP")
 
         size_q = ceil(log2(self.MODULUS))
         current_size = size_q
@@ -1129,6 +1132,7 @@ class EllipticCurveFq:
                 check_constant=False,
                 clean_constant=False,
                 verify_gradient=True,
+                positive_modulo=positive_modulo_i,
                 gradient=StackFiniteFieldElement(4, False, 1),
                 P=StackEllipticCurvePoint(
                     StackFiniteFieldElement(1, False, 1),
@@ -1195,7 +1199,6 @@ class EllipticCurveFq:
             ((a_1, .., a_n), (P_1, .., P_n)) --> \sum_(i=1)^n a_i P_i
         where the a_i's are the scalars, and the P_i's are the bases. The script hard-codes the bases.
 
-
         Stack in:
             - stack:    [gradient[a_1 * P_1, \sum_(i=2)^(n) a_i * P_i], .., gradient[a_n * P_n, a_(n-1) * P_(n-1)],
                             a_n, gradients[a_n, P_n], .., a_2, gradients[a_2, P_2], a_1, gradients[a_1, P_1]]
@@ -1212,7 +1215,7 @@ class EllipticCurveFq:
         Args:
             bases (list[list[int]]): The bases of the multi scalar multiplication, passed as a list of coordinates.
                 `bases[i]` is `bases[i] = [x, y]` the list of the coordinates of P_i.
-            max_multipliers (list[int]): `max_mupliers[i]` is the maximum value allowed for `a_i`.
+            max_multipliers (list[int]): `max_multipliers[i]` is the maximum value allowed for `a_i`.
             modulo_threshold (int): Bit-length threshold. Values whose bit-length exceeds it are reduced modulo `q`.
             take_modulo (bool): If `True`, the result is reduced modulo `q`.
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.

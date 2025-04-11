@@ -2,7 +2,7 @@ import pytest
 from tx_engine import Context, Script, encode_num
 from tx_engine.engine.util import GROUP_ORDER_INT
 
-from src.zkscript.types.stack_elements import StackBaseElement, StackFiniteFieldElement, StackNumber
+from src.zkscript.script_types.stack_elements import StackBaseElement, StackFiniteFieldElement, StackNumber
 from src.zkscript.util.utility_scripts import (
     bytes_to_unsigned,
     enforce_mul_equal,
@@ -37,7 +37,9 @@ def generate_verify(z) -> Script:
         (2, 1, list(range(10)), [0, 1, 2, 3, 4, 5, 6, 8, 9, 7]),
         (2, 2, list(range(10)), [0, 1, 2, 3, 4, 5, 6, 9, 7, 8]),
         (3, 2, list(range(10)), [0, 1, 2, 3, 4, 5, 8, 9, 6, 7]),
+        (3, 3, list(range(10)), [0, 1, 2, 3, 4, 5, 9, 6, 7, 8]),
         (5, 2, list(range(10)), [0, 1, 2, 3, 6, 7, 8, 9, 4, 5]),
+        (5, 3, list(range(10)), [0, 1, 2, 3, 7, 8, 9, 4, 5, 6]),
         (5, 4, list(range(10)), [0, 1, 2, 3, 8, 9, 4, 5, 6, 7]),
         (
             10,

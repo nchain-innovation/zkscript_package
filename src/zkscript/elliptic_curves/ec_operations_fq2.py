@@ -2,7 +2,7 @@
 
 from tx_engine import Script
 
-from src.zkscript.types.stack_elements import StackEllipticCurvePoint, StackFiniteFieldElement
+from src.zkscript.script_types.stack_elements import StackEllipticCurvePoint, StackFiniteFieldElement
 from src.zkscript.util.utility_functions import bitmask_to_boolean_list, check_order
 from src.zkscript.util.utility_scripts import (
     bool_to_moving_function,

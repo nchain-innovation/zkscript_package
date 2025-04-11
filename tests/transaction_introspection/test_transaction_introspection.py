@@ -4,9 +4,12 @@ from pathlib import Path
 import pytest
 from tx_engine import SIGHASH, Context, Tx, TxIn, hash256d, sig_hash_preimage
 
+from src.zkscript.script_types.stack_elements import StackBaseElement
+from src.zkscript.script_types.unlocking_keys.transaction_introspection import (
+    PushTxBitShiftUnlockingKey,
+    PushTxUnlockingKey,
+)
 from src.zkscript.transaction_introspection.transaction_introspection import TransactionIntrospection
-from src.zkscript.types.stack_elements import StackBaseElement
-from src.zkscript.types.unlocking_keys.transaction_introspection import PushTxBitShiftUnlockingKey, PushTxUnlockingKey
 
 prev_txid = int.to_bytes(34060536512648028283387372577505466741680559421950955299118826044926210663733, length=32).hex()
 prev_amount = 100

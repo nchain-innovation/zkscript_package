@@ -7,7 +7,7 @@ from tx_engine import Script
 
 from src.zkscript.elliptic_curves.ec_operations_fq import EllipticCurveFq
 from src.zkscript.groth16.model.groth16 import Groth16
-from src.zkscript.types.unlocking_keys.msm_with_fixed_bases import MsmWithFixedBasesUnlockingKey
+from src.zkscript.script_types.unlocking_keys.msm_with_fixed_bases import MsmWithFixedBasesUnlockingKey
 from src.zkscript.util.utility_scripts import nums_to_script
 
 

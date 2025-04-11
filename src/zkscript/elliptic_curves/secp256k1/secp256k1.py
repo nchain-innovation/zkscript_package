@@ -8,13 +8,13 @@ from src.zkscript.elliptic_curves.secp256k1.util import (
     stack_elliptic_curve_point_to_compressed_pubkey,
     x_coordinate_to_r_component,
 )
-from src.zkscript.transaction_introspection.transaction_introspection import TransactionIntrospection
-from src.zkscript.types.stack_elements import (
+from src.zkscript.script_types.stack_elements import (
     StackBaseElement,
     StackEllipticCurvePoint,
     StackFiniteFieldElement,
     StackNumber,
 )
+from src.zkscript.transaction_introspection.transaction_introspection import TransactionIntrospection
 from src.zkscript.util.utility_functions import (
     bitmask_to_boolean_list,
     boolean_list_to_bitmask,

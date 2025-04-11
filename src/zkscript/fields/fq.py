@@ -2,7 +2,7 @@
 
 from tx_engine import Script
 
-from src.zkscript.types.stack_elements import StackFiniteFieldElement
+from src.zkscript.script_types.stack_elements import StackFiniteFieldElement
 from src.zkscript.util.utility_functions import check_order
 from src.zkscript.util.utility_scripts import (
     bitmask_to_boolean_list,

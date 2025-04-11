@@ -10,8 +10,8 @@ from tx_engine import SIGHASH, Script, Tx, TxOut, Wallet
 from tx_engine.interface.blockchain_interface import BlockchainInterface
 
 from src.zkscript.groth16.mnt4_753.mnt4_753 import mnt4_753 as mnt4_753_script
-from src.zkscript.types.locking_keys.groth16 import Groth16LockingKeyWithPrecomputedMsm
-from src.zkscript.types.unlocking_keys.groth16 import Groth16UnlockingKeyWithPrecomputedMsm
+from src.zkscript.script_types.locking_keys.groth16 import Groth16LockingKeyWithPrecomputedMsm
+from src.zkscript.script_types.unlocking_keys.groth16 import Groth16UnlockingKeyWithPrecomputedMsm
 from src.zkscript.util.utility_scripts import nums_to_script
 from token_examples.tx_engine_utils import (
     p2pk,
