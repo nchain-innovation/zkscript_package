@@ -202,10 +202,7 @@ class Fq12Cubic(PrimeFieldExtension):
         # After this, the stack is: x0 x1 x2 (2*x2*x0)
         compute_third_component = Script.parse_string("OP_2OVER OP_2OVER")  # Pick x2
         compute_third_component += pick(position=15, n_elements=4)  # Pick x0
-        compute_third_component += fq4.mul(take_modulo=False, check_constant=False, clean_constant=False)
-        compute_third_component += Script.parse_string("OP_2") + fq4.base_field_scalar_mul(
-            take_modulo=False, check_constant=False, clean_constant=False
-        )
+        compute_third_component += fq4.mul(take_modulo=False, check_constant=False, clean_constant=False, scalar=2)
         # After this, the stack is: x0 x1 x2, altstack = [2*x2*x0 + x1^2]
         compute_third_component += pick(position=11, n_elements=4)  # Pick x1
         compute_third_component += fq4.square(take_modulo=False, check_constant=False, clean_constant=False)

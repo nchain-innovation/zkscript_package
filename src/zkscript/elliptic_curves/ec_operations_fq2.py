@@ -647,10 +647,9 @@ class EllipticCurveFq2:
         verify_gradient += pick(position=3, n_elements=4)  # Duplicate gradient and xP
         # stack in:  [q, .., gradient, .., P, .., gradient, yP, gradient, yP]
         # stack out: [q, .., gradient, .., P, .., gradient, yP, (2*gradient*yP_)]
-        verify_gradient += fq2.mul(take_modulo=False, check_constant=False, clean_constant=False)  # Compute lamdba * yP
-        verify_gradient += Script.parse_string("OP_2")
-        verify_gradient += Script.parse_string("OP_NEGATE") if P.negate else Script()
-        verify_gradient += fq2.base_field_scalar_mul(take_modulo=False, check_constant=False, clean_constant=False)
+        verify_gradient += fq2.mul(
+            take_modulo=False, check_constant=False, clean_constant=False, scalar=-2 if P.negate else 2
+        )  # Compute lamdba * yP
         # stack in:  [q, .., gradient, .., P, .., gradient, yP, (2*gradient*yP_)]
         # stack out: [q, .., gradient, .., P, .., gradient, yP, xP, or fail]
         verify_gradient += move(P.x.shift(6 - 2 * is_p_rolled), bool_to_moving_function(is_p_rolled))  # Move xP

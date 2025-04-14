@@ -122,16 +122,17 @@ class Fq4(PrimeFieldExtension):
         check_constant: bool | None = None,
         clean_constant: bool | None = None,
         is_constant_reused: bool | None = None,
+        scalar: int = 1,
     ) -> Script:
         """Multiplication in F_q^4.
 
         Stack input:
-            - stack:    [q, ..., x := (x0, x1, x2, x3), y := (y0, y1, y2, y3)], `x`, `y` are couples of elements of
+            - stack:    [q, ..., x := (x0, x1), y := (y0, y1)], `x`, `y` are couples of elements of
                 F_q^2
             - altstack: []
 
         Stack output:
-            - stack:    [q, ..., x * y]
+            - stack:    [q, ..., scalar * x * y]
             - altstack: []
 
         Args:
@@ -141,6 +142,7 @@ class Fq4(PrimeFieldExtension):
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
                 after execution. Defaults to `None`.
+            scalar (int): The scalar to multiply the result by. Defaults to 1.
 
         Returns:
             Script to multiply two elements in F_q^4.
@@ -150,38 +152,41 @@ class Fq4(PrimeFieldExtension):
 
         out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
-        # After this, the stack is: x0 x1 y0 y1 y0 y1
+        # stack in:     [x0, x1, y0, y1]
+        # stack out:    [x0, x1, y0, y1]
+        # altstack out: [scalar * ((x0*y1) + (x1*y0))]
         out += Script.parse_string("OP_2OVER OP_2OVER")
-        # After this, the stack is: x0 x1 y0 y1 y0 (y1 * x0)
         out += pick(position=11, n_elements=2)  # Pick x0
         out += fq2.mul(take_modulo=False, check_constant=False, clean_constant=False)
-        # After this, the stack is x0 x1 y0 y1, altstack = [(x0*y1) + (x1*y0)]
         out += Script.parse_string("OP_2SWAP")
         out += pick(position=9, n_elements=2)  # Pick x1
         out += fq2.mul(take_modulo=False, check_constant=False, clean_constant=False)
-        out += fq2.add(take_modulo=False, check_constant=False, clean_constant=False)
+        out += fq2.add(take_modulo=False, check_constant=False, clean_constant=False, scalar=scalar)
         out += Script.parse_string("OP_TOALTSTACK OP_TOALTSTACK")
 
-        # After this, the stack is (x0 * y0 + x1 * y1 * NON_RESIDUE), altstack = [(x0*y1) + (x1*y0)]
+        # stack in:     [x0, x1, y0, y1]
+        # altstack in:  [scalar * ((x0*y1) + (x1*y0))]
+        # stack out:    [scalar * (x0 * y0 + x1 * y1 * NON_RESIDUE)]
+        # atlstack out: [(x0*y1) + (x1*y0)]
         out += Script.parse_string("OP_2ROT")
         out += fq2.mul(take_modulo=False, check_constant=False, clean_constant=False)
         out += fq2.mul_by_non_residue(take_modulo=False, check_constant=False, clean_constant=False)
         out += Script.parse_string("OP_2ROT OP_2ROT")
         out += fq2.mul(take_modulo=False, check_constant=False, clean_constant=False)
+        out += fq2.add(
+            take_modulo=take_modulo,
+            positive_modulo=positive_modulo,
+            check_constant=False,
+            clean_constant=clean_constant,
+            is_constant_reused=take_modulo,
+            scalar=scalar,
+        )
 
         if take_modulo:
-            out += fq2.add(
-                take_modulo=True,
-                positive_modulo=positive_modulo,
-                check_constant=False,
-                clean_constant=clean_constant,
-                is_constant_reused=True,
-            )
             # Batched modulo operations: pull from altstack, rotate, mod out, repeat
             out += mod(is_positive=positive_modulo)
             out += mod(is_positive=positive_modulo, is_constant_reused=is_constant_reused)
         else:
-            out += fq2.add(take_modulo=False, check_constant=False, clean_constant=False)
             out += Script.parse_string("OP_FROMALTSTACK OP_FROMALTSTACK")
 
         return out
@@ -193,15 +198,16 @@ class Fq4(PrimeFieldExtension):
         check_constant: bool | None = None,
         clean_constant: bool | None = None,
         is_constant_reused: bool | None = None,
+        scalar: int = 1,
     ) -> Script:
         """Squaring in F_q^4.
 
         Stack input:
-            - stack:    [q, ..., x := (x0, x1, x2, x3)], `x` is a couple of elements of F_q^2
+            - stack:    [q, ..., x := (x0, x1)], `x` is a couple of elements of F_q^2
             - altstack: []
 
         Stack output:
-            - stack:    [q, ..., x^2]
+            - stack:    [q, ..., scalar * x^2]
             - altstack: []
 
         Args:
@@ -211,6 +217,7 @@ class Fq4(PrimeFieldExtension):
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
                 after execution. Defaults to `None`.
+            scalar (int): The scalar to multiply the result by. Defaults to 1.
 
         Returns:
             Script to square an element in F_q^4.
@@ -221,49 +228,48 @@ class Fq4(PrimeFieldExtension):
         out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
 
         if take_modulo:
-            # After this, the stack is: x0 x1, altstack = 2x0*x1
+            # stack in:     [x0, x1]
+            # stack out:    [x0, x1]
+            # altstack out: [2 * scalar * * x0 * x1]
             out += Script.parse_string("OP_2OVER OP_2OVER")
-            out += fq2.mul(take_modulo=False, check_constant=False, clean_constant=False)
-            out += Script.parse_string("OP_2")
-            out += fq2.base_field_scalar_mul(take_modulo=False, check_constant=False, clean_constant=False)
+            out += fq2.mul(take_modulo=False, check_constant=False, clean_constant=False, scalar=2 * scalar)
             out += Script.parse_string("OP_TOALTSTACK OP_TOALTSTACK")
 
-            # After this, the stack is: x1^2 * xi x0^2, altstack = 2x0*x1
+            # stack in:     [x0, x1]
+            # altstack in:  [2 * scalar * * x0 * x1]
+            # stack out:    [scalar * (x0^2 + x1^2 * NON_RESIDUE)]
+            # altstack out: [2 * scalar * * x0 * x1]
             out += fq2.square(take_modulo=False, check_constant=False, clean_constant=False)
             out += fq2.mul_by_non_residue(take_modulo=False, check_constant=False, clean_constant=False)
             out += Script.parse_string("OP_2SWAP")
             out += fq2.square(take_modulo=False, check_constant=False, clean_constant=False)
-            # After this, the stack is: x1^2 * xi + x0^2, altstack = 2x0*x1
             out += fq2.add(
                 take_modulo=True,
                 positive_modulo=positive_modulo,
                 check_constant=False,
                 clean_constant=clean_constant,
                 is_constant_reused=True,
+                scalar=scalar,
             )
             # Batched modulo operations: pull from altstack, rotate, mod out, repeat
             out += mod(is_positive=positive_modulo)
             out += mod(is_positive=positive_modulo, is_constant_reused=is_constant_reused)
         else:
-            # After this, the stack is: x_0 x_1 x_0 (x_1^2 * xi)
-            out += Script.parse_string("OP_2OVER OP_2OVER")  # Prepare top of the stack with  x_1
+            # stack in:  [x0, x1]
+            # stack out: [x0, x1, scalar * (x0^2 + x1^2 * NON_RESIDUE)]
+            out += Script.parse_string("OP_2OVER OP_2OVER")
             out += fq2.square(take_modulo=False, check_constant=False, clean_constant=False)
-            out += fq2.mul_by_non_residue(take_modulo=False, check_constant=False, clean_constant=False)
-
-            # After this, the stack is: x_0 x_1 (x_1^2 * xi) x_0^2
-            out += Script.parse_string("OP_2SWAP")  # Prepare top of the stack with x_0
-            out += fq2.square(take_modulo=False, check_constant=False, clean_constant=False)
-
-            # After this, the stack is: x_0 x_1 [(x_1^2 * xi) + x_0^2]
-            out += fq2.add(take_modulo=False, check_constant=False, clean_constant=False)
-
-            # After this, the stack is: [(x_1^2 * xi) + x_0^2] (2 * x_0 * x_1)
-            out += Script.parse_string("OP_2ROT OP_2ROT")  # Prepare top of the stack with x_0 x_1
-            out += fq2.mul(take_modulo=False, check_constant=False, clean_constant=False)
-            out += Script.parse_string("OP_2")
-            out += fq2.base_field_scalar_mul(
+            out += fq2.mul_by_non_residue(
                 take_modulo=False, check_constant=False, clean_constant=False
-            )  # Top of the stack is now 2 * x_0 * x_1 (not mod by q)
+            )  # Compute x1^2 * NON_RESIDUE
+            out += Script.parse_string("OP_2SWAP")  # Roll x0
+            out += fq2.square(take_modulo=False, check_constant=False, clean_constant=False)  # Compute x0^2
+            out += fq2.add(take_modulo=False, check_constant=False, clean_constant=False, scalar=scalar)
+
+            # stack out: [x0, x1, scalar * (x0^2 + x1^2 * NON_RESIDUE)]
+            # stack out: [scalar * (x0^2 + x1^2 * NON_RESIDUE), 2 * scalar * x0 * x1]
+            out += Script.parse_string("OP_2ROT OP_2ROT")  # Roll x0, x1
+            out += fq2.mul(take_modulo=False, check_constant=False, clean_constant=False, scalar=2 * scalar)
 
         return out
 

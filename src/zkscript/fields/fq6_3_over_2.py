@@ -365,10 +365,7 @@ class Fq6(PrimeFieldExtension):
         # After this, the stack is: x0 2x2 x1 x2^2 2x1*x0
         compute_second_component += Script.parse_string("OP_2ROT OP_2SWAP OP_2OVER")
         compute_second_component += pick(position=9, n_elements=2)  # Pick x0
-        compute_second_component += fq2.mul(take_modulo=False, check_constant=False, clean_constant=False)
-        compute_second_component += Script.parse_string("OP_2") + fq2.base_field_scalar_mul(
-            take_modulo=False, check_constant=False, clean_constant=False
-        )
+        compute_second_component += fq2.mul(take_modulo=False, check_constant=False, clean_constant=False, scalar=2)
         # After this, the stack is: x0 2x2 x1, altstack = [thirdComponent, secondComponent]
         compute_second_component += fq2.add(take_modulo=False, check_constant=False, clean_constant=False)
         compute_second_component += Script.parse_string("OP_TOALTSTACK OP_TOALTSTACK")

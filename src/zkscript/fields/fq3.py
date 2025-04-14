@@ -61,6 +61,7 @@ class Fq3(PrimeFieldExtension):
         clean_constant: bool | None = None,
         is_constant_reused: bool | None = None,
         x: StackFiniteFieldElement = StackFiniteFieldElement(2, False, 3),  # noqa: B008
+        scalar: int = 1,
         rolling_option: bool = True,
     ) -> Script:
         """Squaring in F_q^3.
@@ -70,10 +71,10 @@ class Fq3(PrimeFieldExtension):
             - altstack: []
 
         Stack output:
-            - stack:    [q, ..., x^2 := (
-                            x0^2 + 2 * x1 * x2 * NON_RESIDUE,
-                            x2^2 * NON_RESIDUE + 2 * x0 * x1,
-                            x1^2 + 2 * x0 * x1
+            - stack:    [q, ..., scalar * x^2 := (
+                            scalar * (x0^2 + 2 * x1 * x2 * NON_RESIDUE),
+                            scalar * (x2^2 * NON_RESIDUE + 2 * x0 * x1),
+                            scalar * (x1^2 + 2 * x0 * x1)
                             )]
             - altstack: []
 
@@ -86,6 +87,7 @@ class Fq3(PrimeFieldExtension):
                 after execution. Defaults to `None`.
             x (StackFiniteFieldElement): The position in the stack of `x`.
                 Defaults to `StackFiniteFieldElement(2,False,3)`.
+            scalar (int): The scalar to multiply the result by. Defaults to 1.
             rolling_option (bool): If `True`, `x` is removed from the stack after execution. Defaults to `True`.
 
         Returns:
@@ -100,7 +102,7 @@ class Fq3(PrimeFieldExtension):
 
         # stack in:     [q, .., x, ..]
         # stack out:    [q, .., x, .., x1, x2, x0]
-        # altstack out: [x1^2 + 2*x0*x2]
+        # altstack out: [scalar * (x1^2 + 2*x0*x2)]
         if x.position == self.EXTENSION_DEGREE - 1:
             out += move(x.extract_component(1), pick)  # Pick x1
             out += Script.parse_string("OP_DUP OP_MUL")  # Compute x1^2
@@ -114,29 +116,32 @@ class Fq3(PrimeFieldExtension):
                 x.shift(3 - 2 * rolling_option).extract_component(0), bool_to_moving_function(rolling_option)
             )  # Move x0
         out += Script.parse_string("OP_TUCK OP_2 OP_MUL OP_MUL OP_ROT OP_ADD")  # Compute x1^2 + 2*x0*x2
+        out += nums_to_script([scalar]) + Script.parse_string("OP_MUL") if scalar != 1 else Script()
         out += Script.parse_string("OP_TOALTSTACK")
 
-        # stack in:    [q, .., x, .., x1, x2, x0]
-        # altstack in: [x1^2 + 2*x0*x2]
+        # stack in:     [q, .., x, .., x1, x2, x0]
+        # altstack in:  [x1^2 + 2*x0*x2]
         # stack out:    [q, .., x, .., x1, x2, x0]
-        # altstack out: [x1^2 + 2*x0*x2, x2^2 * NON_RESIDUE + 2 * x0 * x1]
+        # altstack out: [scalar * (x1^2 + 2*x0*x2), scalar * (x2^2 * NON_RESIDUE + 2 * x0 * x1)]
         out += Script.parse_string("OP_OVER OP_DUP")
         out += nums_to_script([self.NON_RESIDUE])
         out += Script.parse_string("OP_MUL OP_MUL")  # Compute x2^2 * NON_RESIDUE
         out += Script.parse_string("OP_OVER")
         out += pick(position=4, n_elements=1)  # Pick x1
         out += Script.parse_string("OP_2 OP_MUL OP_MUL OP_ADD")  # Compute x2^2 * NON_RESIDUE + 2 * x0 * x1
+        out += nums_to_script([scalar]) + Script.parse_string("OP_MUL") if scalar != 1 else Script()
         out += Script.parse_string("OP_TOALTSTACK")
 
         # stack in:     [q, .., x, .., x1, x2, x0]
-        # altstack in:  [x1^2 + 2*x0*x2, x2^2 * NON_RESIDUE + 2 * x0 * x1]
-        # stack out:    [q, .., x, .., x0^2 + 2 * x1 * x2 * NON_RESIDUE]
-        # altstack out: [x1^2 + 2*x0*x2, x2^2 * NON_RESIDUE + 2 * x0 * x1]
+        # altstack in:  [scalar * (x1^2 + 2*x0*x2), scalar * (x2^2 * NON_RESIDUE + 2 * x0 * x1)]
+        # stack out:    [q, .., x, .., scalar * (x0^2 + 2 * x1 * x2 * NON_RESIDUE)]
+        # altstack out: [scalar * (x1^2 + 2*x0*x2), scalar* (x2^2 * NON_RESIDUE + 2 * x0 * x1)]
         out += Script.parse_string("OP_DUP OP_MUL OP_TOALTSTACK")
         out += Script.parse_string("OP_2") + nums_to_script([self.NON_RESIDUE])
         out += Script.parse_string(
             "OP_MUL OP_MUL OP_MUL OP_FROMALTSTACK OP_ADD"
         )  # Compute x0^2 + 2 * x1 * x2 * NON_RESIDUE
+        out += nums_to_script([scalar]) + Script.parse_string("OP_MUL") if scalar != 1 else Script()
 
         out += (
             self.take_modulo(
@@ -157,6 +162,7 @@ class Fq3(PrimeFieldExtension):
         is_constant_reused: bool | None = None,
         x: StackFiniteFieldElement = StackFiniteFieldElement(5, False, 3),  # noqa: B008
         y: StackFiniteFieldElement = StackFiniteFieldElement(2, False, 3),  # noqa: B008
+        scalar: int = 1,
         rolling_options: int = 3,
     ) -> Script:
         """Multiplication in F_q^3.
@@ -166,10 +172,10 @@ class Fq3(PrimeFieldExtension):
             - altstack: []
 
         Stack output:
-            - stack:    [q, ..., x * y := (
-                            x0 * y0 + (x1 * y2 + x2 * y1) * NON_RESIDUE,
-                            x2 * y2 * NON_RESIDUE + x0 * x1 + y1 * y0,
-                            x1 * y1 + x0 * y2 + x2 * y0
+            - stack:    [q, ..., scalar * x * y := (
+                            scalar * (x0 * y0 + (x1 * y2 + x2 * y1) * NON_RESIDUE),
+                            scalar * (x2 * y2 * NON_RESIDUE + x0 * x1 + y1 * y0),
+                            scalar * (x1 * y1 + x0 * y2 + x2 * y0)
                             )]
             - altstack: []
 
@@ -184,6 +190,7 @@ class Fq3(PrimeFieldExtension):
                 Defaults to `StackFiniteFieldElement(5,False,3)`.
             y (StackFiniteFieldElement): The position in the stack of `y`.
                 Defaults to `StackFiniteFieldElement(2,False,3)`.
+            scalar (int): The scalar to multiply the result by. Defaults to 1.
             rolling_options (int): Bitmaks detailing which of `x` and `y` should be removed after the execution of the
                 script. Defaults to `3` (remove everything).
 
@@ -203,7 +210,7 @@ class Fq3(PrimeFieldExtension):
 
         # stack in:     [q, .., x, .., y, ..]
         # stack out:    [q, .., x, .., y, .., ]
-        # altstack out: [x1 * y1 + x0 * y2 + x2 * y0]
+        # altstack out: [scalar * (x1 * y1 + x0 * y2 + x2 * y0)]
         out += move(y.extract_component(2), pick)
         out += move(x.shift(1).extract_component(0), pick)
         out += Script.parse_string("OP_MUL")
@@ -215,11 +222,12 @@ class Fq3(PrimeFieldExtension):
         out += move(y.shift(1).extract_component(0), pick)
         out += move(x.shift(2).extract_component(2), pick)
         out += Script.parse_string("OP_MUL OP_ADD")
+        out += nums_to_script([scalar]) + Script.parse_string("OP_MUL") if scalar != 1 else Script()
         out += Script.parse_string("OP_TOALTSTACK")
 
         # stack in:     [q, .., x, .., y, ..]
         # stack out:    [q, .., x, .., y, .., ]
-        # altstack out: [x1 * y1 + x0 * y2 + x2 * y0, x0 * y1 + x1 * y0 + x2 * y2 * NON_RESIDUE]
+        # altstack out: [scalar* (x1 * y1 + x0 * y2 + x2 * y0), scalar * (x0 * y1 + x1 * y0 + x2 * y2 * NON_RESIDUE)]
         out += move(y.extract_component(2), pick)
         out += move(x.shift(1).extract_component(2), pick)
         out += Script.parse_string("OP_MUL")
@@ -233,12 +241,13 @@ class Fq3(PrimeFieldExtension):
         out += move(y.shift(1).extract_component(0), pick)
         out += move(x.shift(2).extract_component(1), pick)
         out += Script.parse_string("OP_MUL OP_ADD")
+        out += nums_to_script([scalar]) + Script.parse_string("OP_MUL") if scalar != 1 else Script()
         out += Script.parse_string("OP_TOALTSTACK")
 
         # stack in:     [q, .., x, .., y, ..]
         # stack out:    [q, .., x, .., y, .., ]
-        # altstack out: [x1 * y1 + x0 * y2 + x2 * y0, x0 * y1 + x1 * y0 + x2 * y2 * NON_RESIDUE,
-        #                   x0 * y0 + NON_RESIDUE * (x1 * y2 + x2 * y1)]
+        # altstack out: [scalar * (x1 * y1 + x0 * y2 + x2 * y0), scalar * (x0 * y1 + x1 * y0 + x2 * y2 * NON_RESIDUE),
+        #                   scalar * (x0 * y0 + NON_RESIDUE * (x1 * y2 + x2 * y1))]
         out += move(y.extract_component(2), bool_to_moving_function(is_y_rolled))
         out += move(x.shift(1 - is_y_rolled).extract_component(1), bool_to_moving_function(is_x_rolled))
         out += Script.parse_string("OP_MUL")
@@ -254,6 +263,7 @@ class Fq3(PrimeFieldExtension):
             x.shift(2 - 3 * is_y_rolled - 2 * is_x_rolled).extract_component(0), bool_to_moving_function(is_x_rolled)
         )
         out += Script.parse_string("OP_MUL OP_ADD")
+        out += nums_to_script([scalar]) + Script.parse_string("OP_MUL") if scalar != 1 else Script()
 
         out += (
             self.take_modulo(

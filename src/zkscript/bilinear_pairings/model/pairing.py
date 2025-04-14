@@ -95,6 +95,7 @@ class Pairing:
             positive_modulo=False,
             check_constant=False,
             clean_constant=False,
+            is_constant_reused=False,
             f_inverse=StackFiniteFieldElement(
                 2 * self.N_ELEMENTS_MILLER_OUTPUT - 1, False, self.N_ELEMENTS_MILLER_OUTPUT
             ).shift(gradient_tracker),
@@ -192,6 +193,7 @@ class Pairing:
             positive_modulo=False,
             check_constant=False,
             clean_constant=False,
+            is_constant_reused=False,
             f_inverse=StackFiniteFieldElement(
                 2 * self.N_ELEMENTS_MILLER_OUTPUT - 1, False, self.N_ELEMENTS_MILLER_OUTPUT
             ).shift(gradient_tracker),

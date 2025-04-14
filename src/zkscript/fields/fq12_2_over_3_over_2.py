@@ -261,11 +261,7 @@ class Fq12(PrimeFieldExtension):
         compute_third_component += pick(position=15, n_elements=2)  # Pick a
         compute_third_component += pick(position=13, n_elements=2)  # Pick c
         compute_third_component += fq2.mul(take_modulo=False, check_constant=False, clean_constant=False)
-        compute_third_component += fq2.add(take_modulo=False, check_constant=False, clean_constant=False)
-        compute_third_component += Script.parse_string("OP_2")
-        compute_third_component += fq2.base_field_scalar_mul(
-            take_modulo=False, check_constant=False, clean_constant=False
-        )
+        compute_third_component += fq2.add(take_modulo=False, check_constant=False, clean_constant=False, scalar=2)
 
         # After this, the stack is: a b c d e f,
         # altstack = [sixthComponent, fifthComponent, fourthComponent, 2*[f^2*xi 2*[(d*e) + (a*c)] + b^2]]
@@ -280,11 +276,7 @@ class Fq12(PrimeFieldExtension):
         # altstack = [sixthComponent, fifthComponent, fourthComponent, thirdComponent]
         compute_second_component = Script.parse_string("OP_2OVER")  # Pick e
         compute_second_component += Script.parse_string("OP_2OVER")  # Pick f
-        compute_second_component += fq2.mul(take_modulo=False, check_constant=False, clean_constant=False)
-        compute_second_component += Script.parse_string("OP_2")
-        compute_second_component += fq2.base_field_scalar_mul(
-            take_modulo=False, check_constant=False, clean_constant=False
-        )
+        compute_second_component += fq2.mul(take_modulo=False, check_constant=False, clean_constant=False, scalar=2)
 
         # After this, the stack is: a b c d e f xi*[c^2 + 2*e*f],
         # altstack = [sixthComponent, fifthComponent, fourthComponent, thirdComponent]
@@ -299,11 +291,7 @@ class Fq12(PrimeFieldExtension):
         # altstack = [sixthComponent, fifthComponent, fourthComponent, thirdComponent]
         compute_second_component += pick(position=13, n_elements=2)  # Pick a
         compute_second_component += pick(position=13, n_elements=2)  # Pick b
-        compute_second_component += fq2.mul(take_modulo=False, check_constant=False, clean_constant=False)
-        compute_second_component += Script.parse_string("OP_2")
-        compute_second_component += fq2.base_field_scalar_mul(
-            take_modulo=False, check_constant=False, clean_constant=False
-        )
+        compute_second_component += fq2.mul(take_modulo=False, check_constant=False, clean_constant=False, scalar=2)
 
         # After this, the stack is: a b c d e f,
         # altstack = [sixthComponent, fifthComponent, fourthComponent, thirdComponent, xi*[c^2 + 2*e*f] + 2*a*b + d^2]
@@ -324,11 +312,7 @@ class Fq12(PrimeFieldExtension):
         compute_first_component += fq2.mul(take_modulo=False, check_constant=False, clean_constant=False)
 
         # After this, the stack is: a e 2*[(d*f)+(b*c)]
-        compute_first_component += fq2.add(take_modulo=False, check_constant=False, clean_constant=False)
-        compute_first_component += Script.parse_string("OP_2")
-        compute_first_component += fq2.base_field_scalar_mul(
-            take_modulo=False, check_constant=False, clean_constant=False
-        )
+        compute_first_component += fq2.add(take_modulo=False, check_constant=False, clean_constant=False, scalar=2)
 
         # After this, the stack is: a xi*[e^2 + 2*[(d*f)+(b*c)]]
         compute_first_component += Script.parse_string("OP_2SWAP")
