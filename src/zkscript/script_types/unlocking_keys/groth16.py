@@ -112,9 +112,9 @@ class Groth16UnlockingKey:
                 None, then n = groth16_model.r.
             load_modulus (bool): Whether or not to load the modulus. Defaults to `True`.
         """
-        ec_fq = EllipticCurveFq(groth16_model.pairing_model.MODULUS, groth16_model.curve_a, groth16_model.curve_b)
+        ec_fq = EllipticCurveFq(groth16_model.pairing_model.modulus, groth16_model.curve_a, groth16_model.curve_b)
 
-        out = nums_to_script([groth16_model.pairing_model.MODULUS]) if load_modulus else Script()
+        out = nums_to_script([groth16_model.pairing_model.modulus]) if load_modulus else Script()
 
         # Load inverse_miller_output inverse
         out += nums_to_script(self.inverse_miller_output)
@@ -180,7 +180,7 @@ class Groth16UnlockingKeyWithPrecomputedMsm:
                 None, then n = groth16_model.r.
             load_modulus (bool): Whether or not to load the modulus. Defaults to `True`.
         """
-        out = nums_to_script([groth16_model.pairing_model.MODULUS]) if load_modulus else Script()
+        out = nums_to_script([groth16_model.pairing_model.modulus]) if load_modulus else Script()
 
         # Load inverse_miller_output inverse
         out += nums_to_script(self.inverse_miller_output)

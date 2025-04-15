@@ -45,7 +45,7 @@ class Pairing:
             - If `P` is the point at infinity, then it is encoded as 0x00 * N_POINTS_CURVE (not OP_0)
             - If `Q` is the point at infinity, then it is encoded as 0x00 * N_POINTS_TWIST (not OP_0)
         """
-        q = self.MODULUS
+        q = self.modulus
 
         easy_exponentiation_with_inverse_check = self.easy_exponentiation_with_inverse_check
         hard_exponentiation = self.hard_exponentiation
@@ -81,7 +81,7 @@ class Pairing:
             clean_constant=False,
         )
 
-        gradient_tracker = (0 if verify_gradients else self.EXTENSION_DEGREE) * sum(
+        gradient_tracker = (0 if verify_gradients else self.extension_degree) * sum(
             [1 if i == 0 else 2 for i in self.exp_miller_loop[:-1]]
         )
 
@@ -95,6 +95,7 @@ class Pairing:
             positive_modulo=False,
             check_constant=False,
             clean_constant=False,
+            is_constant_reused=False,
             f_inverse=StackFiniteFieldElement(
                 2 * self.N_ELEMENTS_MILLER_OUTPUT - 1, False, self.N_ELEMENTS_MILLER_OUTPUT
             ).shift(gradient_tracker),
@@ -165,7 +166,7 @@ class Pairing:
             At the moment, this function does not handle the case where one of the Pi's or one of the Qi's is the
             point at infinity.
         """
-        q = self.MODULUS
+        q = self.modulus
 
         easy_exponentiation_with_inverse_check = self.easy_exponentiation_with_inverse_check
         hard_exponentiation = self.hard_exponentiation
@@ -184,7 +185,7 @@ class Pairing:
         )
 
         gradient_tracker = sum(
-            self.EXTENSION_DEGREE for verify_gradient in verify_gradients if not verify_gradient
+            self.extension_degree for verify_gradient in verify_gradients if not verify_gradient
         ) * sum([1 if i == 0 else 2 for i in self.exp_miller_loop[:-1]])
 
         out += easy_exponentiation_with_inverse_check(
@@ -192,6 +193,7 @@ class Pairing:
             positive_modulo=False,
             check_constant=False,
             clean_constant=False,
+            is_constant_reused=False,
             f_inverse=StackFiniteFieldElement(
                 2 * self.N_ELEMENTS_MILLER_OUTPUT - 1, False, self.N_ELEMENTS_MILLER_OUTPUT
             ).shift(gradient_tracker),

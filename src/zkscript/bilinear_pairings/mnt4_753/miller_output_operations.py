@@ -5,11 +5,11 @@ from tx_engine import Script
 from src.zkscript.bilinear_pairings.mnt4_753.fields import fq4_script
 
 # Fq2 Script implementation
-from src.zkscript.fields.fq4 import Fq4 as Fq4ScriptModel
+from src.zkscript.fields.fq2_over_2_residue_equal_u import Fq2Over2ResidueEqualU
 from src.zkscript.util.utility_scripts import mod, pick, roll, verify_bottom_constant
 
 
-class MillerOutputOperations(Fq4ScriptModel):
+class MillerOutputOperations(Fq2Over2ResidueEqualU):
     """Arithmetic for Miller loop for MNT4-753.
 
     Operations are performed in F_q^4 = F_q^2[s] / (s^2 - u) = F_q[u,s] / (s^2 -  u, u^2 - 13).
@@ -46,7 +46,7 @@ class MillerOutputOperations(Fq4ScriptModel):
         Returns:
             Script to multiply two sparse elements in F_q^4.
         """
-        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
+        out = verify_bottom_constant(self.modulus) if check_constant else Script()
 
         # Computation of fourth component --------------------------------------------------------
 
@@ -152,10 +152,7 @@ class MillerOutputOperations(Fq4ScriptModel):
         Returns:
             Script to multiply an element by a sparse element in F_q^4.
         """
-        # Fq2 implementation
-        fq2 = self.BASE_FIELD
-
-        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
+        out = verify_bottom_constant(self.modulus) if check_constant else Script()
 
         # The stack at the beginning is: a1 b1 a2 b2 with:
         # 	- a1,b1,a2 in Fq2
@@ -167,20 +164,24 @@ class MillerOutputOperations(Fq4ScriptModel):
         compute_second_component = Script.parse_string("OP_DUP")  # Duplicate b2
         compute_second_component += pick(position=7, n_elements=2)  # Pick a1
         compute_second_component += Script.parse_string("OP_ROT")  # Roll b2
-        compute_second_component += fq2.base_field_scalar_mul(
+        compute_second_component += self.base_field.base_field_scalar_mul(
             take_modulo=False, check_constant=False, clean_constant=False, is_constant_reused=False
         )
-        compute_second_component += fq2.mul_by_non_residue(
-            take_modulo=False, check_constant=False, clean_constant=False, is_constant_reused=False
+        compute_second_component += self.base_field.mul_by_fq2_non_residue(
+            self=self.base_field,
+            take_modulo=False,
+            check_constant=False,
+            clean_constant=False,
+            is_constant_reused=False,
         )
 
         # After this, the stack is: a1 b1 a2 b2, altstack = [(a1*b2*u) + b1*a2]
         compute_second_component += pick(position=6, n_elements=2)  # Pick b1
         compute_second_component += pick(position=6, n_elements=2)  # Pick a2
-        compute_second_component += fq2.mul(
+        compute_second_component += self.base_field.mul(
             take_modulo=False, check_constant=False, clean_constant=False, is_constant_reused=False
         )
-        compute_second_component += fq2.add(
+        compute_second_component += self.base_field.add(
             take_modulo=False, check_constant=False, clean_constant=False, is_constant_reused=False
         )
         compute_second_component += Script.parse_string("OP_TOALTSTACK OP_TOALTSTACK")
@@ -193,14 +194,14 @@ class MillerOutputOperations(Fq4ScriptModel):
         compute_first_component = Script.parse_string("OP_13 OP_MUL")  # b2*13
         compute_first_component += roll(position=4, n_elements=2)  # Roll b1
         compute_first_component += Script.parse_string("OP_ROT")
-        compute_first_component += fq2.base_field_scalar_mul(
+        compute_first_component += self.base_field.base_field_scalar_mul(
             take_modulo=False, check_constant=False, clean_constant=False, is_constant_reused=False
         )
         compute_first_component += Script.parse_string("OP_2ROT OP_2ROT")
-        compute_first_component += fq2.mul(
+        compute_first_component += self.base_field.mul(
             take_modulo=False, check_constant=False, clean_constant=False, is_constant_reused=False
         )
-        compute_first_component += fq2.add(
+        compute_first_component += self.base_field.add(
             take_modulo=take_modulo,
             positive_modulo=positive_modulo and take_modulo,
             check_constant=False,
@@ -269,10 +270,7 @@ class MillerOutputOperations(Fq4ScriptModel):
         Returns:
             Script to multiply a sparse element by an element in F_q^4.
         """
-        # Fq2 implementation
-        fq2 = self.BASE_FIELD
-
-        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
+        out = verify_bottom_constant(self.modulus) if check_constant else Script()
 
         # The stack at the beginning is: a1 b1 a2 b2 with:
         # 	- a1,a2,b2 in Fq2
@@ -283,20 +281,24 @@ class MillerOutputOperations(Fq4ScriptModel):
         # After this, the stack is: a1 b1 a2 b2 (a2*b1*u), altstack = []
         compute_second_component = Script.parse_string("OP_2OVER")  # Duplicate a2
         compute_second_component += pick(position=6, n_elements=1)  # Pick b1
-        compute_second_component += fq2.base_field_scalar_mul(
+        compute_second_component += self.base_field.base_field_scalar_mul(
             take_modulo=False, check_constant=False, clean_constant=False, is_constant_reused=False
         )
-        compute_second_component += fq2.mul_by_non_residue(
-            take_modulo=False, check_constant=False, clean_constant=False, is_constant_reused=False
+        compute_second_component += self.base_field.mul_by_fq2_non_residue(
+            self=self.base_field,
+            take_modulo=False,
+            check_constant=False,
+            clean_constant=False,
+            is_constant_reused=False,
         )
 
         # After this, the stack is: a1 b1 a2 b2, altstack = [(a1*b2) + u*b1*a2]
         compute_second_component += Script.parse_string("OP_2OVER")  # Duplicate b2
         compute_second_component += pick(position=10, n_elements=2)  # Pick a1
-        compute_second_component += fq2.mul(
+        compute_second_component += self.base_field.mul(
             take_modulo=False, check_constant=False, clean_constant=False, is_constant_reused=False
         )
-        compute_second_component += fq2.add(
+        compute_second_component += self.base_field.add(
             take_modulo=False, check_constant=False, clean_constant=False, is_constant_reused=False
         )
         compute_second_component += Script.parse_string("OP_TOALTSTACK OP_TOALTSTACK")
@@ -308,14 +310,14 @@ class MillerOutputOperations(Fq4ScriptModel):
         # After this, the stack is: # After this, the stack is: a1*a2 + b1*b2*13, altstack = [secondComponent]
         compute_first_component = roll(position=4, n_elements=1)  # Roll b1
         compute_first_component += Script.parse_string("OP_13 OP_MUL")  # Compute b1*13
-        compute_first_component += fq2.base_field_scalar_mul(
+        compute_first_component += self.base_field.base_field_scalar_mul(
             take_modulo=False, check_constant=False, clean_constant=False, is_constant_reused=False
         )
         compute_first_component += Script.parse_string("OP_2ROT OP_2ROT")
-        compute_first_component += fq2.mul(
+        compute_first_component += self.base_field.mul(
             take_modulo=False, check_constant=False, clean_constant=False, is_constant_reused=False
         )
-        compute_first_component += fq2.add(
+        compute_first_component += self.base_field.add(
             take_modulo=take_modulo,
             positive_modulo=positive_modulo and take_modulo,
             check_constant=False,
@@ -482,4 +484,4 @@ class MillerOutputOperations(Fq4ScriptModel):
         )
 
 
-miller_output_ops = MillerOutputOperations(q=fq4_script.MODULUS, base_field=fq4_script.BASE_FIELD)
+miller_output_ops = MillerOutputOperations(q=fq4_script.modulus, base_field=fq4_script.base_field)

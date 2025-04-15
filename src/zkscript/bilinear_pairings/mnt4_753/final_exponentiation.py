@@ -5,28 +5,38 @@ from tx_engine import Script
 from src.zkscript.bilinear_pairings.mnt4_753.fields import fq2_script, fq4_script
 from src.zkscript.bilinear_pairings.mnt4_753.parameters import exp_miller_loop
 from src.zkscript.bilinear_pairings.model.cyclotomic_exponentiation import CyclotomicExponentiation
+from src.zkscript.fields.fq2 import Fq2
+from src.zkscript.fields.fq2_over_2_residue_equal_u import Fq2Over2ResidueEqualU
 from src.zkscript.script_types.stack_elements import StackFiniteFieldElement
 from src.zkscript.util.utility_scripts import move, pick, roll, verify_bottom_constant
 
 
 class FinalExponentiation(CyclotomicExponentiation):
-    """Final exponentiation in the pairing for MNT4-753."""
+    """Final exponentiation in the pairing for MNT4-753.
 
-    def __init__(self, fq2, fq4):
+    Attributes:
+        modulus (int): Modulus of the field.
+        fq4 (Fq2Over2ResidueEqualU): Instance of the Fq2Over2ResidueEqualU class.
+        cyclotomic_inverse (Callable): Function to compute the cyclotomic inverse in Fq4.
+        square (Callable): Function to compute the square in Fq4.
+        mul (Callable): Function to compute the multiplication in Fq4.
+        extension_degree (int): Degree of the field extension. Equal to 4.
+    """
+
+    def __init__(self, fq2: Fq2, fq4: Fq2Over2ResidueEqualU):
         """Initialise the final exponentiation for MNT4-753.
 
         Args:
-            fq2 (Fq2): Bitcoin script instance to perform arithmetic operations in F_q^2, the quadratic extension of
-                F_q.
-            fq4 (Fq4): Bitcoin script instance to perform arithmetic operations in F_q^4, the quadratic extension of
-                F_q^2.
+            fq2 (fq2): Bitcoin script instance to perform arithmetic operations in F_q^2.
+            fq4 (Fq2Over2ResidueEqualU): Bitcoin script instance to perform arithmetic operations in F_q^4,
+                the quadratic extension of F_q^2, built with non residue equal to u.
         """
-        self.MODULUS = fq4.MODULUS
-        self.FQ4 = fq4
+        self.modulus = fq4.modulus
+        self.fq4 = fq4
         self.cyclotomic_inverse = fq2.negate
         self.square = fq4.square
         self.mul = fq4.mul
-        self.EXTENSION_DEGREE = 4
+        self.extension_degree = 4
 
     def easy_exponentiation_with_inverse_check(
         self,
@@ -66,13 +76,11 @@ class FinalExponentiation(CyclotomicExponentiation):
         Notes:
             The inverse of `f` `inverse(f)` is passed as input value on the stack and verified during script execution.
         """
-        fq4 = self.FQ4
-
-        is_default_config = (f_inverse.position == self.EXTENSION_DEGREE * 2 - 1) and (
-            f.position == self.EXTENSION_DEGREE - 1
+        is_default_config = (f_inverse.position == self.extension_degree * 2 - 1) and (
+            f.position == self.extension_degree - 1
         )
 
-        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
+        out = verify_bottom_constant(self.modulus) if check_constant else Script()
 
         # After this, the stack is: Inverse(f) f
         if not is_default_config:
@@ -82,17 +90,17 @@ class FinalExponentiation(CyclotomicExponentiation):
         # After this, the stack is: Inverse(f) f
         check_f_inverse = pick(position=7, n_elements=4)  # Bring Inverse(f) on top of the stack
         check_f_inverse += pick(position=7, n_elements=4)  # Bring f on top of the stack
-        check_f_inverse += fq4.mul(
+        check_f_inverse += self.fq4.mul(
             take_modulo=True, positive_modulo=True, check_constant=False, clean_constant=False, is_constant_reused=False
         )  # Multiply
         check_f_inverse += Script.parse_string(" ".join(["OP_0", "OP_EQUALVERIFY"] * 3))
         check_f_inverse += Script.parse_string("OP_1 OP_EQUALVERIFY")
 
         # After this, the stack is: Inverse(f) Conjugate(f)
-        easy_exponentiation = fq4.frobenius_even(
+        easy_exponentiation = self.fq4.frobenius_even(
             n=2, take_modulo=False, check_constant=False, clean_constant=False
         )  # Compute f^(q^2)
-        easy_exponentiation += fq4.mul(
+        easy_exponentiation += self.fq4.mul(
             take_modulo=take_modulo,
             positive_modulo=positive_modulo,
             check_constant=False,
@@ -135,13 +143,11 @@ class FinalExponentiation(CyclotomicExponentiation):
         Notes:
             `g` is the output of the easy part of the exponentiation.
         """
-        fq4 = self.FQ4
-
-        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
+        out = verify_bottom_constant(self.modulus) if check_constant else Script()
 
         # After this, the stack is: g, altstack = [g^q]
         out += pick(position=3, n_elements=4)
-        out += fq4.frobenius_odd(n=1, take_modulo=False, check_constant=False, clean_constant=False)
+        out += self.fq4.frobenius_odd(n=1, take_modulo=False, check_constant=False, clean_constant=False)
         out += Script.parse_string(" ".join(["OP_TOALTSTACK"] * 4))
 
         # After this, the stack is: g g^u, altstack = [g^q]
@@ -157,14 +163,14 @@ class FinalExponentiation(CyclotomicExponentiation):
 
         # After this, the stack is: g^[q + u + 1]
         out += Script.parse_string(" ".join(["OP_FROMALTSTACK"] * 4))
-        out += fq4.mul(
+        out += self.fq4.mul(
             take_modulo=False,
             check_constant=False,
             clean_constant=False,
             is_constant_reused=False,
             positive_modulo=False,
         )
-        out += fq4.mul(
+        out += self.fq4.mul(
             take_modulo=take_modulo,
             check_constant=False,
             clean_constant=clean_constant,

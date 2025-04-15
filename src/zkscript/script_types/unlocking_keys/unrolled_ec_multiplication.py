@@ -23,7 +23,7 @@ class EllipticCurveFqUnrolledUnlockingKey:
         gradients (list[list[list[int]]]): The sequence of gradients as required to execute the double-and-add scalar
             multiplication.
         max_multiplier (int): The maximum value of `a`.
-        load_modulus (bool): If `True`, load the modulus `self.MODULUS` on the stack. Defaults to True.
+        load_modulus (bool): If `True`, load the modulus `self.modulus` on the stack. Defaults to True.
 
     Preconditions:
         The list `gradients` is computed as follows. We denote `exp_a = (a0, a1, ..., aN)` the binary expansion of `a`.
@@ -101,7 +101,7 @@ class EllipticCurveFqUnrolledUnlockingKey:
         """
         M = int(log2(self.max_multiplier))
 
-        out = nums_to_script([ec_over_fq.MODULUS]) if load_modulus else Script()
+        out = nums_to_script([ec_over_fq.modulus]) if load_modulus else Script()
 
         # Add the gradients
         if self.a == 0:

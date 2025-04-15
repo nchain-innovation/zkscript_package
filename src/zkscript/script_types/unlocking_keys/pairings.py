@@ -38,7 +38,7 @@ class SinglePairingUnlockingKey:
         Returns:
             Script pushing [miller(P,Q)^-1, self.gradients, self.P, self.Q] on the stack.
         """
-        out = nums_to_script([pairing_model.MODULUS]) if load_modulus else Script()
+        out = nums_to_script([pairing_model.modulus]) if load_modulus else Script()
 
         # P is infinity, Q is not
         if self.P is None and self.Q is not None:
@@ -98,7 +98,7 @@ class TriplePairingUnlockingKey:
         Returns:
             Script pushing [miller(P,Q)^-1, self.gradients, self.P, self.Q] on the stack.
         """
-        out = nums_to_script([pairing_model.MODULUS]) if load_modulus else Script()
+        out = nums_to_script([pairing_model.modulus]) if load_modulus else Script()
 
         # Load inverse_miller_output inverse
         out += nums_to_script(self.inverse_miller_output)

@@ -5,30 +5,21 @@ from types import MethodType
 from tx_engine import Script
 
 from src.zkscript.bilinear_pairings.bls12_381.parameters import GAMMAS, NON_RESIDUE_FQ, q
-from src.zkscript.fields.fq2 import Fq2 as Fq2ScriptModel
-from src.zkscript.fields.fq2 import fq2_for_towering
-from src.zkscript.fields.fq4 import Fq4 as Fq4ScriptModel
-from src.zkscript.fields.fq4 import fq4_for_towering
-from src.zkscript.fields.fq6_3_over_2 import Fq6 as Fq6ScriptModel
-from src.zkscript.fields.fq6_3_over_2 import fq6_for_towering
-from src.zkscript.fields.fq12_2_over_3_over_2 import Fq12 as Fq12ScriptModel
-from src.zkscript.fields.fq12_3_over_2_over_2 import Fq12Cubic as Fq12CubicScriptModel
+from src.zkscript.fields.fq2 import Fq2
+from src.zkscript.fields.fq4 import Fq4
+from src.zkscript.fields.fq6_3_over_2 import Fq6
+from src.zkscript.fields.fq12_2_over_3_over_2 import Fq12
+from src.zkscript.fields.fq12_3_over_2_over_2 import Fq12Cubic
 from src.zkscript.util.utility_scripts import roll
 
-# Fq2 class
-Fq2Script = fq2_for_towering(mul_by_non_residue=Fq2ScriptModel.mul_by_one_plus_u)
-# Fq2 implementation
-fq2_script = Fq2Script(q=q, non_residue=NON_RESIDUE_FQ)
-# Fq4 class: NON_RESIDUE_OVER_FQ2 = 1 + u
-Fq4Script = fq4_for_towering(mul_by_non_residue=Fq4ScriptModel.mul_by_u)
-# Fq4 implementation
-fq4_script = Fq4Script(q=q, base_field=fq2_script)
-# Fq6 class: NON_RESIDUE_OVER_FQ2 = 1 + u
-Fq6Script = fq6_for_towering(mul_by_non_residue=Fq6ScriptModel.mul_by_v)
-# Fq6 implementation
-fq6_script = Fq6Script(q=q, base_field=fq2_script)
-# Fq12 implementation: NON_RESIDUE_OVER_FQ6 = v
-fq12_script = Fq12ScriptModel(q=q, fq2=fq2_script, fq6=fq6_script, gammas_frobenius=GAMMAS)
+# Fq2 implementation, NON_RESIDUE = -1
+fq2_script = Fq2(q=q, non_residue=NON_RESIDUE_FQ, mul_by_fq2_non_residue=Fq2.mul_by_one_plus_u)
+# Fq4 implementation, FQ2_NON_RESIDUE = u
+fq4_script = Fq4(q=q, base_field=fq2_script, mul_by_fq4_non_residue=Fq4.mul_by_u)
+# Fq6 implementation, FQ2_NON_RESIDUE = 1 + u
+fq6_script = Fq6(q=q, base_field=fq2_script, mul_by_fq6_non_residue=Fq6.mul_by_v)
+# Fq12 implementation, NON_RESIDUE_OVER_FQ6 = v
+fq12_script = Fq12(q=q, fq2=fq2_script, fq6=fq6_script, gammas_frobenius=GAMMAS)
 
 
 def to_quadratic(
@@ -80,6 +71,6 @@ def to_quadratic(
     return out
 
 
-# Fq12Cubic implementation: NON_RESIDUE_OVER_FQ2 = 1 + u
-fq12cubic_script = Fq12CubicScriptModel(q=q, fq2=fq2_script, fq4=fq4_script)
+# Fq12Cubic implementation: FQ4_NON_RESIDUE = 1 + u
+fq12cubic_script = Fq12Cubic(q=q, fq4=fq4_script)
 fq12cubic_script.to_quadratic = MethodType(to_quadratic, fq12cubic_script)

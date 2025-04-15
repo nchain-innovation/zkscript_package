@@ -21,11 +21,11 @@ class CyclotomicExponentiation:
             extension_degree: Extension degree (over F_q) of the field over which we compute the cyclotomic
                 exponentiation.
         """
-        self.MODULUS = q
+        self.modulus = q
         self.cyclotomic_inverse = cyclotomic_inverse
         self.square = square
         self.mul = mul
-        self.EXTENSION_DEGREE = extension_degree
+        self.extension_degree = extension_degree
 
     def cyclotomic_exponentiation(
         self,
@@ -61,14 +61,14 @@ class CyclotomicExponentiation:
             Script to perform exponentiation in the cyclotomic subgroup.
         """
         # Bit size of q
-        q = self.MODULUS
+        q = self.modulus
         BIT_SIZE_Q = ceil(log2(q))
 
         cyclotomic_inverse = self.cyclotomic_inverse
         square = self.square
         mul = self.mul
 
-        N_ELEMENTS = self.EXTENSION_DEGREE
+        N_ELEMENTS = self.extension_degree
 
         # --------------------------------------------------------------------------------------------------------------
 

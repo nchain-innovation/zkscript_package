@@ -1,21 +1,13 @@
 """Bitcoin scripts that perform arithmetic operations in a cubic extension of F_q^2."""
 
+from typing import Callable
+
 from tx_engine import Script
 
 from src.zkscript.fields.fq import Fq
+from src.zkscript.fields.fq2 import Fq2
 from src.zkscript.fields.prime_field_extension import PrimeFieldExtension
 from src.zkscript.util.utility_scripts import mod, pick, roll, verify_bottom_constant
-
-
-def fq6_for_towering(mul_by_non_residue):
-    """Export Fq6 class with a mul_by_non_residue method to construct towering extensions."""
-
-    class Fq6ForTowering(Fq6):
-        pass
-
-    Fq6ForTowering.mul_by_non_residue = mul_by_non_residue
-
-    return Fq6ForTowering
 
 
 class Fq6(PrimeFieldExtension):
@@ -27,26 +19,33 @@ class Fq6(PrimeFieldExtension):
     to the cubic non_residue_over_fq2, and the arithmetic operations `+` and `*` are derived from the operations in
     F_q^2.
 
-    The cubic non_residue_over_fq2 is specified by defining the method self.BASE_FIELD.mul_by_non_residue.
+    The cubic non_residue_over_fq2 is specified by the method self.base_field.mul_by_fq2_non_residue.
 
     Attributes:
-        MODULUS: The characteristic of the field F_q.
-        BASE_FIELD (Fq2): Bitcoin script instance to perform arithmetic operations in F_q^2.
-        EXTENSION_DEGREE: The extension degree over the prime field, equal to 6.
-        PRIME_FIELD: The Bitcoin Script implementation of the prime field F_q.
+        modulus (int: The characteristic of the field F_q.
+        extension_degree (int): The extension degree over the prime field, equal to 6.
+        prime_field: The Bitcoin Script implementation of the prime field F_q.
+        base_field (Fq2): Bitcoin script instance to perform arithmetic operations in F_q^2.
+        mul_by_fq6_non_residue (Callable[..., Script] | None): If Fq6 is used for towering as
+            Fq^6[v] / (v^n - fq6_non_residue), this is the Bitcoin Script implementation of the multiplication by
+            fq6_non_residue.
     """
 
-    def __init__(self, q: int, base_field):
+    def __init__(self, q: int, base_field: Fq2, mul_by_fq6_non_residue: Callable[..., Script] | None = None):
         """Initialise F_q^6, the cubic extension of F_q^2.
 
         Args:
-            q: The characteristic of the field F_q.
+            q (int): The characteristic of the field F_q.
             base_field (Fq2): Bitcoin script instance to perform arithmetic operations in F_q^2.
+            mul_by_fq6_non_residue (Callable[..., Script] | None): If Fq6 is used for towering as
+                Fq^6[v] / (v^n - fq6_non_residue), this is the Bitcoin Script implementation of the multiplication
+                by fq6_non_residue. Defaults to None.
         """
-        self.MODULUS = q
-        self.BASE_FIELD = base_field
-        self.EXTENSION_DEGREE = 6
-        self.PRIME_FIELD = Fq(q)
+        self.modulus = q
+        self.extension_degree = 6
+        self.prime_field = Fq(q)
+        self.base_field = base_field
+        self.mul_by_fq6_non_residue = mul_by_fq6_non_residue
 
     def scalar_mul(
         self,
@@ -78,23 +77,20 @@ class Fq6(PrimeFieldExtension):
         Returns:
             Script to multiply an element in F_q^4 by a scalar `lambda` in F_q^2.
         """
-        # Fq2 implementation
-        fq2 = self.BASE_FIELD
-
-        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
+        out = verify_bottom_constant(self.modulus) if check_constant else Script()
 
         # After this, the stack is: x0 x1 lambda, altstack = [x2 * lambda]
         out += Script.parse_string("OP_2SWAP OP_2OVER")
-        out += fq2.mul(take_modulo=False, check_constant=False, clean_constant=False)
+        out += self.base_field.mul(take_modulo=False, check_constant=False, clean_constant=False)
         out += Script.parse_string("OP_TOALTSTACK OP_TOALTSTACK")
         # After this, the stack is: x0 lambda (x1*lamdba), altstack = [x2 * lambda]
         out += Script.parse_string("OP_2SWAP OP_2OVER")
-        out += fq2.mul(take_modulo=False, check_constant=False, clean_constant=False)
+        out += self.base_field.mul(take_modulo=False, check_constant=False, clean_constant=False)
 
         if take_modulo:
             # After this, the stack is: x0*lambda, altstack = [x2*lambda, x1*lambda]
             out += Script.parse_string("OP_TOALTSTACK OP_TOALTSTACK")
-            out += fq2.mul(
+            out += self.base_field.mul(
                 take_modulo=True,
                 positive_modulo=positive_modulo,
                 check_constant=False,
@@ -108,7 +104,7 @@ class Fq6(PrimeFieldExtension):
         else:
             # After this, the stack is: (x0 * lambda) (x1 * lambda) (x2 * lamdba)
             out += Script.parse_string("OP_2ROT OP_2ROT")
-            out += fq2.mul(take_modulo=False, check_constant=False, clean_constant=False)
+            out += self.base_field.mul(take_modulo=False, check_constant=False, clean_constant=False)
             out += Script.parse_string("OP_2SWAP OP_FROMALTSTACK OP_FROMALTSTACK")
 
         return out
@@ -142,20 +138,17 @@ class Fq6(PrimeFieldExtension):
         Returns:
             Script to negate an element in F_q^6.
         """
-        # Fq2 implementation
-        fq2 = self.BASE_FIELD
-
-        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
+        out = verify_bottom_constant(self.modulus) if check_constant else Script()
 
         if take_modulo:
             # After this, stack is: x0 x1, altstack = [-x2]
-            out += fq2.negate(take_modulo=False, check_constant=False, clean_constant=False)
+            out += self.base_field.negate(take_modulo=False, check_constant=False, clean_constant=False)
             out += Script.parse_string("OP_TOALTSTACK OP_TOALTSTACK")
             # After this, stack is: x0, altstack = [-x2, -x1]
-            out += fq2.negate(take_modulo=False, check_constant=False, clean_constant=False)
+            out += self.base_field.negate(take_modulo=False, check_constant=False, clean_constant=False)
             out += Script.parse_string("OP_TOALTSTACK OP_TOALTSTACK")
             # After this, stack is: -x_0, altstack = [-x2,-x1]
-            out += fq2.negate(
+            out += self.base_field.negate(
                 take_modulo=True,
                 positive_modulo=positive_modulo,
                 check_constant=False,
@@ -169,15 +162,15 @@ class Fq6(PrimeFieldExtension):
         else:
             # After this, stack is: x_1 x_2 -x_0
             out += Script.parse_string("OP_2ROT")
-            out += fq2.negate(take_modulo=False, check_constant=False, clean_constant=False)
+            out += self.base_field.negate(take_modulo=False, check_constant=False, clean_constant=False)
 
             # After this, stack is: x_2 -x_0 -x_1
             out += Script.parse_string("OP_2ROT")
-            out += fq2.negate(take_modulo=False, check_constant=False, clean_constant=False)
+            out += self.base_field.negate(take_modulo=False, check_constant=False, clean_constant=False)
 
             # After this, stack is: -x_0 -x_1 -x_2
             out += Script.parse_string("OP_2ROT")
-            out += fq2.negate(take_modulo=False, check_constant=False, clean_constant=False)
+            out += self.base_field.negate(take_modulo=False, check_constant=False, clean_constant=False)
 
         return out
 
@@ -211,26 +204,25 @@ class Fq6(PrimeFieldExtension):
         Returns:
             Script to multiply two elements in F_q^6.
         """
-        # Fq2 implementation
-        fq2 = self.BASE_FIELD
-
-        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
+        out = verify_bottom_constant(self.modulus) if check_constant else Script()
 
         # Computation of third component ---------------------------------------------------------
 
         # After this, the stack is: x0 x1 x2 y0 y1 y2 (x1*y1)
         compute_third_component = Script.parse_string("OP_2OVER")  # Pick y1
         compute_third_component += pick(position=11, n_elements=2)  # Pick x1
-        compute_third_component += fq2.mul(take_modulo=False, check_constant=False, clean_constant=False)
+        compute_third_component += self.base_field.mul(take_modulo=False, check_constant=False, clean_constant=False)
         # After this, the stack is: x0 x1 x2 y0 y1 y2 (x1*y1) (x0*y2)
         compute_third_component += Script.parse_string("OP_2OVER")  # Pick y2
         compute_third_component += pick(position=15, n_elements=2)  # Pick x0
-        compute_third_component += fq2.mul(take_modulo=False, check_constant=False, clean_constant=False)
+        compute_third_component += self.base_field.mul(take_modulo=False, check_constant=False, clean_constant=False)
         # After this, the stack is: x0 x1 x2 y0 y1 y2, altstack = [thirdComponent]
         compute_third_component += pick(position=11, n_elements=2)  # Pick x2
         compute_third_component += pick(position=11, n_elements=2)  # Pick y0
-        compute_third_component += fq2.mul(take_modulo=False, check_constant=False, clean_constant=False)
-        compute_third_component += fq2.add_three(take_modulo=False, check_constant=False, clean_constant=False)
+        compute_third_component += self.base_field.mul(take_modulo=False, check_constant=False, clean_constant=False)
+        compute_third_component += self.base_field.add_three(
+            take_modulo=False, check_constant=False, clean_constant=False
+        )
         compute_third_component += Script.parse_string("OP_TOALTSTACK OP_TOALTSTACK")
 
         # End of computation of third component ---------------------------------------------------
@@ -240,19 +232,21 @@ class Fq6(PrimeFieldExtension):
         # After this, the stack is: x0 x1 x2 y0 y1 y2 (y1*x0)
         compute_second_component = Script.parse_string("OP_2OVER")  # Pick y1
         compute_second_component += pick(position=13, n_elements=2)  # Pick x0
-        compute_second_component += fq2.mul(take_modulo=False, check_constant=False, clean_constant=False)
+        compute_second_component += self.base_field.mul(take_modulo=False, check_constant=False, clean_constant=False)
         # After this, the stack is: x0 x1 x2 y0 y1 y2 (y1*x0) (x2*y2*xi)
         compute_second_component += Script.parse_string("OP_2OVER")  # Pick y2
         compute_second_component += pick(position=11, n_elements=2)  # Pick x2
-        compute_second_component += fq2.mul(take_modulo=False, check_constant=False, clean_constant=False)
-        compute_second_component += fq2.mul_by_non_residue(
-            take_modulo=False, check_constant=False, clean_constant=False
+        compute_second_component += self.base_field.mul(take_modulo=False, check_constant=False, clean_constant=False)
+        compute_second_component += self.base_field.mul_by_fq2_non_residue(
+            self=self.base_field, take_modulo=False, check_constant=False, clean_constant=False
         )
         # After this, the stack is: x0 x1 x2 y0 y1 y2, altstack = [thirdComponent,secondComponent]
         compute_second_component += pick(position=13, n_elements=2)  # Pick x1
         compute_second_component += pick(position=11, n_elements=2)  # Pick y0
-        compute_second_component += fq2.mul(take_modulo=False, check_constant=False, clean_constant=False)
-        compute_second_component += fq2.add_three(take_modulo=False, check_constant=False, clean_constant=False)
+        compute_second_component += self.base_field.mul(take_modulo=False, check_constant=False, clean_constant=False)
+        compute_second_component += self.base_field.add_three(
+            take_modulo=False, check_constant=False, clean_constant=False
+        )
         compute_second_component += Script.parse_string("OP_TOALTSTACK OP_TOALTSTACK")
 
         # End of computation of second component ---------------------------------------------------
@@ -261,18 +255,20 @@ class Fq6(PrimeFieldExtension):
 
         # After this, the stack is: x0 x2 y0 y1 (y2*x1), altstack = [thirdComponent,secondComponent]
         compute_first_component = roll(position=9, n_elements=2)  # Roll x1
-        compute_first_component += fq2.mul(take_modulo=False, check_constant=False, clean_constant=False)
+        compute_first_component += self.base_field.mul(take_modulo=False, check_constant=False, clean_constant=False)
         # After this, the stack is: x0 y0 [(y2*x1) + (x2*y1)] * xi, altstack = [thirdComponent,secondComponent]
         compute_first_component += Script.parse_string("OP_2SWAP")  # Roll y1
         compute_first_component += roll(position=7, n_elements=2)  # Roll x2
-        compute_first_component += fq2.mul(take_modulo=False, check_constant=False, clean_constant=False)
-        compute_first_component += fq2.add(take_modulo=False, check_constant=False, clean_constant=False)
-        compute_first_component += fq2.mul_by_non_residue(take_modulo=False, check_constant=False, clean_constant=False)
+        compute_first_component += self.base_field.mul(take_modulo=False, check_constant=False, clean_constant=False)
+        compute_first_component += self.base_field.add(take_modulo=False, check_constant=False, clean_constant=False)
+        compute_first_component += self.base_field.mul_by_fq2_non_residue(
+            self=self.base_field, take_modulo=False, check_constant=False, clean_constant=False
+        )
         # After this, the stack is: firstComponent, altstack = [thirdComponent,secondComponent]
         compute_first_component += Script.parse_string("OP_2ROT OP_2ROT")
-        compute_first_component += fq2.mul(take_modulo=False, check_constant=False, clean_constant=False)
+        compute_first_component += self.base_field.mul(take_modulo=False, check_constant=False, clean_constant=False)
         if take_modulo:
-            compute_first_component += fq2.add(
+            compute_first_component += self.base_field.add(
                 take_modulo=True,
                 positive_modulo=positive_modulo,
                 check_constant=False,
@@ -280,7 +276,9 @@ class Fq6(PrimeFieldExtension):
                 is_constant_reused=True,
             )
         else:
-            compute_first_component += fq2.add(take_modulo=False, check_constant=False, clean_constant=False)
+            compute_first_component += self.base_field.add(
+                take_modulo=False, check_constant=False, clean_constant=False
+            )
 
         # End of computation of first component ----------------------------------------------------
 
@@ -330,26 +328,23 @@ class Fq6(PrimeFieldExtension):
         Returns:
             Script to square an element in F_q^6.
         """
-        # Fq2 implementation
-        fq2 = self.BASE_FIELD
-
-        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
+        out = verify_bottom_constant(self.modulus) if check_constant else Script()
 
         # Computation third component ------------------------------------------------------------
 
         # After this, the stack is: x0 x1 x2 x1^2
         compute_third_component = Script.parse_string("OP_2OVER")  # Pick x1
-        compute_third_component += fq2.square(take_modulo=False, check_constant=False, clean_constant=False)
+        compute_third_component += self.base_field.square(take_modulo=False, check_constant=False, clean_constant=False)
         # After this, the stack is: x0 x1 x2 2x2 x1^2 2x2
         compute_third_component += Script.parse_string("OP_2OVER")  # Pick x2
-        compute_third_component += Script.parse_string("OP_2") + fq2.base_field_scalar_mul(
+        compute_third_component += Script.parse_string("OP_2") + self.base_field.base_field_scalar_mul(
             take_modulo=False, check_constant=False, clean_constant=False
         )
         compute_third_component += Script.parse_string("OP_2SWAP OP_2OVER")
         # After this, the stack is: x0 x1 x2 2x2, altstack = [thirdComponent]
         compute_third_component += pick(position=11, n_elements=2)  # Pick x0
-        compute_third_component += fq2.mul(take_modulo=False, check_constant=False, clean_constant=False)
-        compute_third_component += fq2.add(take_modulo=False, check_constant=False, clean_constant=False)
+        compute_third_component += self.base_field.mul(take_modulo=False, check_constant=False, clean_constant=False)
+        compute_third_component += self.base_field.add(take_modulo=False, check_constant=False, clean_constant=False)
         compute_third_component += Script.parse_string("OP_TOALTSTACK OP_TOALTSTACK")
 
         # End of computation of third component --------------------------------------------------
@@ -358,19 +353,20 @@ class Fq6(PrimeFieldExtension):
 
         # After this, the stack is: x0 x1 2x2 x2^2
         compute_second_component = Script.parse_string("OP_2SWAP")  # Roll x2
-        compute_second_component += fq2.square(take_modulo=False, check_constant=False, clean_constant=False)
-        compute_second_component += fq2.mul_by_non_residue(
+        compute_second_component += self.base_field.square(
             take_modulo=False, check_constant=False, clean_constant=False
+        )
+        compute_second_component += self.base_field.mul_by_fq2_non_residue(
+            self=self.base_field, take_modulo=False, check_constant=False, clean_constant=False
         )
         # After this, the stack is: x0 2x2 x1 x2^2 2x1*x0
         compute_second_component += Script.parse_string("OP_2ROT OP_2SWAP OP_2OVER")
         compute_second_component += pick(position=9, n_elements=2)  # Pick x0
-        compute_second_component += fq2.mul(take_modulo=False, check_constant=False, clean_constant=False)
-        compute_second_component += Script.parse_string("OP_2") + fq2.base_field_scalar_mul(
-            take_modulo=False, check_constant=False, clean_constant=False
+        compute_second_component += self.base_field.mul(
+            take_modulo=False, check_constant=False, clean_constant=False, scalar=2
         )
         # After this, the stack is: x0 2x2 x1, altstack = [thirdComponent, secondComponent]
-        compute_second_component += fq2.add(take_modulo=False, check_constant=False, clean_constant=False)
+        compute_second_component += self.base_field.add(take_modulo=False, check_constant=False, clean_constant=False)
         compute_second_component += Script.parse_string("OP_TOALTSTACK OP_TOALTSTACK")
 
         # End of computation of second component -------------------------------------------------
@@ -378,12 +374,14 @@ class Fq6(PrimeFieldExtension):
         # Computation of first component ---------------------------------------------------------
 
         # After this, the stack is: firstComponent, altstack = [thirdComponent, secondComponent]
-        compute_first_component = fq2.mul(take_modulo=False, check_constant=False, clean_constant=False)
-        compute_first_component += fq2.mul_by_non_residue(take_modulo=False, check_constant=False, clean_constant=False)
+        compute_first_component = self.base_field.mul(take_modulo=False, check_constant=False, clean_constant=False)
+        compute_first_component += self.base_field.mul_by_fq2_non_residue(
+            self=self.base_field, take_modulo=False, check_constant=False, clean_constant=False
+        )
         compute_first_component += Script.parse_string("OP_2SWAP")  # Roll x0
-        compute_first_component += fq2.square(take_modulo=False, check_constant=False, clean_constant=False)
+        compute_first_component += self.base_field.square(take_modulo=False, check_constant=False, clean_constant=False)
         if take_modulo:
-            compute_first_component += fq2.add(
+            compute_first_component += self.base_field.add(
                 take_modulo=True,
                 positive_modulo=positive_modulo,
                 check_constant=False,
@@ -391,7 +389,9 @@ class Fq6(PrimeFieldExtension):
                 is_constant_reused=True,
             )
         else:
-            compute_first_component += fq2.add(take_modulo=False, check_constant=False, clean_constant=False)
+            compute_first_component += self.base_field.add(
+                take_modulo=False, check_constant=False, clean_constant=False
+            )
 
         # End of computation of first component --------------------------------------------------
 
@@ -441,14 +441,12 @@ class Fq6(PrimeFieldExtension):
         Returns:
             Script to multiply an element by v in F_q^6.
         """
-        # Fq2 implementation
-        fq2 = self.BASE_FIELD
-
-        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
+        out = verify_bottom_constant(self.modulus) if check_constant else Script()
 
         if take_modulo:
             # After this, the stack is: x0 x1 x2*NON_RESIDUE
-            out += fq2.mul_by_non_residue(
+            out += self.base_field.mul_by_fq2_non_residue(
+                self=self.base_field,
                 take_modulo=True,
                 positive_modulo=positive_modulo,
                 check_constant=False,
@@ -480,7 +478,9 @@ class Fq6(PrimeFieldExtension):
                 is_positive=positive_modulo,
             )
         else:
-            out += fq2.mul_by_non_residue(take_modulo=False, check_constant=False, clean_constant=False)
+            out += self.base_field.mul_by_fq2_non_residue(
+                self=self.base_field, take_modulo=False, check_constant=False, clean_constant=False
+            )
             out += Script.parse_string("OP_2ROT OP_2ROT")
 
         return out

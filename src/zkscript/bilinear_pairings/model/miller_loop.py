@@ -227,7 +227,7 @@ class MillerLoop:
             check_constant=False,
             clean_constant=(i == 0) and clean_constant,
             verify_gradient=verify_gradients,
-            gradient=gradient_addition.shift(-self.EXTENSION_DEGREE if verify_gradients else 0),
+            gradient=gradient_addition.shift(-self.extension_degree if verify_gradients else 0),
             P=Q.set_negate(self.exp_miller_loop[i] == -1),
             Q=T,
             rolling_options=boolean_list_to_bitmask([verify_gradients, False, True]),
@@ -304,7 +304,7 @@ class MillerLoop:
                 and log2(lambda^2 - xP - xQ) <= log2(3*max(xP,xQ)) <= log2(3) + log2(max(xP,xQ)) (lambda is always
                 assumed to be in Fq)
         """
-        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
+        out = verify_bottom_constant(self.modulus) if check_constant else Script()
 
         # stack in:  [P, Q]
         # stack out: [P, Q, T]
@@ -313,15 +313,15 @@ class MillerLoop:
             if self.exp_miller_loop[-1] == -1 and j >= self.N_POINTS_TWIST // 2:
                 out += Script.parse_string("OP_NEGATE")
 
-        BIT_SIZE_Q = ceil(log2(self.MODULUS))
+        BIT_SIZE_Q = ceil(log2(self.modulus))
         size_point_multiplication = BIT_SIZE_Q
         size_miller_output = BIT_SIZE_Q
 
         gradient_addition = StackFiniteFieldElement(
-            2 * self.N_POINTS_TWIST + self.N_POINTS_CURVE + 2 * self.EXTENSION_DEGREE - 1, False, self.EXTENSION_DEGREE
+            2 * self.N_POINTS_TWIST + self.N_POINTS_CURVE + 2 * self.extension_degree - 1, False, self.extension_degree
         )
         gradient_doubling = StackFiniteFieldElement(
-            2 * self.N_POINTS_TWIST + self.N_POINTS_CURVE + self.EXTENSION_DEGREE - 1, False, self.EXTENSION_DEGREE
+            2 * self.N_POINTS_TWIST + self.N_POINTS_CURVE + self.extension_degree - 1, False, self.extension_degree
         )
         P = StackEllipticCurvePoint(
             StackFiniteFieldElement(2 * self.N_POINTS_TWIST + self.N_POINTS_CURVE - 1, False, self.N_POINTS_CURVE // 2),
@@ -352,7 +352,7 @@ class MillerLoop:
                 size_miller_output,
                 size_point_multiplication,
             ) = self.size_estimation_miller_loop(
-                self.MODULUS,
+                self.modulus,
                 modulo_threshold,
                 i,
                 self.exp_miller_loop,
@@ -409,7 +409,7 @@ class MillerLoop:
                     P=P,
                     T=T,
                 )
-                gradient_tracker += self.EXTENSION_DEGREE if not verify_gradients else 0
+                gradient_tracker += self.extension_degree if not verify_gradients else 0
             else:
                 # stack in:  [gradient_(2T ± Q), gradient_(2T), ..., P, Q, T, f_i^2]
                 # stack out: [gradient_(2T ± Q) in not verify_gradients, gradient_(2T) if not_verify_gradients, ..., P,
@@ -426,7 +426,7 @@ class MillerLoop:
                     Q=Q,
                     T=T,
                 )
-                gradient_tracker += 2 * self.EXTENSION_DEGREE if not verify_gradients else 0
+                gradient_tracker += 2 * self.extension_degree if not verify_gradients else 0
         # stack in:  [P, Q, w*Q, miller(P,Q)]
         # stack out: [w*Q, miller(P,Q)]
         out += move(Q.shift(self.N_ELEMENTS_MILLER_OUTPUT), roll)  # Roll Q

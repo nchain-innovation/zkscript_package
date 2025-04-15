@@ -3,6 +3,7 @@
 from tx_engine import Script
 
 from src.zkscript.bilinear_pairings.bls12_381.fields import fq2_script
+from src.zkscript.fields.fq2 import Fq2
 from src.zkscript.script_types.stack_elements import StackEllipticCurvePoint, StackFiniteFieldElement
 from src.zkscript.util.utility_functions import bitmask_to_boolean_list, check_order
 from src.zkscript.util.utility_scripts import bool_to_moving_function, mod, move, pick, roll, verify_bottom_constant
@@ -11,14 +12,14 @@ from src.zkscript.util.utility_scripts import bool_to_moving_function, mod, move
 class LineFunctions:
     """Line evaluation for BLS12-381."""
 
-    def __init__(self, fq2):
+    def __init__(self, fq2: Fq2):
         """Initialise line evaluation for BLS12-381.
 
         Args:
             fq2 (Fq2): Bitcoin script instance to perform arithmetic operations in F_q^2.
         """
-        self.MODULUS = fq2.MODULUS
-        self.FQ2 = fq2
+        self.modulus = fq2.modulus
+        self.fq2 = fq2
 
     def line_evaluation(
         self,
@@ -83,13 +84,10 @@ class LineFunctions:
             - `gradient` is NOT checked in this function, it is assumed to be the gradient.
             - `ev_(l_(T,Q)(P))` does NOT include the zero in the second component, this is to optimise the script size.
         """
-        # Fq2 implementation
-        fq2 = self.FQ2
-
         check_order([gradient, P, Q])
         is_gradient_rolled, is_p_rolled, is_q_rolled = bitmask_to_boolean_list(rolling_options, 3)
 
-        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
+        out = verify_bottom_constant(self.modulus) if check_constant else Script()
 
         # For BLS12 M-twist, the line function returns:
         # (gradient, P, Q) --> -yQ + gradient*xQ + yp * s - gradient * xP * r^2
@@ -121,7 +119,9 @@ class LineFunctions:
         # altstack out: [-gradient*xP, (-yQ + gradient*xQ)_1]
         first_component = Script.parse_string("OP_SWAP")  # Reorder gradient
         first_component += move(Q.x.shift(2), bool_to_moving_function(is_q_rolled))  # Move xQ
-        first_component += fq2.mul(take_modulo=False, check_constant=False, clean_constant=False)  # Compute xQ*gradient
+        first_component += self.fq2.mul(
+            take_modulo=False, check_constant=False, clean_constant=False
+        )  # Compute xQ*gradient
         first_component += move(Q.y.shift(2), bool_to_moving_function(is_q_rolled), 1, 2)  # Move yQ_1
         if Q.negate:
             first_component += Script.parse_string("OP_ADD OP_TOALTSTACK")
