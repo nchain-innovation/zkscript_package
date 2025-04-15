@@ -7,13 +7,10 @@ from elliptic_curves.fields.quadratic_extension import QuadraticExtension
 from tx_engine import Context
 
 from src.zkscript.fields.fq2 import Fq2 as Fq2Script
-from src.zkscript.fields.fq2 import fq2_for_towering
 from src.zkscript.fields.fq2_over_2_residue_equal_u import Fq2Over2ResidueEqualU as Fq2Over2ResidueEqualUScript
 from src.zkscript.fields.fq3 import Fq3 as Fq3Script
 from src.zkscript.fields.fq4 import Fq4 as Fq4Script
-from src.zkscript.fields.fq4 import fq4_for_towering
 from src.zkscript.fields.fq6_3_over_2 import Fq6 as Fq6Script
-from src.zkscript.fields.fq6_3_over_2 import fq6_for_towering
 from src.zkscript.fields.fq12_2_over_3_over_2 import Fq12 as Fq12Script
 from src.zkscript.fields.fq12_3_over_2_over_2 import Fq12Cubic as Fq12CubicScript
 from src.zkscript.util.utility_scripts import nums_to_script
@@ -179,8 +176,7 @@ class Fq4:
     NON_RESIDUE_FQ2 = Fq2(Fq(1), Fq(1))
     Fq4 = QuadraticExtension(base_field=Fq2, non_residue=NON_RESIDUE_FQ2)
     # Define fq2_script
-    Fq2Script = fq2_for_towering(mul_by_non_residue=Fq2Script.mul_by_one_plus_u)
-    fq2_script = Fq2Script(q=q, non_residue=NON_RESIDUE.to_int())
+    fq2_script = Fq2Script(q=q, non_residue=NON_RESIDUE.to_int(), mul_by_fq2_non_residue=Fq2Script.mul_by_one_plus_u)
     gammas_frobenius = []
     for j in range(1, 4):
         gammas_frobenius.append(NON_RESIDUE_FQ2.power((q**j - 1) // 2).to_list())
@@ -338,8 +334,7 @@ class Fq2Over2ResidueEqualU:
     NON_RESIDUE_FQ2 = Fq2.u()
     Fq2Over2ResidueEqualU = QuadraticExtension(base_field=Fq2, non_residue=NON_RESIDUE_FQ2)
     # Define fq2_script
-    Fq2Script = fq2_for_towering(mul_by_non_residue=Fq2Script.mul_by_one_plus_u)
-    fq2_script = Fq2Script(q=q, non_residue=NON_RESIDUE.to_int())
+    fq2_script = Fq2Script(q=q, non_residue=NON_RESIDUE.to_int(), mul_by_fq2_non_residue=Fq2Script.mul_by_one_plus_u)
     gammas_frobenius = []
     for j in range(1, 4):
         gammas_frobenius.append(NON_RESIDUE_FQ2.power((q**j - 1) // 2).to_list())
@@ -416,8 +411,7 @@ class Fq6ThreeOverTwo:
     NON_RESIDUE_FQ2 = Fq2(Fq(1), Fq(1))
     Fq6 = CubicExtension(base_field=Fq2, non_residue=NON_RESIDUE_FQ2)
     # Define fq2_script
-    Fq2Script = fq2_for_towering(mul_by_non_residue=Fq2Script.mul_by_one_plus_u)
-    fq2_script = Fq2Script(q=q, non_residue=NON_RESIDUE.to_int())
+    fq2_script = Fq2Script(q=q, non_residue=NON_RESIDUE.to_int(), mul_by_fq2_non_residue=Fq2Script.mul_by_one_plus_u)
     # Define script run in tests
     test_script = Fq6Script(q=q, base_field=fq2_script)
     # Define filename for saving scripts
@@ -539,11 +533,9 @@ class Fq12TwoOverThreeOverTwo:
     NON_RESIDUE_FQ6 = Fq6.v()
     Fq12 = QuadraticExtension(base_field=Fq6, non_residue=NON_RESIDUE_FQ6)
     # Define fq2_script
-    Fq2Script = fq2_for_towering(mul_by_non_residue=Fq2Script.mul_by_one_plus_u)
-    fq2_script = Fq2Script(q=q, non_residue=NON_RESIDUE.to_int())
+    fq2_script = Fq2Script(q=q, non_residue=NON_RESIDUE.to_int(), mul_by_fq2_non_residue=Fq2Script.mul_by_one_plus_u)
     # Define fq6_script
-    Fq6Script = fq6_for_towering(mul_by_non_residue=Fq6Script.mul_by_v)
-    fq6_script = Fq6Script(q=q, base_field=fq2_script)
+    fq6_script = Fq6Script(q=q, base_field=fq2_script, mul_by_fq6_non_residue=Fq6Script.mul_by_v)
     # Define gammas for Frobenius
     gammas_frobenius = []
     for j in range(1, 12):
@@ -648,13 +640,11 @@ class Fq12ThreeOverTwoOverTwo:
     NON_RESIDUE_FQ4 = Fq4.u()
     Fq12 = CubicExtension(base_field=Fq4, non_residue=NON_RESIDUE_FQ4)
     # Define fq2_script
-    Fq2Script = fq2_for_towering(mul_by_non_residue=Fq2Script.mul_by_one_plus_u)
-    fq2_script = Fq2Script(q=q, non_residue=NON_RESIDUE.to_int())
+    fq2_script = Fq2Script(q=q, non_residue=NON_RESIDUE.to_int(), mul_by_fq2_non_residue=Fq2Script.mul_by_one_plus_u)
     # Define fq4_script
-    Fq4Script = fq4_for_towering(mul_by_non_residue=Fq4Script.mul_by_u)
-    fq4_script = Fq4Script(q=q, base_field=fq2_script)
+    fq4_script = Fq4Script(q=q, base_field=fq2_script, mul_by_fq4_non_residue=Fq4Script.mul_by_u)
     # Define script run in tests
-    test_script = Fq12CubicScript(q=q, fq2=fq2_script, fq4=fq4_script)
+    test_script = Fq12CubicScript(q=q, fq4=fq4_script)
     # Define filename for saving scripts
     filename = "fq12_3_over_2_over_2"
 

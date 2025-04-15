@@ -403,7 +403,7 @@ class TripleMillerLoop:
             P=T[0],
             rolling_options=boolean_list_to_bitmask([verify_gradients[0], True]),
         )  # Compute 2 * T1
-        verify_gradient_shift = self.EXTENSION_DEGREE if verify_gradients[0] else 0
+        verify_gradient_shift = self.extension_degree if verify_gradients[0] else 0
         # stack in:     [gradient_(2* T1 ± Q1), gradient_(2* T2 ± Q2), gradient_(2* T3 ± Q3),
         #                   gradient_(2*T2), gradient_(2*T3), P1, P2, P3, Q1, Q2, Q3, T2, T3, 2*T1]
         # altstack in:  [{f_i^2}*(ev_(l_(T1,T1))(P1)*ev_(l_(T2,T2))(P2)) *(ev_(l_(T3,T3))(P3)*ev_(l_(2*T1,± Q1))(P1)) * (ev_(l_(2*T2,± Q2))(P2)*ev_(l_(2*T3,± Q3))(P3))]  # noqa: E501
@@ -438,7 +438,7 @@ class TripleMillerLoop:
             P=T[1].shift(self.N_POINTS_TWIST),
             rolling_options=boolean_list_to_bitmask([verify_gradients[1], True]),
         )  # Compute 2 * T2
-        verify_gradient_shift += self.EXTENSION_DEGREE if verify_gradients[1] else 0
+        verify_gradient_shift += self.extension_degree if verify_gradients[1] else 0
         # stack in:     [..., gradient_(2* T2 ± Q2), gradient_(2* T3 ± Q3), ...,
         #                   gradient_(2*T3), P1, P2, P3, Q1, Q2, Q3, T3, (2*T1 ± Q1), (2*T2)]
         # altstack in:  [{f_i^2}*(ev_(l_(T1,T1))(P1)*ev_(l_(T2,T2))(P2)) *(ev_(l_(T3,T3))(P3)*ev_(l_(2*T1,± Q1))(P1)) * (ev_(l_(2*T2,± Q2))(P2)*ev_(l_(2*T3,± Q3))(P3))]  # noqa: E501
@@ -472,7 +472,7 @@ class TripleMillerLoop:
             P=T[2].shift(2 * self.N_POINTS_TWIST),
             rolling_options=boolean_list_to_bitmask([verify_gradients[2], True]),
         )  # Compute 2 * T3
-        verify_gradient_shift += self.EXTENSION_DEGREE if verify_gradients[2] else 0
+        verify_gradient_shift += self.extension_degree if verify_gradients[2] else 0
         # stack in:     [..., gradient_(2* T3 ± Q3), ..., P1, P2, P3, Q1, Q2, Q3, (2*T1 ± Q1), (2*T2 ± Q2), (2*T3)]
         # altstack in:  [{f_i^2}*(ev_(l_(T1,T1))(P1)*ev_(l_(T2,T2))(P2)) *(ev_(l_(T3,T3))(P3)*ev_(l_(2*T1,± Q1))(P1)) * (ev_(l_(2*T2,± Q2))(P2)*ev_(l_(2*T3,± Q3))(P3))]  # noqa: E501
         # stack out:    [..., gradient_(2* T3 ± Q3) if not verify_gradient[2], ..., P1, P2, P3, Q1, Q2, Q3, (2*T1 ± Q1),
@@ -566,17 +566,17 @@ class TripleMillerLoop:
         """
         gradients_addition = [
             StackFiniteFieldElement(
-                6 * self.N_POINTS_TWIST + 3 * self.N_POINTS_CURVE + i * self.EXTENSION_DEGREE - 1,
+                6 * self.N_POINTS_TWIST + 3 * self.N_POINTS_CURVE + i * self.extension_degree - 1,
                 False,
-                self.EXTENSION_DEGREE,
+                self.extension_degree,
             )
             for i in range(6, 3, -1)
         ]
         gradients_doubling = [
             StackFiniteFieldElement(
-                6 * self.N_POINTS_TWIST + 3 * self.N_POINTS_CURVE + i * self.EXTENSION_DEGREE - 1,
+                6 * self.N_POINTS_TWIST + 3 * self.N_POINTS_CURVE + i * self.extension_degree - 1,
                 False,
-                self.EXTENSION_DEGREE,
+                self.extension_degree,
             )
             for i in range(3, 0, -1)
         ]
@@ -612,11 +612,11 @@ class TripleMillerLoop:
             for i in range(3, 0, -1)
         ]
 
-        BIT_SIZE_Q = ceil(log2(self.MODULUS))
+        BIT_SIZE_Q = ceil(log2(self.modulus))
         size_point_multiplication = BIT_SIZE_Q
         size_miller_output = BIT_SIZE_Q
 
-        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
+        out = verify_bottom_constant(self.modulus) if check_constant else Script()
 
         # stack in:  [P1, P2, P3, Q1, Q2, Q3]
         # stack out: [P1, P2, P3, Q1, Q2, Q3, T1, T2, T3]
@@ -640,7 +640,7 @@ class TripleMillerLoop:
                 size_miller_output,
                 size_point_multiplication,
             ) = self.size_estimation_miller_loop(
-                self.MODULUS,
+                self.modulus,
                 modulo_threshold,
                 i,
                 self.exp_miller_loop,
@@ -668,7 +668,7 @@ class TripleMillerLoop:
                     T=T,
                 )
                 gradient_tracker += sum(
-                    self.EXTENSION_DEGREE if not verify_gradient else 0 for verify_gradient in verify_gradients
+                    self.extension_degree if not verify_gradient else 0 for verify_gradient in verify_gradients
                 )
             else:
                 # stack in:  [gradient_(2* T1 ± Q1), gradient_(2* T2 ± Q2), gradient_(2* T3 ± Q3), gradient_(2*T1),
@@ -688,7 +688,7 @@ class TripleMillerLoop:
                     T=T,
                 )
                 gradient_tracker += 2 * sum(
-                    self.EXTENSION_DEGREE if not verify_gradient else 0 for verify_gradient in verify_gradients
+                    self.extension_degree if not verify_gradient else 0 for verify_gradient in verify_gradients
                 )
 
         # stack in:  [P1, P2, P3, Q1, Q2, Q3, w*Q1, w*Q2, w*Q3, (miller(P1,Q1) * miller(P2,Q2) * miller(P3,Q3))]

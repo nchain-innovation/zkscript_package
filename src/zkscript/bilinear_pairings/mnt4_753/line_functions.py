@@ -17,8 +17,8 @@ class LineFunctions:
         Args:
             fq2 (Fq2): Bitcoin script instance to perform arithmetic operations in F_q^2.
         """
-        self.MODULUS = fq2.MODULUS
-        self.FQ2 = fq2
+        self.modulus = fq2.modulus
+        self.fq2 = fq2
 
     def line_evaluation(
         self,
@@ -82,13 +82,10 @@ class LineFunctions:
             - `gradient` is NOT checked in this function, it is assumed to be the gradient.
             - `ev_(l_(T,Q)(P))` does NOT include the zero in the second component, this is to optimise the script size.
         """
-        # Fq2 implementation
-        fq2 = self.FQ2
-
         check_order([gradient, P, Q])
         is_gradient_rolled, is_p_rolled, is_q_rolled = bitmask_to_boolean_list(rolling_options, 3)
 
-        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
+        out = verify_bottom_constant(self.modulus) if check_constant else Script()
 
         # Line evaluation for MNT4 returns: (gradient, Q, P) --> (-yQ + gradient * (xQ - xP*u), yP) as a point in Fq4
 
@@ -103,7 +100,7 @@ class LineFunctions:
         first_component += move(
             gradient.shift(2 - 2 * is_q_rolled - 1 * is_p_rolled), bool_to_moving_function(is_gradient_rolled)
         )  # Move gradient
-        first_component += fq2.mul(
+        first_component += self.fq2.mul(
             take_modulo=False, check_constant=False, clean_constant=False, is_constant_reused=False
         )
         # stack in:     [q .. {gradient} .. {xP} yP .. {xQ} yQ .. gradient * (xQ - xP*u)]

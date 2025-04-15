@@ -47,7 +47,7 @@ class Groth16(PairingModel):
         for i in range(len(locking_key.gradients_pairings[0])):
             for j in range(len(locking_key.gradients_pairings[0][i])):
                 for k in range(1, -1, -1):
-                    for s in range(self.pairing_model.EXTENSION_DEGREE - 1, -1, -1):
+                    for s in range(self.pairing_model.extension_degree - 1, -1, -1):
                         verification_hash = encode_num(locking_key.gradients_pairings[k][i][j][s]) + verification_hash
                         verification_hash = hash256d(verification_hash)
         return verification_hash
@@ -71,7 +71,7 @@ class Groth16(PairingModel):
         for i in range(len(locking_key.gradients_pairings[0]) - 1, -1, -1):
             for _ in range(len(locking_key.gradients_pairings[0][i]) - 1, -1, -1):
                 for _ in range(1, 3):
-                    for _ in range(self.pairing_model.EXTENSION_DEGREE):
+                    for _ in range(self.pairing_model.extension_degree):
                         list_of_opcodes.append("OP_HASH256")
                         list_of_opcodes.append("OP_CAT")
         del list_of_opcodes[-1]
@@ -133,9 +133,9 @@ class Groth16(PairingModel):
         )
 
         # Elliptic curve arithmetic
-        ec_fq = EllipticCurveFq(q=self.pairing_model.MODULUS, curve_a=self.curve_a, curve_b=self.curve_b)
+        ec_fq = EllipticCurveFq(q=self.pairing_model.modulus, curve_a=self.curve_a, curve_b=self.curve_b)
 
-        out = verify_bottom_constant(self.pairing_model.MODULUS) if check_constant else Script()
+        out = verify_bottom_constant(self.pairing_model.modulus) if check_constant else Script()
 
         # stack in:     [q, ..., inverse_miller_loop_triple_pairing, gradients_pairing, A, B, C,
         #                    gradient[gamma_abc[0], sum_(i=1)^l a_i * gamma_abc[i]],
@@ -218,7 +218,7 @@ class Groth16(PairingModel):
         # Hash used to verify the gradients of -gamma and -delta
         verification_hash = self.__gradients_to_hash_commitment(locking_key=locking_key)
 
-        out = verify_bottom_constant(self.pairing_model.MODULUS) if check_constant else Script()
+        out = verify_bottom_constant(self.pairing_model.modulus) if check_constant else Script()
 
         # stack in:  [q, ..., inverse_miller_loop_triple_pairing, gradients_pairing, A, B, C,
         #                   sum_(i=0)^l a_i * gamma_abc[i]]

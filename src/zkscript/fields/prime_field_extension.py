@@ -20,9 +20,9 @@ class PrimeFieldExtension:
     """Construct Bitcoin scripts that perform arithmetic operations in F_q^n.
 
     The class inheriting from this class is assumed to have the following attributes:
-        MODULUS: The characteristic of the prime field F_q.
-        EXTENSION_DEGREE: The extension degree of the field extension,i.e., n.
-        PRIME_FIELD: The script implementation of the prime field F_q.
+        modulus: The characteristic of the prime field F_q.
+        extension_degree: The extension degree of the field extension,i.e., n.
+        prime_field: The script implementation of the prime field F_q.
     """
 
     def __algebraic_sum_leaving_result_on_altstack(
@@ -32,7 +32,9 @@ class PrimeFieldExtension:
         scalar: int = 1,
         rolling_options: int = 3,
     ) -> Script:
-        """Algebraic addition in F_q^n, where n = x.extension_degree = y.extension_degree leaving result on altstack.
+        """Algebraic addition in F_q^n followed by scalar multiplication leaving result on altstack.
+
+        The script computes the operation (x, y) --> scalar * (± x ± y), where scalar is in Fq.
 
         Stack input:
             - stack:    [q, ..., x := (x0, .., xn), .., y := (y0, .., yn), ..]
@@ -50,8 +52,8 @@ class PrimeFieldExtension:
                 after execution. Defaults to `3` (remove everything).
 
         Returns:
-            Script to compute algebraic sum of two elements in F_q^n, leaving the result (except the first coordinate)
-            on the altstack.
+            Script to compute algebraic sum of two elements in F_q^n and rescale the result. It leaves the result
+            (except the first coordinate) on the altstack.
 
         Notes:
             The function returns an assertion error if `x.extension_degree != y.extension_degree`
@@ -89,7 +91,7 @@ class PrimeFieldExtension:
             match x.extension_degree:
                 case 2 | 3:
                     for i in range(x.extension_degree):
-                        out += self.PRIME_FIELD.algebraic_sum(
+                        out += self.prime_field.algebraic_sum(
                             take_modulo=False,
                             check_constant=False,
                             clean_constant=False,
@@ -98,13 +100,14 @@ class PrimeFieldExtension:
                             y=y.shift(-i * is_y_rolled).extract_component(x.extension_degree - 1 - i),
                             rolling_options=3,
                         )
-                        out += nums_to_script([scalar]) + Script.parse_string("OP_MUL") if scalar != 1 else Script()
+                        if scalar != 1:
+                            out += nums_to_script([scalar]) + Script.parse_string("OP_MUL")
                         out += Script.parse_string("OP_TOALTSTACK" if i != x.extension_degree - 1 else "")
                 case 4:
                     out += move(x, bool_to_moving_function(is_x_rolled), start_index=2, end_index=4)
                     for i in range(x.extension_degree):
                         negate = [y.negate, x.negate] if i <= 1 else [x.negate, y.negate]
-                        out += self.PRIME_FIELD.algebraic_sum(
+                        out += self.prime_field.algebraic_sum(
                             take_modulo=False,
                             check_constant=False,
                             clean_constant=False,
@@ -113,7 +116,8 @@ class PrimeFieldExtension:
                             y=StackFiniteFieldElement(0, negate[1], 1),
                             rolling_options=3,
                         )
-                        out += nums_to_script([scalar]) + Script.parse_string("OP_MUL") if scalar != 1 else Script()
+                        if scalar != 1:
+                            out += nums_to_script([scalar]) + Script.parse_string("OP_MUL")
                         out += Script.parse_string("OP_TOALTSTACK" if i != x.extension_degree - 1 else "")
                 case 6:
                     out += move(x, bool_to_moving_function(is_x_rolled), start_index=4, end_index=6)
@@ -159,7 +163,7 @@ class PrimeFieldExtension:
             )
         else:
             for i in range(x.extension_degree):
-                out += self.PRIME_FIELD.algebraic_sum(
+                out += self.prime_field.algebraic_sum(
                     take_modulo=False,
                     check_constant=False,
                     clean_constant=False,
@@ -168,7 +172,8 @@ class PrimeFieldExtension:
                     y=y.shift(-i * is_y_rolled).extract_component(x.extension_degree - 1 - i),
                     rolling_options=rolling_options,
                 )
-                out += nums_to_script([scalar]) + Script.parse_string("OP_MUL") if scalar != 1 else Script()
+                if scalar != 1:
+                    out += nums_to_script([scalar]) + Script.parse_string("OP_MUL")
                 out += Script.parse_string("OP_TOALTSTACK" if i != x.extension_degree - 1 else "")
 
         return out
@@ -185,7 +190,9 @@ class PrimeFieldExtension:
         scalar: int = 1,
         rolling_options: int = 3,
     ) -> Script:
-        """Algebraic addition in F_q^n.
+        """Algebraic addition in F_q^n followed by scalar multiplication.
+
+        The script computes the operation (x, y) --> scalar * (± x ± y), where scalar is in Fq.
 
         Stack input:
             - stack:    [q, ..., x := (x0, .., xn), .., y := (y0, .., yn), ..]
@@ -209,20 +216,20 @@ class PrimeFieldExtension:
                 after execution. Defaults to `3` (remove everything).
 
         Returns:
-            Script to compute algebraic sum of two elements in F_q^n.
+            Script to compute algebraic sum of two elements in F_q^n and rescale the result.
 
         Note:
             The function raises an assertion error if `x.extension_degree` or `y.extension_degree` are not equal to `n`.
         """
         assert (
-            x.extension_degree == self.EXTENSION_DEGREE
-        ), f"x must have extension degree equal to {self.EXTENSION_DEGREE}"
+            x.extension_degree == self.extension_degree
+        ), f"x must have extension degree equal to {self.extension_degree}"
         assert (
-            y.extension_degree == self.EXTENSION_DEGREE
-        ), f"y must have extension degree equal to {self.EXTENSION_DEGREE}"
+            y.extension_degree == self.extension_degree
+        ), f"y must have extension degree equal to {self.extension_degree}"
         check_order([x, y])
 
-        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
+        out = verify_bottom_constant(self.modulus) if check_constant else Script()
 
         # stack in:     [q, .., x, .., y, ..]
         # stack out:    [q, .., x, .., y, .., scalar * (± x0 ± y0)]
@@ -234,7 +241,7 @@ class PrimeFieldExtension:
                 positive_modulo=positive_modulo, clean_constant=clean_constant, is_constant_reused=is_constant_reused
             )
             if take_modulo
-            else Script.parse_string(" ".join(["OP_FROMALTSTACK"] * (self.EXTENSION_DEGREE - 1)))
+            else Script.parse_string(" ".join(["OP_FROMALTSTACK"] * (self.extension_degree - 1)))
         )
 
         return out
@@ -251,7 +258,9 @@ class PrimeFieldExtension:
         scalar: int = 1,
         rolling_options: int = 3,
     ) -> Script:
-        """Addition in F_q^n.
+        """Addition in F_q^n followed by scalar multiplication.
+
+        The script computes the operation (x, y) --> scalar * (x + y), where scalar is in Fq.
 
         Stack input:
             - stack:    [q, ..., x := (x0, .., xn), .., y := (y0, .., yn), ..]
@@ -269,23 +278,23 @@ class PrimeFieldExtension:
             is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
                 after execution. Defaults to `None`.
             x (StackFiniteFieldElement): The position in the stack of `x`. If `None`, the function defaults to
-                `StackFiniteFieldElement(2 * self.EXTENSION_DEGREE - 1, False, self.EXTENSION_DEGREE)`.
+                `StackFiniteFieldElement(2 * self.extension_degree - 1, False, self.extension_degree)`.
             y (StackFiniteFieldElement): The position in the stack of `y`. If `None`, the function defaults to
-                `StackFiniteFieldElement(self.EXTENSION_DEGREE - 1, False, self.EXTENSION_DEGREE)`.
+                `StackFiniteFieldElement(self.extension_degree - 1, False, self.extension_degree)`.
             scalar (int): The scalar to multiply the result by. Defaults to `1`.
             rolling_options (int): Bitmask detailing which of the elements `x` and `y` should be removed from the stack
                 after execution. Defaults to `3` (remove everything).
 
         Returns:
-            Script to add two elements in F_q^n.
+            Script to add two elements in F_q^n and rescale the result.
 
         Note:
             The function raises an assertion error if:
                 - `x.extension_degree` or `y.extension_degree` are not equal to `n`.
                 - `x.negate` is `True` or `y.negate` is `True`
         """
-        x = x if x is not None else StackFiniteFieldElement(2 * self.EXTENSION_DEGREE - 1, False, self.EXTENSION_DEGREE)
-        y = y if y is not None else StackFiniteFieldElement(self.EXTENSION_DEGREE - 1, False, self.EXTENSION_DEGREE)
+        x = x if x is not None else StackFiniteFieldElement(2 * self.extension_degree - 1, False, self.extension_degree)
+        y = y if y is not None else StackFiniteFieldElement(self.extension_degree - 1, False, self.extension_degree)
         assert not x.negate, "x.negate should be False."
         assert not y.negate, "x.negate should be False."
 
@@ -313,7 +322,9 @@ class PrimeFieldExtension:
         scalar: int = 1,
         rolling_options: int = 3,
     ) -> Script:
-        """Subtraction in F_q^n.
+        """Subtraction in F_q^n followed by scalar multiplication.
+
+        The script computes the operation (x, y) --> scalar * (x - y), where scalar is in Fq.
 
         Stack input:
             - stack:    [q, ..., x := (x0, .., xn), .., y := (y0, .., yn), ..]
@@ -331,23 +342,23 @@ class PrimeFieldExtension:
             is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
                 after execution. Defaults to `None`.
             x (StackFiniteFieldElement): The position in the stack of `x`. If `None`, the function defaults to
-                `StackFiniteFieldElement(2 * self.EXTENSION_DEGREE - 1, False, self.EXTENSION_DEGREE)`.
+                `StackFiniteFieldElement(2 * self.extension_degree - 1, False, self.extension_degree)`.
             y (StackFiniteFieldElement): The position in the stack of `y`. If `None`, the function defaults to
-                `StackFiniteFieldElement(self.EXTENSION_DEGREE - 1, False, self.EXTENSION_DEGREE)`.
+                `StackFiniteFieldElement(self.extension_degree - 1, False, self.extension_degree)`.
             scalar (int): The scalar to multiply the result by. Defaults to `1`.
             rolling_options (int): Bitmask detailing which of the elements `x` and `y` should be removed from the stack
                 after execution. Defaults to `3` (remove everything).
 
         Returns:
-            Script to subtract two elements in F_q^n.
+            Script to subtract two elements in F_q^n and rescale the result.
 
         Note:
             The function raises an assertion error if:
                 - `x.extension_degree` or `y.extension_degree` are not equal to `n`.
                 - `x.negate` is `True` or `y.negate` is `True`
         """
-        x = x if x is not None else StackFiniteFieldElement(2 * self.EXTENSION_DEGREE - 1, False, self.EXTENSION_DEGREE)
-        y = y if y is not None else StackFiniteFieldElement(self.EXTENSION_DEGREE - 1, False, self.EXTENSION_DEGREE)
+        x = x if x is not None else StackFiniteFieldElement(2 * self.extension_degree - 1, False, self.extension_degree)
+        y = y if y is not None else StackFiniteFieldElement(self.extension_degree - 1, False, self.extension_degree)
         assert not x.negate, "x.negate should be False."
         assert not y.negate, "x.negate should be False."
 
@@ -393,7 +404,7 @@ class PrimeFieldExtension:
             is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
                 after execution. Defaults to `None`.
             x (StackFiniteFieldElement): The position in the stack of `x`. If `None`, the function defaults to
-                `StackFiniteFieldElement(self.EXTENSION_DEGREE, False, self.EXTENSION_DEGREE)`.
+                `StackFiniteFieldElement(self.extension_degree, False, self.extension_degree)`.
             scalar (StackFiniteFieldElement): The position in the stack of `scalar`.
             rolling_options (int): Bitmask detailing which of the elements `x` and `scalar` should be removed from the
                 stack after execution. Defaults to `3` (remove everything).
@@ -402,29 +413,29 @@ class PrimeFieldExtension:
             Script to multiply an element `x` in F_q^n by a scalar `scalar` in F_q.
             The function optimises for the default configuration in which `x` is on top of the stack, and it is rolled.
         """
-        x = x if x is not None else StackFiniteFieldElement(self.EXTENSION_DEGREE, False, self.EXTENSION_DEGREE)
+        x = x if x is not None else StackFiniteFieldElement(self.extension_degree, False, self.extension_degree)
         scalar = scalar if scalar is not None else StackFiniteFieldElement(0, False, 1)
         assert scalar.extension_degree == 1, "The extension degree of `scalar` must be 1."
         check_order([x, scalar])
 
         is_scalar_rolled, is_x_rolled = bitmask_to_boolean_list(rolling_options, 2)
-        is_default_config = (x.position == self.EXTENSION_DEGREE) and (scalar.position == 0)
+        is_default_config = (x.position == self.extension_degree) and (scalar.position == 0)
 
-        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
+        out = verify_bottom_constant(self.modulus) if check_constant else Script()
 
         # stack out:    [.., x, .., scalar, x0 * scalar]
         # altstack out: [xn * scalar, .., x1 * scalar]
         if is_default_config:
             out += Script.parse_string("OP_NEGATE") if scalar.negate else Script()
-            for _ in range(self.EXTENSION_DEGREE - 1):
+            for _ in range(self.extension_degree - 1):
                 out += Script.parse_string("OP_TUCK OP_MUL OP_TOALTSTACK")
             out += Script.parse_string("OP_MUL")
         else:
             out += move(scalar, bool_to_moving_function(is_scalar_rolled))  # Move scalar
             out += Script.parse_string("OP_NEGATE") if scalar.negate else Script()
-            for i in range(self.EXTENSION_DEGREE - 1, -1, -1):
+            for i in range(self.extension_degree - 1, -1, -1):
                 out += move(
-                    x.shift(1 - is_scalar_rolled - (self.EXTENSION_DEGREE - 1 - i) * is_x_rolled).extract_component(i),
+                    x.shift(1 - is_scalar_rolled - (self.extension_degree - 1 - i) * is_x_rolled).extract_component(i),
                     bool_to_moving_function(is_x_rolled),
                 )  # Move x[i]
                 out += Script.parse_string("OP_OVER OP_MUL OP_TOALTSTACK" if i != 0 else "OP_MUL OP_TOALTSTACK")
@@ -434,7 +445,7 @@ class PrimeFieldExtension:
                 positive_modulo=positive_modulo, clean_constant=clean_constant, is_constant_reused=is_constant_reused
             )
             if take_modulo
-            else Script.parse_string(" ".join(["OP_FROMALTSTACK"] * (self.EXTENSION_DEGREE - 1)))
+            else Script.parse_string(" ".join(["OP_FROMALTSTACK"] * (self.extension_degree - 1)))
         )
 
         return out
@@ -458,7 +469,7 @@ class PrimeFieldExtension:
         out = Script()
         out += roll(position=-1, n_elements=1) if clean_constant else pick(position=-1, n_elements=1)
         out += mod(stack_preparation="", is_positive=positive_modulo)
-        for _ in range(self.EXTENSION_DEGREE - 2):
+        for _ in range(self.extension_degree - 2):
             out += mod(stack_preparation="OP_FROMALTSTACK OP_ROT", is_positive=positive_modulo)
         out += mod(
             stack_preparation="OP_FROMALTSTACK OP_ROT",

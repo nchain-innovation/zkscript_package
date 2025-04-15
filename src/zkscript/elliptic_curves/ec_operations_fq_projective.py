@@ -33,9 +33,9 @@ class EllipticCurveFqProjective:
     [0x00, 0x00]
 
     Attributes:
-        MODULUS: The characteristic of the field F_q.
-        CURVE_A: The `a` coefficient in the Short-Weierstrass equation of the curve (an element in F_q).
-        CURVE_B: The `b` coefficient in the Short-Weierstrass equation of the curve (an element in F_q).
+        modulus: The characteristic of the field F_q.
+        curve_a: The `a` coefficient in the Short-Weierstrass equation of the curve (an element in F_q).
+        curve_b: The `b` coefficient in the Short-Weierstrass equation of the curve (an element in F_q).
     """
 
     def __init__(self, q: int, curve_a: int, curve_b: int):
@@ -46,9 +46,9 @@ class EllipticCurveFqProjective:
             curve_a: The `a` coefficient in the Short-Weierstrass equation of the curve (an element in F_q).
             curve_b: The `b` coefficient in the Short-Weierstrass equation of the curve (an element in F_q).
         """
-        self.MODULUS = q
-        self.CURVE_A = curve_a
-        self.CURVE_B = curve_b
+        self.modulus = q
+        self.curve_a = curve_a
+        self.curve_b = curve_b
 
     def point_algebraic_addition(
         self,
@@ -94,7 +94,7 @@ class EllipticCurveFqProjective:
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
-            modulus (StackNumber): The position of `self.MODULUS` in the stack.
+            modulus (StackNumber): The position of `self.modulus` in the stack.
             P (StackEllipticCurvePointProjective): The position of the point `P` in the stack,
                 its length, whether it should be negated, and whether it should be rolled or picked.
                 Defaults to: StackEllipticCurvePointProjective(
@@ -140,7 +140,7 @@ class EllipticCurveFqProjective:
             msg = "The current implementation only supports Q in position 2."
             raise ValueError(msg)
 
-        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
+        out = verify_bottom_constant(self.modulus) if check_constant else Script()
 
         # stack in:  [x1, y1, z1, .., x2, y2, z2]
         # stack out: [x1, y1, .., (x2*z1), (y2*z1), z2, (z1*z2)]
@@ -157,7 +157,7 @@ class EllipticCurveFqProjective:
         out += roll(position=3, n_elements=1)  # Roll z2
         out += Script.parse_string("OP_TUCK OP_MUL OP_TOALTSTACK OP_MUL OP_ROT OP_FROMALTSTACK")
         out += Script.parse_string("OP_TUCK")
-        out += Fq(self.MODULUS).algebraic_sum(
+        out += Fq(self.modulus).algebraic_sum(
             take_modulo=False,
             positive_modulo=False,
             check_constant=False,
@@ -210,7 +210,7 @@ class EllipticCurveFqProjective:
         out += Script.parse_string("OP_TUCK OP_SUB")
         out += roll(position=3, n_elements=1)  # Roll u
         out += Script.parse_string("OP_MUL OP_FROMALTSTACK")
-        out += Fq(self.MODULUS).algebraic_sum(
+        out += Fq(self.modulus).algebraic_sum(
             take_modulo=False,
             positive_modulo=False,
             check_constant=False,
@@ -268,7 +268,7 @@ class EllipticCurveFqProjective:
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
-            modulus (StackNumber): The position of `self.MODULUS` in the stack.
+            modulus (StackNumber): The position of `self.modulus` in the stack.
             P (StackEllipticCurvePointProjective): The position of the point `P` in the stack,
                 its length, whether it should be negated, and whether it should be rolled or picked.
                 Defaults to: StackEllipticCurvePointProjective(
@@ -292,17 +292,17 @@ class EllipticCurveFqProjective:
             - The modulo q must be a prime number.
             - `P_` is not the point at infinity
         """
-        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
+        out = verify_bottom_constant(self.modulus) if check_constant else Script()
 
         # Bring P on top of the stack, so we can assume the stack is [x1, y1, z1]
         out += move(P, bool_to_moving_function(rolling_option))
 
-        if self.CURVE_A != 0:
+        if self.curve_a != 0:
             # stack in:  [x1, y1, z1]
             # stack out: [x1, y1, (z1^2 * a), s := (y1 * z1)]
             out += pick(position=1, n_elements=2)  # Duplicate y1, z1
             out += pick(position=0, n_elements=1)  # Duplicate z1
-            out += nums_to_script([self.CURVE_A])
+            out += nums_to_script([self.curve_a])
             out += Script.parse_string("OP_MUL OP_MUL")
             out += roll(position=3, n_elements=2)  # Roll y1, z1
             out += Script.parse_string("OP_MUL")
@@ -406,7 +406,7 @@ class EllipticCurveFqProjective:
         Returns:
             Script to multiply a point on E(F_q) in projective coordinates using double-and-add scalar multiplication.
         """
-        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
+        out = verify_bottom_constant(self.modulus) if check_constant else Script()
 
         # stack in:  [marker_a_is_zero, P]
         # stack out: [marker_a_is_zero, P, T]
@@ -500,7 +500,7 @@ class EllipticCurveFqProjective:
         check_order([z_inverse, P])
         is_z_inverse_rolled, is_p_rolled = bitmask_to_boolean_list(rolling_options, 2)
 
-        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
+        out = verify_bottom_constant(self.modulus) if check_constant else Script()
 
         # stack in: [q, .., z_inverse, .., x, y, z, ..]
         # stack out: [q, .., z_inverse, .., x, y, z, .., x * z_inverse, y * z_inverse, q]
@@ -577,7 +577,7 @@ class EllipticCurveFqProjective:
             The order is important, as we carrying out computations in the projective space. The result is Q + P,
             not P + Q (the classes of the points are equivalent, but they are not equal on the nose).
         """
-        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
+        out = verify_bottom_constant(self.modulus) if check_constant else Script()
 
         # Check if Q is the point at infinity
         # stack in: [q, .., P, Q]
@@ -680,7 +680,7 @@ class EllipticCurveFqProjective:
             A Bitcoin script that computes the sum of of `n := n_points_on_stack + n_points_on_altstack`
             elliptic curve points in projective coordinates.
         """
-        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
+        out = verify_bottom_constant(self.modulus) if check_constant else Script()
 
         # stack in:      [P_(n_points_on_stack), .., P_3, P_2, P_1]
         # altstack in:   [P_n, .., P_(n_points_on_stack+2), P_(n_points_on_stack+1)]
@@ -757,7 +757,7 @@ class EllipticCurveFqProjective:
         Returns:
             A Bitcoin script that computes a multi scalar multiplication with fixed bases.
         """
-        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
+        out = verify_bottom_constant(self.modulus) if check_constant else Script()
 
         # stack in:     [a_n, .., a_2, a_1]
         # stack out:    []

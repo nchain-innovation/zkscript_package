@@ -61,7 +61,7 @@ class MsmWithFixedBasesUnlockingKey:
             load_modulus (bool): Whether or not to load the modulus on the stack. Defaults to `True`.
 
         """
-        out = nums_to_script([ec_over_fq.MODULUS]) if load_modulus else Script()
+        out = nums_to_script([ec_over_fq.modulus]) if load_modulus else Script()
 
         # Load the gradients for the additions
         for gradient in self.gradients_additions[::-1]:

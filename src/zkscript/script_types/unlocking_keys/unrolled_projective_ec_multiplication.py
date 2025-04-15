@@ -83,7 +83,7 @@ class EllipticCurveFqProjectiveUnrolledUnlockingKey:
         """
         M = int(log2(self.max_multiplier))
 
-        out = nums_to_script([ec_over_fq.MODULUS]) if load_modulus else Script()
+        out = nums_to_script([ec_over_fq.modulus]) if load_modulus else Script()
 
         # Add the markers
         if self.a == 0:

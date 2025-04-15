@@ -89,9 +89,9 @@ class PairingModel(MillerLoop, TripleMillerLoop, Pairing):
             size_estimation_miller_loop: function to estimate the size of the elements computed while executing
                 the Miller loop.
         """
-        self.MODULUS = q
+        self.modulus = q
         self.exp_miller_loop = exp_miller_loop
-        self.EXTENSION_DEGREE = extension_degree
+        self.extension_degree = extension_degree
         self.N_POINTS_CURVE = n_points_curve
         self.N_POINTS_TWIST = n_points_twist
         self.N_ELEMENTS_MILLER_OUTPUT = n_elements_miller_output

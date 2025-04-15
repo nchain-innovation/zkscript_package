@@ -32,7 +32,7 @@ class MillerLoopUnlockingKey:
         Returns:
             Script pushing [self.gradients, self.P, self.Q] on the stack.
         """
-        out = nums_to_script([pairing_model.MODULUS])
+        out = nums_to_script([pairing_model.modulus])
         for i in range(len(self.gradients) - 1, -1, -1):
             for j in range(len(self.gradients[i]) - 1, -1, -1):
                 out += nums_to_script(self.gradients[i][j])
@@ -68,7 +68,7 @@ class TripleMillerLoopUnlockingKey:
         Returns:
             Script pushing [self.gradients, self.P, self.Q] on the stack.
         """
-        out = nums_to_script([pairing_model.MODULUS])
+        out = nums_to_script([pairing_model.modulus])
         # Load gradients
         for i in range(len(self.gradients[0]) - 1, -1, -1):
             for j in range(len(self.gradients[0][i]) - 1, -1, -1):

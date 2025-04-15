@@ -5,26 +5,37 @@ from tx_engine import Script
 from src.zkscript.bilinear_pairings.bls12_381.fields import fq12_script, fq12cubic_script
 from src.zkscript.bilinear_pairings.bls12_381.parameters import exp_miller_loop
 from src.zkscript.bilinear_pairings.model.cyclotomic_exponentiation import CyclotomicExponentiation
+from src.zkscript.fields.fq12_2_over_3_over_2 import Fq12
 from src.zkscript.script_types.stack_elements import StackFiniteFieldElement
 from src.zkscript.util.utility_scripts import move, pick, roll, verify_bottom_constant
 
 
 class FinalExponentiation(CyclotomicExponentiation):
-    """Final exponentiation in the pairing for BLS12-381."""
+    """Final exponentiation in the pairing for BLS12-381.
 
-    def __init__(self, fq12):
+    Attributes:
+        modulus (int): Modulus of the field.
+        fq12 (Fq12): Bitcoin script instance to perform arithmetic operations in F_q^12, the quadratic extension of
+            F_q^6.
+        cyclotomic_inverse (function): Cyclotomic inverse function in F_q^12.
+        square (function): Square function in F_q^12.
+        mul (function): Multiply function in F_q^12.
+        extension_degree (int): Extension degree of the field. Equal to 12.
+    """
+
+    def __init__(self, fq12: Fq12):
         """Initialise the final exponentiation for BLS12-381.
 
         Args:
             fq12 (Fq12): Bitcoin script instance to perform arithmetic operations in F_q^12, the quadratic extension of
             F_q^6.
         """
-        self.MODULUS = fq12.MODULUS
-        self.FQ12 = fq12
+        self.modulus = fq12.modulus
+        self.fq12 = fq12
         self.cyclotomic_inverse = fq12.conjugate
         self.square = fq12.square
         self.mul = fq12.mul
-        self.EXTENSION_DEGREE = 12
+        self.extension_degree = 12
 
     def easy_exponentiation_with_inverse_check(
         self,
@@ -67,13 +78,11 @@ class FinalExponentiation(CyclotomicExponentiation):
             The inverse of `f` `inverse(f_quadratic)` is passed as input value on the stack and verified during script
             execution.
         """
-        # Fq12 implementation
-        fq12 = self.FQ12
-        is_default_config = (f_inverse.position == self.EXTENSION_DEGREE * 2 - 1) and (
-            f.position == self.EXTENSION_DEGREE - 1
+        is_default_config = (f_inverse.position == self.extension_degree * 2 - 1) and (
+            f.position == self.extension_degree - 1
         )
 
-        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
+        out = verify_bottom_constant(self.modulus) if check_constant else Script()
 
         # After this, the stack is: Inverse(f_quadratic) f
         if not is_default_config:
@@ -83,7 +92,7 @@ class FinalExponentiation(CyclotomicExponentiation):
         # After this, the stack is: Inverse(f_quadratic) f_quadratic
         check_f_inverse = pick(position=23, n_elements=12)  # Bring Inverse(f_quadratic) on top of the stack
         check_f_inverse += pick(position=23, n_elements=12)  # Bring f_quadratic on top of the stack
-        check_f_inverse += fq12.mul(
+        check_f_inverse += self.fq12.mul(
             take_modulo=True, positive_modulo=True, check_constant=False, clean_constant=False, is_constant_reused=False
         )  # Multiply
         check_f_inverse += Script.parse_string(" ".join(["OP_0", "OP_EQUALVERIFY"] * 11))
@@ -91,14 +100,16 @@ class FinalExponentiation(CyclotomicExponentiation):
 
         # After this, the stack is: Inverse(f_quadratic) Conjugate(f_quadratic)
         # Conjugate f_quadratic
-        easy_exponentiation = fq12.conjugate(take_modulo=False, check_constant=False, clean_constant=False)
+        easy_exponentiation = self.fq12.conjugate(take_modulo=False, check_constant=False, clean_constant=False)
         # Compute Inverse(f_quadratic) * Conjugate(f_quadratic)
-        easy_exponentiation += fq12.mul(take_modulo=False, check_constant=False, clean_constant=False)
+        easy_exponentiation += self.fq12.mul(take_modulo=False, check_constant=False, clean_constant=False)
         # Duplicate Inverse(f_quadratic) * Conjugate(f_quadratic)
         easy_exponentiation += pick(position=11, n_elements=12)
         # Compute (Inverse(f_quadratic) * Conjugate(f_quadratic))^(q^2)
-        easy_exponentiation += fq12.frobenius_even(n=2, take_modulo=False, check_constant=False, clean_constant=False)
-        easy_exponentiation += fq12.mul(
+        easy_exponentiation += self.fq12.frobenius_even(
+            n=2, take_modulo=False, check_constant=False, clean_constant=False
+        )
+        easy_exponentiation += self.fq12.mul(
             take_modulo=take_modulo,
             positive_modulo=positive_modulo,
             check_constant=False,
@@ -145,15 +156,12 @@ class FinalExponentiation(CyclotomicExponentiation):
             - `g` is the output of the easy part of the exponentiation.
             - `gammas` is a dictionary where `gammas['i']` are the gammas required for Frobenius applied `i` times.
         """
-        # Fq12 implementation
-        fq12 = self.FQ12
-
-        out = verify_bottom_constant(self.MODULUS) if check_constant else Script()
+        out = verify_bottom_constant(self.modulus) if check_constant else Script()
 
         # Step 1
         # After this, the stack is g t0
         out += pick(position=11, n_elements=12)
-        out += fq12.square(
+        out += self.fq12.square(
             take_modulo=True,
             positive_modulo=False,
             check_constant=False,
@@ -188,19 +196,21 @@ class FinalExponentiation(CyclotomicExponentiation):
         # Step 4
         # After this, the stack is g t0 t1 t2 t3
         out += pick(position=47, n_elements=12)  # Pick g
-        out += fq12.conjugate(take_modulo=False, check_constant=False, clean_constant=False)  # Compute t3
+        out += self.fq12.conjugate(take_modulo=False, check_constant=False, clean_constant=False)  # Compute t3
         # Step 5
         # After this, the stack is: g t0 t2 t1
         out += roll(position=35, n_elements=12)  # Roll t1
-        out += fq12.mul(take_modulo=False, check_constant=False, clean_constant=False)  # Compute t1 * t3
+        out += self.fq12.mul(take_modulo=False, check_constant=False, clean_constant=False)  # Compute t1 * t3
 
         # Step 6
         # After this, the stack is g t0 t2 t1
-        out += fq12.conjugate(take_modulo=False, check_constant=False, clean_constant=False)  # Compute Conjugate(t1)
+        out += self.fq12.conjugate(
+            take_modulo=False, check_constant=False, clean_constant=False
+        )  # Compute Conjugate(t1)
 
         # Step 7
         # After this, the stack is g t0 t1
-        out += fq12.mul(
+        out += self.fq12.mul(
             take_modulo=True,
             positive_modulo=False,
             check_constant=False,
@@ -235,11 +245,13 @@ class FinalExponentiation(CyclotomicExponentiation):
         # Step 10
         # After this, the stack is g t0 t1 t2 t3 Conjugate(t1)
         out += pick(position=35, n_elements=12)  # Pick t1
-        out += fq12.conjugate(take_modulo=False, check_constant=False, clean_constant=False)  # Compute Conjugate(t1)
+        out += self.fq12.conjugate(
+            take_modulo=False, check_constant=False, clean_constant=False
+        )  # Compute Conjugate(t1)
 
         # Step 11
         # After this, the stack is g t0 t1 t2 t3
-        out += fq12.mul(
+        out += self.fq12.mul(
             take_modulo=True,
             positive_modulo=False,
             check_constant=False,
@@ -250,20 +262,20 @@ class FinalExponentiation(CyclotomicExponentiation):
         # Step 12 - 13
         # After this, the stack is: g t0 t2 t3 t1
         out += roll(position=35, n_elements=12)  # Roll t1
-        out += fq12.frobenius_odd(
+        out += self.fq12.frobenius_odd(
             n=3, take_modulo=False, check_constant=False, clean_constant=False
         )  # Compute t1^(q^3)
 
         # Step 14
         # After this, the stack is: g t0 t3 t1 t2
         out += roll(position=35, n_elements=12)  # Roll t2
-        out += fq12.frobenius_even(
+        out += self.fq12.frobenius_even(
             n=2, take_modulo=False, check_constant=False, clean_constant=False
         )  # Compute t2^(q^2)
 
         # Step 15
         # After this, the stack is: g t0 t3 t1
-        out += fq12.mul(take_modulo=False, check_constant=False, clean_constant=False)  # Compute t1 * t2
+        out += self.fq12.mul(take_modulo=False, check_constant=False, clean_constant=False)  # Compute t1 * t2
 
         # Step 16
         # After this, the stack is: g t0 t3 t1 t2
@@ -280,25 +292,27 @@ class FinalExponentiation(CyclotomicExponentiation):
         # Step 17
         # After this, the stack is: g t3 t1 t2
         out += roll(position=47, n_elements=12)  # Roll t0
-        out += fq12.mul(take_modulo=False, check_constant=False, clean_constant=False)  # Compute t2 * t0
+        out += self.fq12.mul(take_modulo=False, check_constant=False, clean_constant=False)  # Compute t2 * t0
 
         # Step 18
         # After this, the stack is: t3 t1 t2
         out += roll(position=47, n_elements=12)  # Roll g
-        out += fq12.mul(take_modulo=False, check_constant=False, clean_constant=False)  # Compute t2 * g
+        out += self.fq12.mul(take_modulo=False, check_constant=False, clean_constant=False)  # Compute t2 * g
 
         # Step 19
         # After this, the stack is: t3 t1
-        out += fq12.mul(take_modulo=False, check_constant=False, clean_constant=False)  # Compute t1 * t2
+        out += self.fq12.mul(take_modulo=False, check_constant=False, clean_constant=False)  # Compute t1 * t2
 
         # Step 20
         # After this, the stack is: t1 t2
         out += roll(position=23, n_elements=12)  # Roll t3
-        out += fq12.frobenius_odd(n=1, take_modulo=False, check_constant=False, clean_constant=False)  # Compute t3^q
+        out += self.fq12.frobenius_odd(
+            n=1, take_modulo=False, check_constant=False, clean_constant=False
+        )  # Compute t3^q
 
         # Step 21
         # After this, the stack is: g^[(q^4 - q^2 + 1)/r]
-        out += fq12.mul(
+        out += self.fq12.mul(
             take_modulo=take_modulo,
             positive_modulo=positive_modulo,
             check_constant=False,

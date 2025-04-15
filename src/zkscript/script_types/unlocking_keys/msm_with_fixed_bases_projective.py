@@ -53,7 +53,7 @@ class MsmWithFixedBasesProjectiveUnlockingKey:
             load_modulus (bool): Whether or not to load the modulus on the stack. Defaults to `True`.
 
         """
-        out = nums_to_script([ec_over_fq.MODULUS]) if load_modulus else Script()
+        out = nums_to_script([ec_over_fq.modulus]) if load_modulus else Script()
 
         # Load the unlocking scripts for the scalar multiplications
         for key in self.scalar_multiplications_keys[::-1]:
