@@ -35,10 +35,11 @@ python --version
 
 ## Installation
 
-After cloning the repository, you can install all the dependencies with
+After cloning the repository, you can install it with
 
 ```bash
 pip install -r requirements.txt
+pip install -e .
 ```
 
 ## Getting started
