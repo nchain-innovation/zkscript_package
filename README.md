@@ -38,6 +38,7 @@ python --version
 After cloning the repository, you can install it with
 
 ```bash
+pip install -r requirements.txt
 pip install -e .
 ```
 
