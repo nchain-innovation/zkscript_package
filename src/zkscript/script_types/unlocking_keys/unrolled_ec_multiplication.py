@@ -6,7 +6,7 @@ from math import log2
 from tx_engine import Script
 
 from src.zkscript.elliptic_curves.ec_operations_fq import EllipticCurveFq
-from src.zkscript.types.stack_elements import StackBaseElement
+from src.zkscript.script_types.stack_elements import StackBaseElement
 from src.zkscript.util.utility_scripts import bool_to_moving_function, move, nums_to_script
 
 
@@ -155,16 +155,18 @@ class EllipticCurveFqUnrolledUnlockingKey:
                 unlocking script. Defaults to `True`.
         """
         M = int(log2(max_multiplier))
-        front = StackBaseElement(M * 4 - 2 - 2 * (1 - base_loaded))
-        rear = StackBaseElement(M * 4 - 2 * (1 - base_loaded))
+        front = StackBaseElement(M * 4 - 4 + 2 * base_loaded)
+        rear = StackBaseElement(M * 4 - 2 + 2 * base_loaded)
 
         out = Script()
 
         # Extract the bits
         # stack out: [.., rear[0], front[0], .., rear[M-1], front[M-1]]
-        for i in range(M):
-            out += move(rear.shift(-2 * i), bool_to_moving_function(rolling_option))
-            out += move(front.shift(-2 * i + 1), bool_to_moving_function(rolling_option))
+        for _ in range(M):
+            out += move(rear, bool_to_moving_function(rolling_option))
+            out += move(front.shift(1), bool_to_moving_function(rolling_option))
+            rear = rear.shift(-2)
+            front = front.shift(-2)
 
         out += Script.parse_string("OP_1")
         out += Script.parse_string(

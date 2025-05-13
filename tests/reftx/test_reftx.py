@@ -10,8 +10,8 @@ from tx_engine import SIGHASH, Context, Script, Tx, TxIn, sig_hash
 from src.zkscript.groth16.bls12_381.bls12_381 import bls12_381
 from src.zkscript.groth16.mnt4_753.mnt4_753 import mnt4_753
 from src.zkscript.reftx.reftx import RefTx
-from src.zkscript.types.locking_keys.reftx import RefTxLockingKey
-from src.zkscript.types.unlocking_keys.reftx import RefTxUnlockingKey
+from src.zkscript.script_types.locking_keys.reftx import RefTxLockingKey
+from src.zkscript.script_types.unlocking_keys.reftx import RefTxUnlockingKey
 
 
 @dataclass

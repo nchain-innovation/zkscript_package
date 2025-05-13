@@ -7,9 +7,8 @@ from typing import Self
 from tx_engine import Script
 
 from src.zkscript.elliptic_curves.ec_operations_fq import EllipticCurveFq
-from src.zkscript.script_types.unlocking_keys.unrolled_ec_multiplication import EllipticCurveFqUnrolledUnlockingKey
 from src.zkscript.script_types.stack_elements import StackBaseElement
-from src.zkscript.util.utility_scripts import nums_to_script
+from src.zkscript.script_types.unlocking_keys.unrolled_ec_multiplication import EllipticCurveFqUnrolledUnlockingKey
 from src.zkscript.util.utility_scripts import bool_to_moving_function, move, nums_to_script
 
 
@@ -74,7 +73,7 @@ class MsmWithFixedBasesUnlockingKey:
         n_keys = len(self.scalar_multiplications_keys)
         assert extractable_scalars <= n_keys, "Index out of bounds"
 
-        out = nums_to_script([ec_over_fq.MODULUS]) if load_modulus else Script()
+        out = nums_to_script([ec_over_fq.modulus]) if load_modulus else Script()
 
         # Load the gradients for the additions
         for gradient in self.gradients_additions[::-1]:
@@ -104,7 +103,11 @@ class MsmWithFixedBasesUnlockingKey:
         assert index < len(max_multipliers), "Index out of bounds"
 
         M = int(log2(max_multipliers[index]))
+        # Each block ha (log2(max_multipliers[i]) * 4) elements
         n_blocks = sum([int(log2(max_multipliers[i])) for i in range(index + 1)])
+        # On top of each block's elements, we have the zero marker: add `index` elements
+        # The rear is the second to last element (the last is the gradient)
+        # The front is the fourth to last element (the third to last is the gradient)
         front = StackBaseElement(n_blocks * 4 + index - 4)
         rear = StackBaseElement(n_blocks * 4 + index - 2)
 
@@ -112,9 +115,11 @@ class MsmWithFixedBasesUnlockingKey:
 
         # Extract the bits
         # stack out: [.., rear[0], front[0], .., rear[M-1], front[M-1]]
-        for i in range(M):
-            out += move(rear.shift(-2 * i), bool_to_moving_function(rolling_option))
-            out += move(front.shift(-2 * i + 1), bool_to_moving_function(rolling_option))
+        for _ in range(M):
+            out += move(rear, bool_to_moving_function(rolling_option))
+            out += move(front.shift(1), bool_to_moving_function(rolling_option))
+            rear = rear.shift(-2)
+            front = front.shift(-2)
 
         out += Script.parse_string("OP_1")
         out += Script.parse_string(

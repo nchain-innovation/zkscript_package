@@ -3,13 +3,12 @@ from math import log2
 import pytest
 from elliptic_curves.fields.prime_field import PrimeField
 from elliptic_curves.models.ec import ShortWeierstrassEllipticCurve
-from elliptic_curves.util.zkscript import (
-    unrolled_multiplication_gradients,
-)
 from tx_engine import Context, Script
 
-from src.zkscript.elliptic_curves.ec_operations_fq import EllipticCurveFq
-from src.zkscript.script_types.unlocking_keys.unrolled_ec_multiplication import EllipticCurveFqUnrolledUnlockingKey
+from src.zkscript.elliptic_curves.ec_operations_fq_projective import EllipticCurveFqProjective
+from src.zkscript.script_types.unlocking_keys.unrolled_projective_ec_multiplication import (
+    EllipticCurveFqProjectiveUnrolledUnlockingKey,
+)
 from src.zkscript.util.utility_scripts import nums_to_script
 
 # Data for Secp256k1
@@ -25,7 +24,7 @@ generator = secp256k1(
     y=Fq_k1(0x483ADA7726A3C4655DA4FBFC0E1108A8FD17B448A68554199C47D08FFB10D4B8),
     infinity=False,
 )
-test_script = EllipticCurveFq(q=modulus, curve_a=0, curve_b=7)
+test_script = EllipticCurveFqProjective(q=modulus, curve_a=0, curve_b=7)
 
 
 @pytest.mark.parametrize("base_loaded", [True, False])
@@ -65,23 +64,21 @@ test_script = EllipticCurveFq(q=modulus, curve_a=0, curve_b=7)
         ),
     ],
 )
-def test_extract_scalar_as_unsigned(base_loaded, P, a, max_multiplier, rolling_option, expected):  # noqa: N803
-    unlocking_key = EllipticCurveFqUnrolledUnlockingKey(
-        P=P.to_list(), a=a, gradients=unrolled_multiplication_gradients(a, P).as_data(), max_multiplier=max_multiplier
+def test_extract_scalar_as_unsigned(base_loaded, rolling_option, P, a, max_multiplier, expected):  # noqa: N803
+    unlocking_key = EllipticCurveFqProjectiveUnrolledUnlockingKey(
+        P=[*P.to_list(), 1], a=a, max_multiplier=max_multiplier
     )
 
     script = unlocking_key.to_unlocking_script(
         test_script, fixed_length_unlock=True, load_modulus=True, load_P=base_loaded
     )
-    script += EllipticCurveFqUnrolledUnlockingKey.extract_scalar_as_unsigned(
+    script += EllipticCurveFqProjectiveUnrolledUnlockingKey.extract_scalar_as_unsigned(
         max_multiplier=unlocking_key.max_multiplier, rolling_option=rolling_option, base_loaded=base_loaded
     )
     script += nums_to_script([expected]) + Script.parse_string("OP_EQUALVERIFY")
-    # Drop gradients (int(log2(max_multiplier)) * 2), base (2 * base_loaded), zero_marker & modulus (2)
-    script += Script.parse_string(" ".join(["OP_DROP"] * (int(log2(max_multiplier)) * 2 + 2 + 2 * base_loaded)))
-    if not rolling_option:
-        # Drop remaining part of the block
-        script += Script.parse_string(" ".join(["OP_DROP"] * (int(log2(max_multiplier)) * 2)))
+    script += Script.parse_string(
+        " ".join(["OP_DROP"] * (int(2 + 3 * base_loaded + 2 * log2(max_multiplier) * (1 - rolling_option))))
+    )
     script += Script.parse_string("OP_1")
     context = Context(script=script)
     assert context.evaluate()

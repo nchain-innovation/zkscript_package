@@ -3,9 +3,9 @@
 from tx_engine import SIGHASH, Script
 
 from src.zkscript.groth16.model.groth16 import Groth16
+from src.zkscript.script_types.locking_keys.reftx import RefTxLockingKey
+from src.zkscript.script_types.unlocking_keys.msm_with_fixed_bases import MsmWithFixedBasesUnlockingKey
 from src.zkscript.transaction_introspection.transaction_introspection import TransactionIntrospection
-from src.zkscript.types.locking_keys.reftx import RefTxLockingKey
-from src.zkscript.types.unlocking_keys.msm_with_fixed_bases import MsmWithFixedBasesUnlockingKey
 from src.zkscript.util.utility_scripts import nums_to_script
 
 BYTES_32 = 32
@@ -108,10 +108,10 @@ class RefTx:
         max_multipliers = self.__multipliers(locking_key=locking_key, max_multipliers=max_multipliers)
 
         out = Script()
-        
+
         # Extract the sighash from the unlocking script
         # msm_data(**) is the data required to execute the multi scalar multiplication on **
-        # chunks(sighash(stx)) are the chunks in which the sighash is split when supplied in 
+        # chunks(sighash(stx)) are the chunks in which the sighash is split when supplied in
         # the unlocking script of RefTx
         #
         # stack in:     [.., msm_data(u_stx), msm_data(sighash(stx))]
