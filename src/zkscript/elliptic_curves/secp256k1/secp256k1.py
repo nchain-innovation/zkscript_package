@@ -104,7 +104,7 @@ class Secp256k1:
         # Verify that `sig_hash_preimage` is the sig_hash_preimage of the spending transaction
         out += TransactionIntrospection.pushtx(
             sighash_flags=SIGHASH.ALL_FORKID,
-            sig_hash_preimage=sig_hash_preimage.shift(-is_h_rolled),
+            data=sig_hash_preimage.shift(-is_h_rolled),
             rolling_option=is_sig_hash_preimage_rolled,
             clean_constants=clean_constants,
             verify_constants=False,

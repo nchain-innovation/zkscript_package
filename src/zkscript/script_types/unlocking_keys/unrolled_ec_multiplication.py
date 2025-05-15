@@ -6,7 +6,8 @@ from math import log2
 from tx_engine import Script
 
 from src.zkscript.elliptic_curves.ec_operations_fq import EllipticCurveFq
-from src.zkscript.util.utility_scripts import nums_to_script
+from src.zkscript.script_types.stack_elements import StackBaseElement
+from src.zkscript.util.utility_scripts import bool_to_moving_function, move, nums_to_script
 
 
 @dataclass
@@ -43,7 +44,8 @@ class EllipticCurveFqUnrolledUnlockingKey:
 
     Notes:
         The script is based on the binary expansion of `a` (denoted `exp_a`) and the list of gradients `gradients`.
-        Here's how it is built:
+        Here's how it is built (when `fixed_length_unlock = False`, otherwise, each block is padded to length 4 with
+        `OP_0`):
         - Let `exp_a = (a0, a1, ..., aN)` where `a = sum_i 2^i * ai`, and let `M = log2(max_multiplier)`.
         - Start with the point [xP yP].
         - Iterate from `M-1` to 0:
@@ -89,12 +91,20 @@ class EllipticCurveFqUnrolledUnlockingKey:
     gradients: list[list[list[int]]] | None
     max_multiplier: int
 
-    def to_unlocking_script(self, ec_over_fq: EllipticCurveFq, load_modulus=True, load_P=True) -> Script:  # noqa: N803
+    def to_unlocking_script(
+        self,
+        ec_over_fq: EllipticCurveFq,
+        fixed_length_unlock: bool = False,
+        load_modulus: bool = True,
+        load_P: bool = True,  # noqa: N803
+    ) -> Script:
         """Return the unlocking script required by unrolled_multiplication script.
 
         Args:
             ec_over_fq (EllipticCurveFq): The instantiation of ec arithmetic over Fq used to
                 construct the unrolled_multiplication locking script.
+            fixed_length_unlock (bool): If `True`, the unlocking script is padded to so that every block of
+                the unrolled iteration has length 4. Defaults to `False`.
             load_modulus (bool): Whether or not to load the modulus on the stack. Defaults to `True`.
             load_P (bool): Whether or not to load `P` in the unlocking script. Set to `False` if `P`
                 is hard-coded in the locking script.
@@ -105,7 +115,9 @@ class EllipticCurveFqUnrolledUnlockingKey:
 
         # Add the gradients
         if self.a == 0:
-            out += Script.parse_string("OP_1") + Script.parse_string(" ".join(["OP_0"] * M))
+            out += Script.parse_string("OP_1") + Script.parse_string(
+                " ".join(["OP_0 OP_0 OP_0 OP_0"] * M if fixed_length_unlock else ["OP_0"] * M)
+            )
         else:
             exp_a = [int(bin(self.a)[j]) for j in range(2, len(bin(self.a)))][::-1]
 
@@ -120,12 +132,45 @@ class EllipticCurveFqUnrolledUnlockingKey:
                     out += nums_to_script(self.gradients[j][1]) + Script.parse_string("OP_1")
                     out += nums_to_script(self.gradients[j][0]) + Script.parse_string("OP_1")
                 else:
-                    out += Script.parse_string("OP_0")
+                    out += Script.parse_string("OP_0 OP_0" if fixed_length_unlock else "OP_0")
                     out += nums_to_script(self.gradients[j][0])
                     out += Script.parse_string("OP_1")
-            out += Script.parse_string(" ".join(["OP_0"] * (M - N)))
+            out += Script.parse_string(
+                " ".join(["OP_0 OP_0 OP_0 OP_0"] * (M - N) if fixed_length_unlock else ["OP_0"] * (M - N))
+            )
 
         # Load P
         out += nums_to_script(self.P) if load_P else Script()
+
+        return out
+
+    @staticmethod
+    def extract_scalar_as_unsigned(max_multiplier: int, rolling_option: bool, base_loaded: bool = True) -> Script:
+        """Return the script that extracts the scalar from the stack as an unsigned number.
+
+        Args:
+            max_multiplier (int): The maximum value of the scalar.
+            rolling_option (bool): If `True`, the bits are rolled.
+            base_loaded (bool): If `True`, the script assumes that the base was loaded on the stack by the
+                unlocking script. Defaults to `True`.
+        """
+        M = int(log2(max_multiplier))
+        front = StackBaseElement(M * 4 - 4 + 2 * base_loaded)
+        rear = StackBaseElement(M * 4 - 2 + 2 * base_loaded)
+
+        out = Script()
+
+        # Extract the bits
+        # stack out: [.., rear[0], front[0], .., rear[M-1], front[M-1]]
+        for _ in range(M):
+            out += move(rear, bool_to_moving_function(rolling_option))
+            out += move(front.shift(1), bool_to_moving_function(rolling_option))
+            rear = rear.shift(-2)
+            front = front.shift(-2)
+
+        out += Script.parse_string("OP_1")
+        out += Script.parse_string(
+            " ".join(["OP_SWAP OP_IF OP_2 OP_MUL OP_SWAP OP_IF OP_1ADD OP_ENDIF OP_ELSE OP_NIP OP_ENDIF"] * M)
+        )
 
         return out

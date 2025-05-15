@@ -8,7 +8,7 @@ class Groth16LockingKey:
     r"""Class encapsulating the data required to generate a locking script for a Groth16 verifier.
 
     Attributes:
-        alpha_beta (list[int]): List of integers representing the alpha and beta coefficients for the computation.
+        alpha_beta (list[int]): List of integers representing the evaluation of the pairing on (alpha, beta).
         minus_gamma (list[int]): List of integers representing the negated gamma values for the computation.
         minus_delta (list[int]): List of integers representing the negated delta values for the computation
         gamma_abc (list[list[int]]): List of points given in the Common Reference String for which the verifier

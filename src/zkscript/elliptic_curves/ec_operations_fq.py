@@ -1055,6 +1055,7 @@ class EllipticCurveFq:
         check_constant: bool | None = None,
         clean_constant: bool | None = None,
         positive_modulo: bool = True,
+        fixed_length_unlock: bool = False,
     ) -> Script:
         """Unrolled double-and-add scalar multiplication loop in E(F_q).
 
@@ -1074,6 +1075,8 @@ class EllipticCurveFq:
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
+            fixed_length_unlock (bool): If `True`, the unlocking script is expected to be padded to a fixed length
+                (dependent on the `max_multiplier`). Defaults to `False`.
 
         Returns:
             Script to multiply a point on E(F_q) using double-and-add scalar multiplication.
@@ -1102,7 +1105,7 @@ class EllipticCurveFq:
         current_size = size_q
 
         # Compute aP
-        # stack in:  [marker_a_is_zero,, [lambdas, a], P, T]
+        # stack in:  [marker_a_is_zero, [lambdas, a], P, T]
         # stack out: [marker_a_s_zero, P, aP]
         for i in range(int(log2(max_multiplier)) - 1, -1, -1):
             # This is an approximation, but I'm quite sure it works.
@@ -1165,9 +1168,19 @@ class EllipticCurveFq:
                     StackFiniteFieldElement(1, False, 1),
                     StackFiniteFieldElement(0, False, 1),
                 ),
-                rolling_options=boolean_list_to_bitmask([True, False, True]),
+                rolling_options=boolean_list_to_bitmask([not fixed_length_unlock, False, True]),
             )  # Compute 2T + P
-            out += Script.parse_string("OP_ENDIF OP_ENDIF")  # Conclude the conditional branches
+
+            # Conclude the conditional branches and clear auxiliary data
+            if fixed_length_unlock:
+                out += (
+                    Script.parse_string("OP_ENDIF OP_ELSE")
+                    + roll(position=5, n_elements=2)
+                    + Script.parse_string("OP_2DROP OP_ENDIF")
+                )
+                out += roll(position=4, n_elements=1) + Script.parse_string("OP_DROP")
+            else:
+                out += Script.parse_string("OP_ENDIF OP_ENDIF")
 
         # Check if a == 0
         # stack in:  [marker_a_is_zero, P, aP]
@@ -1191,6 +1204,7 @@ class EllipticCurveFq:
         check_constant: bool | None = None,
         clean_constant: bool | None = None,
         positive_modulo: bool = True,
+        extractable_scalars: int = 0,
     ) -> Script:
         r"""Multi-scalar multiplication script in E(F_q) with fixed bases.
 
@@ -1221,6 +1235,8 @@ class EllipticCurveFq:
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
+            extractable_scalars (int): The number of scalars that should be extractable in script. Defaults to 0.
+                The extractable scalars are the first to be multiplied, i.e., the last to be loaded on the stack.
 
         Returns:
             A Bitcoin script that computes a multi scalar multiplication with fixed bases.
@@ -1231,7 +1247,7 @@ class EllipticCurveFq:
         #                   a_n, gradients[a_n, P_n], .., a_2, gradients[a_2, P_2], a_1, gradients[a_1, P_1]]
         # stack out:    [gradient[a_1 * P_1, \sum_(i=2)^(n) a_i * P_i], .., gradient[a_n * P_n, a_(n-1) * P_(n-1)]]
         # altstack out: [a_1 * P_1, .., a_n * P_n]
-        for base, multiplier in zip(bases, max_multipliers):
+        for i, (base, multiplier) in enumerate(zip(bases, max_multipliers)):
             assert len(base) != 0
             # Load `base` to the stack
             out += nums_to_script(base)
@@ -1242,6 +1258,7 @@ class EllipticCurveFq:
                 check_constant=False,
                 clean_constant=False,
                 positive_modulo=False,
+                fixed_length_unlock=(i < extractable_scalars),
             )
             # Put a_i * P_i on the altstack
             out += Script.parse_string("OP_TOALTSTACK OP_TOALTSTACK")
