@@ -39,3 +39,13 @@ examples/outputs
 
 ### Rust
 **/target/
+
+### Latex
+*.aux
+*.bbl
+*.blg
+*.log
+*.pdf
+*.out
+*.synctex.gz
+*.toc
