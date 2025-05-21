@@ -40,6 +40,8 @@ class RefTxLockingKey:
             in the Groth16 verification equation. The meaning of the lists is:
                 - gradients_pairings[0]: gradients required to compute w*(-gamma)
                 - gradients_pairings[1]: gradients required to compute w*(-delta)
+        has_precomputed_gradients (bool): Flag indicating whether the precomputed gradients are injected in the locking 
+            script. Defaults to `False`, meaning that the precomputed gradientes are passed in the unlocking script.
     """
 
     alpha_beta: list[int]
@@ -49,6 +51,7 @@ class RefTxLockingKey:
     gamma_abc_without_l_out: list[list[int]]
     gradients_pairings: list[list[list[list[int]]]]
     sighash_flags: SIGHASH
+    has_precomputed_gradients: bool = False
 
     def to_groth16_key(self) -> Groth16LockingKey:
         """Turn the RefTxLockingKey into a Groth16LockingKey."""
@@ -58,4 +61,5 @@ class RefTxLockingKey:
             minus_delta=self.minus_delta,
             gamma_abc=[self.precomputed_l_out, *self.gamma_abc_without_l_out],
             gradients_pairings=self.gradients_pairings,
+            has_precomputed_gradients=self.has_precomputed_gradients,
         )

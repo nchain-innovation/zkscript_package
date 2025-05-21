@@ -31,6 +31,8 @@ class Groth16UnlockingKey:
             \sum_(i=1)^l pub[i] * gamma_abc[i+1]
         gradient_gamma_abc_zero (list[int]): The gradient required to compute the sum
             gamma_abc[0] + \sum_(i=1)^l pub[i] * gamma_abc[i+1]
+        has_precomputed_gradients (bool): Flag determining if the precomputed gradients used to compute 
+            w*(-gamma) and w*(-delta) are in the unlocking script. Defaults to `True`.
     """
 
     pub: list[int]
@@ -41,6 +43,7 @@ class Groth16UnlockingKey:
     inverse_miller_output: list[int]
     msm_key: MsmWithFixedBasesUnlockingKey
     gradient_gamma_abc_zero: list[int]
+    has_precomputed_gradients: bool = True
 
     @staticmethod
     def from_data(
@@ -55,6 +58,7 @@ class Groth16UnlockingKey:
         gradients_additions: list[list[int]],
         inverse_miller_output: list[int],
         gradient_gamma_abc_zero: list[int],
+        has_precomputed_gradients: bool = True,
     ) -> Self:
         r"""Construct an instance of `Self` from the provided data.
 
@@ -79,6 +83,8 @@ class Groth16UnlockingKey:
                 miller(A,B) * miller(gamma_abc[0] + \sum_{i >=0} pub[i] * gamma_abc[i+1], -gamma) * miller(C, -delta)
             gradient_gamma_abc_zero (list[int]): The gradient required to compute the sum
                 gamma_abc[0] + \sum_(i=1)^l pub[i] * gamma_abc[i+1]
+            has_precomputed_gradients (bool): Flag determining if the precomputed gradients used to compute 
+                w*(-gamma) and w*(-delta) are in the unlocking script. Defaults to `True`.
         """
         max_multipliers = max_multipliers if max_multipliers is not None else [groth16_model.r] * len(pub)
         msm_key = MsmWithFixedBasesUnlockingKey.from_data(
@@ -97,6 +103,7 @@ class Groth16UnlockingKey:
             inverse_miller_output,
             msm_key,
             gradient_gamma_abc_zero,
+            has_precomputed_gradients
         )
 
     def to_unlocking_script(
@@ -119,12 +126,15 @@ class Groth16UnlockingKey:
         # Load inverse_miller_output inverse
         out += nums_to_script(self.inverse_miller_output)
 
-        # Load gradients_pairings
+        # Load gradients_pairings. If has_precomputed_gradients is `True`, then all the gradients are added
+        # to the script. Otherwise only the gradient used to compute w*B is added.
         for i in range(len(self.gradients_pairings[0]) - 1, -1, -1):
             for j in range(len(self.gradients_pairings[0][i]) - 1, -1, -1):
-                for k in range(3):
-                    out += nums_to_script(self.gradients_pairings[k][i][j])
-
+                if self.has_precomputed_gradients:
+                    for k in range(3):
+                        out += nums_to_script(self.gradients_pairings[k][i][j])
+                else:
+                    out += nums_to_script(self.gradients_pairings[0][i][j])
         # Load A, B, C
         out += nums_to_script(self.A)
         out += nums_to_script(self.B)
@@ -159,6 +169,8 @@ class Groth16UnlockingKeyWithPrecomputedMsm:
         inverse_miller_output (list[int]): the inverse of
             miller(A,B) * miller(gamma_abc[0] + \sum_{i >=0} pub[i] * gamma_abc[i+1], -gamma) * miller(C, -delta)
         precomputed_msm: the sum \sum_(i=0)^l a_i * gamma_abc[i]
+        has_precomputed_gradients (bool): Flag determining if the precomputed gradients used to compute 
+            w*(-gamma) and w*(-delta) are in the unlocking script. Defaults to `True`.
     """
 
     A: list[int]
@@ -167,6 +179,7 @@ class Groth16UnlockingKeyWithPrecomputedMsm:
     gradients_pairings: list[list[list[list[int]]]]
     inverse_miller_output: list[int]
     precomputed_msm: list[int]
+    has_precomputed_gradients: bool = True
 
     def to_unlocking_script(
         self,
@@ -186,11 +199,15 @@ class Groth16UnlockingKeyWithPrecomputedMsm:
         # Load inverse_miller_output inverse
         out += nums_to_script(self.inverse_miller_output)
 
-        # Load gradients_pairings
+        # Load gradients_pairings. If has_precomputed_gradients is `True`, then all the gradients are added
+        # to the script. Otherwise only the gradient used to compute w*B is added.
         for i in range(len(self.gradients_pairings[0]) - 1, -1, -1):
             for j in range(len(self.gradients_pairings[0][i]) - 1, -1, -1):
-                for k in range(3):
-                    out += nums_to_script(self.gradients_pairings[k][i][j])
+                if self.has_precomputed_gradients:
+                    for k in range(3):
+                        out += nums_to_script(self.gradients_pairings[k][i][j])
+                else:
+                    out += nums_to_script(self.gradients_pairings[0][i][j])
 
         # Load A, B, C
         out += nums_to_script(self.A)
