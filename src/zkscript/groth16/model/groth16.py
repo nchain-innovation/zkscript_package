@@ -207,7 +207,7 @@ class Groth16:
                 - gradients_pairing are the gradients needed to execute the method `self.triple_pairing()`
                     (from the Pairing class) to compute the triple pairing. If `locking_key.has_precomputed_gradients`
                     is `False`, these are already on the stack, and are verified at the end of the script. If `True`, 
-                    they are injected during the execution of the triple miller loop.
+                    they are injected during the execution of the triple pairing.
             - altstack: []
 
         Stack output:
@@ -261,8 +261,8 @@ class Groth16:
             verify_gradients=(True, False, False),
             check_constant=False,
             clean_constant=clean_constant,
-            is_precomputed_gradients_on_altstack=locking_key.has_precomputed_gradients,
-            gradients_pairing=locking_key.gradients_pairings,
+            is_precomputed_gradients_on_stack=not locking_key.has_precomputed_gradients,
+            precomputed_gradients=locking_key.gradients_pairings,
         )
 
         # Verify pairing(A,B) * pairing(sum_(i=0)^(l) a_i * gamma_abc[i], -gamma) * pairing(C, -delta) == alpha_beta
