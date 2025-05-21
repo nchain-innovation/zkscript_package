@@ -433,12 +433,12 @@ class EllipticCurveFqProjective:
             )  # Compute 2T
 
             # Roll marker for addition and auxiliary data addition
-            # stack in:  [auxiliary_data_addition, marker_addition, P, 2T]
-            # stack out: [auxiliary_data_addition, P, 2T, marker_addition]
+            # stack in:  [marker_addition, P, 2T]
+            # stack out: [P, 2T, marker_addition]
             out += roll(position=6, n_elements=1)
 
             # Check marker for +P and compute 2T + P if marker is 1
-            # stack in:  [auxiliary_data_addition, P, 2T, marker_addition]
+            # stack in:  [P, 2T, marker_addition]
             # stack out: [P, 2T, if marker_addition = 0, else P, (2T+P)]
             out += Script.parse_string("OP_IF")
             out += self.point_algebraic_addition(

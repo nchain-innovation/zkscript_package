@@ -45,12 +45,14 @@ def save_scripts(lock, unlock, save_to_json_folder, filename, test_name):
     ],
 )
 @pytest.mark.parametrize("security", [2, 3])
+@pytest.mark.parametrize("is_sig_hash_preimage", [True, False])
 @pytest.mark.parametrize("is_opcodeseparator", [True, False])
-def test_pushtx_bit_shift(sighash_flags, security, is_opcodeseparator, save_to_json_folder):
+def test_pushtx_bit_shift(sighash_flags, security, is_sig_hash_preimage, is_opcodeseparator, save_to_json_folder):
     lock = TransactionIntrospection.pushtx_bit_shift(
         sighash_flags=sighash_flags,
-        sig_hash_preimage=StackBaseElement(0),
+        data=StackBaseElement(0),
         rolling_option=1,
+        is_sig_hash_preimage=is_sig_hash_preimage,
         is_checksigverify=False,
         is_opcodeseparator=is_opcodeseparator,
         security=security,
@@ -61,7 +63,9 @@ def test_pushtx_bit_shift(sighash_flags, security, is_opcodeseparator, save_to_j
 
     unlocking_key = PushTxBitShiftUnlockingKey(tx=tx, index=0, script_pubkey=lock, prev_amount=prev_amount)
 
-    tx_in.script_sig = unlocking_key.to_unlocking_script(sighash_flags=sighash_flags, security=security)
+    tx_in.script_sig = unlocking_key.to_unlocking_script(
+        sighash_flags=sighash_flags, is_sig_hash_preimage=is_sig_hash_preimage, security=security
+    )
 
     message = sig_hash_preimage(
         tx=tx, index=0, script_pubkey=lock, prev_amount=prev_amount, sighash_flags=sighash_flags
@@ -89,14 +93,16 @@ def test_pushtx_bit_shift(sighash_flags, security, is_opcodeseparator, save_to_j
         SIGHASH.SINGLE_ANYONECANPAY_FORKID,
     ],
 )
+@pytest.mark.parametrize("is_sig_hash_preimage", [True, False])
 @pytest.mark.parametrize("is_opcodeseparator", [True, False])
-def test_pushtx(sighash_flags, is_opcodeseparator, save_to_json_folder):
+def test_pushtx(sighash_flags, is_sig_hash_preimage, is_opcodeseparator, save_to_json_folder):
     lock = TransactionIntrospection.pushtx(
         sighash_flags=sighash_flags,
-        sig_hash_preimage=StackBaseElement(0),
+        data=StackBaseElement(0),
         rolling_option=1,
         clean_constants=True,
         verify_constants=True,
+        is_sig_hash_preimage=is_sig_hash_preimage,
         is_checksigverify=False,
         is_opcodeseparator=is_opcodeseparator,
     )
@@ -106,7 +112,9 @@ def test_pushtx(sighash_flags, is_opcodeseparator, save_to_json_folder):
 
     unlocking_key = PushTxUnlockingKey(tx=tx, index=0, script_pubkey=lock, prev_amount=prev_amount)
 
-    tx_in.script_sig = unlocking_key.to_unlocking_script(sighash_flags=sighash_flags, append_constants=True)
+    tx_in.script_sig = unlocking_key.to_unlocking_script(
+        sighash_flags=sighash_flags, is_sig_hash_preimage=is_sig_hash_preimage, append_constants=True
+    )
 
     message = sig_hash_preimage(
         tx=tx, index=0, script_pubkey=lock, prev_amount=prev_amount, sighash_flags=sighash_flags

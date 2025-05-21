@@ -53,7 +53,6 @@ class Fq:
                 after execution. Defaults to `None`.
             x (StackFiniteFieldElement): The position in the stack of `x` and whether `x` should be negated when used.
             y (StackFiniteFieldElement): The position in the stack of `y` and whether `y` should be negated when used.
-            component:
             rolling_options (int): Bitmask detailing which of the elements `x` and `y` should be removed from the stack
                 after execution. Defaults to `3` (remove everything).
 

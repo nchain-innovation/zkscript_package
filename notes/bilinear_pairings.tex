@@ -182,13 +182,13 @@ Hence, \eqref{eqn:relationsMillerLoop} can be used to directly compute $f_{w,Q}(
 
         \For{$i=n-1, \dots, 0$}
         \State $out \gets out^2$
-        \State $out \gets out \cdot \frac{\ev_{\ell_{T,T}}(P)}{\ev_{\ell_{2T,2T}}(P)}$
+        \State $out \gets out \cdot \frac{\ev_{\ell_{T,T}}(P)}{\ev_{\ell_{2T,-2T}}(P)}$
         \State $T \gets 2T$
         \If{$w_i = 1$}
-            \State $out \gets out \cdot \frac{\ev_{\ell_{T,Q}}(P)}{\ev_{\ell_{T+Q,T+Q}}(P)}$
+            \State $out \gets out \cdot \frac{\ev_{\ell_{T,Q}}(P)}{\ev_{\ell_{T+Q,-(T+Q)}}(P)}$
             \State $T \gets T + Q$
         \Else
-            \State $out \gets out \cdot \frac{\ev_{\ell_{T,-Q}}(P)}{\ev_{\ell_{T-Q,T-Q}}(P)}$
+            \State $out \gets out \cdot \frac{\ev_{\ell_{T,-Q}}(P)}{\ev_{\ell_{T-Q,-(T-Q)}}(P)}$
             \State $T \gets T - Q$
         \EndIf
         \EndFor
@@ -306,13 +306,13 @@ Below is the Miller's algorithm when $Q$ is considered as a point in $E'(\fq{k/d
 
         \For{$i=n-1, \dots, 0$}
         \State $out \gets out^2$
-        \State $out \gets out \cdot \frac{\ev_{\ell_{T,T}}(\Psi^{-1}(P))}{\ev_{\ell_{2T,2T}}(\Psi^{-1}(P))}$
+        \State $out \gets out \cdot \frac{\ev_{\ell_{T,T}}(\Psi^{-1}(P))}{\ev_{\ell_{2T,-2T}}(\Psi^{-1}(P))}$
         \State $T \gets 2T$
         \If{$w_i = 1$}
-            \State $out \gets out \cdot \frac{\ev_{\ell_{T,Q}}(\Psi^{-1}(P))}{\ev_{\ell_{T+Q,T+Q}}(\Psi^{-1}(P))}$
+            \State $out \gets out \cdot \frac{\ev_{\ell_{T,Q}}(\Psi^{-1}(P))}{\ev_{\ell_{T+Q,-(T+Q)}}(\Psi^{-1}(P))}$
             \State $T \gets T + Q$
         \Else
-            \State $out \gets out \cdot \frac{\ev_{\ell_{T,-Q}}(\Psi^{-1}(P))}{\ev_{\ell_{T-Q,T-Q}}(\Psi^{-1}(P))}$
+            \State $out \gets out \cdot \frac{\ev_{\ell_{T,-Q}}(\Psi^{-1}(P))}{\ev_{\ell_{T-Q,-(T-Q)}}(\Psi^{-1}(P))}$
             \State $T \gets T - Q$
         \EndIf
         \EndFor
@@ -332,11 +332,11 @@ The technique of denominator elimination has been described for all types of twi
     \item Quadratic, quartic, sextic twists: $\omega^2 \in \fq{k/2}$; as $(k/2) \mid k$ and $r \nmid q^m - 1$ for $m < k$, $q^{k/2} - 1 \mid \frac{q^k - 1}{r}$ (see also subsection \ref{subsect:finalexponentiation}). Hence\footnote{A similar calculation holds for $\ev_{\ell_{2T,2T}}(\Psi^{-1}(P))$.}
     \begin{equation}
         \label{eqn:den-elim}
-        \ev_{\ell_{T \pm Q, T \pm Q}}(\Psi^{-1}(P)) = x_{T \pm Q} - \omega^2 x_P \in \fq{k/2}
+        \ev_{\ell_{T \pm Q, - (T \pm Q) }}(\Psi^{-1}(P)) = x_{T \pm Q} - \omega^2 x_P \in \fq{k/2}
     \end{equation}
     and
     \[
-        \ev_{\ell_{T \pm Q, T \pm Q}}(\Psi^{-1}(P))^{\frac{q^k-1}{r}} = \ev_{\ell_{T \pm Q, T \pm Q}}(\Psi^{-1}(P))^{(q^{k/2}-1)\frac{q^k-1}{(q^{k/2}-1)r}} = 1
+        \ev_{\ell_{T \pm Q, - (T \pm Q)}}(\Psi^{-1}(P))^{\frac{q^k-1}{r}} = \ev_{\ell_{T \pm Q, T \pm Q}}(\Psi^{-1}(P))^{(q^{k/2}-1)\frac{q^k-1}{(q^{k/2}-1)r}} = 1
     \]
     \item Cubic twists: see \cite[Lem. 1]{LZZW-cubic-den-elim}.
 \end{itemize}
@@ -344,7 +344,7 @@ The technique of denominator elimination has been described for all types of twi
 \begin{remark}
     Note that a similar calculation to \eqref{eqn:den-elim} holds for $\ev_{\ell_{\Psi(T \pm Q), \Psi(T \pm Q)}}(P)$:
     \[
-        \ev_{\ell_{\Psi(T \pm Q), \Psi(T \pm Q)}}(P) = \frac{x_{T \pm Q}}{\omega^2} - x_P \in \fq{k/2}
+        \ev_{\ell_{\Psi(T \pm Q), \Psi(-(T \pm Q))}}(P) = \frac{x_{T \pm Q}}{\omega^2} - x_P \in \fq{k/2}
     \]
 \end{remark}
 

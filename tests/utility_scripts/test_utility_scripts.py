@@ -3,6 +3,7 @@ from tx_engine import Context, Script, encode_num
 from tx_engine.engine.util import GROUP_ORDER_INT
 
 from src.zkscript.script_types.stack_elements import StackBaseElement, StackFiniteFieldElement, StackNumber
+from src.zkscript.util.utility_functions import boolean_list_to_bitmask
 from src.zkscript.util.utility_scripts import (
     bytes_to_unsigned,
     enforce_mul_equal,
@@ -14,6 +15,7 @@ from src.zkscript.util.utility_scripts import (
     reverse_endianness_bounded_length,
     reverse_endianness_fixed_length,
     roll,
+    unsigned_from_bits,
     verify_bottom_constant,
 )
 
@@ -477,6 +479,34 @@ def test_enforce_mul_equal(
         lock += Script.parse_string("OP_EQUAL" if ix == len(expected) - 1 else "OP_EQUALVERIFY")
     if expected == []:
         lock += Script.parse_string("OP_1")
+
+    context = Context(unlock + lock)
+    assert context.evaluate()
+    assert context.get_stack().size() == 1
+
+
+@pytest.mark.parametrize(
+    ("stack", "elements_positions", "rolling_options", "expected"),
+    [
+        (["01", "aa", "00", "01"], [3, 1, 0], [True, True, True], ["aa", "05"]),
+        (["01", "aa", "00", "01"], [3, 1, 0], [True, False, True], ["aa", "00", "05"]),
+        (["01", "aa", "00", "01"], [3, 1, 0], [False, True, True], ["01", "aa", "05"]),
+        (["01", "aa", "00", "01"], [3, 1, 0], [True, True, False], ["aa", "01", "05"]),
+    ],
+)
+def test_unsigned_from_bits(stack, elements_positions, rolling_options, expected):
+    unlock = Script()
+    for el in stack:
+        unlock.append_pushdata(bytes.fromhex(el))
+
+    lock = unsigned_from_bits(
+        stack_elements=[StackBaseElement(ix) for ix in elements_positions],
+        rolling_options=boolean_list_to_bitmask(rolling_options),
+    )
+
+    for ix, el in enumerate(expected[::-1]):
+        lock.append_pushdata(bytes.fromhex(el))
+        lock += Script.parse_string("OP_EQUAL" if ix == len(expected) - 1 else "OP_EQUALVERIFY")
 
     context = Context(unlock + lock)
     assert context.evaluate()

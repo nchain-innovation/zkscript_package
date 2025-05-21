@@ -2,9 +2,9 @@
 
 from tx_engine import Script, encode_num, hash256d
 
-# Pairing
 from src.zkscript.bilinear_pairings.model.model_definition import PairingModel
 
+# Pairing
 # Script implementations
 # EC arithmetic
 from src.zkscript.elliptic_curves.ec_operations_fq import EllipticCurveFq
@@ -13,7 +13,7 @@ from src.zkscript.util.utility_functions import optimise_script
 from src.zkscript.util.utility_scripts import nums_to_script, roll, verify_bottom_constant
 
 
-class Groth16(PairingModel):
+class Groth16:
     """Groth16 class.
 
     Attributes:
@@ -22,11 +22,11 @@ class Groth16(PairingModel):
         r (int): The order of G1/G2/GT.
     """
 
-    def __init__(self, pairing_model, curve_a: int, curve_b: int, r: int):
+    def __init__(self, pairing_model: PairingModel, curve_a: int, curve_b: int, r: int):
         """Initialise the Groth16 class.
 
         Args:
-            pairing_model: Pairing model used to instantiate Groth16.
+            pairing_model (PairingModel): Pairing model used to instantiate Groth16.
             curve_a (int): A coefficient of the base curve over which Groth16 is instantiated.
             curve_b (int): B coefficient of the base curve over which Groth16 is instantiated.
             r (int): The order of G1/G2/GT.
@@ -85,6 +85,7 @@ class Groth16(PairingModel):
         self,
         locking_key: Groth16LockingKey,
         modulo_threshold: int,
+        extractable_inputs: int = 0,
         max_multipliers: list[int] | None = None,
         check_constant: bool | None = None,
         clean_constant: bool | None = None,
@@ -115,6 +116,8 @@ class Groth16(PairingModel):
             locking_key (Groth16LockingKey): Locking key used to generate the verifier. Encapsulates the data of the
                 CRS needed by the verifier.
             modulo_threshold (int): Bit-length threshold. Values whose bit-length exceeds it are reduced modulo `q`.
+            extractable_inputs (int): The number of public inputs which should be extractable in script.
+                Defaults to `0`.
             max_multipliers (list[int]): List where each element max_multipliers[i] is the max value of the i-th public
                 statement.
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
@@ -153,6 +156,7 @@ class Groth16(PairingModel):
             check_constant=False,
             clean_constant=False,
             positive_modulo=False,
+            extractable_scalars=extractable_inputs,
         )
 
         # Load gamma_abc[0] to the stack
