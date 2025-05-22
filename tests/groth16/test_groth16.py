@@ -560,9 +560,9 @@ def test_groth16_slow(
 
     if is_minimal_example:
         sys.stdout.write(
-            f"\nThe locking script size for Groth16 for the curve {filename} with { \
-                "two public inputs" if filename == "bls12_381" else "one public input" \
-                } is {len(lock.raw_serialize())} bytes.\t"
+            f"\nThe locking script size for Groth16 for the curve {filename} with {
+                'two public inputs' if filename == 'bls12_381' else 'one public input'
+            } is {len(lock.raw_serialize())} bytes.\t"
         )
 
     if save_to_json_folder:

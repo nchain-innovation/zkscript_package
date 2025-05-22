@@ -40,9 +40,9 @@ class MerkleTreeBitFlagsUnlockingKey:
         assert self.aux is not None, f"{self.aux} should be a list of strings"
         assert self.bit is not None, f"{self.bit} should be a list of strings"
         assert len(self.bit) == len(self.aux), f"{self.bit} and {self.aux} should have the same lenght"
-        assert all(
-            c in string.hexdigits for node in self.aux for c in node
-        ), f"{self.aux} is not a valid list of hexadecimal strings"
+        assert all(c in string.hexdigits for node in self.aux for c in node), (
+            f"{self.aux} is not a valid list of hexadecimal strings"
+        )
         assert all(c in string.hexdigits for c in self.data)
 
         # Initialize path_data
@@ -69,12 +69,12 @@ class MerkleTreeBitFlagsUnlockingKey:
             AssertionError: Raised if
                 - the lengths of `self.path_data[0]` or `self.path_data[1]` do not match `merkle_tree.depth - 1`.
         """
-        assert (
-            len(self.path_data[0]) == merkle_tree.depth - 1
-        ), f"{self.path_data[0]} must be of lenght {merkle_tree.depth - 1}."
-        assert (
-            len(self.path_data[1]) == merkle_tree.depth - 1
-        ), f"{self.path_data[1]} must be of lenght {merkle_tree.depth - 1}."
+        assert len(self.path_data[0]) == merkle_tree.depth - 1, (
+            f"{self.path_data[0]} must be of lenght {merkle_tree.depth - 1}."
+        )
+        assert len(self.path_data[1]) == merkle_tree.depth - 1, (
+            f"{self.path_data[1]} must be of lenght {merkle_tree.depth - 1}."
+        )
 
         out = Script()
 
@@ -117,15 +117,15 @@ class MerkleTreeTwoAuxUnlockingKey:
         """
         assert self.aux_left is not None, f"{self.aux_left} should be a list of strings"
         assert self.aux_right is not None, f"{self.aux_right} should be a list of strings"
-        assert len(self.aux_left) == len(
-            self.aux_right
-        ), f"{self.aux_left} and {self.aux_right} should have the same lenght"
-        assert all(
-            c in string.hexdigits for node in self.aux_left for c in node
-        ), f"{self.aux_left} is not a valid list of hexadecimal strings"
-        assert all(
-            c in string.hexdigits for node in self.aux_right for c in node
-        ), f"{self.aux_left} is not a valid list of hexadecimal strings"
+        assert len(self.aux_left) == len(self.aux_right), (
+            f"{self.aux_left} and {self.aux_right} should have the same lenght"
+        )
+        assert all(c in string.hexdigits for node in self.aux_left for c in node), (
+            f"{self.aux_left} is not a valid list of hexadecimal strings"
+        )
+        assert all(c in string.hexdigits for node in self.aux_right for c in node), (
+            f"{self.aux_left} is not a valid list of hexadecimal strings"
+        )
         assert all(c in string.hexdigits for c in self.data)
 
         # Initialize path_data
@@ -152,12 +152,12 @@ class MerkleTreeTwoAuxUnlockingKey:
             AssertionError: Raised if
                 - the lengths of `self.path_data[0]` or `self.path_data[1]` do not match `merkle_tree.depth - 1`.
         """
-        assert (
-            len(self.path_data[0]) == merkle_tree.depth - 1
-        ), f"{self.path_data[0]} must be of lenght {merkle_tree.depth - 1}."
-        assert (
-            len(self.path_data[1]) == merkle_tree.depth - 1
-        ), f"{self.path_data[1]} must be of lenght {merkle_tree.depth - 1}."
+        assert len(self.path_data[0]) == merkle_tree.depth - 1, (
+            f"{self.path_data[0]} must be of lenght {merkle_tree.depth - 1}."
+        )
+        assert len(self.path_data[1]) == merkle_tree.depth - 1, (
+            f"{self.path_data[1]} must be of lenght {merkle_tree.depth - 1}."
+        )
 
         out = Script()
 

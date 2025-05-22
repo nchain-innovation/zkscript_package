@@ -19,7 +19,7 @@ class Groth16LockingKey:
             in the Groth16 verification equation. The meaning of the lists is:
                 - gradients_pairings[0]: gradients required to compute w*(-gamma)
                 - gradients_pairings[1]: gradients required to compute w*(-delta)
-        has_precomputed_gradients (bool): Flag indicating whether the precomputed gradients are injected in the locking 
+        has_precomputed_gradients (bool): Flag indicating whether the precomputed gradients are injected in the locking
             script. Defaults to `False`, meaning that the precomputed gradientes are passed in the unlocking script.
     """
 
@@ -43,7 +43,7 @@ class Groth16LockingKeyWithPrecomputedMsm:
             in the Groth16 verification equation. The meaning of the lists is:
                 - gradients_pairings[0]: gradients required to compute w*(-gamma)
                 - gradients_pairings[1]: gradients required to compute w*(-delta)
-        has_precomputed_gradients (bool): Flag indicating whether the precomputed gradients are injected in the locking 
+        has_precomputed_gradients (bool): Flag indicating whether the precomputed gradients are injected in the locking
             script. Defaults to `False`, meaning that the precomputed gradientes are passed in the unlocking script.
     """
 

@@ -31,7 +31,7 @@ class Groth16UnlockingKey:
             \sum_(i=1)^l pub[i] * gamma_abc[i+1]
         gradient_gamma_abc_zero (list[int]): The gradient required to compute the sum
             gamma_abc[0] + \sum_(i=1)^l pub[i] * gamma_abc[i+1]
-        has_precomputed_gradients (bool): Flag determining if the precomputed gradients used to compute 
+        has_precomputed_gradients (bool): Flag determining if the precomputed gradients used to compute
             w*(-gamma) and w*(-delta) are in the unlocking script. Defaults to `True`.
     """
 
@@ -83,7 +83,7 @@ class Groth16UnlockingKey:
                 miller(A,B) * miller(gamma_abc[0] + \sum_{i >=0} pub[i] * gamma_abc[i+1], -gamma) * miller(C, -delta)
             gradient_gamma_abc_zero (list[int]): The gradient required to compute the sum
                 gamma_abc[0] + \sum_(i=1)^l pub[i] * gamma_abc[i+1]
-            has_precomputed_gradients (bool): Flag determining if the precomputed gradients used to compute 
+            has_precomputed_gradients (bool): Flag determining if the precomputed gradients used to compute
                 w*(-gamma) and w*(-delta) are in the unlocking script. Defaults to `True`.
         """
         max_multipliers = max_multipliers if max_multipliers is not None else [groth16_model.r] * len(pub)
@@ -103,7 +103,7 @@ class Groth16UnlockingKey:
             inverse_miller_output,
             msm_key,
             gradient_gamma_abc_zero,
-            has_precomputed_gradients
+            has_precomputed_gradients,
         )
 
     def to_unlocking_script(
@@ -169,7 +169,7 @@ class Groth16UnlockingKeyWithPrecomputedMsm:
         inverse_miller_output (list[int]): the inverse of
             miller(A,B) * miller(gamma_abc[0] + \sum_{i >=0} pub[i] * gamma_abc[i+1], -gamma) * miller(C, -delta)
         precomputed_msm: the sum \sum_(i=0)^l a_i * gamma_abc[i]
-        has_precomputed_gradients (bool): Flag determining if the precomputed gradients used to compute 
+        has_precomputed_gradients (bool): Flag determining if the precomputed gradients used to compute
             w*(-gamma) and w*(-delta) are in the unlocking script. Defaults to `True`.
     """
 
