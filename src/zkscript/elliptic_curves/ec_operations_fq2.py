@@ -103,8 +103,7 @@ class EllipticCurveFq2:
         Raises:
             ValueError: If either of the following happens:
                 - `clean_constant` or `check_constant` are not provided when required.
-                - `gradient` comes after `P` in the stack
-                - `P` comes after `Q` in the stack
+                - `gradient` is between `P` and `Q`
 
         Preconditions:
             - The input points `P` and `Q` must be on the elliptic curve.
@@ -190,7 +189,6 @@ class EllipticCurveFq2:
         Raises:
             ValueError: If either of the following happens:
                 - `clean_constant` or `check_constant` are not provided when required.
-                - `gradient` comes after `P` in the stack
 
         Preconditions:
             - The input point `P` must be on the elliptic curve.
@@ -281,8 +279,7 @@ class EllipticCurveFq2:
         Raises:
             ValueError: If either of the following happens:
                 - `clean_constant` or `check_constant` are not provided when required.
-                - `gradient` comes after `P` in the stack
-                - `P` comes after `Q` in the stack
+                - `gradient` is between `P` and `Q` in the stack.
 
         Preconditions:
             - The input points `P` and `Q` must be on the elliptic curve.
@@ -293,8 +290,18 @@ class EllipticCurveFq2:
             If this function is used when `P_` != `Q_` or `P_ != -Q_`, then any gradient will pass
             the gradient verification, but the point computed is not going to be `P_ + Q_`.
         """
-        check_order([gradient, P, Q])
         is_gradient_rolled, is_p_rolled, is_q_rolled = bitmask_to_boolean_list(rolling_options, 3)
+
+        if Q.is_before(P):
+            Q.overlaps_on_the_right(P)
+            P, Q = Q, P
+
+        if gradient.is_before(P):
+            gradient.overlaps_on_the_right(P)
+            shift = 2
+        else:
+            check_order([Q, gradient])
+            shift = 0 if is_gradient_rolled else 2
 
         out = verify_bottom_constant(self.modulus) if check_constant else Script()
 
@@ -306,11 +313,11 @@ class EllipticCurveFq2:
         # stack in:  [q, .., gradient, .., P, .., Q, ..]
         # stack out: [q, .., gradient, .., P, .., Q, .., gradient, xP, gradient, xP]
         verify_gradient = move(gradient, bool_to_moving_function(is_gradient_rolled))  # Move gradient
-        verify_gradient += move(P.x.shift(2), bool_to_moving_function(is_p_rolled))  # Move xP
+        verify_gradient += move(P.x.shift(shift), bool_to_moving_function(is_p_rolled))  # Move xP
         verify_gradient += pick(position=3, n_elements=4)  # Duplicate gradient and xP
         # stack in:  [q, .., gradient, .., P, .., Q, .., gradient, xP, gradient, xP]
         # stack out: [q, .., gradient, .., P, .., Q, .., gradient, xP, xQ, [gradient * (xP - xQ)]]
-        verify_gradient += move(Q.x.shift(8), bool_to_moving_function(is_q_rolled))  # Move xQ
+        verify_gradient += move(Q.x.shift(6 + shift), bool_to_moving_function(is_q_rolled))  # Move xQ
         verify_gradient += Script.parse_string("OP_2SWAP OP_2OVER")  # Swap xP and xQ, duplicate xQ
         verify_gradient += self.fq2.subtract(
             take_modulo=False, check_constant=False, clean_constant=False
@@ -323,11 +330,11 @@ class EllipticCurveFq2:
         # stack out: [q, .., gradient, .., P, .., Q, .., gradient, xP, xQ,
         #               [gradient * (xP - xQ)] (yP_)_1 [(yQ_)_1 - (yP_)_1]]
         verify_gradient += move(
-            Q.y.shift(8), bool_to_moving_function(is_q_rolled), start_index=1, end_index=2
+            Q.y.shift(6 + shift), bool_to_moving_function(is_q_rolled), start_index=1, end_index=2
         )  # Move (yQ)_1
         verify_gradient += Script.parse_string("OP_NEGATE") if Q.negate else Script()
         verify_gradient += move(
-            P.y.shift(9 - 3 * is_q_rolled), bool_to_moving_function(is_p_rolled), start_index=1, end_index=2
+            P.y.shift(7 + shift - 3 * is_q_rolled), bool_to_moving_function(is_p_rolled), start_index=1, end_index=2
         )  # Move (yP)_1
         verify_gradient += Script.parse_string("OP_NEGATE") if P.negate else Script()
         verify_gradient += Script.parse_string("OP_TUCK OP_SUB")  # Duplicate (yP_)_1 and compute (yQ_)_1 - (yP_)_1
@@ -335,11 +342,11 @@ class EllipticCurveFq2:
         #               [gradient * (xP - xQ)] (yP_)_1 [(yQ_)_1 - (yP_)_1]]
         # stack out: [q, .., gradient, .., P, .., Q, .., gradient, xP, xQ, (yP_)_1 (yP_)_0, or fail]
         verify_gradient += move(
-            Q.y.shift(10 - 1 * is_q_rolled), bool_to_moving_function(is_q_rolled), start_index=0, end_index=1
+            Q.y.shift(8 + shift - 1 * is_q_rolled), bool_to_moving_function(is_q_rolled), start_index=0, end_index=1
         )  # Move (yQ)_0
         verify_gradient += Script.parse_string("OP_NEGATE") if Q.negate else Script()
         verify_gradient += move(
-            P.y.shift(11 - 4 * is_q_rolled - 1 * is_p_rolled),
+            P.y.shift(9 + shift - 4 * is_q_rolled - 1 * is_p_rolled),
             bool_to_moving_function(is_p_rolled),
             start_index=0,
             end_index=1,
@@ -481,8 +488,7 @@ class EllipticCurveFq2:
         Raises:
             ValueError: If either of the following happens:
                 - `clean_constant` or `check_constant` are not provided when required.
-                - `gradient` comes after `P` in the stack
-                - `P` comes after `Q` in the stack
+                - `gradient` is between `P` and `Q` in the stack.
 
         Preconditions:
             - The input points `P` and `Q` must be on the elliptic curve.
@@ -492,8 +498,20 @@ class EllipticCurveFq2:
         Notes:
             This function does not check the validity of the gradient provided.
         """
-        check_order([gradient, P, Q])
         is_gradient_rolled, is_p_rolled, is_q_rolled = bitmask_to_boolean_list(rolling_options, 3)
+
+        if Q.is_before(P):
+            Q.overlaps_on_the_right(P)
+            P, Q = Q, P
+
+        if gradient.is_before(P):
+            gradient.overlaps_on_the_right(P)
+            shift = 2
+        else:
+            check_order([Q, gradient])
+            shift = 0 if is_gradient_rolled else 2
+
+        out = verify_bottom_constant(self.modulus) if check_constant else Script()
 
         out = verify_bottom_constant(self.modulus) if check_constant else Script()
 
@@ -509,8 +527,8 @@ class EllipticCurveFq2:
         x_coordinate += self.fq2.square(
             take_modulo=False, check_constant=False, clean_constant=False
         )  # Compute gradient^2
-        x_coordinate += move(P.x.shift(4), bool_to_moving_function(is_p_rolled))  # Move xP
-        x_coordinate += move(Q.x.shift(6), bool_to_moving_function(is_q_rolled))  # Move xQ
+        x_coordinate += move(P.x.shift(2 + shift), bool_to_moving_function(is_p_rolled))  # Move xP
+        x_coordinate += move(Q.x.shift(4 + shift), bool_to_moving_function(is_q_rolled))  # Move xQ
         x_coordinate += pick(position=3, n_elements=2)  # Duplicate xP
         x_coordinate += self.fq2.add(take_modulo=False, check_constant=False, clean_constant=False)  # Compute (xP + xQ)
         x_coordinate += roll(position=5, n_elements=2)  # Bring gradient^2 on top
@@ -536,7 +554,7 @@ class EllipticCurveFq2:
         )  # Compute gradient * (xP - x(P_+Q_))
         y_coordinate += Script.parse_string("OP_TOALTSTACK")
         y_coordinate += move(
-            P.y.shift(3 - 2 * is_q_rolled), bool_to_moving_function(is_p_rolled), start_index=0, end_index=1
+            P.y.shift(1 + shift - 2 * is_q_rolled), bool_to_moving_function(is_p_rolled), start_index=0, end_index=1
         )  # Move yP_0
         y_coordinate += Script.parse_string("OP_ADD" if P.negate else "OP_SUB")
         if take_modulo:
@@ -544,7 +562,7 @@ class EllipticCurveFq2:
             y_coordinate += mod(stack_preparation="", is_positive=positive_modulo)
         y_coordinate += Script.parse_string("OP_FROMALTSTACK")
         y_coordinate += move(
-            P.y.shift(4 - 2 * is_q_rolled + 1 * take_modulo),
+            P.y.shift(2 + shift - 2 * is_q_rolled + 1 * take_modulo),
             bool_to_moving_function(is_p_rolled),
             start_index=1,
             end_index=2,
@@ -555,7 +573,7 @@ class EllipticCurveFq2:
                 stack_preparation="", is_constant_reused=False, is_positive=positive_modulo
             )
 
-        drop_yq = move(Q.y.shift(4), bool_to_moving_function(is_q_rolled))  # Move yQ
+        drop_yq = move(Q.y.shift(2 + shift), bool_to_moving_function(is_q_rolled))  # Move yQ
         drop_yq += Script.parse_string("OP_2DROP")
 
         out += x_coordinate + y_coordinate
@@ -618,15 +636,20 @@ class EllipticCurveFq2:
         Raises:
             ValueError: If either of the following happens:
                 - `clean_constant` or `check_constant` are not provided when required.
-                - `gradient` comes after `P` in the stack
 
         Preconditions:
             - The input point `P` must be on the elliptic curve.
             - The modulo q must be a prime number.
             - `P` not the point at infinity
         """
-        check_order([gradient, P])
         is_gradient_rolled, is_p_rolled = bitmask_to_boolean_list(rolling_options, 2)
+
+        if gradient.is_before(P):
+            gradient.overlaps_on_the_right(P)
+            shift = 2
+        else:
+            P.overlaps_on_the_right(gradient)
+            shift = 0 if is_gradient_rolled else 2
 
         out = verify_bottom_constant(self.modulus) if check_constant else Script()
 
@@ -637,7 +660,7 @@ class EllipticCurveFq2:
         # stack in:  [q, .., gradient, .., P, ..]
         # stack out: [q, .., gradient, .., P, .., gradient, yP, gradient, yP]
         verify_gradient = move(gradient, bool_to_moving_function(is_gradient_rolled))  # Move gradient
-        verify_gradient += move(P.y.shift(2), bool_to_moving_function(is_p_rolled))  # Move yP
+        verify_gradient += move(P.y.shift(shift), bool_to_moving_function(is_p_rolled))  # Move yP
         verify_gradient += pick(position=3, n_elements=4)  # Duplicate gradient and xP
         # stack in:  [q, .., gradient, .., P, .., gradient, yP, gradient, yP]
         # stack out: [q, .., gradient, .., P, .., gradient, yP, (2*gradient*yP_)]
@@ -646,7 +669,7 @@ class EllipticCurveFq2:
         )  # Compute lamdba * yP
         # stack in:  [q, .., gradient, .., P, .., gradient, yP, (2*gradient*yP_)]
         # stack out: [q, .., gradient, .., P, .., gradient, yP, xP, or fail]
-        verify_gradient += move(P.x.shift(6 - 2 * is_p_rolled), bool_to_moving_function(is_p_rolled))  # Move xP
+        verify_gradient += move(P.x.shift(4 - 2 * is_p_rolled + shift), bool_to_moving_function(is_p_rolled))  # Move xP
         verify_gradient += roll(position=3, n_elements=2)  # Bring (2*gradient*yP_) on top
         verify_gradient += pick(position=3, n_elements=2)  # Duplicate xP
         verify_gradient += self.fq2.square(
@@ -782,7 +805,6 @@ class EllipticCurveFq2:
         Raises:
             ValueError: If either of the following happens:
                 - `clean_constant` or `check_constant` are not provided when required.
-                - `gradient` comes after `P` in the stack
 
         Preconditions:
             - The input point `P` must be on the elliptic curve.
@@ -792,8 +814,14 @@ class EllipticCurveFq2:
         Notes:
             This function does not check the validity of the gradient provided.
         """
-        check_order([gradient, P])
         is_gradient_rolled, is_p_rolled = bitmask_to_boolean_list(rolling_options, 2)
+
+        if gradient.is_before(P):
+            gradient.overlaps_on_the_right(P)
+            shift = 2
+        else:
+            P.overlaps_on_the_right(gradient)
+            shift = 0 if is_gradient_rolled else 2
 
         out = verify_bottom_constant(self.modulus) if check_constant else Script()
 
@@ -808,7 +836,7 @@ class EllipticCurveFq2:
         x_coordinate += self.fq2.square(
             take_modulo=False, check_constant=False, clean_constant=False
         )  # Compute gradient^2
-        x_coordinate += move(P.x.shift(4), bool_to_moving_function(is_p_rolled))  # Bring xP on top
+        x_coordinate += move(P.x.shift(2 + shift), bool_to_moving_function(is_p_rolled))  # Bring xP on top
         x_coordinate += pick(position=1, n_elements=2)  # Duplicate xP
         x_coordinate += Script.parse_string("OP_2")
         x_coordinate += self.fq2.base_field_scalar_mul(
@@ -836,7 +864,7 @@ class EllipticCurveFq2:
         y_coordinate += self.fq2.mul(
             take_modulo=False, check_constant=False, clean_constant=False
         )  # Compute gradient * (xP - x_(2P))
-        y_coordinate += move(P.y.shift(4), bool_to_moving_function(is_p_rolled))  # Bring yP on top
+        y_coordinate += move(P.y.shift(2 + shift), bool_to_moving_function(is_p_rolled))  # Bring yP on top
         y_coordinate += (
             self.fq2.add(
                 take_modulo=take_modulo,

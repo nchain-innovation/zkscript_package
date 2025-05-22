@@ -279,9 +279,9 @@ class TripleMillerLoop:
             if i == len(self.exp_miller_loop) - 2
             else Script.parse_string(" ".join(["OP_TOALTSTACK"] * self.N_ELEMENTS_MILLER_OUTPUT))
         )
-        for i in range(len(precomputed_gradients)):
+        for k in range(len(precomputed_gradients)):
             out += nums_to_script(
-                precomputed_gradients[i][0]
+                precomputed_gradients[k][0]
             )  # since it is without addition, len(precomputed_gradients[0]) == 1
         if i != len(self.exp_miller_loop) - 2:
             out += Script.parse_string(" ".join(["OP_FROMALTSTACK"] * self.N_ELEMENTS_MILLER_OUTPUT))

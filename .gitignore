@@ -49,3 +49,6 @@ examples/outputs
 *.out
 *.synctex.gz
 *.toc
+
+### Elliptic Curve package
+src/elliptic-curves/
