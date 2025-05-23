@@ -103,7 +103,7 @@ class EllipticCurveFq2:
         Raises:
             ValueError: If either of the following happens:
                 - `clean_constant` or `check_constant` are not provided when required.
-                - `gradient` is between `P` and `Q`
+                - `gradient` is between `P` and `Q` in the stack.
 
         Preconditions:
             - The input points `P` and `Q` must be on the elliptic curve.
@@ -187,7 +187,7 @@ class EllipticCurveFq2:
             A Bitcoin Script that computes 2P_ for the given elliptic curve points `P`.
 
         Raises:
-            ValueError: If either of the following happens:
+            ValueError: If the following happens:
                 - `clean_constant` or `check_constant` are not provided when required.
 
         Preconditions:
@@ -634,7 +634,7 @@ class EllipticCurveFq2:
             A Bitcoin Script that computes 2P_ for the given elliptic curve points `P`.
 
         Raises:
-            ValueError: If either of the following happens:
+            ValueError: If the following happens:
                 - `clean_constant` or `check_constant` are not provided when required.
 
         Preconditions:
@@ -803,7 +803,7 @@ class EllipticCurveFq2:
             A Bitcoin Script that computes 2P_ for the given elliptic curve points `P`.
 
         Raises:
-            ValueError: If either of the following happens:
+            ValueError: If the following happens:
                 - `clean_constant` or `check_constant` are not provided when required.
 
         Preconditions:

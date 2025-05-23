@@ -1371,6 +1371,9 @@ class TripleMillerLoop:
                 # stack in:  [P1, P2, P3, Q1, Q2, Q3, T1, T2, T3, f_i]
                 # stack out: [P1, P2, P3, Q1, Q2, Q3, T1, T2, T3, f_i^2]
                 out += self.miller_loop_output_square(take_modulo=False, check_constant=False, clean_constant=False)
+            precomputed_gradient = (
+                None if is_precomputed_gradients_on_stack else [gradient[0] for gradient in precomputed_gradients]
+            )
             if self.exp_miller_loop[i] == 0:
                 # stack in:  [gradient_(2*T1), gradient_(2*T2), gradient_(2*T3), ..., P1, P2, P3, Q1, Q2, Q3, T1, T2,
                 #               T3, {f_i^2}]
@@ -1386,7 +1389,7 @@ class TripleMillerLoop:
                     P=P,
                     T=T,
                     is_precomputed_gradients_on_stack=is_precomputed_gradients_on_stack,
-                    precomputed_gradients=[gradient[0] for gradient in precomputed_gradients],
+                    precomputed_gradients=precomputed_gradient,
                 )
                 if is_precomputed_gradients_on_stack:
                     # update gradient_tracker taking into account the gradients left on the stack
@@ -1420,7 +1423,7 @@ class TripleMillerLoop:
                     Q=Q,
                     T=T,
                     is_precomputed_gradients_on_stack=is_precomputed_gradients_on_stack,
-                    precomputed_gradients=[gradient[0] for gradient in precomputed_gradients],
+                    precomputed_gradients=precomputed_gradient,
                 )
                 if is_precomputed_gradients_on_stack:
                     # update gradient_tracker taking into account the gradients left on the stack
