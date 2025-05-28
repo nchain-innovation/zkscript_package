@@ -221,12 +221,12 @@ class PrimeFieldExtension:
         Note:
             The function raises an assertion error if `x.extension_degree` or `y.extension_degree` are not equal to `n`.
         """
-        assert (
-            x.extension_degree == self.extension_degree
-        ), f"x must have extension degree equal to {self.extension_degree}"
-        assert (
-            y.extension_degree == self.extension_degree
-        ), f"y must have extension degree equal to {self.extension_degree}"
+        assert x.extension_degree == self.extension_degree, (
+            f"x must have extension degree equal to {self.extension_degree}"
+        )
+        assert y.extension_degree == self.extension_degree, (
+            f"y must have extension degree equal to {self.extension_degree}"
+        )
         check_order([x, y])
 
         out = verify_bottom_constant(self.modulus) if check_constant else Script()

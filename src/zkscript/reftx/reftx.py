@@ -128,6 +128,7 @@ class RefTx:
         # altstack in:  [chunks(sighash(stx))]
         # stack out:    [..] of fail
         # altstack out: [chunks(sighash(stx))]
+
         out += self.groth16_model.groth16_verifier(
             locking_key=locking_key.to_groth16_key(),
             modulo_threshold=modulo_threshold,

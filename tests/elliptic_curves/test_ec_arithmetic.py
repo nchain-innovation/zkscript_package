@@ -336,6 +336,9 @@ class Secp256k1Extension:
         {"modulus": 18, "gradient": 13, "P": 9, "Q": 3},
         {"modulus": 20, "gradient": 15, "P": 10, "Q": 6},
         {"modulus": 25, "gradient": 20, "P": 14, "Q": 5},
+        {"modulus": 10, "gradient": 1, "P": 9, "Q": 5},
+        {"modulus": 12, "gradient": 2, "P": 11, "Q": 7},
+        {"modulus": 18, "gradient": 3, "P": 13, "Q": 8},
     ]
     # All possible combinations: ± 2P are tested. Refer to ./util.py
     positions_doubling = [
@@ -344,6 +347,9 @@ class Secp256k1Extension:
         {"modulus": 18, "gradient": 13, "P": 9},
         {"modulus": 20, "gradient": 15, "P": 10},
         {"modulus": 25, "gradient": 20, "P": 14},
+        {"modulus": 6, "gradient": 1, "P": 5},
+        {"modulus": 12, "gradient": 7, "P": 11},
+        {"modulus": 18, "gradient": 5, "P": 13},
     ]
     # Define filename for saving scripts
     filename = "secp256k1_extension"
@@ -399,6 +405,24 @@ class Secp256k1Extension:
                 {"P": False, "Q": False},
                 {"gradient": False, "P": False, "Q": False},
             ),
+            # Test gradient before P and Q
+            generate_test(
+                modulus,
+                P,
+                Q,
+                {"modulus": 10, "gradient": 1, "P": 9, "Q": 5},
+                {"P": False, "Q": False},
+                {"gradient": False, "P": False, "Q": False},
+            ),
+            # Test random positions with gradient before P and Q
+            generate_test(
+                modulus,
+                P,
+                Q,
+                {"modulus": 25, "gradient": 3, "P": 20, "Q": 13},
+                {"P": False, "Q": False},
+                {"gradient": False, "P": False, "Q": False},
+            ),
         ],
         "test_doubling": [
             # Test standard configuration
@@ -425,6 +449,24 @@ class Secp256k1Extension:
                 P,
                 P,
                 {"modulus": 25, "gradient": 20, "P": 14},
+                {"P": False},
+                {"gradient": False, "P": False},
+            ),
+            # Test gradient before P
+            generate_test(
+                modulus,
+                P,
+                P,
+                {"modulus": 6, "gradient": 1, "P": 5},
+                {"P": False},
+                {"gradient": False, "P": False},
+            ),
+            # Test random positions with gradient before P
+            generate_test(
+                modulus,
+                P,
+                P,
+                {"modulus": 12, "gradient": 2, "P": 7},
                 {"P": False},
                 {"gradient": False, "P": False},
             ),
@@ -465,6 +507,8 @@ class Secp256r1Extension:
         {"modulus": 18, "gradient": 13, "P": 9, "Q": 3},
         {"modulus": 20, "gradient": 15, "P": 10, "Q": 6},
         {"modulus": 25, "gradient": 20, "P": 14, "Q": 5},
+        {"modulus": 18, "gradient": 4, "P": 13, "Q": 8},
+        {"modulus": 20, "gradient": 2, "P": 17, "Q": 9},
     ]
     # All possible combinations: ± 2P are tested. Refer to ./util.py
     positions_doubling = [
@@ -473,6 +517,8 @@ class Secp256r1Extension:
         {"modulus": 18, "gradient": 13, "P": 9},
         {"modulus": 20, "gradient": 15, "P": 10},
         {"modulus": 25, "gradient": 20, "P": 14},
+        {"modulus": 20, "gradient": 10, "P": 16},
+        {"modulus": 25, "gradient": 4, "P": 18},
     ]
     # Define filename for saving scripts
     filename = "secp256r1_extension"
@@ -528,6 +574,24 @@ class Secp256r1Extension:
                 {"P": False, "Q": False},
                 {"gradient": False, "P": False, "Q": False},
             ),
+            # Test gradient before P and Q`
+            generate_test(
+                modulus,
+                P,
+                Q,
+                {"modulus": 10, "gradient": 1, "P": 9, "Q": 5},
+                {"P": False, "Q": False},
+                {"gradient": False, "P": False, "Q": False},
+            ),
+            # Test random positions with gradient before P and Q
+            generate_test(
+                modulus,
+                P,
+                Q,
+                {"modulus": 25, "gradient": 3, "P": 20, "Q": 11},
+                {"P": False, "Q": False},
+                {"gradient": False, "P": False, "Q": False},
+            ),
         ],
         "test_doubling": [
             # Test standard configuration
@@ -554,6 +618,24 @@ class Secp256r1Extension:
                 P,
                 P,
                 {"modulus": 25, "gradient": 20, "P": 14},
+                {"P": False},
+                {"gradient": False, "P": False},
+            ),
+            # Test standard configuration
+            generate_test(
+                modulus,
+                P,
+                P,
+                {"modulus": 6, "gradient": 1, "P": 5},
+                {"P": False},
+                {"gradient": False, "P": False},
+            ),
+            # Test random positions
+            generate_test(
+                modulus,
+                P,
+                P,
+                {"modulus": 25, "gradient": 10, "P": 20},
                 {"P": False},
                 {"gradient": False, "P": False},
             ),
@@ -678,7 +760,6 @@ def test_addition(
     lock += (
         expected if verify_gradient else modify_verify_modulo_check(expected) + Script.parse_string("OP_SWAP OP_DROP")
     )
-
     context = Context(script=unlock + lock)
     assert context.evaluate()
     assert context.get_stack().size() == 1
@@ -795,7 +876,7 @@ def test_doubling_slow(
 
 @pytest.mark.parametrize("positive_modulo", [True, False])
 @pytest.mark.parametrize(("config", "P", "Q", "expected"), generate_test_cases("test_addition_unknown_points"))
-def test_addition_unknown_points(config, P, Q, positive_modulo, expected, save_to_json_folder):  # noqa: N803
+def test_addition_unknown_points(config, P, Q, positive_modulo, expected, save_to_json_folder):
     unlock = nums_to_script([config.modulus])
     # If the modulo is positive or the point is at infinity
     # we don't need the modulo for the modified verification script
@@ -831,7 +912,7 @@ def test_addition_unknown_points(config, P, Q, positive_modulo, expected, save_t
 @pytest.mark.parametrize(
     ("config", "P", "a", "expected", "max_multiplier"), generate_test_cases("test_multiplication_unrolled")
 )
-def test_multiplication_unrolled(config, P, a, expected, max_multiplier, fixed_length_unlock, save_to_json_folder):  # noqa: N803
+def test_multiplication_unrolled(config, P, a, expected, max_multiplier, fixed_length_unlock, save_to_json_folder):
     unlocking_key = EllipticCurveFqUnrolledUnlockingKey(
         P=P.to_list(), a=a, gradients=unrolled_multiplication_gradients(a, P).as_data(), max_multiplier=max_multiplier
     )

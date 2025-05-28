@@ -65,7 +65,7 @@ test_script = EllipticCurveFq(q=modulus, curve_a=0, curve_b=7)
         ),
     ],
 )
-def test_extract_scalar_as_unsigned(base_loaded, P, a, max_multiplier, rolling_option, expected):  # noqa: N803
+def test_extract_scalar_as_unsigned(base_loaded, P, a, max_multiplier, rolling_option, expected):
     unlocking_key = EllipticCurveFqUnrolledUnlockingKey(
         P=P.to_list(), a=a, gradients=unrolled_multiplication_gradients(a, P).as_data(), max_multiplier=max_multiplier
     )

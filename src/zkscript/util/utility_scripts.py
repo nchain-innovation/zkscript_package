@@ -549,9 +549,9 @@ def compute_mul_sub(
     """
     if modulus.position > 0:
         check_order([modulus, a, b, c])
-    assert all(
-        [a.extension_degree == 1, b.extension_degree == 1, c.extension_degree == 1]
-    ), "The extension degrees of a, b, and c must be equal to 1."
+    assert all([a.extension_degree == 1, b.extension_degree == 1, c.extension_degree == 1]), (
+        "The extension degrees of a, b, and c must be equal to 1."
+    )
     list_rolling_options = bitmask_to_boolean_list(rolling_options, 3)
     list_leave_on_top = bitmask_to_boolean_list(leave_on_top_of_stack, 3)
 
@@ -712,6 +712,7 @@ def is_mod_equal_to(
     out += Script([OP_EQUALVERIFY] if is_verify else [OP_EQUAL])
 
     return out
+
 
 def unsigned_from_bits(
     stack_elements: list[StackBaseElement],

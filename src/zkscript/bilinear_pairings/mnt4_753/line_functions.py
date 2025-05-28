@@ -78,12 +78,23 @@ class LineFunctions:
         Returns:
             Script to evaluate a line through `T` and `Q` at `P`.
 
+        Raises:
+            ValueError: If either of the following happens:
+             - `gradient` is between `P` and `Q`.
+             - `Q` is before `P`.
+
         Notes:
             - `gradient` is NOT checked in this function, it is assumed to be the gradient.
             - `ev_(l_(T,Q)(P))` does NOT include the zero in the second component, this is to optimise the script size.
         """
-        check_order([gradient, P, Q])
         is_gradient_rolled, is_p_rolled, is_q_rolled = bitmask_to_boolean_list(rolling_options, 3)
+
+        check_order([P, Q])
+
+        if gradient.is_before(P):
+            gradient.overlaps_on_the_right(P)
+        else:
+            check_order([Q, gradient])
 
         out = verify_bottom_constant(self.modulus) if check_constant else Script()
 
@@ -97,23 +108,22 @@ class LineFunctions:
         first_component += Script.parse_string("OP_SUB")
         # stack in:  [q .. gradient ..{xP} yP .. {xQ} yQ .. (xQ - xP*u)]
         # stack out: [q .. {gradient} .. {xP} yP .. {xQ} yQ .. gradient * (xQ - xP*u)]
-        first_component += move(
-            gradient.shift(2 - 2 * is_q_rolled - 1 * is_p_rolled), bool_to_moving_function(is_gradient_rolled)
-        )  # Move gradient
+        shift = 2 - 2 * is_q_rolled - 1 * is_p_rolled if gradient.is_before(P) else 2
+        first_component += move(gradient.shift(shift), bool_to_moving_function(is_gradient_rolled))  # Move gradient
         first_component += self.fq2.mul(
             take_modulo=False, check_constant=False, clean_constant=False, is_constant_reused=False
         )
         # stack in:     [q .. {gradient} .. {xP} yP .. {xQ} yQ .. gradient * (xQ - xP*u)]
         # stack out:    [q .. {gradient} .. {xP} yP .. {xQ} {yQ} .. (-yQ + lambda * (xQ - xP*u))_0]
         # altstack out: [(-yQ + lambda * (xQ - xP*u))_1]
-        first_component += move(Q.y.shift(2), bool_to_moving_function(is_q_rolled), 1, 2)  # Move (yQ)_1
+        shift = 2 if gradient.is_before(P) else 2 - 2 * is_gradient_rolled
+        first_component += move(Q.y.shift(shift), bool_to_moving_function(is_q_rolled), 1, 2)  # Move (yQ)_1
         if Q.negate:
             first_component += Script.parse_string("OP_ADD OP_TOALTSTACK")
         else:
             first_component += Script.parse_string("OP_SUB OP_TOALTSTACK")
-        first_component += move(
-            Q.y.shift(1 - 1 * is_q_rolled), bool_to_moving_function(is_q_rolled), 0, 1
-        )  # Move (yQ)_0
+        shift = 1 - 1 * is_q_rolled if gradient.is_before(P) else 1 - 1 * is_q_rolled - 2 * is_gradient_rolled
+        first_component += move(Q.y.shift(shift), bool_to_moving_function(is_q_rolled), 0, 1)  # Move (yQ)_0
         if Q.negate:
             first_component += Script.parse_string("OP_ADD")
         else:
@@ -130,12 +140,15 @@ class LineFunctions:
             out += roll(position=-1, n_elements=1) if clean_constant else pick(position=-1, n_elements=1)
             out += mod(stack_preparation="", is_mod_on_top=True, is_positive=positive_modulo)
             out += mod(is_positive=positive_modulo)
-            out += move(P.y.shift(3 - 4 * is_q_rolled), bool_to_moving_function(is_p_rolled))  # Move yP
+
+            shift = 3 - 4 * is_q_rolled if gradient.is_before(P) else 3 - 4 * is_q_rolled - 2 * is_gradient_rolled
+            out += move(P.y.shift(shift), bool_to_moving_function(is_p_rolled))  # Move yP
             out += Script.parse_string("OP_ROT")
             out += mod(stack_preparation="", is_constant_reused=is_constant_reused, is_positive=positive_modulo)
         else:
             out += Script.parse_string("OP_FROMALTSTACK")
-            out += move(P.y.shift(2 - 4 * is_q_rolled), bool_to_moving_function(is_p_rolled))  # Move yP
+            shift = 2 - 4 * is_q_rolled if gradient.is_before(P) else 2 - 4 * is_q_rolled - 2 * is_gradient_rolled
+            out += move(P.y.shift(shift), bool_to_moving_function(is_p_rolled))  # Move yP
 
         return out
 
