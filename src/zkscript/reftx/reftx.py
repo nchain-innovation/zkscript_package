@@ -124,10 +124,12 @@ class RefTx:
             out += nums_to_script([bytes_sighash_chunks]) + Script.parse_string("OP_SPLIT OP_DROP")
             out += Script.parse_string("OP_TOALTSTACK")
 
+
         # stack in:     [.., q, .., msm_data(u_stx), msm_data(sighash(stx))]
         # altstack in:  [chunks(sighash(stx))]
         # stack out:    [..] of fail
         # altstack out: [chunks(sighash(stx))]
+
         out += self.groth16_model.groth16_verifier(
             locking_key=locking_key.to_groth16_key(),
             modulo_threshold=modulo_threshold,
@@ -137,6 +139,7 @@ class RefTx:
             clean_constant=True,
         )
         out += Script.parse_string("OP_VERIFY")
+
 
         # stack in:     [..]
         # altstack in:  [chunks(sighash(stx))]
@@ -150,5 +153,6 @@ class RefTx:
             is_opcodeseparator=True,
             is_checksigverify=False,
         )
+
 
         return out

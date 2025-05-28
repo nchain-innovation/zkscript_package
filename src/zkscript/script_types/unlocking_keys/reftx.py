@@ -155,8 +155,8 @@ class RefTxUnlockingKey:
         # Compute bytes sighash chunks and number of chunks
         bytes_sighash_chunks = self.__bytes_sighash_chunks(groth16_model)
         n_chunks = 32 // bytes_sighash_chunks
-
         out = nums_to_script([groth16_model.pairing_model.modulus]) if load_constants else Script()
+
         if load_constants:
             out += nums_to_script([GROUP_ORDER_INT, Gx])
             out.append_pushdata(bytes.fromhex("0220") + Gx_bytes + bytes.fromhex("02"))

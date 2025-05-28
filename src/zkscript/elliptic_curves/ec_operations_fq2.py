@@ -280,6 +280,7 @@ class EllipticCurveFq2:
             ValueError: If either of the following happens:
                 - `clean_constant` or `check_constant` are not provided when required.
                 - `gradient` is between `P` and `Q` in the stack.
+                - `Q` is before `P` in the stack.
 
         Preconditions:
             - The input points `P` and `Q` must be on the elliptic curve.
@@ -292,16 +293,12 @@ class EllipticCurveFq2:
         """
         is_gradient_rolled, is_p_rolled, is_q_rolled = bitmask_to_boolean_list(rolling_options, 3)
 
-        if Q.is_before(P):
-            Q.overlaps_on_the_right(P)
-            P, Q = Q, P
+        check_order([P, Q])
 
         if gradient.is_before(P):
             gradient.overlaps_on_the_right(P)
-            shift = 2
         else:
             check_order([Q, gradient])
-            shift = 0 if is_gradient_rolled else 2
 
         out = verify_bottom_constant(self.modulus) if check_constant else Script()
 
@@ -313,6 +310,7 @@ class EllipticCurveFq2:
         # stack in:  [q, .., gradient, .., P, .., Q, ..]
         # stack out: [q, .., gradient, .., P, .., Q, .., gradient, xP, gradient, xP]
         verify_gradient = move(gradient, bool_to_moving_function(is_gradient_rolled))  # Move gradient
+        shift = 2 if gradient.is_before(P) else (0 if is_gradient_rolled else 2)
         verify_gradient += move(P.x.shift(shift), bool_to_moving_function(is_p_rolled))  # Move xP
         verify_gradient += pick(position=3, n_elements=4)  # Duplicate gradient and xP
         # stack in:  [q, .., gradient, .., P, .., Q, .., gradient, xP, gradient, xP]
@@ -489,6 +487,7 @@ class EllipticCurveFq2:
             ValueError: If either of the following happens:
                 - `clean_constant` or `check_constant` are not provided when required.
                 - `gradient` is between `P` and `Q` in the stack.
+                - `Q` is before `P` in the stack.
 
         Preconditions:
             - The input points `P` and `Q` must be on the elliptic curve.
@@ -499,19 +498,13 @@ class EllipticCurveFq2:
             This function does not check the validity of the gradient provided.
         """
         is_gradient_rolled, is_p_rolled, is_q_rolled = bitmask_to_boolean_list(rolling_options, 3)
-
-        if Q.is_before(P):
-            Q.overlaps_on_the_right(P)
-            P, Q = Q, P
-
+        check_order([P, Q])
         if gradient.is_before(P):
             gradient.overlaps_on_the_right(P)
             shift = 2
         else:
             check_order([Q, gradient])
             shift = 0 if is_gradient_rolled else 2
-
-        out = verify_bottom_constant(self.modulus) if check_constant else Script()
 
         out = verify_bottom_constant(self.modulus) if check_constant else Script()
 

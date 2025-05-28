@@ -74,8 +74,7 @@ class Groth16:
                     for _ in range(self.pairing_model.extension_degree):
                         list_of_opcodes.append("OP_HASH256")
                         list_of_opcodes.append("OP_CAT")
-        del list_of_opcodes[-1]
-        string_of_opcodes = " ".join(list_of_opcodes)
+        string_of_opcodes = " ".join(list_of_opcodes[:-1])
         out = Script.parse_string(string_of_opcodes)
         out.append_pushdata(verification_hash)
         out += Script.parse_string("OP_EQUAL")
@@ -268,11 +267,11 @@ class Groth16:
         # stack in:  [q, ..., (gradients_pairing if not locking_key.has_precomputed_gradients),
         #                   pairing(A,B) * pairing(sum_(i=0)^(l) a_i * gamma_abc[i], -gamma) * pairing(C, -delta)]
         # stack out: [q, ..., 0/1] if locking_key.has_precomputed_gradients else ([q, ..., gradients_pairing] or fail)
-        for el in locking_key.alpha_beta[::-1]:
+        for i, el in enumerate(locking_key.alpha_beta[::-1]):
             out += nums_to_script([el])
             out += (
                 Script.parse_string("OP_EQUAL")
-                if locking_key.has_precomputed_gradients
+                if locking_key.has_precomputed_gradients and i == len(locking_key.alpha_beta) - 1
                 else Script.parse_string("OP_EQUALVERIFY")
             )
 
