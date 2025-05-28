@@ -353,6 +353,7 @@ def save_scripts(lock, unlock, save_to_json_folder, filename, test_name):
         ),
     ],
 )
+@pytest.mark.parametrize("precomputed_gradients_in_unlocking", [True, False])
 def test_groth16(
     test_script,
     prepared_vk,
@@ -360,6 +361,7 @@ def test_groth16(
     prepared_proof,
     max_multipliers,
     extractable_inputs,
+    precomputed_gradients_in_unlocking,
     filename,
     save_to_json_folder,
 ):
@@ -379,6 +381,7 @@ def test_groth16(
         gradients_additions=prepared_proof.gradients_additions,
         inverse_miller_output=prepared_proof.inverse_miller_loop,
         gradient_gamma_abc_zero=prepared_proof.gradient_gamma_abc_zero,
+        has_precomputed_gradients=precomputed_gradients_in_unlocking,
     )
     unlock = unlocking_key.to_unlocking_script(test_script, True, extractable_inputs)
 
@@ -391,6 +394,7 @@ def test_groth16(
             prepared_vk.gradients_minus_gamma,
             prepared_vk.gradients_minus_delta,
         ],
+        has_precomputed_gradients=not precomputed_gradients_in_unlocking,
     )
     lock = test_script.groth16_verifier(
         locking_key,
@@ -400,7 +404,6 @@ def test_groth16(
         check_constant=True,
         clean_constant=True,
     )
-
     context = Context(script=unlock + lock)
     assert context.evaluate()
     assert context.get_stack().size() == 1
@@ -410,6 +413,7 @@ def test_groth16(
         save_scripts(str(lock), str(unlock), save_to_json_folder, filename, "groth16")
 
 
+@pytest.mark.parametrize("precomputed_gradients_in_unlocking", [True, False])
 @pytest.mark.parametrize(
     ("test_script", "prepared_vk", "alpha_beta", "precomputed_msm", "prepared_proof", "filename"),
     [
@@ -453,6 +457,7 @@ def test_groth16_with_precomputed_msm(
     alpha_beta,
     precomputed_msm,
     prepared_proof,
+    precomputed_gradients_in_unlocking,
     filename,
     save_to_json_folder,
 ):
@@ -467,7 +472,9 @@ def test_groth16_with_precomputed_msm(
         ],
         inverse_miller_output=prepared_proof.inverse_miller_loop,
         precomputed_msm=precomputed_msm.to_list(),
+        has_precomputed_gradients=precomputed_gradients_in_unlocking,
     )
+
     unlock = unlocking_key.to_unlocking_script(test_script, True)
 
     locking_key = Groth16LockingKeyWithPrecomputedMsm(
@@ -478,7 +485,9 @@ def test_groth16_with_precomputed_msm(
             prepared_vk.gradients_minus_gamma,
             prepared_vk.gradients_minus_delta,
         ],
+        has_precomputed_gradients=not precomputed_gradients_in_unlocking,
     )
+
     lock = test_script.groth16_verifier_with_precomputed_msm(
         locking_key,
         modulo_threshold=1,
@@ -496,6 +505,7 @@ def test_groth16_with_precomputed_msm(
 
 
 @pytest.mark.slow
+@pytest.mark.parametrize("precomputed_gradients_in_unlocking", [True, False])
 @pytest.mark.parametrize("extractable_inputs", [True, False])
 @pytest.mark.parametrize(
     ("alpha_beta", "prepared_vk", "prepared_proof", "test_script", "filename", "max_multipliers", "is_minimal_example"),
@@ -513,6 +523,7 @@ def test_groth16_slow(
     max_multipliers,
     extractable_inputs,
     is_minimal_example,
+    precomputed_gradients_in_unlocking,
     save_to_json_folder,
 ):
     unlocking_key = Groth16UnlockingKey.from_data(
@@ -531,6 +542,7 @@ def test_groth16_slow(
         gradients_additions=prepared_proof.gradients_additions,
         inverse_miller_output=prepared_proof.inverse_miller_loop,
         gradient_gamma_abc_zero=prepared_proof.gradient_gamma_abc_zero,
+        has_precomputed_gradients=precomputed_gradients_in_unlocking,
     )
     unlock = unlocking_key.to_unlocking_script(test_script, True, extractable_inputs)
 
@@ -543,6 +555,7 @@ def test_groth16_slow(
             prepared_vk.gradients_minus_gamma,
             prepared_vk.gradients_minus_delta,
         ],
+        has_precomputed_gradients=not precomputed_gradients_in_unlocking,
     )
     lock = test_script.groth16_verifier(
         locking_key,
@@ -559,11 +572,16 @@ def test_groth16_slow(
     assert context.get_altstack().size() == 0
 
     if is_minimal_example:
-        sys.stdout.write(
-            f"\nThe locking script size for Groth16 for the curve {filename} with {
-                'two public inputs' if filename == 'bls12_381' else 'one public input'
-            } is {len(lock.raw_serialize())} bytes.\t"
+        num_public_inputs = "two public inputs" if filename == "bls12_381" else "one public input"
+        unlocking_script_type = "un" if precomputed_gradients_in_unlocking else ""
+        message = (
+            f"\nThe script size for Groth16 for the curve {filename} with {num_public_inputs} "
+            f"and precomputed gradients in the {unlocking_script_type}locking script is:\n"
+            f"Locking script: {len(lock.raw_serialize())} bytes.\n"
+            f"Unlocking script: {len(unlock.raw_serialize())} bytes.\t"
         )
+
+        sys.stdout.write(message)
 
     if save_to_json_folder:
         save_scripts(str(lock), str(unlock), save_to_json_folder, filename, "groth16")

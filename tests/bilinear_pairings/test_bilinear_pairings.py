@@ -35,6 +35,7 @@ from src.zkscript.bilinear_pairings.mnt4_753.miller_output_operations import (
     miller_output_ops as miller_output_ops_mnt4_753,
 )
 from src.zkscript.bilinear_pairings.mnt4_753.mnt4_753 import mnt4_753
+from src.zkscript.script_types.stack_elements import StackEllipticCurvePoint, StackFiniteFieldElement
 from src.zkscript.script_types.unlocking_keys.miller_loops import (
     MillerLoopUnlockingKey,
     TripleMillerLoopUnlockingKey,
@@ -2982,7 +2983,10 @@ class Mnt4753:
 
 
 def generate_test_cases(test_name):
-    configurations = [Bls12381, Mnt4753]
+    configurations = [
+        Bls12381,
+        Mnt4753,
+    ]
 
     out = []
     for config in configurations:
@@ -3085,25 +3089,56 @@ def test_cubic_to_quadratic(config, x, expected, save_to_json_folder):
 @pytest.mark.parametrize("clean_constant", [True, False])
 @pytest.mark.parametrize("is_constant_reused", [True, False])
 @pytest.mark.parametrize("positive_modulo", [True, False])
+@pytest.mark.parametrize("is_gradient_before", [True, False])
 @pytest.mark.parametrize(
     ("config", "point_p", "point_q", "lam", "expected"), generate_test_cases("test_line_evaluation")
 )
 def test_line_evaluation(
-    config, positive_modulo, point_p, point_q, lam, expected, clean_constant, is_constant_reused, save_to_json_folder
+    config,
+    positive_modulo,
+    point_p,
+    point_q,
+    lam,
+    expected,
+    clean_constant,
+    is_constant_reused,
+    is_gradient_before,
+    save_to_json_folder,
 ):
     unlock = nums_to_script([config.q])
-    unlock += generate_unlock(lam)
+    if is_gradient_before:
+        unlock += generate_unlock(lam)
     unlock += generate_unlock(point_p)
     unlock += generate_unlock(point_q)
+    if not is_gradient_before:
+        unlock += generate_unlock(lam)
 
     # Check correct evaluation, if positive_modulo is negative, we do not clean the modulo constant q
-    lock = config.test_script_line_functions.line_evaluation(
-        take_modulo=True,
-        positive_modulo=positive_modulo,
-        check_constant=True,
-        clean_constant=clean_constant and positive_modulo,
-        is_constant_reused=is_constant_reused,
-    )
+    if is_gradient_before:
+        lock = config.test_script_line_functions.line_evaluation(
+            take_modulo=True,
+            positive_modulo=positive_modulo,
+            check_constant=True,
+            clean_constant=clean_constant and positive_modulo,
+            is_constant_reused=is_constant_reused,
+        )
+    else:
+        lock = config.test_script_line_functions.line_evaluation(
+            take_modulo=True,
+            positive_modulo=positive_modulo,
+            check_constant=True,
+            clean_constant=clean_constant and positive_modulo,
+            is_constant_reused=is_constant_reused,
+            gradient=StackFiniteFieldElement(1, False, 2),
+            P=StackEllipticCurvePoint(
+                StackFiniteFieldElement(7, False, 1),
+                StackFiniteFieldElement(6, False, 1),
+            ),
+            Q=StackEllipticCurvePoint(
+                StackFiniteFieldElement(5, False, 2),
+                StackFiniteFieldElement(3, False, 2),
+            ),
+        )
     if is_constant_reused:
         lock += check_constant(config.q)
 
@@ -3435,21 +3470,31 @@ def test_single_pairing(config, point_p, point_q, miller_output_inverse, expecte
 
 @pytest.mark.parametrize("clean_constant", [True, False])
 @pytest.mark.parametrize(("config", "point_p", "point_q", "expected"), generate_test_cases("test_triple_miller_loop"))
-def test_triple_miller_loop(config, point_p, point_q, expected, clean_constant, save_to_json_folder):
+@pytest.mark.parametrize("is_precomputed_gradients_in_unlock", [True, False])
+def test_triple_miller_loop(
+    config, point_p, point_q, expected, clean_constant, is_precomputed_gradients_in_unlock, save_to_json_folder
+):
     gradients = [[[s.to_list() for s in el] for el in point_q[i].gradients(config.exp_miller_loop)] for i in range(3)]
 
     unlocking_key = TripleMillerLoopUnlockingKey(
         [point_p[0].to_list(), point_p[1].to_list(), point_p[2].to_list()],
         [point_q[0].to_list(), point_q[1].to_list(), point_q[2].to_list()],
         gradients,
+        has_precomputed_gradients=is_precomputed_gradients_in_unlock,
     )
 
     unlock = unlocking_key.to_unlocking_script(config.test_script_pairing)
 
     # Check correct evaluation
-    lock = config.test_script_pairing.triple_miller_loop(modulo_threshold=1, check_constant=True, clean_constant=False)
-    lock += modify_verify_modulo_check(generate_verify(expected), clean_constant)
+    lock = config.test_script_pairing.triple_miller_loop(
+        modulo_threshold=1,
+        check_constant=True,
+        clean_constant=False,
+        is_precomputed_gradients_on_stack=is_precomputed_gradients_in_unlock,
+        precomputed_gradients=gradients[1:],
+    )
 
+    lock += modify_verify_modulo_check(generate_verify(expected), clean_constant)
     verify_script(lock, unlock, clean_constant)
 
     if save_to_json_folder and clean_constant:
@@ -3457,10 +3502,20 @@ def test_triple_miller_loop(config, point_p, point_q, expected, clean_constant, 
 
 
 @pytest.mark.parametrize("clean_constant", [True, False])
+@pytest.mark.parametrize("is_precomputed_gradients_in_unlock", [True, False])
 @pytest.mark.parametrize(
     ("config", "point_p", "point_q", "miller_output_inverse", "expected"), generate_test_cases("test_triple_pairing")
 )
-def test_triple_pairing(config, point_p, point_q, miller_output_inverse, expected, clean_constant, save_to_json_folder):
+def test_triple_pairing(
+    config,
+    point_p,
+    point_q,
+    miller_output_inverse,
+    expected,
+    clean_constant,
+    is_precomputed_gradients_in_unlock,
+    save_to_json_folder,
+):
     gradients = [[[s.to_list() for s in el] for el in point_q[i].gradients(config.exp_miller_loop)] for i in range(3)]
 
     unlocking_key = TriplePairingUnlockingKey(
@@ -3468,12 +3523,18 @@ def test_triple_pairing(config, point_p, point_q, miller_output_inverse, expecte
         [point_q[i].to_list() for i in range(3)],
         gradients,
         miller_output_inverse.to_list(),
+        has_precomputed_gradients=is_precomputed_gradients_in_unlock,
     )
 
     unlock = unlocking_key.to_unlocking_script(config.test_script_pairing)
 
-    # Check correct evaluation
-    lock = config.test_script_pairing.triple_pairing(modulo_threshold=1, check_constant=True, clean_constant=False)
+    lock = config.test_script_pairing.triple_pairing(
+        modulo_threshold=1,
+        check_constant=True,
+        clean_constant=False,
+        is_precomputed_gradients_on_stack=is_precomputed_gradients_in_unlock,
+        precomputed_gradients=gradients[1:],
+    )
     lock += modify_verify_modulo_check(generate_verify(expected), clean_constant)
 
     verify_script(lock, unlock, clean_constant)

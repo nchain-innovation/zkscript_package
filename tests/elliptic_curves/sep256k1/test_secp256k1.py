@@ -31,7 +31,7 @@ dummy_sighash = hash256d(dummy_pre_sig_hash)
 h = int.from_bytes(dummy_sighash)
 
 
-def compress(P) -> bytes:  # noqa: N803
+def compress(P) -> bytes:
     point_as_list = P.to_list()
     x_coordinate = int.to_bytes(point_as_list[0], 32)
     out = bytes.fromhex("03") if point_as_list[1] % 2 else bytes.fromhex("02")
@@ -55,7 +55,7 @@ def tweak_private_key(a: int) -> int:
     ],
 )
 @pytest.mark.parametrize("compressed_pubkey", [True, False])
-def test_verify_base_point_multiplication_up_to_epsilon(a, A, additional_constant, compressed_pubkey):  # noqa: N803
+def test_verify_base_point_multiplication_up_to_epsilon(a, A, additional_constant, compressed_pubkey):
     lock = Secp256k1._Secp256k1__verify_base_point_multiplication_up_to_epsilon(  # noqa: SLF001
         True,
         True,
@@ -85,7 +85,7 @@ def test_verify_base_point_multiplication_up_to_epsilon(a, A, additional_constan
 
 
 @pytest.mark.parametrize(("a", "A"), [(2, generator.multiply(2)), (10, generator.multiply(10))])
-def test_verify_base_point(a, A):  # noqa: N803
+def test_verify_base_point(a, A):
     lock = Secp256k1.verify_base_point_multiplication(
         True,
         True,
@@ -109,7 +109,7 @@ def test_verify_base_point(a, A):  # noqa: N803
         (56, generator.multiply(231)),
     ],
 )
-def test_verify_point_multiplication_up_to_sign(b, P, negate):  # noqa: N803
+def test_verify_point_multiplication_up_to_sign(b, P, negate):
     Q = P.multiply(b)
     h_times_x_coordinate_target_inverse = Fr_k1(h) * Fr_k1(Q.x.x).invert()
     h_times_x_coordinate_target_inverse_times_G = generator.multiply(h_times_x_coordinate_target_inverse.x)
@@ -140,7 +140,7 @@ def test_verify_point_multiplication_up_to_sign(b, P, negate):  # noqa: N803
 
 
 @pytest.mark.parametrize(("b", "P"), [(3, generator.multiply(10)), (110, generator.multiply(547))])
-def test_verify_point_multiplication(b, P):  # noqa: N803
+def test_verify_point_multiplication(b, P):
     Q = P.multiply(b)
 
     d = []

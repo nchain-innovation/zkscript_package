@@ -64,7 +64,7 @@ test_script = EllipticCurveFqProjective(q=modulus, curve_a=0, curve_b=7)
         ),
     ],
 )
-def test_extract_scalar_as_unsigned(base_loaded, rolling_option, P, a, max_multiplier, expected):  # noqa: N803
+def test_extract_scalar_as_unsigned(base_loaded, rolling_option, P, a, max_multiplier, expected):
     unlocking_key = EllipticCurveFqProjectiveUnrolledUnlockingKey(
         P=[*P.to_list(), 1], a=a, max_multiplier=max_multiplier
     )
