@@ -124,7 +124,6 @@ class RefTx:
             out += nums_to_script([bytes_sighash_chunks]) + Script.parse_string("OP_SPLIT OP_DROP")
             out += Script.parse_string("OP_TOALTSTACK")
 
-
         # stack in:     [.., q, .., msm_data(u_stx), msm_data(sighash(stx))]
         # altstack in:  [chunks(sighash(stx))]
         # stack out:    [..] of fail
@@ -140,7 +139,6 @@ class RefTx:
         )
         out += Script.parse_string("OP_VERIFY")
 
-
         # stack in:     [..]
         # altstack in:  [chunks(sighash(stx))]
         # stack out:    [0/1]
@@ -153,6 +151,5 @@ class RefTx:
             is_opcodeseparator=True,
             is_checksigverify=False,
         )
-
 
         return out

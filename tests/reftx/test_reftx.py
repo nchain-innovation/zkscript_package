@@ -1,5 +1,4 @@
 import json
-import sys
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -302,8 +301,6 @@ class Mnt4753:
     filename = "mnt4_753"
 
 
-
-
 def save_scripts(lock, unlock, save_to_json_folder, filename, test_name):
     if save_to_json_folder:
         output_dir = Path("data") / save_to_json_folder / "groth16"
@@ -415,4 +412,3 @@ def test_reftx(
 
     if save_to_json_folder:
         save_scripts(str(lock), str(unlock), save_to_json_folder, config.filename, "reftx")
-
