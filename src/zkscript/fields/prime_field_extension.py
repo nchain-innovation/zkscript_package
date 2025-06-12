@@ -296,7 +296,7 @@ class PrimeFieldExtension:
         x = x if x is not None else StackFiniteFieldElement(2 * self.extension_degree - 1, False, self.extension_degree)
         y = y if y is not None else StackFiniteFieldElement(self.extension_degree - 1, False, self.extension_degree)
         assert not x.negate, "x.negate should be False."
-        assert not y.negate, "x.negate should be False."
+        assert not y.negate, "y.negate should be False."
 
         return self.algebraic_sum(
             x=x,
