@@ -74,8 +74,7 @@ class Groth16:
                     for _ in range(self.pairing_model.extension_degree):
                         list_of_opcodes.append("OP_HASH256")
                         list_of_opcodes.append("OP_CAT")
-        del list_of_opcodes[-1]
-        string_of_opcodes = " ".join(list_of_opcodes)
+        string_of_opcodes = " ".join(list_of_opcodes[:-1])
         out = Script.parse_string(string_of_opcodes)
         out.append_pushdata(verification_hash)
         out += Script.parse_string("OP_EQUAL")
@@ -93,11 +92,12 @@ class Groth16:
         """Groth16 verifier.
 
         Stack input:
-            - stack:    [q, ..., inverse_miller_loop_triple_pairing, gradients_pairing, A, B, C,
-                            gradient[gamma_abc[0], sum_(i=1)^l a_i * gamma_abc[i]],
-                                gradient[sum_(i=1)^(l-1) a_i * gamma_abc[i], a_1 * gamma_abc[1]], ...,
-                                    gradient[a_(l-1) * gamma_abc[l-1], a_l * gamma_abc[l]],
-                                        a_2, gradients[a_2,gamma_abc[l]], ..., a_1, gradients[a_1,gamma_abc[1]]]
+            - stack:    [q, ..., inverse_miller_loop_triple_pairing,
+                            (gradients_pairing if not locking_key.has_precomputed_gradients), A, B, C,
+                                gradient[gamma_abc[0], sum_(i=1)^l a_i * gamma_abc[i]],
+                                    gradient[sum_(i=1)^(l-1) a_i * gamma_abc[i], a_1 * gamma_abc[1]], ...,
+                                        gradient[a_(l-1) * gamma_abc[l-1], a_l * gamma_abc[l]],
+                                            a_2, gradients[a_2,gamma_abc[l]], ..., a_1, gradients[a_1,gamma_abc[1]]]
 
                 where:
                 - [a_i, gradients[a_i,gamma_abc[i]]] is the input required to execute `unrolled_multiplication` from
@@ -105,7 +105,8 @@ class Groth16:
                 - gradient[sum_(i=1)^(j-1) a_i * gamma_abc[i], a_j * gamma_abc[j]] is the gradient through
                     a_j * gamma_abc[j] and sum_(i=1)^(j-1) a_i * gamma_abc[i] to compute their sum
                 - gradients_pairing are the gradients needed to execute the method `self.triple_pairing()`
-                    (from the Pairing class) to compute the triple pairing
+                    (from the Pairing class) to compute the triple pairing. These may not be on the stack based on
+                    the value of `locking_key.has_precomputed_gradients`.
             - altstack: []
 
         Stack output:
@@ -140,14 +141,16 @@ class Groth16:
 
         out = verify_bottom_constant(self.pairing_model.modulus) if check_constant else Script()
 
-        # stack in:     [q, ..., inverse_miller_loop_triple_pairing, gradients_pairing, A, B, C,
-        #                    gradient[gamma_abc[0], sum_(i=1)^l a_i * gamma_abc[i]],
-        #                        gradient[sum_(i=1)^(l-1) a_i * gamma_abc[i], a_1 * gamma_abc[1]], ...,
+        # stack in:     [q, ..., inverse_miller_loop_triple_pairing,
+        #                   (gradients_pairing if not locking_key.has_precomputed_gradients),
+        #                       A, B, C, gradient[gamma_abc[0], sum_(i=1)^l a_i * gamma_abc[i]],
+        #                       gradient[sum_(i=1)^(l-1) a_i * gamma_abc[i], a_1 * gamma_abc[1]], ...,
         #                           gradient[a_(l-1) * gamma_abc[l-1], a_l * gamma_abc[l]],
         #                               a_2, gradients[a_2,gamma_abc[l]], ..., a_1, gradients[a_1,gamma_abc[1]],
-        # stack out:    [q, ..., inverse_miller_loop_triple_pairing, gradients_pairing, A, B, C,
-        #                    gradient[gamma_abc[0], sum_(i=1)^l a_i * gamma_abc[i]],
-        #                       sum_(i=1)^l a_i * gamma_abc[i]]
+        # stack out:    [q, ..., inverse_miller_loop_triple_pairing,
+        #                   (gradients_pairing if not locking_key.has_precomputed_gradients), A, B, C,
+        #                       gradient[gamma_abc[0], sum_(i=1)^l a_i * gamma_abc[i]],
+        #                           sum_(i=1)^l a_i * gamma_abc[i]]
         out += ec_fq.msm_with_fixed_bases(
             bases=locking_key.gamma_abc[1:],
             max_multipliers=max_multipliers,
@@ -162,17 +165,20 @@ class Groth16:
         # Load gamma_abc[0] to the stack
         out += nums_to_script(locking_key.gamma_abc[0])
 
-        # stack in:    [q, ..., inverse_miller_loop_triple_pairing, gradients_pairing, A, B, C,
-        #                    gradient[gamma_abc[0], sum_(i=1)^l a_i * gamma_abc[i]],
-        #                       sum_(i=1)^l a_i * gamma_abc[i]]
-        # stack out:    [q, ..., inverse_miller_loop_triple_pairing, gradients_pairing, A, B, C,
-        #                   sum_(i=0)^l a_i * gamma_abc[i]]
+        # stack in:    [q, ..., inverse_miller_loop_triple_pairing,
+        #                  (gradients_pairing if not locking_key.has_precomputed_gradients),
+        #                      A, B, C, gradient[gamma_abc[0], sum_(i=1)^l a_i * gamma_abc[i]],
+        #                          sum_(i=1)^l a_i * gamma_abc[i]]
+        # stack out:   [q, ..., inverse_miller_loop_triple_pairing,
+        #                  (gradients_pairing if not locking_key.has_precomputed_gradients),
+        #                      A, B, C, sum_(i=0)^l a_i * gamma_abc[i]]
         out += ec_fq.point_addition_with_unknown_points(
             take_modulo=True, positive_modulo=False, check_constant=False, clean_constant=False
         )
 
-        # stack in:  [q, ..., inverse_miller_loop_triple_pairing, gradients_pairing, A, B, C,
-        #                   sum_(i=0)^l a_i * gamma_abc[i]]
+        # stack in:    [q, ..., inverse_miller_loop_triple_pairing,
+        #                  (gradients_pairing if not locking_key.has_precomputed_gradients),
+        #                      A, B, C, sum_(i=0)^l a_i * gamma_abc[i]]
         # stack out: [q, ..., 0/1]
         out += self.groth16_verifier_with_precomputed_msm(
             locking_key=locking_key,
@@ -193,11 +199,14 @@ class Groth16:
         """Groth16 verifier.
 
         Stack input:
-            - stack:    [q, ..., inverse_miller_loop_triple_pairing, gradients_pairing, A, B, C,
-                            sum_(i=0)^l a_i * gamma_abc[i]]
+            - stack:    [q, ..., inverse_miller_loop_triple_pairing,
+                            (gradients_pairing if not locking_key.has_precomputed_gradients),
+                                A, B, C, sum_(i=0)^l a_i * gamma_abc[i]]
                 where:
                 - gradients_pairing are the gradients needed to execute the method `self.triple_pairing()`
-                    (from the Pairing class) to compute the triple pairing
+                    (from the Pairing class) to compute the triple pairing. If `locking_key.has_precomputed_gradients`
+                    is `False`, these are already on the stack, and are verified at the end of the script. If `True`,
+                    they are injected during the execution of the triple pairing.
             - altstack: []
 
         Stack output:
@@ -219,15 +228,14 @@ class Groth16:
         Notes:
             a_0 = 1.
         """
-        # Hash used to verify the gradients of -gamma and -delta
-        verification_hash = self.__gradients_to_hash_commitment(locking_key=locking_key)
-
         out = verify_bottom_constant(self.pairing_model.modulus) if check_constant else Script()
 
-        # stack in:  [q, ..., inverse_miller_loop_triple_pairing, gradients_pairing, A, B, C,
-        #                   sum_(i=0)^l a_i * gamma_abc[i]]
-        # stack out: [q, ..., inverse_miller_loop_triple_pairing, gradients_pairing, A,
-        #                   sum_(i=0)^l a_i * gamma_abc[i], C, B, -gamma, -delta]
+        # stack in:  [q, ..., inverse_miller_loop_triple_pairing,
+        #                (gradients_pairing if not locking_key.has_precomputed_gradients),
+        #                    A, B, C, sum_(i=0)^l a_i * gamma_abc[i]]
+        # stack out: [q, ..., inverse_miller_loop_triple_pairing,
+        #                (gradients_pairing if not locking_key.has_precomputed_gradients),
+        #                    A, sum_(i=0)^l a_i * gamma_abc[i], C, B, -gamma, -delta]
         out += roll(
             position=2 * self.pairing_model.N_POINTS_CURVE - 1, n_elements=self.pairing_model.N_POINTS_CURVE
         )  # Roll C
@@ -239,9 +247,11 @@ class Groth16:
         out += nums_to_script(locking_key.minus_delta)
 
         # Compute the triple pairing
-        # stack in:  [q, ..., inverse_miller_loop_triple_pairing, gradients_pairing, A,
-        #                   sum_(i=0)^l a_i * gamma_abc[i], C, B, -gamma, -delta]
-        # stack out: [q, ..., gradients_pairing,
+        # stack in:  [q, ..., inverse_miller_loop_triple_pairing,
+        #                (gradients_pairing if not locking_key.has_precomputed_gradients),
+        #                    A, sum_(i=0)^l a_i * gamma_abc[i], C, B, -gamma, -delta]
+        # altstack in: [(gradients_pairing if locking_key.has_precomputed_gradients)]
+        # stack out: [q, ..., (gradients_pairing if not locking_key.has_precomputed_gradients),
         #                   pairing(A,B) * pairing(sum_(i=0)^(l) a_i * gamma_abc[i], -gamma) * pairing(C, -delta)]
         out += self.pairing_model.triple_pairing(
             modulo_threshold=modulo_threshold,
@@ -249,19 +259,29 @@ class Groth16:
             verify_gradients=(True, False, False),
             check_constant=False,
             clean_constant=clean_constant,
+            is_precomputed_gradients_on_stack=not locking_key.has_precomputed_gradients,
+            precomputed_gradients=locking_key.gradients_pairings,
         )
 
         # Verify pairing(A,B) * pairing(sum_(i=0)^(l) a_i * gamma_abc[i], -gamma) * pairing(C, -delta) == alpha_beta
-        # stack in:  [q, ..., gradients_pairing,
+        # stack in:  [q, ..., (gradients_pairing if not locking_key.has_precomputed_gradients),
         #                   pairing(A,B) * pairing(sum_(i=0)^(l) a_i * gamma_abc[i], -gamma) * pairing(C, -delta)]
-        # stack out: [q, ..., gradients_pairing] or fail
-        for el in locking_key.alpha_beta[::-1]:
+        # stack out: [q, ..., 0/1] if locking_key.has_precomputed_gradients else ([q, ..., gradients_pairing] or fail)
+        for i, el in enumerate(locking_key.alpha_beta[::-1]):
             out += nums_to_script([el])
-            out += Script.parse_string("OP_EQUALVERIFY")
+            out += (
+                Script.parse_string("OP_EQUAL")
+                if locking_key.has_precomputed_gradients and i == len(locking_key.alpha_beta) - 1
+                else Script.parse_string("OP_EQUALVERIFY")
+            )
 
-        # Verify that the gradients supplied for -gamma and -delta are the correct ones
-        # stack in:  [q, ..., gradients_pairing]
+        # If locking_key.has_precomputed_gradients is False, verify that the gradients supplied by the unlocking script
+        # for -gamma and -delta are the correct ones.
+        # stack in:  [q, ..., gradients_pairing] if not locking_key.has_precomputed_gradients
         # stack out: [q, ..., 0/1]
-        out += self.__verify_hash_commitment(locking_key=locking_key, verification_hash=verification_hash)
+        if not locking_key.has_precomputed_gradients:
+            # Hash used to verify the gradients of -gamma and -delta
+            verification_hash = self.__gradients_to_hash_commitment(locking_key=locking_key)
+            out += self.__verify_hash_commitment(locking_key=locking_key, verification_hash=verification_hash)
 
         return optimise_script(out)

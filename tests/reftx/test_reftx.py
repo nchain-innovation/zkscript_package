@@ -319,6 +319,7 @@ def save_scripts(lock, unlock, save_to_json_folder, filename, test_name):
             json.dump(data, f, indent=4)
 
 
+@pytest.mark.parametrize("precomputed_gradients_in_unlocking", [True, False])
 @pytest.mark.parametrize(
     ("config", "prepared_vk", "alpha_beta", "prepared_proof", "max_multipliers"),
     [
@@ -358,6 +359,7 @@ def test_reftx(
     alpha_beta,
     prepared_proof,
     max_multipliers,
+    precomputed_gradients_in_unlocking,
     save_to_json_folder,
 ):
     unlock_key = RefTxUnlockingKey.from_data(
@@ -376,6 +378,7 @@ def test_reftx(
         gradients_additions=prepared_proof.gradients_additions,
         inverse_miller_output=prepared_proof.inverse_miller_loop,
         gradient_precomputed_l_out=prepared_proof.gradient_gamma_abc_zero,
+        has_precomputed_gradients=precomputed_gradients_in_unlocking,
     )
 
     unlock = unlock_key.to_unlocking_script(config.test_script_groth16)
@@ -391,6 +394,7 @@ def test_reftx(
             prepared_vk.gradients_minus_delta,
         ],
         sighash_flags=SIGHASH.ALL_FORKID,
+        has_precomputed_gradients=not precomputed_gradients_in_unlocking,
     )
 
     lock = config.test_script.locking_script(

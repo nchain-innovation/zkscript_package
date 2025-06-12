@@ -26,7 +26,7 @@ def generate_verify_from_list(elements: list[int]) -> Script:
     return out
 
 
-def generate_verify_point(P, degree: int) -> Script:  # noqa: N803
+def generate_verify_point(P, degree: int) -> Script:
     """Generate verification script for P.
 
     Args:
@@ -103,8 +103,8 @@ def generate_extended_list(elements: list[list[int]], positions_elements: list[i
 
 def generate_test(
     modulus: int,
-    P,  # noqa: N803
-    Q,  # noqa: N803
+    P,
+    Q,
     positions: dict[str, int],
     negations: dict[str, bool],
     rolls: dict[str, bool],
@@ -132,77 +132,167 @@ def generate_test(
 
     P_ = -P if negations["P"] else P
     Q_ = P_ if P == Q else (-Q if negations["Q"] else Q)
-
+    is_gradient_before = positions["gradient"] > positions["P"]
     gradient = P_.gradient(Q_)
-
-    unlocking_script = (
-        [[modulus], gradient.to_list(), P.to_list(), Q.to_list()]
-        if P != Q
-        else [[modulus], gradient.to_list(), P.to_list()]
-    )
-    unlocking_script = generate_extended_list(
-        unlocking_script,
-        [positions["modulus"], positions["gradient"], positions["P"]]
-        if P == Q
-        else [positions["modulus"], positions["gradient"], positions["P"], positions["Q"]],
-        1,
-    )  # Generate extended unlocking script
+    if is_gradient_before:
+        unlocking_script = (
+            [[modulus], gradient.to_list(), P.to_list(), Q.to_list()]
+            if P != Q
+            else [[modulus], gradient.to_list(), P.to_list()]
+        )
+        unlocking_script = generate_extended_list(
+            unlocking_script,
+            [positions["modulus"], positions["gradient"], positions["P"]]
+            if P == Q
+            else [positions["modulus"], positions["gradient"], positions["P"], positions["Q"]],
+            1,
+        )  # Generate extended unlocking script
+    else:
+        unlocking_script = (
+            [[modulus], P.to_list(), Q.to_list(), gradient.to_list()]
+            if P != Q
+            else [
+                [modulus],
+                P.to_list(),
+                gradient.to_list(),
+            ]
+        )
+        unlocking_script = generate_extended_list(
+            unlocking_script,
+            [positions["modulus"], positions["P"], positions["gradient"]]
+            if P == Q
+            else [positions["modulus"], positions["P"], positions["Q"], positions["gradient"]],
+            1,
+        )  # Generate extended unlocking script
 
     tuple_to_match = (
-        (rolls["gradient"], rolls["P"], rolls["P"]) if P == Q else (rolls["gradient"], rolls["P"], rolls["Q"])
+        (rolls["gradient"], rolls["P"], rolls["P"], is_gradient_before)
+        if P == Q
+        else (rolls["gradient"], rolls["P"], rolls["Q"], is_gradient_before)
     )
     match tuple_to_match:
-        case (False, False, False):
+        case (False, False, False, True):
             expected = (
                 [[modulus], gradient.to_list(), P.to_list(), Q.to_list()]
                 if P != Q
                 else [[modulus], gradient.to_list(), P.to_list()]
             )
             positions_expected = positions.values()
-        case (False, False, True):
+        case (False, False, True, True):
             expected = [[modulus], gradient.to_list(), P.to_list()]
             positions_expected = [
                 positions["modulus"] - len(Q.to_list()),
                 positions["gradient"] - len(Q.to_list()),
                 positions["P"] - len(Q.to_list()),
             ]
-        case (False, True, False):
+        case (False, True, False, True):
             expected = [[modulus], gradient.to_list(), Q.to_list()]
             positions_expected = [
                 positions["modulus"] - len(P.to_list()),
                 positions["gradient"] - len(P.to_list()),
                 positions["Q"],
             ]
-        case (False, True, True):
+        case (False, True, True, True):
             expected = [[modulus], gradient.to_list()]
             positions_expected = (
                 [positions["modulus"] - 2 * len(P.to_list()), positions["gradient"] - 2 * len(P.to_list())]
                 if P != Q
                 else [positions["modulus"] - len(P.to_list()), positions["gradient"] - len(P.to_list())]
             )
-        case (True, False, False):
+        case (True, False, False, True):
             expected = [[modulus], P.to_list(), Q.to_list()] if P != Q else [[modulus], P.to_list()]
             positions_expected = (
                 [positions["modulus"] - len(gradient.to_list()), positions["P"]]
                 if P == Q
                 else [positions["modulus"] - len(gradient.to_list()), positions["P"], positions["Q"]]
             )
-        case (True, False, True):
+        case (True, False, True, True):
             expected = [[modulus], P.to_list()]
             positions_expected = [
                 positions["modulus"] - len(gradient.to_list()) - len(Q.to_list()),
                 positions["P"] - len(Q.to_list()),
             ]
-        case (True, True, False):
+        case (True, True, False, True):
             expected = [[modulus], Q.to_list()]
             positions_expected = [positions["modulus"] - len(gradient.to_list()) - len(P.to_list()), positions["Q"]]
-        case (True, True, True):
+        case (True, True, True, True):
             expected = [[modulus]]
             positions_expected = (
                 [positions["modulus"] - len(gradient.to_list()) - len(P.to_list()) - len(Q.to_list())]
                 if P != Q
                 else [positions["modulus"] - len(gradient.to_list()) - len(P.to_list())]
             )
+        case (False, False, False, False):
+            expected = (
+                [[modulus], P.to_list(), Q.to_list(), gradient.to_list()]
+                if P != Q
+                else [[modulus], P.to_list(), gradient.to_list()]
+            )
+            positions_expected = (
+                [positions["modulus"], positions["P"], positions["Q"], positions["gradient"]]
+                if P != Q
+                else [positions["modulus"], positions["P"], positions["gradient"]]
+            )
+        case (False, False, True, False):
+            expected = [
+                [modulus],
+                P.to_list(),
+                gradient.to_list(),
+            ]
+            positions_expected = [
+                positions["modulus"] - len(Q.to_list()),
+                positions["P"] - len(Q.to_list()),
+                positions["gradient"],
+            ]
+        case (False, True, False, False):
+            expected = [
+                [modulus],
+                Q.to_list(),
+                gradient.to_list(),
+            ]
+            positions_expected = [
+                positions["modulus"] - len(P.to_list()),
+                positions["Q"],
+                positions["gradient"],
+            ]
+        case (False, True, True, False):
+            expected = [[modulus], gradient.to_list()]
+            positions_expected = (
+                [positions["modulus"] - 2 * len(P.to_list()), positions["gradient"]]
+                if P != Q
+                else [positions["modulus"] - len(P.to_list()), positions["gradient"]]
+            )
+        case (True, False, False, False):
+            expected = [[modulus], P.to_list(), Q.to_list()] if P != Q else [[modulus], P.to_list()]
+            positions_expected = (
+                [positions["modulus"] - len(gradient.to_list()), positions["P"] - len(gradient.to_list())]
+                if P == Q
+                else [
+                    positions["modulus"] - len(gradient.to_list()),
+                    positions["P"] - len(gradient.to_list()),
+                    positions["Q"] - len(gradient.to_list()),
+                ]
+            )
+        case (True, False, True, False):
+            expected = [[modulus], P.to_list()]
+            positions_expected = [
+                positions["modulus"] - len(gradient.to_list()) - len(Q.to_list()),
+                positions["P"] - len(gradient.to_list()) - len(Q.to_list()),
+            ]
+        case (True, True, False, False):
+            expected = [[modulus], Q.to_list()]
+            positions_expected = [
+                positions["modulus"] - len(gradient.to_list()) - len(P.to_list()),
+                positions["Q"] - len(gradient.to_list()),
+            ]
+        case (True, True, True, False):
+            expected = [[modulus]]
+            positions_expected = (
+                [positions["modulus"] - len(gradient.to_list()) - len(P.to_list()) - len(Q.to_list())]
+                if P != Q
+                else [positions["modulus"] - len(gradient.to_list()) - len(P.to_list())]
+            )
+
     expected = [*expected, (P_ + Q_).to_list()]
     positions_expected = [*[el + len(P.to_list()) for el in positions_expected], len(P.to_list()) - 1]
     expected = generate_extended_list(expected, positions_expected, 1)[1:]
@@ -249,8 +339,8 @@ def generate_test(
 
 def generate_test_data(
     modulus: int,
-    P,  # noqa: N803
-    Q,  # noqa: N803
+    P,
+    Q,
     positions: list[dict[str, int]],
 ) -> list[dict[str, Union[Script, StackFiniteFieldElement, StackEllipticCurvePoint]]]:
     """Generate test cases starting from modulus, P, Q and the positions modulus, gradient, P and Q should be in.
@@ -290,7 +380,7 @@ def generate_test_data(
     return test_cases
 
 
-def generate_unlock(P, degree) -> Script:  # noqa: N803
+def generate_unlock(P, degree) -> Script:
     out = Script()
     if not P.is_infinity():
         out += nums_to_script(P.to_list())

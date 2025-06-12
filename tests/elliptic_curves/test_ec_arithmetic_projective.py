@@ -522,7 +522,7 @@ def test_doubling(config, additional_elements, negate_p, P, save_to_json_folder)
 @pytest.mark.parametrize(
     ("config", "P", "a", "expected", "max_multiplier"), generate_test_cases("test_multiplication_unrolled")
 )
-def test_multiplication_unrolled(config, P, a, expected, max_multiplier, save_to_json_folder):  # noqa: N803
+def test_multiplication_unrolled(config, P, a, expected, max_multiplier, save_to_json_folder):
     unlocking_key = EllipticCurveFqProjectiveUnrolledUnlockingKey(P=proj_to_list(P), a=a, max_multiplier=max_multiplier)
 
     unlock = unlocking_key.to_unlocking_script(config.test_script, load_modulus=True, load_P=True)

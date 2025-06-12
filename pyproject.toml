@@ -21,6 +21,7 @@ exclude = ["tests"]
 
 [tool.ruff]
 include = ["src/zkscript/**/*.py", "script_examples/**/*.py", "tests/**/*.py"]
+exclude = ["**/elliptic-curves/**/*py"]
 line-length = 120
 indent-width = 4
 
@@ -111,6 +112,8 @@ convention = "google"
     "PLR6301", # no self use
     "RUF012", # Checks for mutable default values in class attributes.
     "PERF401", # manual-list-comprehension
+    "PLR0913", # many function arguments
+    "N803", # allow variables not followring the snake_case convention
 ]
 
 [tool.ruff.format]

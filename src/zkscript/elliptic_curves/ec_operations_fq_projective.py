@@ -369,12 +369,12 @@ class EllipticCurveFqProjective:
             out += mod(stack_preparation="", is_positive=positive_modulo)
             out += mod(is_positive=positive_modulo)
             out += mod(
-                stack_preparation=f"OP_FROMALTSTACK {"OP_NEGATE" if P.negate else ""} OP_ROT",
+                stack_preparation=f"OP_FROMALTSTACK {'OP_NEGATE' if P.negate else ''} OP_ROT",
                 is_positive=positive_modulo,
                 is_constant_reused=False,
             )
         else:
-            out += Script.parse_string(f"OP_FROMALTSTACK {"OP_NEGATE" if P.negate else ""} OP_ROT")
+            out += Script.parse_string(f"OP_FROMALTSTACK {'OP_NEGATE' if P.negate else ''} OP_ROT")
 
         return out
 

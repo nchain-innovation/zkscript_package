@@ -89,6 +89,7 @@ class RefTxUnlockingKey:
         gradients_additions: list[list[int]],
         inverse_miller_output: list[int],
         gradient_precomputed_l_out: list[int],
+        has_precomputed_gradients: bool = True,
     ) -> Self:
         r"""Construct an instance of `Self` from the provided data.
 
@@ -114,6 +115,8 @@ class RefTxUnlockingKey:
             gradient_precomputed_l_out (list[int]): The gradient required to compute the sum
                 (gamma_abc[0] + \sum_(i=1)^(n_l_out) pub[i] * gamma_abc[i+1]) +
                     \sum_(i=n_l_out+1)^(n_pub) pub[i] * gamma_abc[i+1]
+            has_precomputed_gradients (bool): Flag determining if the precomputed gradients used to compute
+                w*(-gamma) and w*(-delta) are in the unlocking script. Defaults to `True`.
         """
         max_multipliers = RefTxUnlockingKey.__multipliers(groth16_model, pub)
         msm_key = MsmWithFixedBasesUnlockingKey.from_data(
@@ -132,6 +135,7 @@ class RefTxUnlockingKey:
             inverse_miller_output,
             msm_key,
             gradient_precomputed_l_out,
+            has_precomputed_gradients=has_precomputed_gradients,
         )
 
         return RefTxUnlockingKey(groth16_key)
@@ -151,8 +155,8 @@ class RefTxUnlockingKey:
         # Compute bytes sighash chunks and number of chunks
         bytes_sighash_chunks = self.__bytes_sighash_chunks(groth16_model)
         n_chunks = 32 // bytes_sighash_chunks
-
         out = nums_to_script([groth16_model.pairing_model.modulus]) if load_constants else Script()
+
         if load_constants:
             out += nums_to_script([GROUP_ORDER_INT, Gx])
             out.append_pushdata(bytes.fromhex("0220") + Gx_bytes + bytes.fromhex("02"))

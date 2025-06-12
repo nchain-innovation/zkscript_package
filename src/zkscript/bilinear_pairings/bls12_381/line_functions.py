@@ -80,12 +80,23 @@ class LineFunctions:
         Returns:
             Script to evaluate a line through `T` and `Q` at `P`.
 
+        Raises:
+            ValueError: If either of the following happens:
+             - `gradient` is between `P` and `Q`.
+             - `Q` is before `P`.
+
         Notes:
             - `gradient` is NOT checked in this function, it is assumed to be the gradient.
             - `ev_(l_(T,Q)(P))` does NOT include the zero in the second component, this is to optimise the script size.
         """
-        check_order([gradient, P, Q])
         is_gradient_rolled, is_p_rolled, is_q_rolled = bitmask_to_boolean_list(rolling_options, 3)
+
+        check_order([P, Q])
+
+        if gradient.is_before(P):
+            gradient.overlaps_on_the_right(P)
+        else:
+            check_order([Q, gradient])
 
         out = verify_bottom_constant(self.modulus) if check_constant else Script()
 
@@ -97,14 +108,17 @@ class LineFunctions:
         # stack out:    [q .. {gradient} .. {xP} yP .. Q .. gradient_1 gradient_0]
         # altstack out: [-gradient*xP]
         third_component = move(gradient, bool_to_moving_function(is_gradient_rolled), 1, 2)  # Move gradient_1
-        third_component += move(P.x.shift(1), bool_to_moving_function(is_p_rolled))  # Move xP
+        # If the gradient is before P, or if the gradient is after P and we pick the coordinate, we need to shift by 1.
+        shift = 1 if gradient.is_before(P) else (0 if is_gradient_rolled else 1)
+        third_component += move(P.x.shift(shift), bool_to_moving_function(is_p_rolled))  # Move xP
         third_component += Script.parse_string("OP_NEGATE")  # Negate xP
         third_component += Script.parse_string(
             "OP_TUCK OP_OVER OP_MUL"
         )  # Duplicate xP, gradient_1, compute -xP*gradient_1
         third_component += Script.parse_string("OP_ROT")  # Rotate -xP
+        shift = 3 - 1 * is_gradient_rolled - (1 * is_p_rolled if gradient.is_before(P) else 0)
         third_component += move(
-            gradient.shift(3 - 1 * is_p_rolled - 1 * is_gradient_rolled),
+            gradient.shift(shift),
             bool_to_moving_function(is_gradient_rolled),
             0,
             1,
@@ -118,16 +132,18 @@ class LineFunctions:
         # stack out:    [q .. {gradient} .. {xP} yP .. {Q} .. (-yQ + gradient*xQ)_0]
         # altstack out: [-gradient*xP, (-yQ + gradient*xQ)_1]
         first_component = Script.parse_string("OP_SWAP")  # Reorder gradient
-        first_component += move(Q.x.shift(2), bool_to_moving_function(is_q_rolled))  # Move xQ
+        shift = 2 if gradient.is_before(P) else 2 - 2 * is_gradient_rolled
+        first_component += move(Q.x.shift(shift), bool_to_moving_function(is_q_rolled))  # Move xQ
         first_component += self.fq2.mul(
             take_modulo=False, check_constant=False, clean_constant=False
         )  # Compute xQ*gradient
-        first_component += move(Q.y.shift(2), bool_to_moving_function(is_q_rolled), 1, 2)  # Move yQ_1
+        first_component += move(Q.y.shift(shift), bool_to_moving_function(is_q_rolled), 1, 2)  # Move yQ_1
         if Q.negate:
             first_component += Script.parse_string("OP_ADD OP_TOALTSTACK")
         else:
             first_component += Script.parse_string("OP_SUB OP_TOALTSTACK")
-        first_component += move(Q.y.shift(1 - 1 * is_q_rolled), bool_to_moving_function(is_q_rolled), 0, 1)  # Move yQ_0
+        shift = 1 - 1 * is_q_rolled if gradient.is_before(P) else 1 - 2 * is_gradient_rolled - 1 * is_q_rolled
+        first_component += move(Q.y.shift(shift), bool_to_moving_function(is_q_rolled), 0, 1)  # Move yQ_0
         if Q.negate:
             first_component += Script.parse_string("OP_ADD")
         else:
@@ -139,14 +155,16 @@ class LineFunctions:
             out += roll(position=-1, n_elements=1) if clean_constant else pick(position=-1, n_elements=1)
             out += mod(stack_preparation="", is_mod_on_top=True, is_positive=positive_modulo)
             out += mod(is_positive=positive_modulo)
-            out += move(P.y.shift(3 - 4 * is_q_rolled), bool_to_moving_function(is_p_rolled))  # Move yP
+            shift = 3 - 4 * is_q_rolled if gradient.is_before(P) else 3 - 4 * is_q_rolled - 2 * is_gradient_rolled
+            out += move(P.y.shift(shift), bool_to_moving_function(is_p_rolled))  # Move yP
             out += Script.parse_string("OP_ROT")  # Rotate q
             out += mod(stack_preparation="", is_positive=positive_modulo)
             out += mod(is_positive=positive_modulo)
             out += mod(is_constant_reused=is_constant_reused, is_positive=positive_modulo)
         else:
             out += Script.parse_string("OP_FROMALTSTACK")
-            out += move(P.y.shift(2 - 2 * is_q_rolled), bool_to_moving_function(is_p_rolled))  # Move yP
+            shift = 2 - 2 * is_q_rolled if gradient.is_before(P) else 2 - 2 * is_q_rolled - 2 * is_gradient_rolled
+            out += move(P.y.shift(shift), bool_to_moving_function(is_p_rolled))  # Move yP
             out += Script.parse_string("OP_FROMALTSTACK OP_FROMALTSTACK")
 
         return out

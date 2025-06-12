@@ -67,7 +67,7 @@ def save_scripts(lock, unlock, save_to_json_folder, filename, test_name):
             json.dump(data, f, indent=4)
 
 
-def points_to_multiplication_unlocking_data(sighash: bytes, m: int, G, Q, P):  # noqa: N803
+def points_to_multiplication_unlocking_data(sighash: bytes, m: int, G, Q, P):
     h = int.from_bytes(sighash)
 
     d = []
@@ -125,10 +125,10 @@ def test_pedersen_commitment(
     sig_hash_preimage,
     m,
     r,
-    Q,  # noqa: N803
-    P,  # noqa: N803
-    R,  # noqa: N803
-    S,  # noqa: N803
+    Q,
+    P,
+    R,
+    S,
     save_to_json_folder,
 ):
     lock = commitment_scheme.commit(commitment)
