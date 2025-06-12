@@ -8,6 +8,7 @@ from src.zkscript.bilinear_pairings.model.cyclotomic_exponentiation import Cyclo
 from src.zkscript.fields.fq12_2_over_3_over_2 import Fq12
 from src.zkscript.script_types.stack_elements import StackFiniteFieldElement
 from src.zkscript.util.utility_scripts import move, pick, roll, verify_bottom_constant
+from src.zkscript.util.utility_script_params import ScriptParameters
 
 
 class FinalExponentiation(CyclotomicExponentiation):
@@ -39,13 +40,11 @@ class FinalExponentiation(CyclotomicExponentiation):
 
     def easy_exponentiation_with_inverse_check(
         self,
-        take_modulo: bool,
-        positive_modulo: bool = True,
-        check_constant: bool | None = None,
-        clean_constant: bool | None = None,
-        is_constant_reused: bool | None = None,
+         
         f_inverse: StackFiniteFieldElement = StackFiniteFieldElement(23, False, 12),  # noqa: B008
         f: StackFiniteFieldElement = StackFiniteFieldElement(11, False, 12),  # noqa: B008
+        params: ScriptParameters = default_parameters_1,
+        **kwargs, # override some params if necessary
     ) -> Script:
         """Easy part of the final exponentiation.
 
@@ -78,6 +77,13 @@ class FinalExponentiation(CyclotomicExponentiation):
             The inverse of `f` `inverse(f_quadratic)` is passed as input value on the stack and verified during script
             execution.
         """
+        params = params.with_overrides(**kwargs)
+        positive_modulo = params.positive_modulo
+        check_constant  = params.check_constant 
+        take_modulo = params.take_modulo 
+        clean_constant = params.clean_constant 
+        is_constant_reused = params.is_constant_reused 
+
         is_default_config = (f_inverse.position == self.extension_degree * 2 - 1) and (
             f.position == self.extension_degree - 1
         )
