@@ -160,7 +160,7 @@ class Pairing:
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
-            is_precomputed_gradients_on_stack (bool): If `True`, the precomputed gradients are alreadt on the stack,
+            is_precomputed_gradients_on_stack (bool): If `True`, the precomputed gradients are already on the stack,
                 otherwise they are injected during the triple Miller loop. Defaults to `True`.
             precomputed_gradients (list[list[list[list[int]]]]): list of gradients required to compute the triple
                 miller loop. The meaning of the lists is:
