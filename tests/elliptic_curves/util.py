@@ -389,6 +389,66 @@ def generate_unlock(P, degree) -> Script:
     return out
 
 
+def double_fq2(point, curve, field, extension_field):
+    """Compute `2*point` where `point` is a point on an EC in projective coordinates."""
+    X = point[0]
+    Y = point[1]
+    Z = point[2]
+    a = curve.a
+    b = curve.b
+
+    two = extension_field(field(2), field(0))
+    three = extension_field(field(3), field(0))
+    six = two * three
+    eight = two * two * two
+
+    A = a * X * X + six * b * X * Z - a * a * Z * Z
+    B = two * a * X * Z + three * b * Z * Z
+    C = three * X * X + a * Z * Z
+    X1 = two * X * Y * (Y * Y - B) - two * A * Y * Z
+    Y1 = A * C + (Y * Y + B) * (Y * Y - B)
+    Z1 = eight * Y * Y * Y * Z
+
+    return [Z1, Y1, X1]
+
+
+def add_fq2(point_1, point_2, curve, field, extension_field):
+    """Compute `point_1 + point_2` where the points are in projective coordinates."""
+    X_1 = point_1[0]
+    Y_1 = point_1[1]
+    Z_1 = point_1[2]
+    X_2 = point_2[0]
+    Y_2 = point_2[1]
+    Z_2 = point_2[2]
+
+    a = curve.a
+    b = curve.b
+
+    three = extension_field(field(3), field(0))
+
+    A = a * X_1 * X_2 + three * b * (X_1 * Z_2 + X_2 * Z_1) - a * a * Z_1 * Z_2
+    B = a * (X_1 * Z_2 + X_2 * Z_1) + three * b * Z_1 * Z_2
+    C = three * X_1 * X_2 + a * Z_1 * Z_2
+
+    X_3 = (X_1 * Y_2 + X_2 * Y_1) * (Y_1 * Y_2 - B) - A * (Y_1 * Z_2 + Y_2 * Z_1)
+    Y_3 = A * C + (Y_1 * Y_2 + B) * (Y_1 * Y_2 - B)
+    Z_3 = (Y_1 * Y_2 + B) * (Y_1 * Z_2 + Y_2 * Z_1) + C * (X_1 * Y_2 + X_2 * Y_1)
+
+    return [Z_3, Y_3, X_3]
+
+
+def negate_fq2(point):
+    """Compute `2*point` where `point` is a point on an EC in projective coordinates."""
+    X = point[0]
+    Y = point[1]
+    Z = point[2]
+    return [X, -Y, Z]
+
+
+def proj_point_to_script_fq2(point):
+    return [val for coord in [[i.x0.to_int(), i.x1.to_int()] for i in point] for val in coord]
+
+
 def save_scripts(lock, unlock, save_to_json_folder, filename, test_name):
     if save_to_json_folder:
         output_dir = Path("data") / save_to_json_folder / "elliptic_curves"
