@@ -275,28 +275,15 @@ def mod(
     """
     out = Script.parse_string(stack_preparation)
 
+    pick_modulo = OP_TUCK if is_mod_on_top else OP_OVER
+
     if is_positive:
-        if is_constant_reused:
-            if is_mod_on_top:
-                out += Script([OP_TUCK, OP_MOD, OP_OVER, OP_ADD, OP_OVER, OP_MOD])
-            else:
-                out += Script([OP_OVER, OP_MOD, OP_OVER, OP_ADD, OP_OVER, OP_MOD])
-        else:  # noqa: PLR5501
-            if is_mod_on_top:
-                out += Script([OP_TUCK, OP_MOD, OP_OVER, OP_ADD, OP_SWAP, OP_MOD])
-            else:
-                out += Script([OP_OVER, OP_MOD, OP_OVER, OP_ADD, OP_SWAP, OP_MOD])
-    else:  # noqa: PLR5501
-        if is_constant_reused:
-            if is_mod_on_top:
-                out += Script([OP_TUCK, OP_MOD])
-            else:
-                out += Script([OP_OVER, OP_MOD])
-        else:  # noqa: PLR5501
-            if is_mod_on_top:
-                out += Script([OP_MOD])
-            else:
-                out += Script([OP_SWAP, OP_MOD])
+        reuse_modulo = OP_OVER if is_constant_reused else OP_SWAP
+        out += Script([pick_modulo, OP_MOD, OP_OVER, OP_ADD, reuse_modulo, OP_MOD])
+    elif is_constant_reused:
+        out += Script([pick_modulo, OP_MOD])
+    else:
+        out += Script([OP_MOD]) if is_mod_on_top else Script([OP_SWAP, OP_MOD])
 
     return out
 
