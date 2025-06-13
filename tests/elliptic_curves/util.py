@@ -395,46 +395,39 @@ def double_fq2(point, curve, field, extension_field):
     Y = point[1]
     Z = point[2]
     a = curve.a
-    b = curve.b
 
     two = extension_field(field(2), field(0))
     three = extension_field(field(3), field(0))
-    six = two * three
-    eight = two * two * two
+    T = three * X * X + a * Z * Z
+    U = two*Y*Z
+    V = two * U * X * Y
+    W = T*T - two*V
 
-    A = a * X * X + six * b * X * Z - a * a * Z * Z
-    B = two * a * X * Z + three * b * Z * Z
-    C = three * X * X + a * Z * Z
-    X1 = two * X * Y * (Y * Y - B) - two * A * Y * Z
-    Y1 = A * C + (Y * Y + B) * (Y * Y - B)
-    Z1 = eight * Y * Y * Y * Z
+    X1 = U*W
+    Y1 = T*(V-W) - two*(U*Y*U*Y)
+    Z1 = U*U*U
 
-    return [Z1, Y1, X1]
+    return [X1, Y1, Z1]
 
 
 def add_fq2(point_1, point_2, curve, field, extension_field):
     """Compute `point_1 + point_2` where the points are in projective coordinates."""
-    X_1 = point_1[0]
-    Y_1 = point_1[1]
-    Z_1 = point_1[2]
-    X_2 = point_2[0]
-    Y_2 = point_2[1]
-    Z_2 = point_2[2]
+    X1 = point_1[0]
+    Y1 = point_1[1]
+    Z1 = point_1[2]
+    X2 = point_2[0]
+    Y2 = point_2[1]
+    Z2 = point_2[2]
 
-    a = curve.a
-    b = curve.b
+    T = Y1*Z2 - Y2*Z1
+    U = X1*Z2 - X2*Z1
+    V = X1*Z2 + X2 * Z1
+    W = T*T*Z1*Z2 - U*U*V
 
-    three = extension_field(field(3), field(0))
-
-    A = a * X_1 * X_2 + three * b * (X_1 * Z_2 + X_2 * Z_1) - a * a * Z_1 * Z_2
-    B = a * (X_1 * Z_2 + X_2 * Z_1) + three * b * Z_1 * Z_2
-    C = three * X_1 * X_2 + a * Z_1 * Z_2
-
-    X_3 = (X_1 * Y_2 + X_2 * Y_1) * (Y_1 * Y_2 - B) - A * (Y_1 * Z_2 + Y_2 * Z_1)
-    Y_3 = A * C + (Y_1 * Y_2 + B) * (Y_1 * Y_2 - B)
-    Z_3 = (Y_1 * Y_2 + B) * (Y_1 * Z_2 + Y_2 * Z_1) + C * (X_1 * Y_2 + X_2 * Y_1)
-
-    return [Z_3, Y_3, X_3]
+    X3 = U*W
+    Y3 = T*(X1*Z2*U*U - W) - Z2*Y1*U*U*U
+    Z3 = U*U*U*Z1*Z2
+    return [X3, Y3, Z3]
 
 
 def negate_fq2(point):

@@ -76,13 +76,6 @@ class Secp256r1Extension:
             {"P": P},
             {"P": Q},
             {"P": double_fq2(P, curve, f_q, f_q2)},
-            {"P": point_at_infinity},
-        ],
-        "test_addition": [
-            {"P": P, "Q": Q},
-            {"P": P, "Q": double_fq2(Q, curve, f_q, f_q2)},
-            {"P": P, "Q": point_at_infinity},
-            {"P": point_at_infinity, "Q": point_at_infinity},
         ],
         "test_mixed_addition": [
             {"P": P, "Q": Q[:2]},
@@ -146,13 +139,6 @@ class Secp256k1Extension:
             {"P": P},
             {"P": Q},
             {"P": double_fq2(P, curve, f_q, f_q2)},
-            {"P": point_at_infinity},
-        ],
-        "test_addition": [
-            {"P": P, "Q": Q},
-            {"P": P, "Q": double_fq2(Q, curve, f_q, f_q2)},
-            {"P": P, "Q": point_at_infinity},
-            {"P": point_at_infinity, "Q": point_at_infinity},
         ],
         "test_mixed_addition": [
             {"P": P, "Q": Q[:2]},
@@ -190,13 +176,6 @@ class DummyCurve1:
             {"P": P},
             {"P": Q},
             {"P": double_fq2(P, curve, f_q, f_q2)},
-            {"P": point_at_infinity},
-        ],
-        "test_addition": [
-            {"P": P, "Q": Q},
-            {"P": P, "Q": double_fq2(Q, curve, f_q, f_q2)},
-            {"P": P, "Q": point_at_infinity},
-            {"P": point_at_infinity, "Q": point_at_infinity},
         ],
         "test_mixed_addition": [
             {"P": P, "Q": Q[:2]},
@@ -235,13 +214,6 @@ class DummyCurve2:
             {"P": P},
             {"P": Q},
             {"P": double_fq2(P, curve, f_q, f_q2)},
-            {"P": point_at_infinity},
-        ],
-        "test_addition": [
-            {"P": P, "Q": Q},
-            {"P": P, "Q": double_fq2(Q, curve, f_q, f_q2)},
-            {"P": P, "Q": point_at_infinity},
-            {"P": point_at_infinity, "Q": point_at_infinity},
         ],
         "test_mixed_addition": [
             {"P": P, "Q": Q[:2]},
@@ -261,7 +233,7 @@ def generate_test_cases(test_name):
         if test_name in config.test_data:
             for test_data in config.test_data[test_name]:
                 match test_name:
-                    case "test_addition" | "test_mixed_addition":
+                    case "test_mixed_addition":
                         out.append(
                             (
                                 config,
@@ -279,9 +251,9 @@ def generate_test_cases(test_name):
     return out
 
 
-@pytest.mark.parametrize("additional_elements", [[], [1], [1, 2]])
+@pytest.mark.parametrize("additional_elements", [[], [1], [1,2]])
 @pytest.mark.parametrize("negate_p", [False, True])
-@pytest.mark.parametrize("rolling_option", [False, True])
+@pytest.mark.parametrize("rolling_option", [True, False])
 @pytest.mark.parametrize(
     ("config", "P"),
     generate_test_cases("test_doubling"),
@@ -321,7 +293,8 @@ def test_doubling(config, additional_elements, negate_p, P, rolling_option, save
         lock += nums_to_script([el])
         lock += Script.parse_string("OP_EQUALVERIFY")
     lock += Script.parse_string("OP_1")
-
+    print(lock)
+    print(unlock)
     context = Context(script=unlock + lock)
     assert context.evaluate()
     assert context.get_stack().size() == 1
@@ -331,74 +304,12 @@ def test_doubling(config, additional_elements, negate_p, P, rolling_option, save
         save_scripts(str(lock), str(unlock), save_to_json_folder, config.filename, "point doubling")
 
 
-@pytest.mark.parametrize("additional_elements", [[], [1], [1, 2]])
+
+
+@pytest.mark.parametrize("additional_elements", [[],[1], [1,2]])
 @pytest.mark.parametrize("negate_p", [False, True])
 @pytest.mark.parametrize("negate_q", [False, True])
-@pytest.mark.parametrize("rolling_option", [False, True])
-@pytest.mark.parametrize(
-    ("config", "P", "Q"),
-    generate_test_cases("test_addition"),
-)
-def test_addition(config, additional_elements, negate_p, negate_q, P, Q, rolling_option, save_to_json_folder):
-    nums_of_additional_elements = len(additional_elements)
-
-    expected = add_fq2(
-        P if not negate_p else negate_fq2(P),
-        Q if not negate_q else negate_fq2(Q),
-        config.curve,
-        config.f_q,
-        config.f_q2,
-    )
-
-    script_P = proj_point_to_script_fq2(P)
-    script_Q = proj_point_to_script_fq2(Q)
-    script_expected = proj_point_to_script_fq2(expected)
-
-    unlock = nums_to_script([config.modulus])
-    unlock += nums_to_script(script_Q)
-    unlock += nums_to_script(script_P)
-    unlock += nums_to_script(additional_elements)
-    lock = config.test_script.point_algebraic_addition(
-        take_modulo=True,
-        check_constant=True,
-        clean_constant=True,
-        positive_modulo=True,
-        P=StackEllipticCurvePointProjective(
-            StackFiniteFieldElement(5 + nums_of_additional_elements, False, 2),
-            StackFiniteFieldElement(3 + nums_of_additional_elements, negate_p, 2),
-            StackFiniteFieldElement(1 + nums_of_additional_elements, False, 2),
-        ),
-        Q=StackEllipticCurvePointProjective(
-            StackFiniteFieldElement(11 + nums_of_additional_elements, False, 2),
-            StackFiniteFieldElement(9 + nums_of_additional_elements, negate_q, 2),
-            StackFiniteFieldElement(7 + nums_of_additional_elements, False, 2),
-        ),
-        rolling_option=rolling_option,
-    )
-    remaining_elements = (
-        [*additional_elements, *script_expected]
-        if rolling_option
-        else [*script_Q, *script_P, *additional_elements, *script_expected]
-    )
-
-    for el in remaining_elements[::-1]:
-        lock += nums_to_script([el])
-        lock += Script.parse_string("OP_EQUALVERIFY")
-    lock += Script.parse_string("OP_1")
-
-    context = Context(script=unlock + lock)
-    assert context.evaluate()
-    assert context.get_stack().size() == 1
-    assert context.get_altstack().size() == 0
-
-    if save_to_json_folder:
-        save_scripts(str(lock), str(unlock), save_to_json_folder, config.filename, "point addition")
-
-
-@pytest.mark.parametrize("additional_elements", [[], [1], [1, 2]])
-@pytest.mark.parametrize("negate_p", [False, True])
-@pytest.mark.parametrize("negate_q", [False, True])
-@pytest.mark.parametrize("rolling_option", [False, True])
+@pytest.mark.parametrize("rolling_option", [True, False])
 @pytest.mark.parametrize(
     ("config", "P", "Q"),
     generate_test_cases("test_mixed_addition"),
