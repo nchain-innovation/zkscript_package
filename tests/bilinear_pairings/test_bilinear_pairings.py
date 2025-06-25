@@ -52,6 +52,7 @@ from tests.bilinear_pairings.util import (
     modify_verify_modulo_check,
     save_scripts,
 )
+from src.zkscript.util.utility_script_params import ScriptParameters, default_parameters_3
 
 
 @dataclass
@@ -3400,11 +3401,8 @@ def test_hard_exponentiation(config, positive_modulo, f, expected, clean_constan
     unlock += generate_unlock(f, config.ix_miller_output)
 
     # Check correct evaluation, if positive_modulo is negative, we do not clean the modulo constant q
-    lock = config.test_script_final_exponentiation.hard_exponentiation(
-        take_modulo=True,
+    lock = config.test_script_final_exponentiation.hard_exponentiation(modulo_threshold=1, params=default_parameters_3,
         positive_modulo=positive_modulo,
-        modulo_threshold=1,
-        check_constant=True,
         clean_constant=clean_constant and positive_modulo,
     )
     verification = generate_verify(expected, config.ix_miller_output)

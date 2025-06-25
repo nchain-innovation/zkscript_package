@@ -10,16 +10,6 @@ class ScriptParameters:
     clean_constant: Optional[bool] = None
     is_constant_reused: Optional[bool] = None
 
-    # def __repr__(self):
-    #     return (
-    #         f"{self.__class__.__name__}("
-    #         f"positive_modulo={self.positive_modulo}, "
-    #         f"check_constant={self.check_constant}, "
-    #         f"take_modulo={self.take_modulo}, "
-    #         f"clean_constant={self.clean_constant}, "
-    #         f"is_constant_reused={self.is_constant_reused})"
-    #     )
-
     def change_attributes(self, attr_name:str, *args):
         args = (attr_name,) + args
         for arg in args:
@@ -43,3 +33,5 @@ class ScriptParameters:
         return new_params
 
 default_parameters_1 = ScriptParameters()
+default_parameters_2 = ScriptParameters(positive_modulo=True, check_constant=False, take_modulo=True, clean_constant=None, is_constant_reused=None) 
+default_parameters_3 = ScriptParameters(positive_modulo=True, check_constant=True, take_modulo=True, clean_constant=None, is_constant_reused=None) 

@@ -9,6 +9,7 @@ from src.zkscript.fields.fq2 import Fq2
 from src.zkscript.fields.fq2_over_2_residue_equal_u import Fq2Over2ResidueEqualU
 from src.zkscript.script_types.stack_elements import StackFiniteFieldElement
 from src.zkscript.util.utility_scripts import move, pick, roll, verify_bottom_constant
+from src.zkscript.util.utility_script_params import ScriptParameters, default_parameters_1
 
 
 class FinalExponentiation(CyclotomicExponentiation):
@@ -114,11 +115,9 @@ class FinalExponentiation(CyclotomicExponentiation):
 
     def hard_exponentiation(
         self,
-        take_modulo: bool,
         modulo_threshold: int,
-        positive_modulo: bool = True,
-        check_constant: bool | None = None,
-        clean_constant: bool | None = None,
+        params: ScriptParameters = default_parameters_1,
+        **kwargs # # override some params if necessary
     ) -> Script:
         """Hard part of the final exponentiation.
 
@@ -143,6 +142,14 @@ class FinalExponentiation(CyclotomicExponentiation):
         Notes:
             `g` is the output of the easy part of the exponentiation.
         """
+
+        # Define parameters with possible overrides
+        params = params.with_overrides(**kwargs)
+        positive_modulo = params.positive_modulo
+        check_constant  = params.check_constant 
+        take_modulo = params.take_modulo 
+        clean_constant = params.clean_constant 
+
         out = verify_bottom_constant(self.modulus) if check_constant else Script()
 
         # After this, the stack is: g, altstack = [g^q]

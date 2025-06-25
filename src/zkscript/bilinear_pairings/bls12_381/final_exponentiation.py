@@ -8,10 +8,10 @@ from src.zkscript.bilinear_pairings.model.cyclotomic_exponentiation import Cyclo
 from src.zkscript.fields.fq12_2_over_3_over_2 import Fq12
 from src.zkscript.script_types.stack_elements import StackFiniteFieldElement
 from src.zkscript.util.utility_scripts import move, pick, roll, verify_bottom_constant
-from src.zkscript.util.utility_script_params import ScriptParameters
-
+from src.zkscript.util.utility_script_params import ScriptParameters, default_parameters_1
 
 class FinalExponentiation(CyclotomicExponentiation):
+    
     """Final exponentiation in the pairing for BLS12-381.
 
     Attributes:
@@ -40,7 +40,6 @@ class FinalExponentiation(CyclotomicExponentiation):
 
     def easy_exponentiation_with_inverse_check(
         self,
-         
         f_inverse: StackFiniteFieldElement = StackFiniteFieldElement(23, False, 12),  # noqa: B008
         f: StackFiniteFieldElement = StackFiniteFieldElement(11, False, 12),  # noqa: B008
         params: ScriptParameters = default_parameters_1,
@@ -77,6 +76,8 @@ class FinalExponentiation(CyclotomicExponentiation):
             The inverse of `f` `inverse(f_quadratic)` is passed as input value on the stack and verified during script
             execution.
         """
+
+        # Define parameters with possible overrides
         params = params.with_overrides(**kwargs)
         positive_modulo = params.positive_modulo
         check_constant  = params.check_constant 
@@ -132,11 +133,15 @@ class FinalExponentiation(CyclotomicExponentiation):
 
     def hard_exponentiation(
         self,
-        take_modulo: bool,
         modulo_threshold: int,
-        positive_modulo: bool = True,
-        check_constant: bool | None = None,
-        clean_constant: bool | None = None,
+        params: ScriptParameters = default_parameters_1,
+        **kwargs # override some params if necessary
+        
+        # take_modulo: bool,
+        # positive_modulo: bool = True,
+        # check_constant: bool | None = None,
+        # clean_constant: bool | None = None,
+        
     ) -> Script:
         """Hard part of the final exponentiation.
 
@@ -162,6 +167,14 @@ class FinalExponentiation(CyclotomicExponentiation):
             - `g` is the output of the easy part of the exponentiation.
             - `gammas` is a dictionary where `gammas['i']` are the gammas required for Frobenius applied `i` times.
         """
+
+        # Define parameters with possible overrides
+        params = params.with_overrides(**kwargs)
+        positive_modulo = params.positive_modulo
+        check_constant  = params.check_constant 
+        take_modulo = params.take_modulo 
+        clean_constant = params.clean_constant 
+
         out = verify_bottom_constant(self.modulus) if check_constant else Script()
 
         # Step 1

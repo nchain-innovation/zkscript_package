@@ -5,6 +5,8 @@ from tx_engine import Script
 from src.zkscript.script_types.stack_elements import StackFiniteFieldElement
 from src.zkscript.util.utility_functions import optimise_script
 from src.zkscript.util.utility_scripts import pick, roll, verify_bottom_constant
+from src.zkscript.util.utility_scripts import pick, roll, verify_bottom_constant
+from src.zkscript.util.utility_script_params import ScriptParameters, default_parameters_1, default_parameters_2
 
 
 class Pairing:
@@ -14,9 +16,8 @@ class Pairing:
         self,
         modulo_threshold: int,
         verify_gradients: bool = True,
-        check_constant: bool | None = None,
-        clean_constant: bool | None = None,
-        positive_modulo: bool = True,
+        params: ScriptParameters = default_parameters_1,
+        **kwargs, # override some params if necessary
     ) -> Script:
         """Bilinear pairing.
 
@@ -45,6 +46,12 @@ class Pairing:
             - If `P` is the point at infinity, then it is encoded as 0x00 * N_POINTS_CURVE (not OP_0)
             - If `Q` is the point at infinity, then it is encoded as 0x00 * N_POINTS_TWIST (not OP_0)
         """
+        # Define parameters with possible overrides
+        params = params.with_overrides(**kwargs)
+        positive_modulo = params.positive_modulo
+        check_constant  = params.check_constant 
+        clean_constant = params.clean_constant 
+
         q = self.modulus
 
         easy_exponentiation_with_inverse_check = self.easy_exponentiation_with_inverse_check
@@ -101,11 +108,8 @@ class Pairing:
             ).shift(gradient_tracker),
             f=StackFiniteFieldElement(self.N_ELEMENTS_MILLER_OUTPUT - 1, False, self.N_ELEMENTS_MILLER_OUTPUT),
         )
-        out += hard_exponentiation(
-            take_modulo=True,
-            modulo_threshold=modulo_threshold,
+        out += hard_exponentiation(modulo_threshold=modulo_threshold, params=default_parameters_2,
             positive_modulo=positive_modulo,
-            check_constant=False,
             clean_constant=clean_constant,
         )
 
@@ -218,11 +222,8 @@ class Pairing:
             f=StackFiniteFieldElement(self.N_ELEMENTS_MILLER_OUTPUT - 1, False, self.N_ELEMENTS_MILLER_OUTPUT),
         )
 
-        out += hard_exponentiation(
-            take_modulo=True,
-            modulo_threshold=modulo_threshold,
+        out += hard_exponentiation(modulo_threshold=modulo_threshold,params=default_parameters_2,
             positive_modulo=positive_modulo,
-            check_constant=False,
             clean_constant=clean_constant,
         )
 
