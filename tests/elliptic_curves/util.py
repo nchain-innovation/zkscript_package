@@ -389,6 +389,59 @@ def generate_unlock(P, degree) -> Script:
     return out
 
 
+def double_fq2(point, curve, field, extension_field):
+    """Compute `2*point` where `point` is a point on an EC in projective coordinates."""
+    X = point[0]
+    Y = point[1]
+    Z = point[2]
+    a = curve.a
+
+    two = extension_field(field(2), field(0))
+    three = extension_field(field(3), field(0))
+    T = three * X * X + a * Z * Z
+    U = two*Y*Z
+    V = two * U * X * Y
+    W = T*T - two*V
+
+    X1 = U*W
+    Y1 = T*(V-W) - two*(U*Y*U*Y)
+    Z1 = U*U*U
+
+    return [X1, Y1, Z1]
+
+
+def add_fq2(point_1, point_2, curve, field, extension_field):
+    """Compute `point_1 + point_2` where the points are in projective coordinates."""
+    X1 = point_1[0]
+    Y1 = point_1[1]
+    Z1 = point_1[2]
+    X2 = point_2[0]
+    Y2 = point_2[1]
+    Z2 = point_2[2]
+
+    T = Y1*Z2 - Y2*Z1
+    U = X1*Z2 - X2*Z1
+    V = X1*Z2 + X2 * Z1
+    W = T*T*Z1*Z2 - U*U*V
+
+    X3 = U*W
+    Y3 = T*(X1*Z2*U*U - W) - Z2*Y1*U*U*U
+    Z3 = U*U*U*Z1*Z2
+    return [X3, Y3, Z3]
+
+
+def negate_fq2(point):
+    """Compute `2*point` where `point` is a point on an EC in projective coordinates."""
+    X = point[0]
+    Y = point[1]
+    Z = point[2]
+    return [X, -Y, Z]
+
+
+def proj_point_to_script_fq2(point):
+    return [val for coord in [[i.x0.to_int(), i.x1.to_int()] for i in point] for val in coord]
+
+
 def save_scripts(lock, unlock, save_to_json_folder, filename, test_name):
     if save_to_json_folder:
         output_dir = Path("data") / save_to_json_folder / "elliptic_curves"

@@ -54,6 +54,12 @@ class Fq2ResidueMinusOne:
             {"x": [1, -1], "expected": [0, 17], "positive_modulo": True},
             {"x": [1, -1], "expected": [0, -2], "positive_modulo": False},
         ],
+        "test_cube": [
+            {"x": [1, -1], "expected": [17, 17], "positive_modulo": True},
+            {"x": [1, -1], "expected": [17, -2], "positive_modulo": False},
+            {"x": [1, -3], "expected": [12, 18], "positive_modulo": True},
+            {"x": [1, -3], "expected": [12, -1], "positive_modulo": False},
+        ],
         "test_add_three": [
             {"x": [1, 2], "y": [-12, -3], "z": [18, -5], "expected": [7, 13], "positive_modulo": True},
             {"x": [1, 2], "y": [-12, -3], "z": [18, -5], "expected": [7, -6], "positive_modulo": False},
@@ -109,6 +115,12 @@ class Fq2ResidueNotMinusOne:
         "test_square": [
             {"x": [1, -1], "expected": [4, 17], "positive_modulo": True},
             {"x": [1, -1], "expected": [4, -2], "positive_modulo": False},
+        ],
+        "test_cube": [
+            {"x": [1, -1], "expected": [10, -6], "positive_modulo": False},
+            {"x": [1, -1], "expected": [10, 13], "positive_modulo": True},
+            {"x": [1, -3], "expected": [6, 5], "positive_modulo": True},
+            {"x": [1, -3], "expected": [6, -14], "positive_modulo": False},
         ],
         "test_add_three": [
             {"x": [1, 2], "y": [-12, -3], "z": [18, -5], "expected": [7, 13], "positive_modulo": True},
@@ -855,6 +867,34 @@ def test_square(config, positive_modulo, x, expected, clean_constant, is_constan
 
     if save_to_json_folder and clean_constant and not is_constant_reused:
         save_scripts(str(lock), str(unlock), save_to_json_folder, config.filename, "square")
+
+
+@pytest.mark.parametrize("clean_constant", [True, False])
+@pytest.mark.parametrize("is_constant_reused", [True, False])
+@pytest.mark.parametrize("scalar", [1, -1, 6, -6, 9, -9, 2, -2])
+@pytest.mark.parametrize(("config", "positive_modulo", "x", "expected"), generate_test_cases("test_cube"))
+def test_cube(config, positive_modulo, x, expected, clean_constant, is_constant_reused, scalar, save_to_json_folder):
+    unlock = nums_to_script([config.q])
+    unlock += generate_unlock(x)
+
+    lock = config.test_script.cube(
+        take_modulo=True,
+        positive_modulo=positive_modulo,
+        check_constant=True,
+        clean_constant=clean_constant,
+        is_constant_reused=is_constant_reused,
+        scalar=scalar,
+    )
+    if is_constant_reused:
+        lock += check_constant(config.q)
+    expected = [i * scalar for i in expected]
+    expected = [i % config.q if positive_modulo or i > 0 else (i % config.q) - config.q for i in expected]
+
+    lock += generate_verify(expected)
+    verify_script(lock, unlock, clean_constant)
+
+    if save_to_json_folder and clean_constant and not is_constant_reused:
+        save_scripts(str(lock), str(unlock), save_to_json_folder, config.filename, "cube")
 
 
 @pytest.mark.parametrize("clean_constant", [True, False])
