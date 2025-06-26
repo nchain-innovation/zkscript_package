@@ -55,7 +55,7 @@ class EllipticCurveFqProjectiveUnrolledUnlockingKey:
 
     Example:
         >>> from src.zkscript.elliptic_curves.ec_operations_fq_projective import EllipticCurveFqProjective
-        >>> from src.zkscript.types.unlocking_keys.unrolled_projective_ec_multiplication import EllipticCurveFqProjectiveUnrolledUnlockingKey
+        >>> from src.zkscript.types.unlocking_keys.unrolled_projective_ec_multiplication import *
         >>>
         >>> P = [6, 11, 1]
         >>> ec_curve = EllipticCurveFq(q=17, curve_a=0)

@@ -350,8 +350,8 @@ class TripleMillerLoop:
             clean_constant=False,
         )  # Compute ev_(l_(T1,T1))(P1) * ev_(l_(T2,T2))(P2) * ev_(l_(T3,T3))(P3)
         if loop_i != len(self.exp_miller_loop) - 2:
-            # stack in:  [gradient_(2*T1), P1, P2, P3, Q1, Q2, Q3, T1, T2, T3, gradient_(2*T2), gradient_(2*T3), {f_i^2},
-            #                ev_(l_(T1,T1))(P1) * ev_(l_(T2,T2))(P2) * ev_(l_(T3,T3))(P3)]
+            # stack in:  [gradient_(2*T1), P1, P2, P3, Q1, Q2, Q3, T1, T2, T3, gradient_(2*T2), gradient_(2*T3),
+            #                {f_i^2}, ev_(l_(T1,T1))(P1) * ev_(l_(T2,T2))(P2) * ev_(l_(T3,T3))(P3)]
             # stack out: [gradient_(2*T1), P1, P2, P3, Q1, Q2, Q3, T1, T2, T3, gradient_(2*T2), gradient_(2*T3),
             #                {f_i^2} * ev_(l_(T1,T1))(P1) * ev_(l_(T2,T2))(P2) * ev_(l_(T3,T3))(P3)]
             out += self.miller_loop_output_times_eval_times_eval_times_eval(
