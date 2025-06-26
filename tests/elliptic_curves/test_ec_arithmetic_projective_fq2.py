@@ -14,7 +14,8 @@ from src.zkscript.script_types.stack_elements import (
     StackFiniteFieldElement,
 )
 from src.zkscript.util.utility_scripts import nums_to_script
-from tests.elliptic_curves.util import add_fq2, double_fq2, negate_fq2, proj_point_to_script_fq2, save_scripts
+from tests.elliptic_curves.util import save_scripts
+from tests.elliptic_curves.util_projective_ec import add_fq2, double_fq2, negate_fq2, proj_point_to_script_fq2
 
 
 @dataclass
@@ -225,7 +226,7 @@ class DummyCurve2:
 
 
 def generate_test_cases(test_name):
-    configurations = [Secp256k1Extension, Secp256r1Extension, DummyCurve1, DummyCurve2]
+    configurations = [Secp256k1Extension, DummyCurve1, DummyCurve2, Secp256r1Extension]
     # Parse and return config and the test_data for each config
     out = []
 
@@ -251,7 +252,7 @@ def generate_test_cases(test_name):
     return out
 
 
-@pytest.mark.parametrize("additional_elements", [[], [1], [1,2]])
+@pytest.mark.parametrize("additional_elements", [[], [1], [1, 2]])
 @pytest.mark.parametrize("negate_p", [False, True])
 @pytest.mark.parametrize("rolling_option", [True, False])
 @pytest.mark.parametrize(
@@ -293,8 +294,7 @@ def test_doubling(config, additional_elements, negate_p, P, rolling_option, save
         lock += nums_to_script([el])
         lock += Script.parse_string("OP_EQUALVERIFY")
     lock += Script.parse_string("OP_1")
-    print(lock)
-    print(unlock)
+
     context = Context(script=unlock + lock)
     assert context.evaluate()
     assert context.get_stack().size() == 1
@@ -304,9 +304,7 @@ def test_doubling(config, additional_elements, negate_p, P, rolling_option, save
         save_scripts(str(lock), str(unlock), save_to_json_folder, config.filename, "point doubling")
 
 
-
-
-@pytest.mark.parametrize("additional_elements", [[],[1], [1,2]])
+@pytest.mark.parametrize("additional_elements", [[], [1], [1, 2]])
 @pytest.mark.parametrize("negate_p", [False, True])
 @pytest.mark.parametrize("negate_q", [False, True])
 @pytest.mark.parametrize("rolling_option", [True, False])
@@ -322,9 +320,6 @@ def test_mixed_addition(config, additional_elements, negate_p, negate_q, P, Q, r
     expected = add_fq2(
         P if not negate_p else negate_fq2(P),
         Q_proj if not negate_q else negate_fq2(Q_proj),
-        config.curve,
-        config.f_q,
-        config.f_q2,
     )
 
     script_P = proj_point_to_script_fq2(P)
