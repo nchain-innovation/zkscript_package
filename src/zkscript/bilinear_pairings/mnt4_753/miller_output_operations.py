@@ -485,6 +485,10 @@ class MillerOutputOperations(Fq2Over2ResidueEqualU):
             is_constant_reused=is_constant_reused,
         )
 
+    # Mapping of Miller output functions names to (function, position of the innermost denominator).
+    # - Key: string name of the function
+    # - Value: (function reference, position of the innermost denominator)
+
     function_index: ClassVar[dict] = {
         "line_eval_times_eval": (line_eval_times_eval, 4),
         "miller_loop_output_times_eval": (miller_loop_output_times_eval, 4),
@@ -519,8 +523,9 @@ class MillerOutputOperations(Fq2Over2ResidueEqualU):
         is_constant_reused: bool | None = None,
     ) -> Script:
         """Adapt Miller output operation to support values in rational forms.
-        
-        An element x = (x0, ..., xn) in Fq^k is represented in rational form as X = (X0, ..., Xn, k), with xi = Xi/k (in Fq).
+
+        An element x = (x0, ..., xn) in Fq^k is represented in rational form as X = (X0, ..., Xn, k),
+        with xi = Xi/k (in Fq).
 
         Args:
             function_name (str): The name of the function to be adapted to values in rational form.
@@ -533,11 +538,11 @@ class MillerOutputOperations(Fq2Over2ResidueEqualU):
 
         Returns:
             Script to perform the required function with elements written in rational form.
-            
-        """
-        function, norm_position = self.function_index[function_name]
 
-        out = nums_to_script([norm_position])
+        """
+        function, denominator_position = self.function_index[function_name]
+
+        out = nums_to_script([denominator_position])
         out += Script.parse_string("OP_ROLL OP_MUL OP_TOALTSTACK")
 
         out += function(
@@ -546,7 +551,7 @@ class MillerOutputOperations(Fq2Over2ResidueEqualU):
             positive_modulo=positive_modulo,
             check_constant=check_constant,
             clean_constant=clean_constant,
-            is_constant_reused= take_modulo, # we need it only if we are going to take the modulo later
+            is_constant_reused=take_modulo,  # we need it only if we are going to take the modulo later
         )
 
         if take_modulo:

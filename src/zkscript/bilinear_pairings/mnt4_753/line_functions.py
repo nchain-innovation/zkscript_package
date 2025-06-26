@@ -194,13 +194,13 @@ class LineFunctions:
             T = [xT, yT, zT] in E(Fq2) in projective coordinates
 
         The function computes the element of Fq12 ev_(l_(T,Q)(P)) as described below:
-            l1 = 3xT^2 + twisted_a * zT^2 if is_tangent else yT - yQ * zT
-            l2 = 2*yT*zT if is_tangent else xT - yQ * xT
-            m = conj(zT^2 * yT) if is_tangent else l1 * conj(l2)
-            n = zT * l2 * conj(zT^2 * yT) if is_tangent else l2 * conj(l2)
-            A = (-2 * yT^2 * zT + l1 * (xT - xP * zT * u)) * m if is_tangent else - yQ * n + m * (xQ - xP * u)
-            B = yP * n
-            ev_(l_(T,Q)(P)) = (A + B * r * u)/n
+            l1 = 3 * xT^2 + twisted_a * zT^2 if is_tangent else yT - yQ * zT
+            l2 = 2 * yT * zT if is_tangent else xT - xQ * zT
+            m = conj(l2 * zT)/2 if is_tangent else l1 * conj(l2)
+            n = zT * l2 * m if is_tangent else l2 * conj(l2)
+            A = (-l2 * yT + l1 * (xT - xP * zT * u)) * m if is_tangent else - yQ * n + m * (xQ - xP * u)
+            B = yP * n (for both values of is_tangent)
+            ev_(l_(T,Q)(P)) = (A + B * r * u)/n (for both values of is_tangent)
 
         We represent ev_(l_(T,Q)(P)) using 4 coordinates in Fq:
 

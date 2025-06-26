@@ -202,15 +202,16 @@ class LineFunctions:
             P = (xP, yP) in E(Fq)
             Q = (xQ, yQ) in E(Fq2) if is_tangent is False
             T = [xT, yT, zT] in E(Fq2) in projective coordinates
-            l1/l2 the gradient of the line through T and Q (or the tangent line to T if is_tangent is True)
 
         The function computes the element of Fq12 ev_(l_(T,Q)(P)) as described below:
-            m = conj(zQ*l2)/2 if is_tangent else l1 * conj(l2)
-            n = (zQ * l2) * conj(zQ * l2)/2 if is_tangent else l2 * conj(l2)
-            A = (-2 * yQ^2 * zQ + 3 * xQ^3) * m if is_tangent else -yQ * n + m * xQ
-            B = yP * n
-            C = - l1 * zT * m * xP
-            ev_(l_(T,Q)(P)) = (A + B * s + C * r^2)/n
+            l1 = 3 * xT^2 if is_tangent else yT - zT * yQ
+            l2 = 2 * yT * zT if is_tangent else xT - zT * xQ
+            m = conj(zT * l2)/2 if is_tangent else l1 * conj(l2)
+            n = (zT * l2) * m if is_tangent else l2 * conj(l2)
+            A = (-l2 * yT + l1 * xT) * m if is_tangent else -yQ * n + m * xQ
+            B = yP * n (for both values of is_tangent)
+            C = - l1 * zT * m * xP if is_tanget else -xP * m
+            ev_(l_(T,Q)(P)) = (A + B * s + C * r^2)/n (for both values of is_tangent)
 
         We represent ev_(l_(T,Q)(P)) using 6 coordinates in Fq:
 
