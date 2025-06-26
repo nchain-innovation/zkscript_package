@@ -12,9 +12,6 @@ dependencies = [
     "elliptic_curves_package @ git+https://github.com/nchain-innovation/elliptic_curves_package.git@v0.1.0#egg=elliptic_curves",
 ]
 
-[pytest]
-testpaths = ["tests"]
-
 [tool.setuptools.packages.find]
 include = ["src/zkscript"]
 exclude = ["tests"]
@@ -25,8 +22,7 @@ exclude = ["**/elliptic-curves/**/*py"]
 line-length = 120
 indent-width = 4
 
-[tool.ruff.lint]
-select = [
+lint.select = [
     "F",  # Pyflakes
     "E",  # pycodestyle (Error)
     "W",  # pycodestyle (Warning)
@@ -57,7 +53,6 @@ select = [
     "SLOT",  # flake8-slots
     "SIM",  # flake8-simplify
     "TID",  # flake8-tidy-imports
-    "TCH",  # flake8-type-checking
     "INT",  # flake8-gettext
     "ARG",  # flake8-unused-arguments
     "PTH",  # flake8-use-pathlib
@@ -72,7 +67,7 @@ select = [
     "D",  # pydocstyle
 ]
 
-ignore = [
+lint.ignore = [
     "S101",  # use of assert
     "N806",  # variable name in function should be lowercase
     # Lint rules incompatible with Ruff formatter
@@ -93,11 +88,11 @@ ignore = [
 ]
 
 # Allow fix for all enabled rules (when `--fix`) is provided.
-fixable = ["ALL"]
-unfixable = []
+lint.fixable = ["ALL"]
+lint.unfixable = []
 
 # Allow unused variables when underscore-prefixed.
-dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+lint.dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
@@ -114,6 +109,11 @@ convention = "google"
     "PERF401", # manual-list-comprehension
     "PLR0913", # many function arguments
     "N803", # allow variables not followring the snake_case convention
+    "E731", # allow lambda functions to define variables in tests.
+    "C901", # allow complex functions in tests
+    "PLR0912", # allow many branches in tests
+    "PLR0913", # allow many arguments in tests
+    "PLR0915", # allow many statements in tests
 ]
 
 [tool.ruff.format]
