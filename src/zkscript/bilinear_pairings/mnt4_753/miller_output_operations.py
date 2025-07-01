@@ -1,12 +1,14 @@
 """Operations between Miller output (in F_q^4) and line evaluations for MNT4-753."""
 
+from typing import ClassVar
+
 from tx_engine import Script
 
 from src.zkscript.bilinear_pairings.mnt4_753.fields import fq4_script
 
 # Fq2 Script implementation
 from src.zkscript.fields.fq2_over_2_residue_equal_u import Fq2Over2ResidueEqualU
-from src.zkscript.util.utility_scripts import mod, pick, roll, verify_bottom_constant
+from src.zkscript.util.utility_scripts import mod, nums_to_script, pick, roll, verify_bottom_constant
 
 
 class MillerOutputOperations(Fq2Over2ResidueEqualU):
@@ -482,6 +484,87 @@ class MillerOutputOperations(Fq2Over2ResidueEqualU):
             clean_constant=clean_constant,
             is_constant_reused=is_constant_reused,
         )
+
+    # Mapping of Miller output functions names to (function, position of the innermost denominator).
+    # - Key: string name of the function
+    # - Value: (function reference, position of the innermost denominator)
+
+    function_index: ClassVar[dict] = {
+        "line_eval_times_eval": (line_eval_times_eval, 4),
+        "miller_loop_output_times_eval": (miller_loop_output_times_eval, 4),
+        "miller_loop_output_times_eval_times_eval": (miller_loop_output_times_eval_times_eval, 5),
+        "line_eval_times_eval_times_eval": (line_eval_times_eval_times_eval, 5),
+        "line_eval_times_eval_times_eval_times_eval": (line_eval_times_eval_times_eval_times_eval, 5),
+        "line_eval_times_eval_times_eval_times_eval_times_eval_times_eval": (
+            line_eval_times_eval_times_eval_times_eval_times_eval_times_eval,
+            5,
+        ),
+        "miller_loop_output_square": (miller_loop_output_square, 5),
+        "miller_loop_output_mul": (miller_loop_output_mul, 5),
+        "line_eval_times_eval_times_miller_loop_output": (line_eval_times_eval_times_miller_loop_output, 5),
+        "miller_loop_output_times_eval_times_eval_times_eval": (miller_loop_output_times_eval_times_eval_times_eval, 5),
+        "miller_loop_output_times_eval_times_eval_times_eval_times_eval": (
+            miller_loop_output_times_eval_times_eval_times_eval_times_eval,
+            5,
+        ),
+        "miller_loop_output_times_eval_times_eval_times_eval_times_eval_times_eval_times_eval": (
+            miller_loop_output_times_eval_times_eval_times_eval_times_eval_times_eval_times_eval,
+            5,
+        ),
+    }
+
+    def rational_form(
+        self,
+        function_name,
+        take_modulo: bool,
+        positive_modulo: bool = True,
+        check_constant: bool | None = None,
+        clean_constant: bool | None = None,
+        is_constant_reused: bool | None = None,
+    ) -> Script:
+        """Adapt Miller output operation to support values in rational forms.
+
+        An element x = (x0, ..., xn) in Fq^k is represented in rational form as X = (X0, ..., Xn, k),
+        with xi = Xi/k (in Fq).
+
+        Args:
+            function_name (str): The name of the function to be adapted to values in rational form.
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
+            is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
+                after execution. Defaults to `None`.
+
+        Returns:
+            Script to perform the required function with elements written in rational form.
+
+        """
+        function, denominator_position = self.function_index[function_name]
+
+        out = nums_to_script([denominator_position])
+        out += Script.parse_string("OP_ROLL OP_MUL OP_TOALTSTACK")
+
+        out += function(
+            self,
+            take_modulo=take_modulo,
+            positive_modulo=positive_modulo,
+            check_constant=check_constant,
+            clean_constant=clean_constant,
+            is_constant_reused=take_modulo,  # we need it only if we are going to take the modulo later
+        )
+
+        if take_modulo:
+            out += mod(
+                "OP_FROMALTSTACK OP_ROT",
+                is_constant_reused=is_constant_reused,
+                is_mod_on_top=True,
+                is_positive=positive_modulo,
+            )
+        else:
+            out += Script.parse_string("OP_FROMALTSTACK")
+
+        return out
 
 
 miller_output_ops = MillerOutputOperations(q=fq4_script.modulus, base_field=fq4_script.base_field)

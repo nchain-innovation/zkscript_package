@@ -9,6 +9,7 @@ from src.zkscript.util.utility_scripts import (
     bool_to_moving_function,
     mod,
     move,
+    pick,
     roll,
     verify_bottom_constant,
 )
@@ -69,6 +70,6 @@ class Fq:
         out += Script.parse_string("OP_ADD" if (x.negate == y.negate) else "OP_SUB")
         out += Script.parse_string("OP_NEGATE" if y.negate else "")
         if take_modulo:
-            out += roll(position=-1, n_elements=1) if clean_constant else roll(position=-1, n_elements=1)
+            out += roll(position=-1, n_elements=1) if clean_constant else pick(position=-1, n_elements=1)
             out += mod(stack_preparation="", is_positive=positive_modulo, is_constant_reused=is_constant_reused)
         return out

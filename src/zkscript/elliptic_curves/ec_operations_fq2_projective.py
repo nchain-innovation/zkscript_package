@@ -46,7 +46,6 @@ class EllipticCurveFq2Projective:
         self.curve_b = curve_b
         self.FQ2 = fq2
 
-
     def point_algebraic_doubling(
         self,
         take_modulo: bool,
@@ -116,9 +115,11 @@ class EllipticCurveFq2Projective:
         # stack out:    [q, .., X, {Y}, {Z}, .., UY]
         # altstack out: [U]
 
-        out += move(P.y, bool_to_moving_function(rolling_option)) # Pick or roll Y
-        out += move(P.z.shift(extension_degree), bool_to_moving_function(self.curve_a == [0,0] and rolling_option)) # Pick or roll Z
-        out += Script.parse_string("OP_2OVER") # Duplicate Y
+        out += move(P.y, bool_to_moving_function(rolling_option))  # Pick or roll Y
+        out += move(
+            P.z.shift(extension_degree), bool_to_moving_function(self.curve_a == [0, 0] and rolling_option)
+        )  # Pick or roll Z
+        out += Script.parse_string("OP_2OVER")  # Duplicate Y
 
         out += self.FQ2.mul(
             take_modulo=False,
@@ -126,10 +127,10 @@ class EllipticCurveFq2Projective:
             check_constant=False,
             clean_constant=False,
             is_constant_reused=False,
-            scalar=2*negation_coeff,
+            scalar=2 * negation_coeff,
         )  # Compute U = 2YZ
-        
-        out += Script.parse_string("OP_2DUP OP_TOALTSTACK OP_TOALTSTACK") # Move U on the altstack
+
+        out += Script.parse_string("OP_2DUP OP_TOALTSTACK OP_TOALTSTACK")  # Move U on the altstack
 
         out += self.FQ2.mul(
             take_modulo=False,
@@ -145,9 +146,11 @@ class EllipticCurveFq2Projective:
         # stack out:    [q, .., {X}, {Y}, {Z}, .., UY, X, T]
         # altstack out: [U]
 
-        shift_value = extension_degree - (extension_degree if rolling_option else 0) * (2 if self.curve_a == [0,0] else 1)
+        shift_value = extension_degree - (extension_degree if rolling_option else 0) * (
+            2 if self.curve_a == [0, 0] else 1
+        )
 
-        out += move(P.x.shift(shift_value), bool_to_moving_function(rolling_option)) # Pick or roll X
+        out += move(P.x.shift(shift_value), bool_to_moving_function(rolling_option))  # Pick or roll X
         out += Script.parse_string("OP_2DUP")
         out += self.FQ2.square(
             take_modulo=False,
@@ -155,10 +158,10 @@ class EllipticCurveFq2Projective:
             check_constant=False,
             clean_constant=False,
             is_constant_reused=False,
-            scalar = 3,
+            scalar=3,
         )  # Compute 3X^2
-        if self.curve_a != [0,0]:
-            out += move(P.z.shift(3*extension_degree), bool_to_moving_function(rolling_option)) # Pick or roll Z
+        if self.curve_a != [0, 0]:
+            out += move(P.z.shift(3 * extension_degree), bool_to_moving_function(rolling_option))  # Pick or roll Z
             if self.curve_a[1] == 0:
                 out += self.FQ2.square(
                     take_modulo=False,
@@ -166,7 +169,7 @@ class EllipticCurveFq2Projective:
                     check_constant=False,
                     clean_constant=False,
                     is_constant_reused=False,
-                    scalar = self.curve_a[0],
+                    scalar=self.curve_a[0],
                 )  # Compute aZ^2
             else:
                 out += self.FQ2.square(
@@ -185,13 +188,12 @@ class EllipticCurveFq2Projective:
                     is_constant_reused=False,
                 )  # Compute aZ^2
             out += self.FQ2.add(
-                    take_modulo=False,
-                    positive_modulo=False,
-                    check_constant=False,
-                    clean_constant=False,
-                    is_constant_reused=False,
-                )  # Compute T = aZ^2 + 3X^2
-
+                take_modulo=False,
+                positive_modulo=False,
+                check_constant=False,
+                clean_constant=False,
+                is_constant_reused=False,
+            )  # Compute T = aZ^2 + 3X^2
 
         # stack in:     [q, .., {X}, {Y}, {Z}, .., UY, X, T]
         # altstack in:  [U]
@@ -204,16 +206,16 @@ class EllipticCurveFq2Projective:
             check_constant=False,
             clean_constant=False,
             is_constant_reused=False,
-            scalar = 2,
+            scalar=2,
         )  # Compute V = 2UXY
         out += Script.parse_string("OP_2ROT OP_2OVER OP_2")
         out += self.FQ2.base_field_scalar_mul(
-                take_modulo=False,
-                positive_modulo=False,
-                check_constant=False,
-                clean_constant=False,
-                is_constant_reused=False,
-            ) # Compute 2V
+            take_modulo=False,
+            positive_modulo=False,
+            check_constant=False,
+            clean_constant=False,
+            is_constant_reused=False,
+        )  # Compute 2V
         out += Script.parse_string("OP_2OVER")
         out += self.FQ2.square(
             take_modulo=False,
@@ -241,8 +243,8 @@ class EllipticCurveFq2Projective:
         out += Script.parse_string("OP_FROMALTSTACK OP_FROMALTSTACK OP_2DUP")
 
         out += self.FQ2.cube(
-            take_modulo=False,
-            positive_modulo=False,
+            take_modulo=take_modulo,
+            positive_modulo=positive_modulo,
             check_constant=False,
             clean_constant=False,
             is_constant_reused=False,
@@ -251,8 +253,8 @@ class EllipticCurveFq2Projective:
         out += Script.parse_string("OP_TOALTSTACK OP_TOALTSTACK OP_2OVER")
 
         out += self.FQ2.mul(
-            take_modulo=False,
-            positive_modulo=False,
+            take_modulo=take_modulo,
+            positive_modulo=positive_modulo,
             check_constant=False,
             clean_constant=False,
             is_constant_reused=False,
@@ -289,28 +291,21 @@ class EllipticCurveFq2Projective:
             check_constant=False,
             clean_constant=False,
             is_constant_reused=False,
-            scalar = 2
+            scalar=2,
         )  # Compute 2(UY)^2
 
         out += self.FQ2.algebraic_sum(
             x=StackFiniteFieldElement(2 * extension_degree - 1, False, extension_degree),
             y=StackFiniteFieldElement(extension_degree - 1, True, extension_degree),
-            take_modulo=False,
-            positive_modulo=False,
+            take_modulo=take_modulo,
+            positive_modulo=positive_modulo,
             check_constant=False,
-            clean_constant=False,
+            clean_constant=clean_constant,
             is_constant_reused=False,
         )  # Compute Y' =  T(V - W) - 2(UY)^2
 
-        out += Script.parse_string("OP_FROMALTSTACK OP_FROMALTSTACK OP_2SWAP OP_FROMALTSTACK OP_FROMALTSTACK OP")
+        out += Script.parse_string("OP_FROMALTSTACK OP_FROMALTSTACK OP_2SWAP OP_FROMALTSTACK OP_FROMALTSTACK")
 
-        if take_modulo:
-            out += roll(position=-1, n_elements=1) if clean_constant else pick(position=-1, n_elements=1)
-            out += mod(stack_preparation="", is_positive=positive_modulo)
-            for _ in range(4):
-                out += mod(stack_preparation="OP_TOALTSTACK", is_positive=positive_modulo)
-            out += mod(stack_preparation="OP_TOALTSTACK", is_positive=positive_modulo, is_constant_reused=False)
-        out += Script.parse_string("OP_FROMALTSTACK OP_FROMALTSTACK OP_FROMALTSTACK OP_FROMALTSTACK OP_FROMALTSTACK")
         return out
 
     def point_algebraic_mixed_addition(
@@ -398,9 +393,6 @@ class EllipticCurveFq2Projective:
         negation_coeff_Q = -1 if Q.y.negate else 1
         negation_coeff_P = -1 if P.y.negate else 1
 
-
-
-
         # stack in:     [q, .., X', Y', .., X, Y, Z, ..,]
         # stack out:    [q, .., X', {Y'}, .., X, {Y}, {Z}, .., Y, Z, T]
         # altstack out: [V, U]
@@ -408,10 +400,10 @@ class EllipticCurveFq2Projective:
         out += move(P.y, bool_to_moving_function(rolling_option))
         out += move(P.z.shift(extension_degree), bool_to_moving_function(rolling_option))
         out += Script.parse_string("OP_2OVER OP_2OVER")
-        shift_val = 2*extension_degree if rolling_option else 4*extension_degree
+        shift_val = 2 * extension_degree if rolling_option else 4 * extension_degree
         out += move(Q.y.shift(shift_val), bool_to_moving_function(rolling_option))
         out += Script.parse_string("OP_2OVER")
-        shift_val = 3*extension_degree if rolling_option else 6*extension_degree 
+        shift_val = 3 * extension_degree if rolling_option else 6 * extension_degree
         out += move(Q.x.shift(shift_val), bool_to_moving_function(rolling_option))
         out += self.FQ2.mul(
             take_modulo=False,
@@ -421,7 +413,7 @@ class EllipticCurveFq2Projective:
             is_constant_reused=False,
         )  # Compute ZX'
 
-        shift_val = 4*extension_degree if rolling_option else 6*extension_degree 
+        shift_val = 4 * extension_degree if rolling_option else 6 * extension_degree
         out += move(P.x.shift(shift_val), bool_to_moving_function(False))
         out += Script.parse_string("OP_2OVER OP_2OVER")
         out += self.FQ2.add(
@@ -449,7 +441,7 @@ class EllipticCurveFq2Projective:
             check_constant=False,
             clean_constant=False,
             is_constant_reused=False,
-            scalar = negation_coeff_Q
+            scalar=negation_coeff_Q,
         )  # Compute U = ZY'_
         out += self.FQ2.algebraic_sum(
             x=StackFiniteFieldElement(2 * extension_degree - 1, P.y.negate, extension_degree),
@@ -521,7 +513,7 @@ class EllipticCurveFq2Projective:
         )  # Compute X'' = UW
         out += Script.parse_string("OP_TOALTSTACK OP_TOALTSTACK OP_2ROT")
 
-        shift_val = 4*extension_degree if rolling_option else 6*extension_degree
+        shift_val = 4 * extension_degree if rolling_option else 6 * extension_degree
         out += move(P.x.shift(shift_val), bool_to_moving_function(rolling_option))
         out += Script.parse_string("OP_2OVER")
         out += self.FQ2.mul(
@@ -531,7 +523,6 @@ class EllipticCurveFq2Projective:
             clean_constant=False,
             is_constant_reused=False,
         )  # Compute XU^2
-        
         out += Script.parse_string("OP_2ROT OP_2ROT")
         out += self.FQ2.mul(
             take_modulo=False,
@@ -565,7 +556,7 @@ class EllipticCurveFq2Projective:
             check_constant=False,
             clean_constant=False,
             is_constant_reused=False,
-            scalar = negation_coeff_P
+            scalar=negation_coeff_P,
         )  # Compute YU^3
         out += Script.parse_string("OP_2ROT")
         out += self.FQ2.algebraic_sum(

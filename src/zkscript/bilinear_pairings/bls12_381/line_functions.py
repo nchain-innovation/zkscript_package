@@ -4,7 +4,11 @@ from tx_engine import Script
 
 from src.zkscript.bilinear_pairings.bls12_381.fields import fq2_script
 from src.zkscript.fields.fq2 import Fq2
-from src.zkscript.script_types.stack_elements import StackEllipticCurvePoint, StackFiniteFieldElement
+from src.zkscript.script_types.stack_elements import (
+    StackEllipticCurvePoint,
+    StackEllipticCurvePointProjective,
+    StackFiniteFieldElement,
+)
 from src.zkscript.util.utility_functions import bitmask_to_boolean_list, check_order
 from src.zkscript.util.utility_scripts import bool_to_moving_function, mod, move, pick, roll, verify_bottom_constant
 
@@ -166,6 +170,293 @@ class LineFunctions:
             shift = 2 - 2 * is_q_rolled if gradient.is_before(P) else 2 - 2 * is_q_rolled - 2 * is_gradient_rolled
             out += move(P.y.shift(shift), bool_to_moving_function(is_p_rolled))  # Move yP
             out += Script.parse_string("OP_FROMALTSTACK OP_FROMALTSTACK")
+
+        return out
+
+    def line_evaluation_proj(
+        self,
+        take_modulo: bool,
+        positive_modulo: bool = True,
+        check_constant: bool | None = None,
+        clean_constant: bool | None = None,
+        is_constant_reused: bool | None = None,
+        is_tangent: bool = True,
+        P: StackEllipticCurvePoint = StackEllipticCurvePoint(  # noqa: B008, N803
+            StackFiniteFieldElement(11, False, 1),  # noqa: B008
+            StackFiniteFieldElement(10, False, 1),  # noqa: B008
+        ),
+        Q: StackEllipticCurvePoint = StackEllipticCurvePoint(  # noqa: B008, N803
+            StackFiniteFieldElement(9, False, 2),  # noqa: B008
+            StackFiniteFieldElement(7, False, 2),  # noqa: B008
+        ),
+        T: StackEllipticCurvePointProjective = StackEllipticCurvePointProjective(  # noqa: B008, N803
+            StackFiniteFieldElement(5, False, 2),  # noqa: B008
+            StackFiniteFieldElement(3, False, 2),  # noqa: B008
+            StackFiniteFieldElement(1, False, 2),  # noqa: B008
+        ),
+        rolling_options: int = 7,
+    ) -> Script:
+        r"""Evaluate line through T and Q at P.
+
+        For:
+            P = (xP, yP) in E(Fq)
+            Q = (xQ, yQ) in E(Fq2) if is_tangent is False
+            T = [xT, yT, zT] in E(Fq2) in projective coordinates
+
+        The function computes the element of Fq12 ev_(l_(T,Q)(P)) as described below:
+            l1 = 3 * xT^2 if is_tangent else yT - zT * yQ
+            l2 = 2 * yT * zT if is_tangent else xT - zT * xQ
+            m = conj(zT * l2)/2 if is_tangent else l1 * conj(l2)
+            n = (zT * l2) * m if is_tangent else l2 * conj(l2)
+            A = (-l2 * yT + l1 * xT) * m if is_tangent else -yQ * n + m * xQ
+            B = yP * n (for both values of is_tangent)
+            C = - l1 * zT * m * xP if is_tanget else -xP * m
+            ev_(l_(T,Q)(P)) = (A + B * s + C * r^2)/n (for both values of is_tangent)
+
+        We represent ev_(l_(T,Q)(P)) using 6 coordinates in Fq:
+
+        ev_(l_(T,Q)(P)) = (A0, A1, B, C0, C1, n)
+
+        Stack input:
+            - stack:    [q, ..., P, .., {Q}, .., T, ..],
+            - altstack: []
+
+        Stack output:
+            - stack:    [q, ..., ev_(l_(T,Q)(P))],
+            - altstack: []
+
+        Args:
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
+            is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
+                after execution. Defaults to `None`.
+            gradient (StackFiniteFieldElement): The position of the gradient between T and Q on the stack. Defaults to
+                `StackFiniteFieldElement(7, False, 2)`.
+            is_tangent (bool): Flag to decide if the line is the tangent line at T or the line trough T and Q. Default
+                to `True` (the line is the tangent line at T).
+            P (StackEllipticCurvePoint): The position of the point `P` on the stack. Defaults to:
+                `StackEllipticCurvePoint(
+                    StackFiniteFieldElement(11, False, 1),
+                    StackFiniteFieldElement(10, False, 1),
+                )`
+            Q (StackEllipticCurvePoint): The position of the point `Q` on the stack. Defaults to:
+                `StackEllipticCurvePoint(
+                    StackFiniteFieldElement(9, False, 2),
+                    StackFiniteFieldElement(7, False, 2),
+                )`
+            T (StackEllipticCurvePointProjective): The position of the point `T` on the stack. Defaults to:
+                `StackEllipticCurvePointProjective(
+                    StackFiniteFieldElement(5, False, 2),
+                    StackFiniteFieldElement(3, False, 2),
+                    StackFiniteFieldElement(1, False, 2),
+                )`
+            rolling_options (int): Bitmask detailing which elements among `P`, `Q`, and `T` should be rolled.
+                Defaults to 7 (everything is rolled).
+
+        Returns:
+            Script to evaluate a line through `T` and `Q` at `P`.
+
+        Raises:
+            ValueError: If the order in the stack is different from P, .., Q, .., T.
+        """
+        is_p_rolled, is_q_rolled, is_t_rolled = bitmask_to_boolean_list(rolling_options, 3)
+
+        check_order([P, Q, T])
+
+        out = verify_bottom_constant(self.modulus) if check_constant else Script()
+
+        extension_degree = 2
+        if is_tangent:
+            # stack in:     [q .. P .. T ..]
+            # stack out:    [q .. P .. {T} .. xT xT zT -l2 * yT m]
+
+            out += move(T.x, moving_function=bool_to_moving_function(is_t_rolled))
+            out += Script.parse_string("OP_2DUP")
+            out += move(T.z.shift(2 * extension_degree), moving_function=bool_to_moving_function(is_t_rolled))
+            out += Script.parse_string("OP_2DUP")
+            shift_val = 4 * extension_degree - (extension_degree if is_t_rolled else 0)
+            out += move(T.y.shift(shift_val), moving_function=bool_to_moving_function(is_t_rolled))
+            out += Script.parse_string("OP_2OVER OP_2OVER")
+
+            out += self.fq2.mul(take_modulo=False, check_constant=False, clean_constant=False)  # compute l2/2 = yT * zT
+            out += Script.parse_string("OP_2DUP OP_2ROT")
+
+            out += self.fq2.mul(
+                take_modulo=False, check_constant=False, clean_constant=False, scalar=-2
+            )  # compute -2 * yT^2 * zT
+            out += Script.parse_string("OP_2ROT OP_2ROT")
+
+            out += self.fq2.mul(take_modulo=False, check_constant=False, clean_constant=False)  # compute zT^2 * yT
+
+            out += Script.parse_string("OP_NEGATE")  # compute m = conj(zT^2*yT)
+
+            # stack in:     [q .. P .. {T} .. xT xT zT (-l2 * yT) m]
+            # stack out:    [q .. P .. {T} .. zT m xT]
+            # altstack out: [n, A]
+
+            out += Script.parse_string("OP_TOALTSTACK OP_TOALTSTACK OP_2ROT")
+
+            out += self.fq2.cube(
+                take_modulo=False, check_constant=False, clean_constant=False, scalar=3
+            )  # compute 3 * xT^3
+
+            out += self.fq2.add(
+                take_modulo=False, check_constant=False, clean_constant=False
+            )  # compute 3 * xT^3 - 2 yT^2 * zT
+            out += Script.parse_string("OP_FROMALTSTACK OP_FROMALTSTACK OP_2DUP OP_2DUP")
+
+            out += self.fq2.norm(
+                take_modulo=False, check_constant=False, clean_constant=False, scalar=2
+            )  # compute n = 2* conj(zT^2*yT)*zT^2*yT
+            out += Script.parse_string("OP_TOALTSTACK OP_2ROT")
+
+            out += self.fq2.mul(
+                take_modulo=take_modulo,
+                positive_modulo=positive_modulo,
+                check_constant=False,
+                clean_constant=False,
+                is_constant_reused=False,
+            )  # compute A = m * (3 * xT^3 - 2 yT^2 * zT)
+            out += Script.parse_string("OP_TOALTSTACK OP_TOALTSTACK OP_2ROT")
+
+            # stack in:     [q .. P .. {T} .. zT m xT]
+            # altstack in:  [n, A]
+            # stack out:    [q .. {P} .. {T} .. A B C n]
+
+            out += self.fq2.square(
+                take_modulo=False, check_constant=False, clean_constant=False, scalar=-3
+            )  # compute -3*xT^2
+
+            out += Script.parse_string("OP_2ROT")
+
+            out += self.fq2.mul(take_modulo=False, check_constant=False, clean_constant=False)  # compute -3 * xT^2 * zT
+
+            out += self.fq2.mul(
+                take_modulo=False, check_constant=False, clean_constant=False
+            )  # compute -3 * Tx^2 * Tz * m
+            shift_val = extension_degree - (3 * extension_degree if is_t_rolled else 0)
+
+            out += move(P.x.shift(shift_val), moving_function=bool_to_moving_function(is_p_rolled))
+
+            out += self.fq2.base_field_scalar_mul(
+                take_modulo=take_modulo,
+                positive_modulo=positive_modulo,
+                check_constant=False,
+                clean_constant=False,
+                is_constant_reused=False,
+            )  # compute C = Px * (-3 * Tx^2 * Tz * m)
+            out += Script.parse_string("OP_FROMALTSTACK OP_FROMALTSTACK OP_2SWAP")
+
+            shift_val = 2 * extension_degree - (3 * extension_degree if is_t_rolled else 0)
+            out += move(P.y.shift(shift_val), moving_function=bool_to_moving_function(is_p_rolled))
+
+            out += Script.parse_string("OP_FROMALTSTACK OP_TUCK OP_MUL")
+            if take_modulo:
+                out += roll(position=-1, n_elements=1) if clean_constant else pick(position=-1, n_elements=1)
+                out += mod("", is_positive=positive_modulo, is_constant_reused=True)
+                out += mod("OP_ROT OP_ROT", is_mod_on_top=True, is_positive=positive_modulo, is_constant_reused=False)
+            else:
+                out += Script.parse_string("OP_SWAP")
+            out += Script.parse_string("OP_TOALTSTACK OP_ROT OP_ROT OP_FROMALTSTACK")
+
+        else:
+            # stack in:    [q .. P .. Q .. T ..]
+            # stack out:   [q .. P .. {Q} .. {T} .. xQ yQ m n]
+
+            out += move(Q, moving_function=bool_to_moving_function(is_q_rolled))
+            out += Script.parse_string("OP_2OVER OP_2OVER")
+            out += move(T.z.shift(4 * extension_degree), moving_function=bool_to_moving_function(is_t_rolled))
+            out += Script.parse_string("OP_2DUP OP_2ROT")
+            out += self.fq2.mul(take_modulo=False, check_constant=False, clean_constant=False)  # compute zT * yQ
+            shift_val = 4 * extension_degree if is_t_rolled else 5 * extension_degree
+            out += move(T.y.shift(shift_val), moving_function=bool_to_moving_function(is_t_rolled))
+            out += self.fq2.algebraic_sum(
+                x=StackFiniteFieldElement(2 * extension_degree - 1, True, extension_degree),
+                y=StackFiniteFieldElement(extension_degree - 1, False, extension_degree),
+                take_modulo=False,
+                check_constant=False,
+                clean_constant=False,
+            )  # compute l2 = yT - zT * yQ
+            out += Script.parse_string("OP_TOALTSTACK OP_TOALTSTACK")
+            out += self.fq2.mul(take_modulo=False, check_constant=False, clean_constant=False)  # compute zT * xQ
+            shift_val = extension_degree if is_t_rolled else 3 * extension_degree
+            out += move(T.x.shift(shift_val), moving_function=bool_to_moving_function(is_t_rolled))
+            out += self.fq2.algebraic_sum(
+                x=StackFiniteFieldElement(2 * extension_degree - 1, True, extension_degree),
+                y=StackFiniteFieldElement(extension_degree - 1, False, extension_degree),
+                take_modulo=False,
+                check_constant=False,
+                clean_constant=False,
+            )  # compute l2 = xT - zT * xQ
+            out += Script.parse_string("OP_FROMALTSTACK OP_FROMALTSTACK")
+
+            out += Script.parse_string("OP_2OVER OP_NEGATE")
+            out += self.fq2.mul(
+                take_modulo=False, check_constant=False, clean_constant=False
+            )  # compute m = l1 * conj(l2/2) or l1 * conj(l2)
+            out += Script.parse_string("OP_2SWAP")
+            out += self.fq2.norm(
+                take_modulo=False,
+                positive_modulo=False,
+                check_constant=False,
+                clean_constant=False,
+                is_constant_reused=False,
+                scalar=2 if is_tangent else 1,
+            )  # compute n = l2 * conj(l2/2) or l2*conj(l2)
+
+            # stack in:    [q .. P .. {Q} .. {T} .. xQ yQ m n]
+            # stack out:   [q .. {P} .. {Q} .. {T} .. A B C n]
+
+            out += Script.parse_string("OP_TOALTSTACK OP_2ROT OP_2OVER")
+            out += self.fq2.mul(take_modulo=False, check_constant=False, clean_constant=False)  # compute m * xQ
+            out += Script.parse_string("OP_2ROT OP_FROMALTSTACK OP_DUP OP_TOALTSTACK")
+            out += self.fq2.base_field_scalar_mul(
+                take_modulo=False,
+                check_constant=False,
+                clean_constant=False,
+            )  # compute n * yQ
+            out += self.fq2.algebraic_sum(
+                x=StackFiniteFieldElement(2 * extension_degree - 1, False, extension_degree),
+                y=StackFiniteFieldElement(extension_degree - 1, True, extension_degree),
+                take_modulo=take_modulo,
+                positive_modulo=positive_modulo,
+                check_constant=False,
+                clean_constant=False,
+                is_constant_reused=False,
+            )  # compute A = m * xQ - yQ * n
+
+            out += Script.parse_string("OP_2SWAP")
+            shift_val = (
+                2 * extension_degree
+                - (3 * extension_degree if is_t_rolled else 0)
+                - (2 * extension_degree if not is_tangent and is_q_rolled else 0)
+            )
+            out += move(P.y.shift(shift_val), moving_function=bool_to_moving_function(is_p_rolled))
+            out += Script.parse_string("OP_FROMALTSTACK OP_DUP OP_TOALTSTACK OP_MUL")  # compute B = n * yP
+            if take_modulo:
+                out += pick(position=-1, n_elements=1)
+                out += mod(
+                    stack_preparation="", is_mod_on_top=True, is_positive=positive_modulo, is_constant_reused=False
+                )
+
+            out += Script.parse_string("OP_ROT OP_ROT")
+            shift_val += 0 if is_p_rolled else 1
+            out += move(P.x.shift(shift_val), moving_function=bool_to_moving_function(is_p_rolled))
+            out += Script.parse_string("OP_NEGATE")
+            out += self.fq2.base_field_scalar_mul(
+                take_modulo=take_modulo,
+                positive_modulo=positive_modulo,
+                check_constant=False,
+                clean_constant=clean_constant,
+                is_constant_reused=True,
+            )  # compute C = -xP*m
+
+            if take_modulo:
+                out += mod(is_positive=positive_modulo, is_constant_reused=is_constant_reused)
+            else:
+                out += Script.parse_string("OP_FROMALTSTACK")
 
         return out
 

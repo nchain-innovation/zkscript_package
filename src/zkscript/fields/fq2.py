@@ -540,52 +540,106 @@ class Fq2(PrimeFieldExtension):
         out += Script.parse_string("OP_TOALTSTACK OP_MUL OP_FROMALTSTACK")
 
         # stack in:     [.., x0, x1, x0^2, x1^2]
-        # stack out:    [.., x0, x0^2, x1^2]
+        # stack out:    [.., x0^2, x1^2 * non_res, x0]
         # altstack out: [self.non_residue * x1^3 + 3 * x0^2 * x1]
-        out += Script.parse_string("OP_2DUP")
         out += nums_to_script([self.non_residue])
-        out += Script.parse_string("OP_MUL OP_3 OP_ROT OP_MUL OP_ADD")
-        out += Script.parse_string("OP_3 OP_ROLL OP_MUL")
-        if scalar == -1:
-            out += Script.parse_string("OP_NEGATE")
-        out += Script.parse_string("OP_TOALTSTACK")
+        out += Script.parse_string("OP_MUL OP_2SWAP OP_2OVER")
 
-        # stack in:     [.., x0, x1, x0^2, x1^2]
+        out += Script.parse_string("OP_ROT OP_TUCK OP_MUL OP_TOALTSTACK")
+        out += Script.parse_string("OP_3 OP_MUL OP_MUL OP_FROMALTSTACK OP_ADD OP_TOALTSTACK")
+
+        # stack in:     [.., x0^2, x1^2 * self.non_residue, x0]
         # altstack in:  [self.non_residue * x1^3 + 3 * x0^2 * x1]
-        # stack out:    [.., scalar * (x0^3 + 3 * x0 * x1^2 * self.non_residue), scalar * (self.non_residue * x1^3 + 3 * x0^2 * x1)]
-        multiplier = (3 * self.non_residue) % self.modulus
-        if multiplier != 1:
-            out += (
-                nums_to_script([multiplier]) + Script.parse_string("OP_MUL")
-                if multiplier != self.modulus - 1
-                else Script.parse_string("OP_NEGATE")
-            )
+        # stack out:    [.., x0^3 + 3 * x1^2 * x0 * self.non_residue]
+        # altstack out: [self.non_residue * x1^3 + 3 * x0^2 * x1]
 
-        out += Script.parse_string("OP_ADD OP_MUL")
+        out += Script.parse_string("OP_TUCK OP_MUL OP_3 OP_MUL OP_TOALTSTACK")
+        out += Script.parse_string("OP_MUL OP_FROMALTSTACK OP_ADD")
 
-        if scalar == -1:
-            out += Script.parse_string("OP_NEGATE")
-        elif scalar != 1:
+        # stack in:     [.., x0^3 + 3 * x1^2 * x0 * self.non_residue]
+        # altstack in:  [self.non_residue * x1^3 + 3 * x0^2 * x1]
+
+        if scalar != 1:
             out += nums_to_script([scalar])
-            out += Script.parse_string("OP_MUL")
+            out += Script.parse_string("OP_TUCK OP_MUL")
 
         if take_modulo:
             out += roll(position=-1, n_elements=1) if clean_constant else pick(position=-1, n_elements=1)
-            out += mod(stack_preparation="", is_positive=positive_modulo)
-            if scalar == 1 or scalar == -1:
-                out += mod(is_constant_reused=is_constant_reused, is_positive=positive_modulo)
-            else:
-                out += nums_to_script([scalar])
-                out += mod(
-                    stack_preparation="OP_FROMALTSTACK OP_MUL OP_ROT",
-                    is_mod_on_top=True,
-                    is_positive=positive_modulo,
-                    is_constant_reused=is_constant_reused,
-                )
+            out += mod(stack_preparation="", is_positive=positive_modulo, is_constant_reused=True)
+            preparation = "OP_ROT OP_FROMALTSTACK OP_MUL OP_ROT" if scalar != 1 else "OP_FROMALTSTACK OP_ROT"
+            out += mod(
+                stack_preparation=preparation,
+                is_mod_on_top=True,
+                is_positive=positive_modulo,
+                is_constant_reused=is_constant_reused,
+            )
 
-        elif scalar == 1 or scalar == -1:
-            out += Script.parse_string("OP_FROMALTSTACK")
         else:
-            out += Script.parse_string("OP_TOALTSTACK OP_MUL OP_FROMALTSTACK")
+            out += Script.parse_string("OP_SWAP OP_FROMALTSTACK OP_MUL")
+
+        return out
+
+    def norm(
+        self,
+        take_modulo: bool,
+        positive_modulo: bool = True,
+        check_constant: bool | None = None,
+        clean_constant: bool | None = None,
+        is_constant_reused: bool | None = None,
+        scalar: int = 1,
+    ) -> Script:
+        """Compute the norm of an element x = (x0, x1).
+
+        The script computes the operation x --> x0^2 - x1^2*self.non_residue.
+
+        Stack input:
+            - stack:    [q, ..., x := (x0, x1)]
+            - altstack: []
+
+        Stack output:
+            - stack:    [q, ..., x0^2 - x1^2*self.non_residue]
+            - altstack: []
+
+        Args:
+            take_modulo (bool): If `True`, the result is reduced modulo `q`.
+            positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
+            is_constant_reused (bool | None, optional): If `True`, `q` remains as the second-to-top element on the stack
+                after execution. Defaults to `None`.
+            scalar (int): The scalar to multiply the result by. Defaults to `1`.
+
+        Returns:
+            Script to compute the norm of an element in F_q^2.
+        """
+        out = verify_bottom_constant(self.modulus) if check_constant else Script()
+        scalar_is_negative = scalar < 0
+        # stack in:     [.., x0, x1]
+        # stack out:    [.., x0^2 + self.non_residue * x1^2]
+        out += Script.parse_string("OP_DUP OP_MUL")  # compute x1^2
+        if self.non_residue != -1:
+            out += nums_to_script(
+                [self.non_residue if scalar_is_negative else -self.non_residue]
+            )  # compute x1^2 * self.non_residue
+            out += Script.parse_string("OP_MUL")
+        elif scalar_is_negative:
+            out += Script.parse_string("OP_NEGATE")
+        out += Script.parse_string("OP_SWAP OP_DUP OP_MUL")  # compute x0^2
+        out += Script.parse_string(
+            "OP_SUB" if scalar_is_negative else "OP_ADD"
+        )  # compute x0^2 + x1^2 * self.non_residue
+
+        if scalar not in {1, -1}:
+            out += nums_to_script([abs(scalar)])
+            out += Script.parse_string("OP_MUL")  # compute x1^2 * self.non_residue * scalar
+
+        if take_modulo:
+            out += roll(position=-1, n_elements=1) if clean_constant else pick(position=-1, n_elements=1)
+            out += mod(
+                stack_preparation="",
+                is_mod_on_top=True,
+                is_positive=positive_modulo,
+                is_constant_reused=is_constant_reused,
+            )
 
         return out
