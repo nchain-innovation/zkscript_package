@@ -82,7 +82,7 @@ class TriplePairingUnlockingKey:
             gradients[i] is the list of gradients needed to compute w*Q[i]
         inverse_miller_loop (list[int]): the inverse of \prod_i miller(P[i],Q[i]).
         has_precomputed_gradients (bool): Whether the precomputed gradients are in the unloking key.
-
+        is_miller_loop_proj (bool): Whether the Miller loop uses projective coordinates.
     """
 
     P: list[list[int]]
@@ -90,6 +90,7 @@ class TriplePairingUnlockingKey:
     gradients: list[list[list[list[int]]]]
     inverse_miller_output: list[int] | None
     has_precomputed_gradients: bool = True
+    is_miller_loop_proj: bool = False
 
     def to_unlocking_script(self, pairing_model: PairingModel, load_modulus: bool = True) -> Script:
         """Returns a script containing the data required to execute the `pairing_model.single_pairing` method.
@@ -107,13 +108,14 @@ class TriplePairingUnlockingKey:
         out += nums_to_script(self.inverse_miller_output)
 
         # Load gradients
-        for i in range(len(self.gradients[0]) - 1, -1, -1):
-            for j in range(len(self.gradients[0][i]) - 1, -1, -1):
-                if self.has_precomputed_gradients:
-                    for k in range(3):
-                        out += nums_to_script(self.gradients[k][i][j])
-                else:
-                    out += nums_to_script(self.gradients[0][i][j])
+        if not self.is_miller_loop_proj:
+            for i in range(len(self.gradients[0]) - 1, -1, -1):
+                for j in range(len(self.gradients[0][i]) - 1, -1, -1):
+                    if self.has_precomputed_gradients:
+                        for k in range(3):
+                            out += nums_to_script(self.gradients[k][i][j])
+                    else:
+                        out += nums_to_script(self.gradients[0][i][j])
 
         for i in range(3):
             out += nums_to_script(self.P[i])

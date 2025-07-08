@@ -85,3 +85,35 @@ class TripleMillerLoopUnlockingKey:
             out += nums_to_script(self.Q[i])
 
         return out
+
+
+@dataclass
+class TripleMillerLoopProjUnlockingKey:
+    r"""Class with the data to generate an unlocking script for the triple Miller loop in projective coordinates.
+
+    Attributes:
+        P (list[list[int]]): The points P for which the script computes \prod_i miller(P[i],Q[i])
+        Q (list[list[int]]): The points Q for which the script computes \prod_i miller(P[i],Q[i])
+    """
+
+    P: list[list[int]]
+    Q: list[list[int]]
+
+    def to_unlocking_script(self, pairing_model: PairingModel) -> Script:
+        """Return the unlocking script required to execute the `pairing_model.triple_miller_loop_proj` method.
+
+        Args:
+            pairing_model (PairingModel): The pairing model over which the Miller loop is computed.
+
+        Returns:
+            Script pushing [self.P, self.Q] on the stack.
+        """
+        out = nums_to_script([pairing_model.modulus])
+        # Load gradients
+
+        for i in range(3):
+            out += nums_to_script(self.P[i])
+        for i in range(3):
+            out += nums_to_script(self.Q[i])
+
+        return out
