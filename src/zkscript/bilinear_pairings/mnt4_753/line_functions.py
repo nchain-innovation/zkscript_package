@@ -47,7 +47,7 @@ class LineFunctions:
             StackFiniteFieldElement(3, False, 2),  # noqa: B008
             StackFiniteFieldElement(1, False, 2),  # noqa: B008
         ),
-        rolling_options: int = 7,
+        rolling_option: int = 7,
     ) -> Script:
         r"""Evaluate line through T and Q at P.
 
@@ -79,7 +79,7 @@ class LineFunctions:
                     StackFiniteFieldElement(3, False, 2),
                     StackFiniteFieldElement(1, False, 2),
                 )`
-            rolling_options (int): Bitmask detailing which elements among `gradient`, `P`, and `Q` should be rolled.
+            rolling_option (int): Bitmask detailing which elements among `gradient`, `P`, and `Q` should be rolled.
                 Defaults to 7 (everything is rolled).
 
         Preconditions:
@@ -98,7 +98,7 @@ class LineFunctions:
             - `gradient` is NOT checked in this function, it is assumed to be the gradient.
             - `ev_(l_(T,Q)(P))` does NOT include the zero in the second component, this is to optimise the script size.
         """
-        is_gradient_rolled, is_p_rolled, is_q_rolled = bitmask_to_boolean_list(rolling_options, 3)
+        is_gradient_rolled, is_p_rolled, is_q_rolled = bitmask_to_boolean_list(rolling_option, 3)
 
         check_order([P, Q])
 
@@ -184,7 +184,7 @@ class LineFunctions:
             StackFiniteFieldElement(3, False, 2),  # noqa: B008
             StackFiniteFieldElement(1, False, 2),  # noqa: B008
         ),
-        rolling_options: int = 7,
+        rolling_option: int = 7,
     ) -> Script:
         r"""Evaluate line through T and Q at P.
 
@@ -241,7 +241,7 @@ class LineFunctions:
                     StackFiniteFieldElement(3, False, 2),
                     StackFiniteFieldElement(1, False, 2),
                 )`
-            rolling_options (int): Bitmask detailing which elements among `P`, `Q`, and `T` should be rolled.
+            rolling_option (int): Bitmask detailing which elements among `P`, `Q`, and `T` should be rolled.
                 Defaults to 7 (everything is rolled).
 
         Returns:
@@ -250,14 +250,13 @@ class LineFunctions:
         Raises:
             ValueError: If the order in the stack is different from P, .., Q, .., T.
         """
-        is_p_rolled, is_q_rolled, is_t_rolled = bitmask_to_boolean_list(rolling_options, 3)
-
-        check_order([P, Q, T])
+        is_p_rolled, is_q_rolled, is_t_rolled = bitmask_to_boolean_list(rolling_option, 3)
 
         out = verify_bottom_constant(self.modulus) if check_constant else Script()
 
         extension_degree = 2
         if is_tangent:
+            check_order([P, T])
             # stack in:     [q .. P .. T ..]
             # stack out:    [q .. P .. {xT} yT zT .. xT zT l1]
             out += move(T.x, moving_function=bool_to_moving_function(is_t_rolled))
@@ -355,9 +354,12 @@ class LineFunctions:
             else:
                 out += Script.parse_string("OP_SWAP")
         else:
+            check_order([P, Q, T])
             # stack in:     [q .. P .. Q .. T ..]
             # stack out:    [q .. P .. {Q} .. {T} .. xQ yQ l2 l1]
             out += move(Q, moving_function=bool_to_moving_function(is_q_rolled))
+            if Q.negate:
+                out += Script.parse_string("OP_NEGATE OP_SWAP OP_NEGATE OP_SWAP")
             out += Script.parse_string("OP_2OVER OP_2OVER")
             out += move(T.z.shift(4 * extension_degree), moving_function=bool_to_moving_function(is_t_rolled))
             out += Script.parse_string("OP_2DUP OP_2ROT")
