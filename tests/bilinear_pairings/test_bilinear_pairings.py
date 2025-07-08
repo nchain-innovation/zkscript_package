@@ -42,7 +42,11 @@ from src.zkscript.script_types.stack_elements import (
     StackEllipticCurvePointProjective,
     StackFiniteFieldElement,
 )
-from src.zkscript.script_types.unlocking_keys.miller_loops import MillerLoopUnlockingKey, TripleMillerLoopUnlockingKey
+from src.zkscript.script_types.unlocking_keys.miller_loops import (
+    MillerLoopUnlockingKey,
+    TripleMillerLoopProjUnlockingKey,
+    TripleMillerLoopUnlockingKey,
+)
 from src.zkscript.script_types.unlocking_keys.pairings import SinglePairingUnlockingKey, TriplePairingUnlockingKey
 from src.zkscript.util.utility_scripts import bitmask_to_boolean_list, nums_to_script
 from tests.bilinear_pairings.util import (
@@ -3209,8 +3213,8 @@ def verify_script(lock, unlock, clean_constant):
     context = Context(script=unlock + lock)
 
     assert context.evaluate()
-    assert context.get_altstack().size() == 0
 
+    assert context.get_altstack().size() == 0
     if clean_constant:
         assert context.get_stack().size() == 1
     else:
@@ -3648,6 +3652,7 @@ def test_triple_miller_loop(
 
 @pytest.mark.parametrize("clean_constant", [True, False])
 @pytest.mark.parametrize("is_precomputed_gradients_in_unlock", [True, False])
+@pytest.mark.parametrize("is_miller_loop_proj", [True, False])
 @pytest.mark.parametrize(
     ("config", "point_p", "point_q", "miller_output_inverse", "expected"), generate_test_cases("test_triple_pairing")
 )
@@ -3659,6 +3664,7 @@ def test_triple_pairing(
     expected,
     clean_constant,
     is_precomputed_gradients_in_unlock,
+    is_miller_loop_proj,
     save_to_json_folder,
 ):
     gradients = [[[s.to_list() for s in el] for el in point_q[i].gradients(config.exp_miller_loop)] for i in range(3)]
@@ -3669,6 +3675,7 @@ def test_triple_pairing(
         gradients,
         miller_output_inverse.to_list(),
         has_precomputed_gradients=is_precomputed_gradients_in_unlock,
+        is_miller_loop_proj=is_miller_loop_proj,
     )
 
     unlock = unlocking_key.to_unlocking_script(config.test_script_pairing)
@@ -3679,6 +3686,7 @@ def test_triple_pairing(
         clean_constant=False,
         is_precomputed_gradients_on_stack=is_precomputed_gradients_in_unlock,
         precomputed_gradients=gradients[1:],
+        is_miller_loop_proj=is_miller_loop_proj,
     )
     lock += modify_verify_modulo_check(generate_verify(expected), clean_constant)
 
@@ -3696,7 +3704,7 @@ def line_evaluation_proj(
     point_t,
     expected,
     save_to_json_folder,
-    rolling_options,
+    rolling_option,
     additional_elements,
     clean_constant,
     zt,
@@ -3738,10 +3746,10 @@ def line_evaluation_proj(
             StackFiniteFieldElement(3, False, 2),
             StackFiniteFieldElement(1, False, 2),
         ).shift(len(additional_elements)),
-        rolling_options=rolling_options,
+        rolling_option=rolling_option,
     )
 
-    is_p_rolled, is_q_rolled, is_t_rolled = bitmask_to_boolean_list(rolling_options, 3)
+    is_p_rolled, is_q_rolled, is_t_rolled = bitmask_to_boolean_list(rolling_option, 3)
 
     remaining_elements = []
     remaining_elements += point_p if not is_p_rolled else []
@@ -3769,7 +3777,7 @@ def line_evaluation_proj(
 
 
 @pytest.mark.parametrize("positive_modulo", [False, True])
-@pytest.mark.parametrize("rolling_options", [7])
+@pytest.mark.parametrize("rolling_option", [7])
 @pytest.mark.parametrize("additional_elements", [[]])
 @pytest.mark.parametrize("clean_constant", [True, False])
 @pytest.mark.parametrize("zt", [[1, 0]])
@@ -3785,7 +3793,7 @@ def test_line_evaluation_proj_fast(
     zt,
     clean_constant,
     additional_elements,
-    rolling_options,
+    rolling_option,
     positive_modulo,
     save_to_json_folder,
 ):
@@ -3797,7 +3805,7 @@ def test_line_evaluation_proj_fast(
         point_t,
         expected,
         save_to_json_folder,
-        rolling_options,
+        rolling_option,
         additional_elements,
         clean_constant,
         zt,
@@ -3805,7 +3813,7 @@ def test_line_evaluation_proj_fast(
 
 
 @pytest.mark.parametrize("positive_modulo", [False, True])
-@pytest.mark.parametrize("rolling_options", [0, 1, 2, 3, 4, 5, 6, 7])
+@pytest.mark.parametrize("rolling_option", [0, 1, 2, 3, 4, 5, 6, 7])
 @pytest.mark.parametrize("additional_elements", [[], [1, 2], [1, 5415423, 2134]])
 @pytest.mark.parametrize("clean_constant", [True, False])
 @pytest.mark.parametrize("zt", [[1, 0], [2, 0], [1, 2], [334245, 2435123], [0, 3]])
@@ -3822,7 +3830,7 @@ def test_line_evaluation_proj_slow(
     zt,
     clean_constant,
     additional_elements,
-    rolling_options,
+    rolling_option,
     positive_modulo,
     save_to_json_folder,
 ):
@@ -3834,7 +3842,7 @@ def test_line_evaluation_proj_slow(
         point_t,
         expected,
         save_to_json_folder,
-        rolling_options,
+        rolling_option,
         additional_elements,
         clean_constant,
         zt,
@@ -3900,3 +3908,31 @@ def test_rational_form(config, norms, positive_modulo, is_constant_reused, clean
 
                 assert context.evaluate()
                 assert context.get_altstack().size() == 0
+
+
+@pytest.mark.parametrize("config", [Bls12381, Mnt4753])
+@pytest.mark.parametrize("clean_constant", [True, False])
+def test_triple_miller_loop_proj(config, clean_constant):
+    tests = config.test_data["test_triple_miller_loop"]
+
+    for test in tests:
+        points_p = test["point_p"]
+        points_q = test["point_q"]
+        expected = test["expected"]
+        unlocking_key = TripleMillerLoopProjUnlockingKey(
+            [points_p[0].to_list(), points_p[1].to_list(), points_p[2].to_list()],
+            [points_q[0].to_list(), points_q[1].to_list(), points_q[2].to_list()],
+        )
+
+        unlock = unlocking_key.to_unlocking_script(config.test_script_pairing)
+
+        # Check correct evaluation
+        lock = config.test_script_pairing.triple_miller_loop_proj(
+            modulo_threshold=1,
+            check_constant=True,
+            clean_constant=clean_constant,
+        )
+
+        lock += generate_verify(expected)
+
+        verify_script(lock, unlock, clean_constant)

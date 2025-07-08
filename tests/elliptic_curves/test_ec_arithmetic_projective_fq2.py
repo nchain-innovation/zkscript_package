@@ -36,7 +36,6 @@ class Secp256r1Extension:
     test_script = EllipticCurveFq2Projective(
         q=modulus,
         curve_a=[0xFFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFC, 0],
-        curve_b=[0x5AC635D8AA3A93E7B3EBBD55769886BC651D06B0CC53B0F63BCE3C3E27D2604B, 0],
         fq2=Fq2Script(q=modulus, non_residue=non_residue.to_int()),
     )
 
@@ -100,7 +99,7 @@ class Secp256k1Extension:
     point_at_infinity = [f_q2.zero(), f_q2.identity(), f_q2.zero()]
 
     test_script = EllipticCurveFq2Projective(
-        q=modulus, curve_a=[0, 0], curve_b=[7, 0], fq2=Fq2Script(q=modulus, non_residue=non_residue.to_int())
+        q=modulus, curve_a=[0, 0], fq2=Fq2Script(q=modulus, non_residue=non_residue.to_int())
     )
 
     # Define filename for saving scripts
@@ -163,7 +162,7 @@ class DummyCurve1:
     point_at_infinity = [f_q2.zero(), f_q2.identity(), f_q2.zero()]
 
     test_script = EllipticCurveFq2Projective(
-        q=modulus, curve_a=[4, 2], curve_b=[1, 3], fq2=Fq2Script(q=modulus, non_residue=non_residue.to_int())
+        q=modulus, curve_a=[4, 2], fq2=Fq2Script(q=modulus, non_residue=non_residue.to_int())
     )
 
     # Define filename for saving scripts
@@ -201,7 +200,7 @@ class DummyCurve2:
     b = f_q2(f_q(3), f_q(4))
 
     test_script = EllipticCurveFq2Projective(
-        q=modulus, curve_a=[0, 0], curve_b=[3, 4], fq2=Fq2Script(q=modulus, non_residue=non_residue.to_int())
+        q=modulus, curve_a=[0, 0], fq2=Fq2Script(q=modulus, non_residue=non_residue.to_int())
     )
 
     # Define filename for saving scripts
@@ -254,7 +253,7 @@ def generate_test_cases(test_name):
 
 @pytest.mark.parametrize("additional_elements", [[], [1], [1, 2]])
 @pytest.mark.parametrize("negate_p", [False, True])
-@pytest.mark.parametrize("rolling_option", [True, False])
+@pytest.mark.parametrize("rolling_option", [0, 1])
 @pytest.mark.parametrize(
     ("config", "P"),
     generate_test_cases("test_doubling"),
@@ -307,7 +306,7 @@ def test_doubling(config, additional_elements, negate_p, P, rolling_option, save
 @pytest.mark.parametrize("additional_elements", [[], [1], [1, 2]])
 @pytest.mark.parametrize("negate_p", [False, True])
 @pytest.mark.parametrize("negate_q", [False, True])
-@pytest.mark.parametrize("rolling_option", [True, False])
+@pytest.mark.parametrize("rolling_option", [0, 1, 2, 3])
 @pytest.mark.parametrize(
     ("config", "P", "Q"),
     generate_test_cases("test_mixed_addition"),
@@ -348,11 +347,15 @@ def test_mixed_addition(config, additional_elements, negate_p, negate_q, P, Q, r
         rolling_option=rolling_option,
     )
 
-    remaining_elements = (
-        [*additional_elements, *script_expected]
-        if rolling_option
-        else [*script_Q, *script_P, *additional_elements, *script_expected]
-    )
+    match rolling_option:
+        case 3:
+            remaining_elements = [*additional_elements, *script_expected]
+        case 2:
+            remaining_elements = [*script_P, *additional_elements, *script_expected]
+        case 1:
+            remaining_elements = [*script_Q, *additional_elements, *script_expected]
+        case 0:
+            remaining_elements = [*script_Q, *script_P, *additional_elements, *script_expected]
 
     for el in remaining_elements[::-1]:
         lock += nums_to_script([el])

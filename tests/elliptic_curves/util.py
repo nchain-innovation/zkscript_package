@@ -112,7 +112,7 @@ def generate_test(
     """Generate test case from modulus, P, Q, their positions and whether they should be negated and rolled.
 
     The function constructs the arguments we must supply to point_algebraic_addition and point_algebraic_doubling
-    (gradient,P,Q,rolling_options, see src/zkscript/elliptic_curves) and the respective unlocking script for a fixed
+    (gradient,P,Q,rolling_option, see src/zkscript/elliptic_curves) and the respective unlocking script for a fixed
     couple (±P,±Q) and fixed rolling options.
 
     Args:
@@ -331,7 +331,7 @@ def generate_test(
                 ),
             ),
         },
-        "rolling_options": boolean_list_to_bitmask(
+        "rolling_option": boolean_list_to_bitmask(
             [rolls["gradient"], rolls["P"]] if P == Q else [rolls["gradient"], rolls["P"], rolls["Q"]]
         ),
     }
@@ -346,7 +346,7 @@ def generate_test_data(
     """Generate test cases starting from modulus, P, Q and the positions modulus, gradient, P and Q should be in.
 
     The function constructs the arguments we must supply to point_algebraic_addition and point_algebraic_doubling
-    (gradient,P,Q,rolling_options, see src/zkscript/elliptic_curves) and the respective unlocking script. The function
+    (gradient,P,Q,rolling_option, see src/zkscript/elliptic_curves) and the respective unlocking script. The function
     iterates over all possible positions and generates test data for all possible combinations of ±P and ±Q. See
     generate_test for examples.
 

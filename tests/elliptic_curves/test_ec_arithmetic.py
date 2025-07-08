@@ -663,7 +663,7 @@ def generate_test_cases(test_name):
                                 test_data["unlocking_script"],
                                 test_data["expected"],
                                 test_data["stack_elements"],
-                                test_data["rolling_options"],
+                                test_data["rolling_option"],
                             )
                         )
                     case "test_doubling":
@@ -673,7 +673,7 @@ def generate_test_cases(test_name):
                                 test_data["unlocking_script"],
                                 test_data["expected"],
                                 test_data["stack_elements"],
-                                test_data["rolling_options"],
+                                test_data["rolling_option"],
                             )
                         )
                     case "test_addition_slow":
@@ -683,7 +683,7 @@ def generate_test_cases(test_name):
                                 test_data["unlocking_script"],
                                 test_data["expected"],
                                 test_data["stack_elements"],
-                                test_data["rolling_options"],
+                                test_data["rolling_option"],
                             )
                         )
                     case "test_doubling_slow":
@@ -693,7 +693,7 @@ def generate_test_cases(test_name):
                                 test_data["unlocking_script"],
                                 test_data["expected"],
                                 test_data["stack_elements"],
-                                test_data["rolling_options"],
+                                test_data["rolling_option"],
                             )
                         )
                     case "test_addition_unknown_points":
@@ -736,11 +736,11 @@ def test_is_on_curve(config, P, position, expected, save_to_json_folder):
 
 @pytest.mark.parametrize("verify_gradient", [True, False])
 @pytest.mark.parametrize(
-    ("config", "unlocking_script", "expected", "stack_elements", "rolling_options"),
+    ("config", "unlocking_script", "expected", "stack_elements", "rolling_option"),
     generate_test_cases("test_addition"),
 )
 def test_addition(
-    config, unlocking_script, expected, stack_elements, rolling_options, verify_gradient, save_to_json_folder
+    config, unlocking_script, expected, stack_elements, rolling_option, verify_gradient, save_to_json_folder
 ):
     unlock = unlocking_script
 
@@ -754,7 +754,7 @@ def test_addition(
         gradient=stack_elements["gradient"],
         P=stack_elements["P"],
         Q=stack_elements["Q"],
-        rolling_options=rolling_options,
+        rolling_option=rolling_option,
     )
 
     lock += (
@@ -771,11 +771,11 @@ def test_addition(
 
 @pytest.mark.parametrize("verify_gradient", [True, False])
 @pytest.mark.parametrize(
-    ("config", "unlocking_script", "expected", "stack_elements", "rolling_options"),
+    ("config", "unlocking_script", "expected", "stack_elements", "rolling_option"),
     generate_test_cases("test_doubling"),
 )
 def test_doubling(
-    config, unlocking_script, expected, stack_elements, rolling_options, verify_gradient, save_to_json_folder
+    config, unlocking_script, expected, stack_elements, rolling_option, verify_gradient, save_to_json_folder
 ):
     unlock = unlocking_script
     clean_constant = verify_gradient
@@ -787,7 +787,7 @@ def test_doubling(
         verify_gradient=verify_gradient,
         gradient=stack_elements["gradient"],
         P=stack_elements["P"],
-        rolling_options=rolling_options,
+        rolling_option=rolling_option,
     )
 
     lock += (
@@ -806,11 +806,11 @@ def test_doubling(
 @pytest.mark.slow
 @pytest.mark.parametrize("verify_gradient", [True, False])
 @pytest.mark.parametrize(
-    ("config", "unlocking_script", "expected", "stack_elements", "rolling_options"),
+    ("config", "unlocking_script", "expected", "stack_elements", "rolling_option"),
     generate_test_cases("test_addition_slow"),
 )
 def test_addition_slow(
-    config, unlocking_script, expected, stack_elements, rolling_options, verify_gradient, save_to_json_folder
+    config, unlocking_script, expected, stack_elements, rolling_option, verify_gradient, save_to_json_folder
 ):
     unlock = unlocking_script
     clean_constant = verify_gradient
@@ -823,7 +823,7 @@ def test_addition_slow(
         gradient=stack_elements["gradient"],
         P=stack_elements["P"],
         Q=stack_elements["Q"],
-        rolling_options=rolling_options,
+        rolling_option=rolling_option,
     )
 
     lock += (
@@ -842,11 +842,11 @@ def test_addition_slow(
 @pytest.mark.slow
 @pytest.mark.parametrize("verify_gradient", [True, False])
 @pytest.mark.parametrize(
-    ("config", "unlocking_script", "expected", "stack_elements", "rolling_options"),
+    ("config", "unlocking_script", "expected", "stack_elements", "rolling_option"),
     generate_test_cases("test_doubling_slow"),
 )
 def test_doubling_slow(
-    config, unlocking_script, expected, stack_elements, rolling_options, verify_gradient, save_to_json_folder
+    config, unlocking_script, expected, stack_elements, rolling_option, verify_gradient, save_to_json_folder
 ):
     unlock = unlocking_script
     clean_constant = verify_gradient
@@ -858,7 +858,7 @@ def test_doubling_slow(
         verify_gradient=verify_gradient,
         gradient=stack_elements["gradient"],
         P=stack_elements["P"],
-        rolling_options=rolling_options,
+        rolling_option=rolling_option,
     )
 
     lock += (

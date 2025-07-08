@@ -300,7 +300,7 @@ def test_bytes_to_unsigned(stack, length_stack_element, stack_element, rolling_o
 
 @pytest.mark.parametrize("add_prefix", [True, False])
 @pytest.mark.parametrize(
-    ("stack", "group_order", "stack_element", "rolling_options", "expected"),
+    ("stack", "group_order", "stack_element", "rolling_option", "expected"),
     [
         (
             [
@@ -405,12 +405,12 @@ def test_bytes_to_unsigned(stack, length_stack_element, stack_element, rolling_o
         ),
     ],
 )
-def test_int_sig_to_s_component(stack, group_order, stack_element, rolling_options, add_prefix, expected):
+def test_int_sig_to_s_component(stack, group_order, stack_element, rolling_option, add_prefix, expected):
     unlock = Script()
     for el in stack:
         unlock.append_pushdata(el)
 
-    lock = int_sig_to_s_component(group_order, stack_element, rolling_options, add_prefix)
+    lock = int_sig_to_s_component(group_order, stack_element, rolling_option, add_prefix)
     for ix, el in enumerate(expected[::-1]):
         lock.append_pushdata(el if ix != 0 or not add_prefix else bytes.fromhex("02" + hex(len(el))[2:]) + el)
         lock += Script.parse_string("OP_EQUAL" if ix == len(expected) - 1 else "OP_EQUALVERIFY")
@@ -428,7 +428,7 @@ def test_int_sig_to_s_component(stack, group_order, stack_element, rolling_optio
         "b",
         "c",
         "negate",
-        "rolling_options",
+        "rolling_option",
         "leave_on_top_of_stack",
         "equation_to_check",
         "expected",
@@ -460,7 +460,7 @@ def test_int_sig_to_s_component(stack, group_order, stack_element, rolling_optio
     ],
 )
 def test_enforce_mul_equal(
-    stack, modulus, a, b, c, negate, rolling_options, leave_on_top_of_stack, equation_to_check, expected
+    stack, modulus, a, b, c, negate, rolling_option, leave_on_top_of_stack, equation_to_check, expected
 ):
     unlock = nums_to_script(stack)
     lock = enforce_mul_equal(
@@ -470,7 +470,7 @@ def test_enforce_mul_equal(
         StackFiniteFieldElement(a, negate[0], 1),
         StackFiniteFieldElement(b, negate[1], 1),
         StackFiniteFieldElement(c, negate[2], 1),
-        rolling_options,
+        rolling_option,
         leave_on_top_of_stack,
         equation_to_check,
     )
@@ -486,7 +486,7 @@ def test_enforce_mul_equal(
 
 
 @pytest.mark.parametrize(
-    ("stack", "elements_positions", "rolling_options", "expected"),
+    ("stack", "elements_positions", "rolling_option", "expected"),
     [
         (["01", "aa", "00", "01"], [3, 1, 0], [True, True, True], ["aa", "05"]),
         (["01", "aa", "00", "01"], [3, 1, 0], [True, False, True], ["aa", "00", "05"]),
@@ -494,14 +494,14 @@ def test_enforce_mul_equal(
         (["01", "aa", "00", "01"], [3, 1, 0], [True, True, False], ["aa", "01", "05"]),
     ],
 )
-def test_unsigned_from_bits(stack, elements_positions, rolling_options, expected):
+def test_unsigned_from_bits(stack, elements_positions, rolling_option, expected):
     unlock = Script()
     for el in stack:
         unlock.append_pushdata(bytes.fromhex(el))
 
     lock = unsigned_from_bits(
         stack_elements=[StackBaseElement(ix) for ix in elements_positions],
-        rolling_options=boolean_list_to_bitmask(rolling_options),
+        rolling_option=boolean_list_to_bitmask(rolling_option),
     )
 
     for ix, el in enumerate(expected[::-1]):
