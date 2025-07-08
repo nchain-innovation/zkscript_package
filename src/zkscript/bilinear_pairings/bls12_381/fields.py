@@ -5,6 +5,7 @@ from types import MethodType
 from tx_engine import Script
 
 from src.zkscript.bilinear_pairings.bls12_381.parameters import GAMMAS, NON_RESIDUE_FQ, q
+from src.zkscript.fields.fq import Fq
 from src.zkscript.fields.fq2 import Fq2
 from src.zkscript.fields.fq4 import Fq4
 from src.zkscript.fields.fq6_3_over_2 import Fq6
@@ -12,6 +13,8 @@ from src.zkscript.fields.fq12_2_over_3_over_2 import Fq12
 from src.zkscript.fields.fq12_3_over_2_over_2 import Fq12Cubic
 from src.zkscript.util.utility_scripts import roll
 
+# Fq implementation
+fq_script = Fq(q=q)
 # Fq2 implementation, NON_RESIDUE = -1
 fq2_script = Fq2(q=q, non_residue=NON_RESIDUE_FQ, mul_by_fq2_non_residue=Fq2.mul_by_one_plus_u)
 # Fq4 implementation, FQ2_NON_RESIDUE = u

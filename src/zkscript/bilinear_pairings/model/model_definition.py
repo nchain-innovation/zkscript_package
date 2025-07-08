@@ -3,9 +3,10 @@
 from src.zkscript.bilinear_pairings.model.miller_loop import MillerLoop
 from src.zkscript.bilinear_pairings.model.pairing import Pairing
 from src.zkscript.bilinear_pairings.model.triple_miller_loop import TripleMillerLoop
+from src.zkscript.bilinear_pairings.model.triple_miller_loop_proj import TripleMillerLoopProj
 
 
-class PairingModel(MillerLoop, TripleMillerLoop, Pairing):
+class PairingModel(MillerLoop, TripleMillerLoop, TripleMillerLoopProj, Pairing):
     """Pairing Model."""
 
     def __init__(
@@ -18,9 +19,14 @@ class PairingModel(MillerLoop, TripleMillerLoop, Pairing):
         n_elements_miller_output,
         n_elements_evaluation_output,
         n_elements_evaluation_times_evaluation,
+        inverse_fq,
+        scalar_multiplication_fq,
         point_doubling_twisted_curve,
         point_addition_twisted_curve,
+        point_doubling_twisted_curve_proj,
+        point_addition_twisted_curve_proj,
         line_eval,
+        line_eval_proj,
         line_eval_times_eval,
         line_eval_times_eval_times_eval,
         line_eval_times_eval_times_eval_times_eval,
@@ -32,6 +38,7 @@ class PairingModel(MillerLoop, TripleMillerLoop, Pairing):
         miller_loop_output_times_eval_times_eval,
         miller_loop_output_times_eval_times_eval_times_eval,
         miller_loop_output_times_eval_times_eval_times_eval_times_eval_times_eval_times_eval,
+        rational_form,
         pad_eval_times_eval_to_miller_output,
         pad_eval_times_eval_times_eval_times_eval_to_miller_output,
         cyclotomic_inverse,
@@ -51,10 +58,16 @@ class PairingModel(MillerLoop, TripleMillerLoop, Pairing):
             n_elements_evaluation_output: Number of integers needed to write the result of a line evaluation.
             n_elements_evaluation_times_evaluation: Number of integers needed to write the result of the product of two
                 line evaluations.
+            inverse_fq: Script to compute the inverse of an element in the base field Fq.
+            scalar_multiplication_fq: Script to perform scalar multiplication by an element in Fq.
             point_doubling_twisted_curve: Script to perform point doubling on the twisted curve.
             point_addition_twisted_curve: Script to perform point addition on the twisted curve.
-            point_negation_twisted_curve: Script to negate a point on the twisted curve.
+            point_doubling_twisted_curve_proj: Script to perform point doubling in projective coordinates on the
+                twisted curve.
+            point_addition_twisted_curve_proj: Script to perform point addition in mixed coordinates (one point
+                projective, the other affine) on the twisted curve.
             line_eval: Script for line evaluation.
+            line_eval_proj: Script for line evaluation in projective coordinates.
             line_eval_times_eval: Script for product of two line evaluations.
             line_eval_times_eval_times_eval: Script for product of three line evaluations, assuming the first product
                 has been calculated: the script computes ev * t1, where t1 = ev * ev.
@@ -80,6 +93,7 @@ class PairingModel(MillerLoop, TripleMillerLoop, Pairing):
             miller_loop_output_times_eval_times_eval_times_eval_times_eval_times_eval_times_eval: Script to compute
                 the multiplication of the Miller output with a product of six line evaluations: the script computes
                 t1 * t2, where t1 = miller_output, t2 = ev * ev * ev * ev * ev * ev.
+            rational_form: Script to modify Miller loop functions to supports inputs in the form A/B.
             pad_eval_times_eval_to_miller_output: Script to pad a product of two line evaluations to a Miller output.
             pad_eval_times_eval_times_eval_times_eval_to_miller_output: Script to pad a product of four line evaluations
                 to a Miller output.
@@ -99,7 +113,14 @@ class PairingModel(MillerLoop, TripleMillerLoop, Pairing):
         self.N_ELEMENTS_EVALUATION_TIMES_EVALUATION = n_elements_evaluation_times_evaluation
         self.point_doubling_twisted_curve = point_doubling_twisted_curve
         self.point_addition_twisted_curve = point_addition_twisted_curve
+        self.point_doubling_twisted_curve_proj = point_doubling_twisted_curve_proj
+        self.point_addition_twisted_curve_proj = point_addition_twisted_curve_proj
+
+        self.inverse_fq = inverse_fq
+        self.scalar_multiplication_fq = scalar_multiplication_fq
+
         self.line_eval = line_eval
+        self.line_eval_proj = line_eval_proj
         self.line_eval_times_eval = line_eval_times_eval
         self.line_eval_times_eval_times_eval = line_eval_times_eval_times_eval
         self.line_eval_times_eval_times_eval_times_eval = line_eval_times_eval_times_eval_times_eval
@@ -115,6 +136,7 @@ class PairingModel(MillerLoop, TripleMillerLoop, Pairing):
         self.miller_loop_output_times_eval_times_eval_times_eval_times_eval_times_eval_times_eval = (
             miller_loop_output_times_eval_times_eval_times_eval_times_eval_times_eval_times_eval
         )
+        self.rational_form = rational_form
         self.pad_eval_times_eval_to_miller_output = pad_eval_times_eval_to_miller_output
         self.pad_eval_times_eval_times_eval_times_eval_to_miller_output = (
             pad_eval_times_eval_times_eval_times_eval_to_miller_output
