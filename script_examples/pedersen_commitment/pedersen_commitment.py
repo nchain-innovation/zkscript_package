@@ -87,7 +87,7 @@ class PedersenCommitmentSecp256k1:
             clean_constants=False,
             sig_hash_preimage=sig_hash_preimage.shift(-1),
             h=h.shift(-1),
-            rolling_options=((1 << 15) - 1) ^ 1 ^ (1 << 1) ^ (1 << 14),
+            rolling_option=((1 << 15) - 1) ^ 1 ^ (1 << 1) ^ (1 << 14),
         )
         out += Script.parse_string("OP_VERIFY")
 
@@ -103,7 +103,7 @@ class PedersenCommitmentSecp256k1:
             clean_constants=True,
             sig_hash_preimage=sig_hash_preimage.shift(-19),
             h=h.shift(-19),
-            rolling_options=((1 << 15) - 1) ^ (1 << 14),
+            rolling_option=((1 << 15) - 1) ^ (1 << 14),
         )
         out += Script.parse_string("OP_VERIFY")
 

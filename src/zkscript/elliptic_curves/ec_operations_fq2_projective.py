@@ -7,7 +7,7 @@ from src.zkscript.script_types.stack_elements import (
     StackEllipticCurvePointProjective,
     StackFiniteFieldElement,
 )
-from src.zkscript.util.utility_functions import check_order
+from src.zkscript.util.utility_functions import bitmask_to_boolean_list, check_order
 from src.zkscript.util.utility_scripts import (
     bool_to_moving_function,
     mod,
@@ -28,22 +28,19 @@ class EllipticCurveFq2Projective:
     Attributes:
         modulus: The characteristic of the field F_q.
         curve_a: The `a` coefficient in the Short-Weierstrass equation of the curve (an element in F_q^2).
-        curve_b: The `b` coefficient in the Short-Weierstrass equation of the curve (an element in F_q^2).
         FQ2 (Fq2): Bitcoin script instance to perform arithmetic operations in F_q^2.
     """
 
-    def __init__(self, q: int, curve_a: list[int], curve_b: list[int], fq2):
+    def __init__(self, q: int, curve_a: list[int], fq2):
         """Initialise the elliptic curve group E(F_q^2).
 
         Args:
             q: The characteristic of the field F_q.
             curve_a: The `a` coefficient in the Short-Weierstrass equation of the curve (an element in F_q^2).
-            curve_b: The `b` coefficient in the Short-Weierstrass equation of the curve (an element in F_q^2).
             fq2 (Fq2): Bitcoin script instance to perform arithmetic operations in F_q^2.
         """
         self.modulus = q
         self.curve_a = curve_a
-        self.curve_b = curve_b
         self.FQ2 = fq2
 
     def point_algebraic_doubling(
@@ -57,7 +54,7 @@ class EllipticCurveFq2Projective:
             StackFiniteFieldElement(3, False, 2),  # noqa: B008
             StackFiniteFieldElement(1, False, 2),  # noqa: B008
         ),
-        rolling_option: bool = True,
+        rolling_option: int = 1,  # point removed from the stack
     ) -> Script:
         """Perform algebraic point doubling of points on an elliptic curve defined over Fq2 in projective coordinates.
 
@@ -96,7 +93,7 @@ class EllipticCurveFq2Projective:
                     StackFiniteFieldElement(3, False, 2),
                     StackFiniteFieldElement(1, False, 2),
                 )
-            rolling_option (bool): If `True`, `P` is removed from the stack at the end of script execution.
+            rolling_option (int): If `1`, `P` is removed from the stack at the end of script execution.
 
         Returns:
             A Bitcoin Script that computes 2P_ for the given elliptic curve points `P`.
@@ -107,6 +104,7 @@ class EllipticCurveFq2Projective:
             - The modulo q must be a prime number.
             - The point `P` is not the point at infinity.
         """
+        is_p_rolled = bitmask_to_boolean_list(rolling_option, 1)[0]
         out = verify_bottom_constant(self.modulus) if check_constant else Script()
 
         extension_degree = self.FQ2.extension_degree
@@ -115,9 +113,9 @@ class EllipticCurveFq2Projective:
         # stack out:    [q, .., X, {Y}, {Z}, .., UY]
         # altstack out: [U]
 
-        out += move(P.y, bool_to_moving_function(rolling_option))  # Pick or roll Y
+        out += move(P.y, bool_to_moving_function(is_p_rolled))  # Pick or roll Y
         out += move(
-            P.z.shift(extension_degree), bool_to_moving_function(self.curve_a == [0, 0] and rolling_option)
+            P.z.shift(extension_degree), bool_to_moving_function(self.curve_a == [0, 0] and is_p_rolled)
         )  # Pick or roll Z
         out += Script.parse_string("OP_2OVER")  # Duplicate Y
 
@@ -146,11 +144,9 @@ class EllipticCurveFq2Projective:
         # stack out:    [q, .., {X}, {Y}, {Z}, .., UY, X, T]
         # altstack out: [U]
 
-        shift_value = extension_degree - (extension_degree if rolling_option else 0) * (
-            2 if self.curve_a == [0, 0] else 1
-        )
+        shift_value = extension_degree - (extension_degree if is_p_rolled else 0) * (2 if self.curve_a == [0, 0] else 1)
 
-        out += move(P.x.shift(shift_value), bool_to_moving_function(rolling_option))  # Pick or roll X
+        out += move(P.x.shift(shift_value), bool_to_moving_function(is_p_rolled))  # Pick or roll X
         out += Script.parse_string("OP_2DUP")
         out += self.FQ2.square(
             take_modulo=False,
@@ -161,7 +157,7 @@ class EllipticCurveFq2Projective:
             scalar=3,
         )  # Compute 3X^2
         if self.curve_a != [0, 0]:
-            out += move(P.z.shift(3 * extension_degree), bool_to_moving_function(rolling_option))  # Pick or roll Z
+            out += move(P.z.shift(3 * extension_degree), bool_to_moving_function(is_p_rolled))  # Pick or roll Z
             if self.curve_a[1] == 0:
                 out += self.FQ2.square(
                     take_modulo=False,
@@ -323,7 +319,7 @@ class EllipticCurveFq2Projective:
             StackFiniteFieldElement(9, False, 2),  # noqa: B008
             StackFiniteFieldElement(7, False, 2),  # noqa: B008
         ),
-        rolling_option: bool = True,
+        rolling_option: int = 3,  # both points removed
     ) -> Script:
         """Perform algebraic mixed addition of points on an elliptic curve defined over Fq2.
 
@@ -370,7 +366,8 @@ class EllipticCurveFq2Projective:
                     StackFiniteFieldElement(9, False, 2),
                     StackFiniteFieldElement(7, False, 2),
                 ),
-            rolling_option (bool): If `True`, `P` and `Q` are removed from the stack at the end of script execution.
+            rolling_option (int): Bitmask to describe if `P` and `Q` are removed from the stack at the end
+                of script execution.
 
 
         Returns:
@@ -387,6 +384,8 @@ class EllipticCurveFq2Projective:
             - `P` is not the point at infinity.
         """
         check_order([Q, P])
+        is_p_rolled = bitmask_to_boolean_list(rolling_option, 2)[0]
+        is_q_rolled = bitmask_to_boolean_list(rolling_option, 2)[1]
         out = verify_bottom_constant(self.modulus) if check_constant else Script()
 
         extension_degree = self.FQ2.extension_degree
@@ -397,14 +396,18 @@ class EllipticCurveFq2Projective:
         # stack out:    [q, .., X', {Y'}, .., X, {Y}, {Z}, .., Y, Z, T]
         # altstack out: [V, U]
 
-        out += move(P.y, bool_to_moving_function(rolling_option))
-        out += move(P.z.shift(extension_degree), bool_to_moving_function(rolling_option))
+        out += move(P.y, bool_to_moving_function(is_p_rolled))
+        out += move(P.z.shift(extension_degree), bool_to_moving_function(is_p_rolled))
         out += Script.parse_string("OP_2OVER OP_2OVER")
-        shift_val = 2 * extension_degree if rolling_option else 4 * extension_degree
-        out += move(Q.y.shift(shift_val), bool_to_moving_function(rolling_option))
+        shift_val = 2 * extension_degree if is_p_rolled else 4 * extension_degree
+        out += move(Q.y.shift(shift_val), bool_to_moving_function(is_q_rolled))
         out += Script.parse_string("OP_2OVER")
-        shift_val = 3 * extension_degree if rolling_option else 6 * extension_degree
-        out += move(Q.x.shift(shift_val), bool_to_moving_function(rolling_option))
+        shift_val = (
+            6 * extension_degree
+            - (2 * extension_degree if is_p_rolled else 0)
+            - (extension_degree if is_q_rolled else 0)
+        )
+        out += move(Q.x.shift(shift_val), bool_to_moving_function(is_q_rolled))
         out += self.FQ2.mul(
             take_modulo=False,
             positive_modulo=False,
@@ -412,8 +415,9 @@ class EllipticCurveFq2Projective:
             clean_constant=False,
             is_constant_reused=False,
         )  # Compute ZX'
+        # stack in:     [q, .., {X'}, {Y'}, .., X, {Y}, {Z}, .., Y Z Y Z Y' ZX']
 
-        shift_val = 4 * extension_degree if rolling_option else 6 * extension_degree
+        shift_val = 6 * extension_degree - (2 * extension_degree if is_p_rolled else 0)
         out += move(P.x.shift(shift_val), bool_to_moving_function(False))
         out += Script.parse_string("OP_2OVER OP_2OVER")
         out += self.FQ2.add(
@@ -513,8 +517,8 @@ class EllipticCurveFq2Projective:
         )  # Compute X'' = UW
         out += Script.parse_string("OP_TOALTSTACK OP_TOALTSTACK OP_2ROT")
 
-        shift_val = 4 * extension_degree if rolling_option else 6 * extension_degree
-        out += move(P.x.shift(shift_val), bool_to_moving_function(rolling_option))
+        shift_val = 6 * extension_degree - (2 * extension_degree if is_p_rolled else 0)
+        out += move(P.x.shift(shift_val), bool_to_moving_function(is_p_rolled))
         out += Script.parse_string("OP_2OVER")
         out += self.FQ2.mul(
             take_modulo=False,

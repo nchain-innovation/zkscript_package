@@ -536,11 +536,12 @@ class Fq2(PrimeFieldExtension):
         out = verify_bottom_constant(self.modulus) if check_constant else Script()
         # stack in:     [.., x0, x1]
         # stack out:    [.., x0, x1, x0^2, x1^2]
+
         out += Script.parse_string("OP_2DUP OP_2DUP OP_ROT OP_MUL")
         out += Script.parse_string("OP_TOALTSTACK OP_MUL OP_FROMALTSTACK")
 
         # stack in:     [.., x0, x1, x0^2, x1^2]
-        # stack out:    [.., x0^2, x1^2 * non_res, x0]
+        # stack out:    [.., x0^2, x1^2 * self.non_residue, x0]
         # altstack out: [self.non_residue * x1^3 + 3 * x0^2 * x1]
         out += nums_to_script([self.non_residue])
         out += Script.parse_string("OP_MUL OP_2SWAP OP_2OVER")
@@ -558,24 +559,24 @@ class Fq2(PrimeFieldExtension):
 
         # stack in:     [.., x0^3 + 3 * x1^2 * x0 * self.non_residue]
         # altstack in:  [self.non_residue * x1^3 + 3 * x0^2 * x1]
-
+        # stack out:    [.., scalar * x^3]
+        # altstack out: []
         if scalar != 1:
             out += nums_to_script([scalar])
-            out += Script.parse_string("OP_TUCK OP_MUL")
+            out += Script.parse_string("OP_TUCK OP_MUL OP_SWAP OP_FROMALTSTACK OP_MUL")
+        else:
+            out += Script.parse_string("OP_FROMALTSTACK")
 
         if take_modulo:
             out += roll(position=-1, n_elements=1) if clean_constant else pick(position=-1, n_elements=1)
             out += mod(stack_preparation="", is_positive=positive_modulo, is_constant_reused=True)
-            preparation = "OP_ROT OP_FROMALTSTACK OP_MUL OP_ROT" if scalar != 1 else "OP_FROMALTSTACK OP_ROT"
             out += mod(
-                stack_preparation=preparation,
+                stack_preparation="OP_TOALTSTACK",
                 is_mod_on_top=True,
                 is_positive=positive_modulo,
                 is_constant_reused=is_constant_reused,
             )
-
-        else:
-            out += Script.parse_string("OP_SWAP OP_FROMALTSTACK OP_MUL")
+            out += Script.parse_string("OP_FROMALTSTACK")
 
         return out
 
