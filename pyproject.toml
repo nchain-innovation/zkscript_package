@@ -85,6 +85,11 @@ lint.ignore = [
     "COM819",
     "ISC001",
     "ISC002",
+    # temporary ignore rules
+    "PLR0915",  # too many statements in function
+    "PLR0912",  # too many branches in function
+    "PLR0913",  # too many arguments in function
+    "C901",  # too complex function
 ]
 
 # Allow fix for all enabled rules (when `--fix`) is provided.
