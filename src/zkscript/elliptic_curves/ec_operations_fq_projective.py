@@ -67,7 +67,7 @@ class EllipticCurveFqProjective:
             StackFiniteFieldElement(1, False, 1),  # noqa: B008
             StackFiniteFieldElement(0, False, 1),  # noqa: B008
         ),
-        rolling_options: int = 3,
+        rolling_option: int = 3,
     ) -> Script:
         """Perform algebraic addition of points on an elliptic curve defined over Fq.
 
@@ -109,7 +109,7 @@ class EllipticCurveFqProjective:
                     StackFiniteFieldElement(1,False,1),
                     StackFiniteFieldElement(0,False,1)
                     )
-            rolling_options (int): A bitmask specifying which arguments should be rolled on which should
+            rolling_option (int): A bitmask specifying which arguments should be rolled on which should
                 be picked. The bits of the bitmask correspond to whether the i-th argument should be
                 rolled or not. Defaults to 3 (all elements are rolled).
 
@@ -130,13 +130,13 @@ class EllipticCurveFqProjective:
             - `P_` != `Q_` and `P_ != -Q_` and `P_`, `Q_` not the point at infinity
         """
         check_order([P, Q])
-        is_p_rolled, is_q_rolled = bitmask_to_boolean_list(rolling_options, 2)
+        is_p_rolled, is_q_rolled = bitmask_to_boolean_list(rolling_option, 2)
 
         # Checks for unimplemented cases
         if not is_q_rolled:
             msg = "The current implementation only supports rolling Q."
             raise ValueError(msg)
-        if Q.position != 2:
+        if Q.position != 2:  # noqa: PLR2004
             msg = "The current implementation only supports Q in position 2."
             raise ValueError(msg)
 
@@ -446,7 +446,7 @@ class EllipticCurveFqProjective:
                 check_constant=False,
                 clean_constant=False,
                 positive_modulo=positive_modulo and (i == 0),
-                rolling_options=boolean_list_to_bitmask([False, True]),
+                rolling_option=boolean_list_to_bitmask([False, True]),
             )  # Compute 2T + P
             out += Script.parse_string("OP_ENDIF OP_ENDIF")  # Conclude the conditional branches
 
@@ -475,7 +475,7 @@ class EllipticCurveFqProjective:
             StackFiniteFieldElement(1, False, 1),  # noqa: B008
             StackFiniteFieldElement(0, False, 1),  # noqa: B008
         ),
-        rolling_options: int = 3,
+        rolling_option: int = 3,
     ) -> Script:
         """Transform the elliptic curve point `P` into its affine form.
 
@@ -493,12 +493,12 @@ class EllipticCurveFqProjective:
                     StackFiniteFieldElement(1,False,1),
                     StackFiniteFieldElement(0,False,1)
                     )
-            rolling_options (int): A bitmask specifying which arguments should be rolled on which should
+            rolling_option (int): A bitmask specifying which arguments should be rolled on which should
                 be picked. The bits of the bitmask correspond to whether the i-th argument should be
                 rolled or not. Defaults to 3 (all elements are rolled).
         """
         check_order([z_inverse, P])
-        is_z_inverse_rolled, is_p_rolled = bitmask_to_boolean_list(rolling_options, 2)
+        is_z_inverse_rolled, is_p_rolled = bitmask_to_boolean_list(rolling_option, 2)
 
         out = verify_bottom_constant(self.modulus) if check_constant else Script()
 
@@ -627,7 +627,7 @@ class EllipticCurveFqProjective:
             check_constant=False,
             clean_constant=False,
             positive_modulo=positive_modulo,
-            rolling_options=3,
+            rolling_option=3,
         )
 
         # Come here if P = - Q

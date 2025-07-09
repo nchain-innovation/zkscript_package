@@ -459,7 +459,7 @@ def test_addition(config, additional_elements, negate_p, negate_q, P, Q, save_to
             StackFiniteFieldElement(1, negate_q, 1),
             StackFiniteFieldElement(0, False, 1),
         ),
-        rolling_options=3,
+        rolling_option=3,
     )
     for el in [*additional_elements, *expected][::-1]:
         lock += nums_to_script([el])
@@ -606,7 +606,7 @@ def test_to_affine(config, additional_elements, P, expected, save_to_json_folder
             StackFiniteFieldElement(1 + 2 * is_with_additiona_elements, False, 1),
             StackFiniteFieldElement(0 + 2 * is_with_additiona_elements, False, 1),
         ),
-        rolling_options=3,
+        rolling_option=3,
     )
 
     for el in [*additional_elements, *expected.to_list()][::-1]:

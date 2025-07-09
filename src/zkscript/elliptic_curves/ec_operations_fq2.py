@@ -53,7 +53,7 @@ class EllipticCurveFq2:
             StackFiniteFieldElement(3, False, 2),  # noqa: B008
             StackFiniteFieldElement(1, False, 2),  # noqa: B008
         ),
-        rolling_options: int = 7,
+        rolling_option: int = 7,
     ) -> Script:
         """Perform algebraic addition of points on an elliptic curve defined over Fq2.
 
@@ -92,7 +92,7 @@ class EllipticCurveFq2:
                 Defaults to: StackEllipticCurvePoint(
                     StackFiniteFieldElement(3, False, 2),StackFiniteFieldElement(1, False, 2)
                     )
-            rolling_options (int): A bitmask specifying which arguments should be rolled on which should
+            rolling_option (int): A bitmask specifying which arguments should be rolled on which should
                 be picked. The bits of the bitmask correspond to whether the i-th argument should be
                 rolled or not. Defaults to 7 (all elements are rolled).
 
@@ -119,7 +119,7 @@ class EllipticCurveFq2:
                 gradient=gradient,
                 P=P,
                 Q=Q,
-                rolling_options=rolling_options,
+                rolling_option=rolling_option,
             )
             if verify_gradient
             else self.point_algebraic_addition_without_verifying_gradient(
@@ -130,7 +130,7 @@ class EllipticCurveFq2:
                 gradient=gradient,
                 P=P,
                 Q=Q,
-                rolling_options=rolling_options,
+                rolling_option=rolling_option,
             )
         )
 
@@ -146,7 +146,7 @@ class EllipticCurveFq2:
             StackFiniteFieldElement(3, False, 2),  # noqa: B008
             StackFiniteFieldElement(1, False, 2),  # noqa: B008
         ),
-        rolling_options: int = 3,
+        rolling_option: int = 3,
     ) -> Script:
         """Perform algebraic point doubling of points on an elliptic curve defined over Fq2.
 
@@ -179,7 +179,7 @@ class EllipticCurveFq2:
                     Defaults to: StackEllipticCurvePoint(
                         StackFiniteFieldElement(3,False,2),StackFiniteFieldElement(1,False,2)
                         )
-            rolling_options (int): A bitmask specifying which arguments should be rolled on which should
+            rolling_option (int): A bitmask specifying which arguments should be rolled on which should
                 be picked. The bits of the bitmask correspond to whether the i-th argument should be
                 rolled or not. Defaults to 3 (all elements are rolled).
 
@@ -203,7 +203,7 @@ class EllipticCurveFq2:
                 positive_modulo=positive_modulo,
                 gradient=gradient,
                 P=P,
-                rolling_options=rolling_options,
+                rolling_option=rolling_option,
             )
             if verify_gradient
             else self.point_algebraic_doubling_without_verifying_gradient(
@@ -213,7 +213,7 @@ class EllipticCurveFq2:
                 positive_modulo=positive_modulo,
                 gradient=gradient,
                 P=P,
-                rolling_options=rolling_options,
+                rolling_option=rolling_option,
             )
         )
 
@@ -232,7 +232,7 @@ class EllipticCurveFq2:
             StackFiniteFieldElement(3, False, 2),  # noqa: B008
             StackFiniteFieldElement(1, False, 2),  # noqa: B008
         ),
-        rolling_options: int = 7,
+        rolling_option: int = 7,
     ) -> Script:
         """Perform algebraic addition of points on an elliptic curve defined over Fq2.
 
@@ -269,7 +269,7 @@ class EllipticCurveFq2:
                 Defaults to: StackEllipticCurvePoint(
                     StackFiniteFieldElement(3, False, 2),StackFiniteFieldElement(1, False, 2)
                     )
-            rolling_options (int): A bitmask specifying which arguments should be rolled on which should
+            rolling_option (int): A bitmask specifying which arguments should be rolled on which should
                 be picked. The bits of the bitmask correspond to whether the i-th argument should be
                 rolled or not. Defaults to 7 (all elements are rolled).
 
@@ -291,7 +291,7 @@ class EllipticCurveFq2:
             If this function is used when `P_` != `Q_` or `P_ != -Q_`, then any gradient will pass
             the gradient verification, but the point computed is not going to be `P_ + Q_`.
         """
-        is_gradient_rolled, is_p_rolled, is_q_rolled = bitmask_to_boolean_list(rolling_options, 3)
+        is_gradient_rolled, is_p_rolled, is_q_rolled = bitmask_to_boolean_list(rolling_option, 3)
 
         check_order([P, Q])
 
@@ -438,7 +438,7 @@ class EllipticCurveFq2:
             StackFiniteFieldElement(3, False, 2),  # noqa: B008
             StackFiniteFieldElement(1, False, 2),  # noqa: B008
         ),
-        rolling_options: int = 7,
+        rolling_option: int = 7,
     ) -> Script:
         """Perform algebraic addition of points on an elliptic curve defined over Fq2.
 
@@ -476,7 +476,7 @@ class EllipticCurveFq2:
                 Defaults to: StackEllipticCurvePoint(
                     StackFiniteFieldElement(3, False, 2),StackFiniteFieldElement(1, False, 2)
                     )
-            rolling_options (int): A bitmask specifying which arguments should be rolled on which should
+            rolling_option (int): A bitmask specifying which arguments should be rolled on which should
                 be picked. The bits of the bitmask correspond to whether the i-th argument should be
                 rolled or not. Defaults to 7 (all elements are rolled).
 
@@ -497,7 +497,7 @@ class EllipticCurveFq2:
         Notes:
             This function does not check the validity of the gradient provided.
         """
-        is_gradient_rolled, is_p_rolled, is_q_rolled = bitmask_to_boolean_list(rolling_options, 3)
+        is_gradient_rolled, is_p_rolled, is_q_rolled = bitmask_to_boolean_list(rolling_option, 3)
         check_order([P, Q])
         if gradient.is_before(P):
             gradient.overlaps_on_the_right(P)
@@ -588,7 +588,7 @@ class EllipticCurveFq2:
             StackFiniteFieldElement(3, False, 2),  # noqa: B008
             StackFiniteFieldElement(1, False, 2),  # noqa: B008
         ),
-        rolling_options: int = 3,
+        rolling_option: int = 3,
     ) -> Script:
         """Perform algebraic point doubling of points on an elliptic curve defined over Fq2.
 
@@ -619,7 +619,7 @@ class EllipticCurveFq2:
                     Defaults to: StackEllipticCurvePoint(
                         StackFiniteFieldElement(3,False,2),StackFiniteFieldElement(1,False,2)
                         )
-            rolling_options (int): A bitmask specifying which arguments should be rolled on which should
+            rolling_option (int): A bitmask specifying which arguments should be rolled on which should
                 be picked. The bits of the bitmask correspond to whether the i-th argument should be
                 rolled or not. Defaults to 3 (all elements are rolled).
 
@@ -635,7 +635,7 @@ class EllipticCurveFq2:
             - The modulo q must be a prime number.
             - `P` not the point at infinity
         """
-        is_gradient_rolled, is_p_rolled = bitmask_to_boolean_list(rolling_options, 2)
+        is_gradient_rolled, is_p_rolled = bitmask_to_boolean_list(rolling_option, 2)
 
         if gradient.is_before(P):
             gradient.overlaps_on_the_right(P)
@@ -756,7 +756,7 @@ class EllipticCurveFq2:
             StackFiniteFieldElement(3, False, 2),  # noqa: B008
             StackFiniteFieldElement(1, False, 2),  # noqa: B008
         ),
-        rolling_options: int = 3,
+        rolling_option: int = 3,
     ) -> Script:
         """Perform algebraic point doubling of points on an elliptic curve defined over Fq2.
 
@@ -788,7 +788,7 @@ class EllipticCurveFq2:
                     Defaults to: StackEllipticCurvePoint(
                         StackFiniteFieldElement(3,False,2),StackFiniteFieldElement(1,False,2)
                         )
-            rolling_options (int): A bitmask specifying which arguments should be rolled on which should
+            rolling_option (int): A bitmask specifying which arguments should be rolled on which should
                 be picked. The bits of the bitmask correspond to whether the i-th argument should be
                 rolled or not. Defaults to 3 (all elements are rolled).
 
@@ -807,7 +807,7 @@ class EllipticCurveFq2:
         Notes:
             This function does not check the validity of the gradient provided.
         """
-        is_gradient_rolled, is_p_rolled = bitmask_to_boolean_list(rolling_options, 2)
+        is_gradient_rolled, is_p_rolled = bitmask_to_boolean_list(rolling_option, 2)
 
         if gradient.is_before(P):
             gradient.overlaps_on_the_right(P)

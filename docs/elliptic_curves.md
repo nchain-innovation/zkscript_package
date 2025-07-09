@@ -23,7 +23,7 @@ The scripts `point_algebraic_addition` and `point_algebraic_doubling` in the cla
 - `gradient (StackFiniteFieldElement)`: the position of `gradient` in the stack
 - `P (StackEllipticCurvePoint)`: the position of `P` in the stack (and whether it should be negated)
 - (only for `point_algebraic_addition`) `Q (StackEllipticCurvePoint)`: the position of `Q` in the stack (and whether it should be negated)
-- `rolling_options (int)`: a bitmask telling the function whether `gradient`, `P`, and `Q` should be rolled.
+- `rolling_option (int)`: a bitmask telling the function whether `gradient`, `P`, and `Q` should be rolled.
 
 For the definition of the `StackFiniteFieldElement`, `StackEllipticCurvePoint`, see [StackElements](../docs/stack_elements.md).
 

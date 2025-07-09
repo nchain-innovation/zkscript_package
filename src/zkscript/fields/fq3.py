@@ -157,7 +157,7 @@ class Fq3(PrimeFieldExtension):
         x: StackFiniteFieldElement = StackFiniteFieldElement(5, False, 3),  # noqa: B008
         y: StackFiniteFieldElement = StackFiniteFieldElement(2, False, 3),  # noqa: B008
         scalar: int = 1,
-        rolling_options: int = 3,
+        rolling_option: int = 3,
     ) -> Script:
         """Multiplication in F_q^3 followed by scalar multiplication.
 
@@ -187,7 +187,7 @@ class Fq3(PrimeFieldExtension):
             y (StackFiniteFieldElement): The position in the stack of `y`.
                 Defaults to `StackFiniteFieldElement(2,False,3)`.
             scalar (int): The scalar to multiply the result by. Defaults to 1.
-            rolling_options (int): Bitmaks detailing which of `x` and `y` should be removed after the execution of the
+            rolling_option (int): Bitmaks detailing which of `x` and `y` should be removed after the execution of the
                 script. Defaults to `3` (remove everything).
 
         Returns:
@@ -200,7 +200,7 @@ class Fq3(PrimeFieldExtension):
         assert x.extension_degree == self.extension_degree
         assert y.extension_degree == self.extension_degree
 
-        is_x_rolled, is_y_rolled = bitmask_to_boolean_list(rolling_options, 2)
+        is_x_rolled, is_y_rolled = bitmask_to_boolean_list(rolling_option, 2)
 
         out = verify_bottom_constant(self.modulus) if check_constant else Script()
 

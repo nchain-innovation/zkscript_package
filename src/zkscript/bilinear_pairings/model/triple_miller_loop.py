@@ -122,7 +122,7 @@ class TripleMillerLoop:
             gradient=gradients_doubling[0].shift(shift),
             P=P[0].shift(shift),
             Q=T[0].shift(shift),
-            rolling_options=0,
+            rolling_option=0,
         )  # Compute ev_(l_(T1,T1))(P1)
         # stack in:  [gradient_(2*T1), gradient_(2*T2), gradient_(2*T3), P1, P2, P3, Q1, Q2, Q3, T1, T2, T3, {f_i^2},
         #                ev_(l_(T1,T1))(P1)]
@@ -137,7 +137,7 @@ class TripleMillerLoop:
             gradient=gradients_doubling[1].shift(self.N_ELEMENTS_EVALUATION_OUTPUT + shift),
             P=P[1].shift(self.N_ELEMENTS_EVALUATION_OUTPUT + shift),
             Q=T[1].shift(self.N_ELEMENTS_EVALUATION_OUTPUT + shift),
-            rolling_options=0,
+            rolling_option=0,
         )  # Compute ev_(l_(T2,T2))(P2)
         # stack in:  [gradient_(2*T1), gradient_(2*T2), gradient_(2*T3), P1, P2, P3, Q1, Q2, Q3, T1, T2, T3, {f_i^2},
         #                ev_(l_(T1,T1))(P1), ev_(l_(T2,T2))(P2)]
@@ -152,7 +152,7 @@ class TripleMillerLoop:
             gradient=gradients_doubling[2].shift(2 * self.N_ELEMENTS_EVALUATION_OUTPUT + shift),
             P=P[2].shift(2 * self.N_ELEMENTS_EVALUATION_OUTPUT + shift),
             Q=T[2].shift(2 * self.N_ELEMENTS_EVALUATION_OUTPUT + shift),
-            rolling_options=0,
+            rolling_option=0,
         )  # Compute ev_(l_(T3,T3))(P3)
         # stack in:  [gradient_(2*T1), gradient_(2*T2), gradient_(2*T3), P1, P2, P3, Q1, Q2, Q3, T1, T2, T3, {f_i^2},
         #               ev_(l_(T1,T1))(P1), ev_(l_(T2,T2))(P2), ev_(l_(T3,T3))(P3)]
@@ -197,7 +197,7 @@ class TripleMillerLoop:
             verify_gradient=verify_gradients[0],
             gradient=gradients_doubling[0],
             P=T[0],
-            rolling_options=boolean_list_to_bitmask([verify_gradients[0], True]),
+            rolling_option=boolean_list_to_bitmask([verify_gradients[0], True]),
         )  # Compute 2*T1
         # stack in:     [..., gradient_(2*T2), gradient_(2*T3), P1, P2, P3, Q1, Q2, Q3, T2, T3, (2*T1)]
         # altstack in:  [{f_i^2} * (ev_(l_(T1,T1))(P1) * ev_(l_(T2,T2))(P2) * ev_(l_(T3,T3))(P3))]
@@ -212,7 +212,7 @@ class TripleMillerLoop:
             verify_gradient=verify_gradients[1],
             gradient=gradients_doubling[1],
             P=T[1].shift(self.N_POINTS_TWIST),
-            rolling_options=boolean_list_to_bitmask([verify_gradients[1], True]),
+            rolling_option=boolean_list_to_bitmask([verify_gradients[1], True]),
         )  # Compute 2*T2
         # stack in:     [..., gradient_(2*T3), P1, P2, P3, Q1, Q2, Q3, T3, (2*T1), (2*T2)]
         # altstack in:  [{f_i^2} * (ev_(l_(T1,T1))(P1) * ev_(l_(T2,T2))(P2) * ev_(l_(T3,T3))(P3))]
@@ -227,7 +227,7 @@ class TripleMillerLoop:
             verify_gradient=verify_gradients[2],
             gradient=gradients_doubling[2],
             P=T[2].shift(2 * self.N_POINTS_TWIST),
-            rolling_options=boolean_list_to_bitmask([verify_gradients[2], True]),
+            rolling_option=boolean_list_to_bitmask([verify_gradients[2], True]),
         )  # Compute 2*T3
         # stack in:     [..., P1, P2, P3, Q1, Q2, Q3, T3, (2*T1), (2*T2), (2*T3)]
         # altstack in:  [{f_i^2} * (ev_(l_(T1,T1))(P1) * ev_(l_(T2,T2))(P2) * ev_(l_(T3,T3))(P3))]
@@ -303,7 +303,7 @@ class TripleMillerLoop:
             gradient=gradients_doubling[0].shift(shift_injected_gradients + shift_miller_output),
             P=P[0].shift(shift_injected_gradients + shift_miller_output),
             Q=T[0].shift(shift_injected_gradients + shift_miller_output),
-            rolling_options=0,
+            rolling_option=0,
         )  # Compute ev_(l_(T1,T1))(P1)
         shift_evaluation = self.N_ELEMENTS_EVALUATION_OUTPUT
         # stack in:  [gradient_(2*T1), P1, P2, P3, Q1, Q2, Q3, T1, T2, T3, gradient_(2*T2), gradient_(2*T3), {f_i^2},
@@ -319,7 +319,7 @@ class TripleMillerLoop:
             gradient=gradients_doubling[1].shift(shift_evaluation + shift_miller_output),
             P=P[1].shift(shift_injected_gradients + shift_miller_output + shift_evaluation),
             Q=T[1].shift(shift_injected_gradients + shift_miller_output + shift_evaluation),
-            rolling_options=0,
+            rolling_option=0,
         )  # Compute ev_(l_(T2,T2))(P2)
         # stack in:  [gradient_(2*T1), P1, P2, P3, Q1, Q2, Q3, T1, T2, T3, gradient_(2*T2), gradient_(2*T3), {f_i^2},
         #                ev_(l_(T1,T1))(P1), ev_(l_(T2,T2))(P2)]
@@ -334,7 +334,7 @@ class TripleMillerLoop:
             gradient=gradients_doubling[2].shift(2 * shift_evaluation + shift_miller_output),
             P=P[2].shift(shift_injected_gradients + shift_miller_output + 2 * shift_evaluation),
             Q=T[2].shift(shift_injected_gradients + shift_miller_output + 2 * shift_evaluation),
-            rolling_options=0,
+            rolling_option=0,
         )  # Compute ev_(l_(T3,T3))(P3)
         # stack in:  [gradient_(2*T1), P1, P2, P3, Q1, Q2, Q3, T1, T2, T3, gradient_(2*T2), gradient_(2*T3), {f_i^2},
         #                ev_(l_(T1,T1))(P1), ev_(l_(T2,T2))(P2), ev_(l_(T3,T3))(P3)]
@@ -379,7 +379,7 @@ class TripleMillerLoop:
             verify_gradient=verify_gradients[0],
             gradient=gradients_doubling[0].shift(shift_injected_gradients),
             P=T[0].shift(shift_injected_gradients),
-            rolling_options=boolean_list_to_bitmask([verify_gradients[0], True]),
+            rolling_option=boolean_list_to_bitmask([verify_gradients[0], True]),
         )  # Compute 2*T1
         # stack in:     [{gradient_(2*T1) if not verify_gradient[0]}, P1, P2, P3, Q1, Q2, Q3, T2, T3,
         #                   gradient_(2*T2), gradient_(2*T3), (2*T1)]
@@ -394,7 +394,7 @@ class TripleMillerLoop:
             verify_gradient=False,
             gradient=gradients_doubling[1].shift(self.N_POINTS_TWIST),
             P=T[1].shift(shift_injected_gradients + self.N_POINTS_TWIST),
-            rolling_options=boolean_list_to_bitmask([True, True]),
+            rolling_option=boolean_list_to_bitmask([True, True]),
         )  # Compute 2*T2
         shift_injected_gradients -= self.extension_degree
         # stack in:     [..., P1, P2, P3, Q1, Q2, Q3, T3, gradient_(2*T3), (2*T1), (2*T2)]
@@ -409,7 +409,7 @@ class TripleMillerLoop:
             verify_gradient=False,
             gradient=gradients_doubling[2].shift(2 * self.N_POINTS_TWIST),
             P=T[2].shift(2 * self.N_POINTS_TWIST + shift_injected_gradients),
-            rolling_options=boolean_list_to_bitmask([True, True]),
+            rolling_option=boolean_list_to_bitmask([True, True]),
         )  # Compute 2*T3
         # stack in:     [..., P1, P2, P3, Q1, Q2, Q3, (2*T1), (2*T2), (2*T3)]
         # altstack in:  [{f_i^2} * (ev_(l_(T1,T1))(P1) * ev_(l_(T2,T2))(P2) * ev_(l_(T3,T3))(P3))]
@@ -544,7 +544,7 @@ class TripleMillerLoop:
             gradient=gradients_doubling[0].shift(shift),
             P=P[0].shift(shift),
             Q=T[0].shift(shift),
-            rolling_options=0,
+            rolling_option=0,
         )  # Compute ev_(l_(T1,T1))(P1)
         # stack in:  [gradient_(2* T1 ± Q1), gradient_(2* T2 ± Q2), gradient_(2* T3 ± Q3), gradient_(2*T1),
         #               gradient_(2*T2), gradient_(2*T3), P1, P2, P3, Q1, Q2, Q3, T1, T2, T3, {f_i^2},
@@ -561,7 +561,7 @@ class TripleMillerLoop:
             gradient=gradients_doubling[1].shift(self.N_ELEMENTS_EVALUATION_OUTPUT + shift),
             P=P[1].shift(self.N_ELEMENTS_EVALUATION_OUTPUT + shift),
             Q=T[1].shift(self.N_ELEMENTS_EVALUATION_OUTPUT + shift),
-            rolling_options=0,
+            rolling_option=0,
         )  # Compute ev_(l_(T2,T2))(P2)
         # stack in:  [gradient_(2* T1 ± Q1), gradient_(2* T2 ± Q2), gradient_(2* T3 ± Q3), gradient_(2*T1),
         #               gradient_(2*T2), gradient_(2*T3), P1, P2, P3, Q1, Q2, Q3, T1, T2, T3, {f_i^2},
@@ -587,7 +587,7 @@ class TripleMillerLoop:
             gradient=gradients_doubling[2].shift(self.N_ELEMENTS_EVALUATION_TIMES_EVALUATION + shift),
             P=P[2].shift(self.N_ELEMENTS_EVALUATION_TIMES_EVALUATION + shift),
             Q=T[2].shift(self.N_ELEMENTS_EVALUATION_TIMES_EVALUATION + shift),
-            rolling_options=0,
+            rolling_option=0,
         )  # Compute ev_(l_(T3,T3))(P3)
         # stack in:  [gradient_(2* T1 ± Q1), gradient_(2* T2 ± Q2), gradient_(2* T3 ± Q3), gradient_(2*T1),
         #               gradient_(2*T2), gradient_(2*T3), P1, P2, P3, Q1, Q2, Q3, T1, T2, T3, {f_i^2},
@@ -609,7 +609,7 @@ class TripleMillerLoop:
             Q=Q[0]
             .shift(self.N_ELEMENTS_EVALUATION_TIMES_EVALUATION + self.N_ELEMENTS_EVALUATION_OUTPUT + shift)
             .set_negate(self.exp_miller_loop[loop_i] == -1),
-            rolling_options=0,
+            rolling_option=0,
         )  # Compute ev_(l_(2*T1,± Q1))(P1)
         # stack in:  [gradient_(2* T1 ± Q1), gradient_(2* T2 ± Q2), gradient_(2* T3 ± Q3), gradient_(2*T1),
         #               gradient_(2*T2), gradient_(2*T3), P1, P2, P3, Q1, Q2, Q3, T1, T2, T3, {f_i^2},
@@ -642,7 +642,7 @@ class TripleMillerLoop:
             Q=Q[1]
             .shift(2 * self.N_ELEMENTS_EVALUATION_TIMES_EVALUATION + shift)
             .set_negate(self.exp_miller_loop[loop_i] == -1),
-            rolling_options=0,
+            rolling_option=0,
         )
         # stack in:  [gradient_(2* T1 ± Q1), gradient_(2* T2 ± Q2), gradient_(2* T3 ± Q3), gradient_(2*T1),
         #               gradient_(2*T2), gradient_(2*T3), P1, P2, P3, Q1, Q2, Q3, T1, T2, T3, {f_i^2},
@@ -667,7 +667,7 @@ class TripleMillerLoop:
             Q=Q[2]
             .shift(2 * self.N_ELEMENTS_EVALUATION_TIMES_EVALUATION + self.N_ELEMENTS_EVALUATION_OUTPUT + shift)
             .set_negate(self.exp_miller_loop[loop_i] == -1),
-            rolling_options=0,
+            rolling_option=0,
         )
         # stack in:  [gradient_(2* T1 ± Q1), gradient_(2* T2 ± Q2), gradient_(2* T3 ± Q3), gradient_(2*T1),
         #               gradient_(2*T2), gradient_(2*T3), P1, P2, P3, Q1, Q2, Q3, T1, T2, T3, {f_i^2},
@@ -723,7 +723,7 @@ class TripleMillerLoop:
             verify_gradient=verify_gradients[0],
             gradient=gradients_doubling[0],
             P=T[0],
-            rolling_options=boolean_list_to_bitmask([verify_gradients[0], True]),
+            rolling_option=boolean_list_to_bitmask([verify_gradients[0], True]),
         )  # Compute 2 * T1
         verify_gradient_shift = self.extension_degree if verify_gradients[0] else 0
         # stack in:     [gradient_(2* T1 ± Q1), gradient_(2* T2 ± Q2), gradient_(2* T3 ± Q3),
@@ -741,7 +741,7 @@ class TripleMillerLoop:
             gradient=gradients_addition[0].shift(-verify_gradient_shift),
             P=Q[0].set_negate(self.exp_miller_loop[loop_i] == -1),
             Q=T[0].shift(-2 * self.N_POINTS_TWIST),
-            rolling_options=boolean_list_to_bitmask([verify_gradients[0], False, True]),
+            rolling_option=boolean_list_to_bitmask([verify_gradients[0], False, True]),
         )
         # stack in:     [..., gradient_(2* T2 ± Q2), gradient_(2* T3 ± Q3), ...,
         #                   gradient_(2*T2), gradient_(2*T3), P1, P2, P3, Q1, Q2, Q3, T2, T3, (2*T1 ± Q1)]
@@ -758,7 +758,7 @@ class TripleMillerLoop:
             verify_gradient=verify_gradients[1],
             gradient=gradients_doubling[1],
             P=T[1].shift(self.N_POINTS_TWIST),
-            rolling_options=boolean_list_to_bitmask([verify_gradients[1], True]),
+            rolling_option=boolean_list_to_bitmask([verify_gradients[1], True]),
         )  # Compute 2 * T2
         verify_gradient_shift += self.extension_degree if verify_gradients[1] else 0
         # stack in:     [..., gradient_(2* T2 ± Q2), gradient_(2* T3 ± Q3), ...,
@@ -776,7 +776,7 @@ class TripleMillerLoop:
             gradient=gradients_addition[1].shift(-verify_gradient_shift),
             P=Q[1].set_negate(self.exp_miller_loop[loop_i] == -1),
             Q=T[1].shift(-self.N_POINTS_TWIST),
-            rolling_options=boolean_list_to_bitmask([verify_gradients[1], False, True]),
+            rolling_option=boolean_list_to_bitmask([verify_gradients[1], False, True]),
         )
         # stack in:     [..., gradient_(2* T3 ± Q3), ..., gradient_(2*T3), P1, P2, P3, Q1, Q2, Q3, T3, (2*T1 ± Q1),
         #                   (2*T2 ± Q2)]
@@ -792,7 +792,7 @@ class TripleMillerLoop:
             verify_gradient=verify_gradients[2],
             gradient=gradients_doubling[2],
             P=T[2].shift(2 * self.N_POINTS_TWIST),
-            rolling_options=boolean_list_to_bitmask([verify_gradients[2], True]),
+            rolling_option=boolean_list_to_bitmask([verify_gradients[2], True]),
         )  # Compute 2 * T3
         verify_gradient_shift += self.extension_degree if verify_gradients[2] else 0
         # stack in:     [..., gradient_(2* T3 ± Q3), ..., P1, P2, P3, Q1, Q2, Q3, (2*T1 ± Q1), (2*T2 ± Q2), (2*T3)]
@@ -809,7 +809,7 @@ class TripleMillerLoop:
             gradient=gradients_addition[2].shift(-verify_gradient_shift),
             P=Q[2].set_negate(self.exp_miller_loop[loop_i] == -1),
             Q=T[2],
-            rolling_options=boolean_list_to_bitmask([verify_gradients[2], False, True]),
+            rolling_option=boolean_list_to_bitmask([verify_gradients[2], False, True]),
         )
         # stack in:     [..., P1, P2, P3, Q1, Q2, Q3, (2*T1 ± Q1), (2*T2 ± Q2), (2*T3 ± Q3)]
         # altstack in:  [{f_i^2}*(ev_(l_(T1,T1))(P1)*ev_(l_(T2,T2))(P2)) *(ev_(l_(T3,T3))(P3)*ev_(l_(2*T1,± Q1))(P1)) * (ev_(l_(2*T2,± Q2))(P2)*ev_(l_(2*T3,± Q3))(P3))]  # noqa: E501
@@ -891,7 +891,7 @@ class TripleMillerLoop:
             gradient=gradients_doubling[0].shift(shift_injected_gradients + shift_miller_output),
             P=P[0].shift(shift_injected_gradients + shift_miller_output),
             Q=T[0].shift(shift_injected_gradients + shift_miller_output),
-            rolling_options=0,
+            rolling_option=0,
         )  # Compute ev_(l_(T1,T1))(P1)
         shift_evaluation = self.N_ELEMENTS_EVALUATION_OUTPUT
         # stack in:  [gradient_(2* T1 ± Q1), gradient_(2*T1), P1, P2, P3, Q1, Q2, Q3, T1, T2, T3,
@@ -909,7 +909,7 @@ class TripleMillerLoop:
             gradient=gradients_doubling[1].shift(shift_miller_output + shift_evaluation),
             P=P[1].shift(shift_evaluation + shift_miller_output + shift_injected_gradients),
             Q=T[1].shift(shift_evaluation + shift_miller_output + shift_injected_gradients),
-            rolling_options=0,
+            rolling_option=0,
         )  # Compute ev_(l_(T2,T2))(P2)
         # stack in:  [gradient_(2* T1 ± Q1), gradient_(2*T1), P1, P2, P3, Q1, Q2, Q3, T1, T2, T3,
         #                gradient_(2* T2 ± Q2), gradient_(2* T3 ± Q3), gradient_(2*T2), gradient_(2*T3), {f_i^2},
@@ -936,7 +936,7 @@ class TripleMillerLoop:
             gradient=gradients_doubling[2].shift(shift_evaluation + shift_miller_output),
             P=P[2].shift(shift_evaluation + shift_miller_output + shift_injected_gradients),
             Q=T[2].shift(shift_evaluation + shift_miller_output + shift_injected_gradients),
-            rolling_options=0,
+            rolling_option=0,
         )  # Compute ev_(l_(T3,T3))(P3)
         shift_evaluation += self.N_ELEMENTS_EVALUATION_OUTPUT
         # stack in:  [gradient_(2* T1 ± Q1), gradient_(2*T1), P1, P2, P3, Q1, Q2, Q3, T1, T2, T3,
@@ -956,7 +956,7 @@ class TripleMillerLoop:
             Q=Q[0]
             .shift(shift_evaluation + shift_injected_gradients + shift_miller_output)
             .set_negate(self.exp_miller_loop[loop_i] == -1),
-            rolling_options=0,
+            rolling_option=0,
         )  # Compute ev_(l_(2*T1,± Q1))(P1)
         # stack in:  [gradient_(2* T1 ± Q1), gradient_(2*T1), P1, P2, P3, Q1, Q2, Q3, T1, T2, T3,
         #                gradient_(2* T2 ± Q2), gradient_(2* T3 ± Q3), gradient_(2*T2), gradient_(2*T3), {f_i^2},
@@ -986,7 +986,7 @@ class TripleMillerLoop:
             Q=Q[1]
             .shift(shift_evaluation + shift_injected_gradients + shift_miller_output)
             .set_negate(self.exp_miller_loop[loop_i] == -1),
-            rolling_options=0,
+            rolling_option=0,
         )
         shift_evaluation += self.N_ELEMENTS_EVALUATION_OUTPUT
         # stack in:  [gradient_(2* T1 ± Q1), gradient_(2*T1), P1, P2, P3, Q1, Q2, Q3, T1, T2, T3,
@@ -1008,7 +1008,7 @@ class TripleMillerLoop:
             Q=Q[2]
             .shift(shift_evaluation + shift_injected_gradients + shift_miller_output)
             .set_negate(self.exp_miller_loop[loop_i] == -1),
-            rolling_options=0,
+            rolling_option=0,
         )
         # stack in:  [gradient_(2* T1 ± Q1), gradient_(2*T1), P1, P2, P3, Q1, Q2, Q3, T1, T2, T3,
         #                gradient_(2* T2 ± Q2), gradient_(2* T3 ± Q3), gradient_(2*T2), gradient_(2*T3), {f_i^2},
@@ -1061,7 +1061,7 @@ class TripleMillerLoop:
             verify_gradient=verify_gradients[0],
             gradient=gradients_doubling[0].shift(shift_injected_gradients),
             P=T[0].shift(shift_injected_gradients),
-            rolling_options=boolean_list_to_bitmask([verify_gradients[0], True]),
+            rolling_option=boolean_list_to_bitmask([verify_gradients[0], True]),
         )  # Compute 2 * T1
         # stack in:  [gradient_(2* T1 ± Q1), {gradient_(2*T1) if not verify_gradients[0]}, P1, P2, P3,
         #                Q1, Q2, Q3, T2, T3, gradient_(2* T2 ± Q2), gradient_(2* T3 ± Q3),
@@ -1082,7 +1082,7 @@ class TripleMillerLoop:
             ),
             P=Q[0].shift(shift_injected_gradients).set_negate(self.exp_miller_loop[loop_i] == -1),
             Q=T[0].shift(-2 * self.N_POINTS_TWIST),  # this is pointing to the newly computed 2*T1 on top of the stack
-            rolling_options=boolean_list_to_bitmask([verify_gradients[0], False, True]),
+            rolling_option=boolean_list_to_bitmask([verify_gradients[0], False, True]),
         )
         # stack in:  [gradient_(2* T1 ± Q1), {gradient_(2*T1) if not verify_gradients[0]}, P1, P2, P3,
         #                Q1, Q2, Q3, T2, T3, gradient_(2* T2 ± Q2), gradient_(2* T3 ± Q3),
@@ -1099,7 +1099,7 @@ class TripleMillerLoop:
             verify_gradient=False,
             gradient=gradients_doubling[1].shift(self.N_POINTS_TWIST),
             P=T[1].shift(shift_injected_gradients + self.N_POINTS_TWIST),
-            rolling_options=boolean_list_to_bitmask([True, True]),
+            rolling_option=boolean_list_to_bitmask([True, True]),
         )  # Compute 2 * T2
         shift_injected_gradients -= self.extension_degree
         # stack in:  [..., P1, P2, P3, Q1, Q2, Q3, T2, T3, gradient_(2* T2 ± Q2), gradient_(2* T3 ± Q3),
@@ -1122,7 +1122,7 @@ class TripleMillerLoop:
             ),  # Top of the stack
             P=Q[1].shift(shift_injected_gradients).set_negate(self.exp_miller_loop[loop_i] == -1),
             Q=T[1].shift(-self.N_POINTS_TWIST + self.extension_degree),
-            rolling_options=boolean_list_to_bitmask([True, False, True]),
+            rolling_option=boolean_list_to_bitmask([True, False, True]),
         )
         shift_injected_gradients -= self.extension_degree
         # stack in:  [..., P1, P2, P3, Q1, Q2, Q3, T3, gradient_(2* T3 ± Q3), gradient_(2*T3),
@@ -1138,7 +1138,7 @@ class TripleMillerLoop:
             verify_gradient=False,
             gradient=gradients_doubling[2].shift(2 * self.N_POINTS_TWIST),
             P=T[2].shift(2 * self.N_POINTS_TWIST + shift_injected_gradients),
-            rolling_options=boolean_list_to_bitmask([True, True]),
+            rolling_option=boolean_list_to_bitmask([True, True]),
         )  # Compute 2 * T3
         shift_injected_gradients -= self.extension_degree
         # stack in:  [..., P1, P2, P3, Q1, Q2, Q3, gradient_(2* T3 ± Q3), (2*T1 ± Q1), (2*T2 ± Q2), 2*T3]
@@ -1159,7 +1159,7 @@ class TripleMillerLoop:
             ),  # Top of the stack
             P=Q[2].shift(shift_injected_gradients).set_negate(self.exp_miller_loop[loop_i] == -1),
             Q=T[2].shift(shift_injected_gradients),
-            rolling_options=boolean_list_to_bitmask([True, False, True]),
+            rolling_option=boolean_list_to_bitmask([True, False, True]),
         )
         # stack in:     [..., P1, P2, P3, Q1, Q2, Q3, (2*T1 ± Q1), (2*T2 ± Q2), (2*T3 ± Q3)]
         # altstack in:  [{f_i^2}*(ev_(l_(T1,T1))(P1)*ev_(l_(T2,T2))(P2)) *(ev_(l_(T3,T3))(P3)*ev_(l_(2*T1,± Q1))(P1)) * (ev_(l_(2*T2,± Q2))(P2)*ev_(l_(2*T3,± Q3))(P3))]  # noqa: E501

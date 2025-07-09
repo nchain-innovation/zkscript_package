@@ -6,7 +6,7 @@ from tx_engine import Script
 
 from src.zkscript.bilinear_pairings.bls12_381.fields import fq2_script, fq4_script
 from src.zkscript.fields.fq12_3_over_2_over_2 import Fq12Cubic as Fq12CubicScriptModel
-from src.zkscript.util.utility_scripts import mod, nums_to_script, pick, roll, verify_bottom_constant
+from src.zkscript.util.utility_scripts import mod, pick, roll, verify_bottom_constant
 
 
 class MillerOutputOperations(Fq12CubicScriptModel):
@@ -1921,7 +1921,7 @@ class MillerOutputOperations(Fq12CubicScriptModel):
             line_eval_times_eval_times_eval_times_eval_times_eval_times_eval,
             13,
         ),
-        "miller_loop_output_square": (miller_loop_output_square, 13),
+        "miller_loop_output_square": (miller_loop_output_square, 0),
         "miller_loop_output_mul": (miller_loop_output_mul, 13),
         "line_eval_times_eval_times_miller_loop_output": (line_eval_times_eval_times_miller_loop_output, 13),
         "miller_loop_output_times_eval_times_eval_times_eval": (
@@ -1967,8 +1967,8 @@ class MillerOutputOperations(Fq12CubicScriptModel):
         """
         function, denominator_position = self.function_index[function_name]
 
-        out = nums_to_script([denominator_position])
-        out += Script.parse_string("OP_ROLL OP_MUL OP_TOALTSTACK")
+        out = roll(denominator_position, 1) if denominator_position != 0 else pick(denominator_position, 1)
+        out += Script.parse_string("OP_MUL OP_TOALTSTACK")
 
         out += function(
             self,

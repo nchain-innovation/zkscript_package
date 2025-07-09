@@ -4,8 +4,9 @@ import pytest
 from elliptic_curves.fields.cubic_extension import CubicExtension
 from elliptic_curves.fields.prime_field import PrimeField
 from elliptic_curves.fields.quadratic_extension import QuadraticExtension
-from tx_engine import Context
+from tx_engine import Context, Script
 
+from src.zkscript.fields.fq import Fq as FqScript
 from src.zkscript.fields.fq2 import Fq2 as Fq2Script
 from src.zkscript.fields.fq2_over_2_residue_equal_u import Fq2Over2ResidueEqualU as Fq2Over2ResidueEqualUScript
 from src.zkscript.fields.fq3 import Fq3 as Fq3Script
@@ -13,6 +14,7 @@ from src.zkscript.fields.fq4 import Fq4 as Fq4Script
 from src.zkscript.fields.fq6_3_over_2 import Fq6 as Fq6Script
 from src.zkscript.fields.fq12_2_over_3_over_2 import Fq12 as Fq12Script
 from src.zkscript.fields.fq12_3_over_2_over_2 import Fq12Cubic as Fq12CubicScript
+from src.zkscript.script_types.stack_elements import StackFiniteFieldElement
 from src.zkscript.util.utility_scripts import nums_to_script
 from tests.fields.util import check_constant, generate_unlock, generate_verify, save_scripts
 
@@ -59,6 +61,8 @@ class Fq2ResidueMinusOne:
             {"x": [1, -1], "expected": [17, -2], "positive_modulo": False},
             {"x": [1, -3], "expected": [12, 18], "positive_modulo": True},
             {"x": [1, -3], "expected": [12, -1], "positive_modulo": False},
+            {"x": [-1, 0], "expected": [18, 0], "positive_modulo": True},
+            {"x": [-1, 0], "expected": [-1, 0], "positive_modulo": False},
         ],
         "test_add_three": [
             {"x": [1, 2], "y": [-12, -3], "z": [18, -5], "expected": [7, 13], "positive_modulo": True},
@@ -896,12 +900,20 @@ def test_cube(config, positive_modulo, x, expected, clean_constant, is_constant_
         is_constant_reused=is_constant_reused,
         scalar=scalar,
     )
-    if is_constant_reused:
-        lock += check_constant(config.q)
-    expected = [i * scalar for i in expected]
-    expected = [i % config.q if positive_modulo or i > 0 else (i % config.q) - config.q for i in expected]
 
-    lock += generate_verify(expected)
+    expected = [i * scalar for i in expected]
+
+    expected = [i % config.q if positive_modulo or i >= 0 else (i % config.q) - config.q for i in expected]
+
+    if is_constant_reused:
+        expected = [config.q, *expected]
+
+    for el in expected[::-1]:
+        lock += nums_to_script([el])
+        lock += Script.parse_string("OP_EQUALVERIFY")
+
+    lock += Script.parse_string("OP_1")
+
     verify_script(lock, unlock, clean_constant)
 
     if save_to_json_folder and clean_constant and not is_constant_reused:
@@ -1171,3 +1183,50 @@ def test_frobenius_cube(config, positive_modulo, x, expected, clean_constant, is
 
     if save_to_json_folder and clean_constant and not is_constant_reused:
         save_scripts(str(lock), str(unlock), save_to_json_folder, config.filename, "frobenius cube")
+
+
+@pytest.mark.parametrize("q", [2, 3, 11, 17, 91, 6211, 1111111111111111111])
+@pytest.mark.parametrize("x", [2, 3, 4, -2, -3])
+@pytest.mark.parametrize("mod_frequency", [2, 5, 10])
+@pytest.mark.parametrize("positive_modulo", [True, False])
+@pytest.mark.parametrize("negate", [True, False])
+@pytest.mark.slow
+def test_fq_inverse_slow(save_to_json_folder, q, x, mod_frequency, positive_modulo, negate):
+    fq_inverse(save_to_json_folder, q, x, mod_frequency, positive_modulo, negate)
+
+
+@pytest.mark.parametrize("q", [19])
+@pytest.mark.parametrize("x", [1, 2, -2, -1])
+@pytest.mark.parametrize("mod_frequency", [3])
+@pytest.mark.parametrize("positive_modulo", [True, False])
+@pytest.mark.parametrize("negate", [True, False])
+def test_fq_inverse_fast(save_to_json_folder, q, x, mod_frequency, positive_modulo, negate):
+    fq_inverse(save_to_json_folder, q, x, mod_frequency, positive_modulo, negate)
+
+
+def fq_inverse(save_to_json_folder, q, x, mod_frequency, positive_modulo, negate):
+    test_script = FqScript(q=q)
+    unlock = nums_to_script([q, x])
+
+    lock = test_script.inverse(
+        take_modulo=True,
+        positive_modulo=positive_modulo,
+        check_constant=check_constant,
+        clean_constant=True,
+        is_constant_reused=False,
+        rolling_option=1,
+        mod_frequency=mod_frequency,
+        x=StackFiniteFieldElement(0, negate, 1),
+    )
+
+    expected = pow((-1 if negate else 1) * x, q - 2, q) if x % q != 0 else 0
+    if x % q != 0 and not positive_modulo and ((x < 0 and not negate) or (x > 0 and negate)):
+        expected -= q
+
+    lock += nums_to_script([expected])
+    lock += Script.parse_string("OP_EQUALVERIFY OP_1")
+
+    verify_script(lock, unlock, True)
+
+    if save_to_json_folder:
+        save_scripts(str(lock), str(unlock), save_to_json_folder, "fq", "inverse")

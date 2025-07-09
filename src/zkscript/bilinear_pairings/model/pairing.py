@@ -138,6 +138,7 @@ class Pairing:
         positive_modulo: bool = True,
         is_precomputed_gradients_on_stack: bool = True,
         precomputed_gradients: list[list[list[list[int]]]] | None = None,
+        is_miller_loop_proj: bool = False,
     ) -> Script:
         """Product of three bilinear pairings.
 
@@ -166,6 +167,8 @@ class Pairing:
                 miller loop. The meaning of the lists is:
                     - precomputed_gradients[0]: gradients required to compute w*(-gamma)
                     - precomputed_gradients[1]: gradients required to compute w*(-delta)
+            is_miller_loop_proj (bool): boolean flag to switch between the projective and non projective implementation
+                of the Miller loop. Default to False.
 
         Returns:
             Script to compute the product of three bilinear pairings e(P1,Q1) * e(P2,Q2) * e(P3,Q3).
@@ -184,27 +187,35 @@ class Pairing:
         # After this, the stack is:
         # [miller(P1,Q1) * miller(P2,Q2) * miller(P3,Q3)]^-1
         # [miller(P1,Q1) * miller(P2,Q2) * miller(P3,Q3)]
-        out += self.triple_miller_loop(
-            modulo_threshold=modulo_threshold,
-            positive_modulo=False,
-            verify_gradients=verify_gradients,
-            check_constant=False,
-            clean_constant=False,
-            is_precomputed_gradients_on_stack=is_precomputed_gradients_on_stack,
-            precomputed_gradients=precomputed_gradients,
-        )
-        # Update the value of the verify_gradients vector to compute the gradient tracker.
-        # If is_precomputed_gradients_on_stack is False, the last two gradients are injected and consumed
-        # inside the triple miller loop, and thus are not on the stack anymore. Otherwise, they may still be
-        # on the stack, and we need to count them to update gradient_tracker.
-        checked_gradients = [
-            verify_gradients[0],
-            verify_gradients[1] or not is_precomputed_gradients_on_stack,
-            verify_gradients[2] or not is_precomputed_gradients_on_stack,
-        ]
-        gradient_tracker = sum(self.extension_degree for gradient in checked_gradients if not gradient) * sum(
-            [1 if i == 0 else 2 for i in self.exp_miller_loop[:-1]]
-        )
+        if is_miller_loop_proj:
+            out += self.triple_miller_loop_proj(
+                modulo_threshold=modulo_threshold, positive_modulo=True, check_constant=False, clean_constant=False
+            )
+            # There are no gradients on the stack if we use projective coordinates in the Miller loop.
+            gradient_tracker = 0
+
+        else:
+            out += self.triple_miller_loop(
+                modulo_threshold=modulo_threshold,
+                positive_modulo=False,
+                verify_gradients=verify_gradients,
+                check_constant=False,
+                clean_constant=False,
+                is_precomputed_gradients_on_stack=is_precomputed_gradients_on_stack,
+                precomputed_gradients=precomputed_gradients,
+            )
+            # Update the value of the verify_gradients vector to compute the gradient tracker.
+            # If is_precomputed_gradients_on_stack is False, the last two gradients are injected and consumed
+            # inside the triple miller loop, and thus are not on the stack anymore. Otherwise, they may still be
+            # on the stack, and we need to count them to update gradient_tracker.
+            checked_gradients = [
+                verify_gradients[0],
+                verify_gradients[1] or not is_precomputed_gradients_on_stack,
+                verify_gradients[2] or not is_precomputed_gradients_on_stack,
+            ]
+            gradient_tracker = sum(self.extension_degree for gradient in checked_gradients if not gradient) * sum(
+                [1 if i == 0 else 2 for i in self.exp_miller_loop[:-1]]
+            )
 
         out += easy_exponentiation_with_inverse_check(
             take_modulo=True,

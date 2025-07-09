@@ -8,7 +8,7 @@ from src.zkscript.bilinear_pairings.mnt4_753.fields import fq4_script
 
 # Fq2 Script implementation
 from src.zkscript.fields.fq2_over_2_residue_equal_u import Fq2Over2ResidueEqualU
-from src.zkscript.util.utility_scripts import mod, nums_to_script, pick, roll, verify_bottom_constant
+from src.zkscript.util.utility_scripts import mod, pick, roll, verify_bottom_constant
 
 
 class MillerOutputOperations(Fq2Over2ResidueEqualU):
@@ -499,7 +499,7 @@ class MillerOutputOperations(Fq2Over2ResidueEqualU):
             line_eval_times_eval_times_eval_times_eval_times_eval_times_eval,
             5,
         ),
-        "miller_loop_output_square": (miller_loop_output_square, 5),
+        "miller_loop_output_square": (miller_loop_output_square, 0),
         "miller_loop_output_mul": (miller_loop_output_mul, 5),
         "line_eval_times_eval_times_miller_loop_output": (line_eval_times_eval_times_miller_loop_output, 5),
         "miller_loop_output_times_eval_times_eval_times_eval": (miller_loop_output_times_eval_times_eval_times_eval, 5),
@@ -542,8 +542,8 @@ class MillerOutputOperations(Fq2Over2ResidueEqualU):
         """
         function, denominator_position = self.function_index[function_name]
 
-        out = nums_to_script([denominator_position])
-        out += Script.parse_string("OP_ROLL OP_MUL OP_TOALTSTACK")
+        out = roll(denominator_position, 1) if denominator_position != 0 else pick(denominator_position, 1)
+        out += Script.parse_string("OP_MUL OP_TOALTSTACK")
 
         out += function(
             self,

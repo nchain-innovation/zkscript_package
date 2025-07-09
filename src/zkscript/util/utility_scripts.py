@@ -420,7 +420,7 @@ def reverse_endianness_bounded_length(
 def int_sig_to_s_component(
     group_order: StackNumber = StackNumber(1, False),  # noqa: B008
     int_sig: StackNumber = StackNumber(0, False),  # noqa: B008
-    rolling_options: int = 3,
+    rolling_option: int = 3,
     add_prefix: bool = True,
 ) -> Script:
     """Return the script that transforms int_sig to the s-component of a secp256k1 ECDSA signature.
@@ -429,10 +429,10 @@ def int_sig_to_s_component(
         group_order (StackNumber): The position in the stack of the group order of secp256k1. Defaults
             to `StackNumber(1,False)`.
         int_sig (StackNumber): The position in the stack of int_sig. Defaults to `StackNumber(0,False)`.
-        rolling_options (int): Whether or not to roll group_order and int_sig, defaults to 3 (roll everything).
+        rolling_option (int): Whether or not to roll group_order and int_sig, defaults to 3 (roll everything).
         add_prefix (bool): Whether or not to prepend s with 0x02||len(s). Defaults to `True`.
     """
-    is_group_order_rolled, is_int_sig_rolled = bitmask_to_boolean_list(rolling_options, 2)
+    is_group_order_rolled, is_int_sig_rolled = bitmask_to_boolean_list(rolling_option, 2)
 
     # stack out: [.., int_sig, group_order]
     if [int_sig.position, group_order.position] == [1, 0]:
@@ -499,7 +499,7 @@ def compute_mul_sub(
     a: StackFiniteFieldElement = StackFiniteFieldElement(2, False, 1),  # noqa: B008
     b: StackFiniteFieldElement = StackFiniteFieldElement(1, False, 1),  # noqa: B008
     c: StackFiniteFieldElement = StackFiniteFieldElement(0, False, 1),  # noqa: B008
-    rolling_options: int = 7,
+    rolling_option: int = 7,
     leave_on_top_of_stack: int = 0,
     permutation: int = 1,
 ) -> Script:
@@ -525,7 +525,7 @@ def compute_mul_sub(
             `StackFiniteFieldElement(1,False,1)`. It must have extension_degree equal to 1.
         c (StackFiniteFieldElement): the element c for which a = b*c % modulus. Defaults to
             `StackFiniteFieldElement(0,False,1)`. It must have extension_degree equal to 1.
-        rolling_options (int): Bitmask deciding which elements should be removed from the stack after
+        rolling_option (int): Bitmask deciding which elements should be removed from the stack after
             the execution of the script. Defaults to `7`: remove everything.
         leave_on_top_of_stack (int): Bitmask deciding which of the elements `a`, `b`, `c` should be left
             on top of the stack after the execution of the script. Defaults to `0`: don't leave anything.
@@ -539,7 +539,7 @@ def compute_mul_sub(
     assert all([a.extension_degree == 1, b.extension_degree == 1, c.extension_degree == 1]), (
         "The extension degrees of a, b, and c must be equal to 1."
     )
-    list_rolling_options = bitmask_to_boolean_list(rolling_options, 3)
+    list_rolling_options = bitmask_to_boolean_list(rolling_option, 3)
     list_leave_on_top = bitmask_to_boolean_list(leave_on_top_of_stack, 3)
 
     out = move(a, bool_to_moving_function(list_rolling_options[0]))
@@ -585,7 +585,7 @@ def enforce_mul_equal(
     a: StackFiniteFieldElement = StackFiniteFieldElement(2, False, 1),  # noqa: B008
     b: StackFiniteFieldElement = StackFiniteFieldElement(1, False, 1),  # noqa: B008
     c: StackFiniteFieldElement = StackFiniteFieldElement(0, False, 1),  # noqa: B008
-    rolling_options: int = 7,
+    rolling_option: int = 7,
     leave_on_top_of_stack: int = 0,
     equation_to_check: int = 1,
 ) -> Script:
@@ -610,7 +610,7 @@ def enforce_mul_equal(
             `StackFiniteFieldElement(1,False,1)`. It must have extension_degree equal to 1.
         c (StackFiniteFieldElement): the element c for which a = b*c % modulus. Defaults to
             `StackFiniteFieldElement(0,False,1)`. It must have extension_degree equal to 1.
-        rolling_options (int): Bitmask deciding which elements should be removed from the stack after
+        rolling_option (int): Bitmask deciding which elements should be removed from the stack after
             the execution of the script. Defaults to `7`: remove everything.
         leave_on_top_of_stack (int): Bitmask deciding which of the elements `a`, `b`, `c` should be left
             on top of the stack after the execution of the script. Defaults to `0`: don't leave anything.
@@ -627,7 +627,7 @@ def enforce_mul_equal(
         a=a,
         b=b,
         c=c,
-        rolling_options=rolling_options,
+        rolling_option=rolling_option,
         leave_on_top_of_stack=leave_on_top_of_stack,
         permutation=equation_to_check,
     )
@@ -703,7 +703,7 @@ def is_mod_equal_to(
 
 def unsigned_from_bits(
     stack_elements: list[StackBaseElement],
-    rolling_options: int,
+    rolling_option: int,
 ) -> Script:
     r"""Script to turn a list of `m` bits into a single `m`-bit unsigned integer.
 
@@ -716,7 +716,7 @@ def unsigned_from_bits(
 
     Args:
         stack_elements (list[StackBaseElement]): The positions of the `m` bits in the stack.
-        rolling_options (int): The rolling options for the stack elements, encoded as a bitmask.
+        rolling_option (int): The rolling options for the stack elements, encoded as a bitmask.
 
     Returns:
         The script to turn `m` bits into a single `m`-bit unsigned integer.
@@ -724,7 +724,7 @@ def unsigned_from_bits(
     check_order(stack_elements)
 
     m = len(stack_elements)
-    list_rolling_options = bitmask_to_boolean_list(rolling_options, m)
+    list_rolling_options = bitmask_to_boolean_list(rolling_option, m)
 
     out = move(stack_elements[-1], bool_to_moving_function(list_rolling_options[-1]))
     shift = 0 if list_rolling_options[-1] else 1
