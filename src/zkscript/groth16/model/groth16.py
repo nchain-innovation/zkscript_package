@@ -8,7 +8,12 @@ from src.zkscript.bilinear_pairings.model.model_definition import PairingModel
 # Script implementations
 # EC arithmetic
 from src.zkscript.elliptic_curves.ec_operations_fq import EllipticCurveFq
+from src.zkscript.elliptic_curves.ec_operations_fq_projective import EllipticCurveFqProjective
 from src.zkscript.script_types.locking_keys.groth16 import Groth16LockingKey, Groth16LockingKeyWithPrecomputedMsm
+from src.zkscript.script_types.locking_keys.groth16_proj import (
+    Groth16ProjLockingKey,
+    Groth16ProjLockingKeyWithPrecomputedMsm,
+)
 from src.zkscript.util.utility_functions import optimise_script
 from src.zkscript.util.utility_scripts import nums_to_script, roll, verify_bottom_constant
 
@@ -283,5 +288,173 @@ class Groth16:
             # Hash used to verify the gradients of -gamma and -delta
             verification_hash = self.__gradients_to_hash_commitment(locking_key=locking_key)
             out += self.__verify_hash_commitment(locking_key=locking_key, verification_hash=verification_hash)
+
+        return optimise_script(out)
+
+    def groth16_verifier_proj(
+        self,
+        locking_key: Groth16ProjLockingKey,
+        modulo_threshold: int,
+        extractable_inputs: int = 0,
+        max_multipliers: list[int] | None = None,
+        check_constant: bool | None = None,
+        clean_constant: bool | None = None,
+    ) -> Script:
+        """Groth16 verifier with projective coordinates.
+
+        Stack input:
+            - stack:    [q, ..., inverse_miller_loop_triple_pairing, A, B, C, ..., a_i, ..., a_1]
+            - altstack: []
+
+        Stack output:
+            - stack:    [q, ..., True/False]
+            - altstack: []
+
+        Args:
+            locking_key (Groth16ProjLockingKey): Locking key used to generate the verifier. Contains the data of the
+                CRS needed by the verifier.
+            modulo_threshold (int): Bit-length threshold. Values whose bit-length exceeds it are reduced modulo `q`.
+            extractable_inputs (int): The number of public inputs which should be extractable in script.
+                Defaults to `0`.
+            max_multipliers (list[int]): List where each element max_multipliers[i] is the max value of the i-th public
+                statement.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
+
+        Returns:
+            Script to verify the equation e(A,B) = alpha_beta * e(sum_(i=0)^(l) a_i * gamma_abc[i], gamma) * e(C, delta)
+            which we turn into  e(A,B) * e(sum_(i=0)^(l) a_i * gamma_abc[i], - gamma) * e(C, - delta) = alpha_beta.
+            The LHS of the equation is a triple pairing defined in bilinear_pairings/model/triple_pairing.py
+
+        Notes:
+            a_0 = 1.
+        """
+        max_multipliers = (
+            max_multipliers if max_multipliers is not None else [self.r] * (len(locking_key.gamma_abc) - 1)
+        )
+
+        # Elliptic curve arithmetic
+        ec_fq = EllipticCurveFqProjective(q=self.pairing_model.modulus, curve_a=self.curve_a, curve_b=self.curve_b)
+
+        out = verify_bottom_constant(self.pairing_model.modulus) if check_constant else Script()
+
+        # stack in:     [q, ..., inverse_miller_loop_triple_pairing, A, B, C, ..., a_2, a_1],
+        # stack out:    [q, ..., inverse_miller_loop_triple_pairing, A, B, C, sum_(i=0)^l a_i * gamma_abc[i]]
+        out += ec_fq.msm_with_fixed_bases(
+            bases=locking_key.gamma_abc[1:],
+            max_multipliers=max_multipliers,
+            take_modulo=True,
+            check_constant=False,
+            clean_constant=False,
+            positive_modulo=False,
+            extractable_scalars=extractable_inputs,
+        )
+
+        # Load gamma_abc[0] to the stack
+        out += nums_to_script(locking_key.gamma_abc[0])
+
+        # if gamma_abc[0] is affine, it is mapped to
+        if len(locking_key.gamma_abc[0]) == 2:  # noqa PLR2004
+            out += Script.parse_string("OP_1")
+
+        # Sum gamma_abc[0] (a_0 = 1)
+        out += ec_fq.point_addition_with_unknown_points(
+            take_modulo=True, positive_modulo=False, check_constant=False, clean_constant=False
+        )
+
+        # Convert sum_(i=0)^l a_i * gamma_abc[i] in affine coordinates
+        # Compute the inverse of the z coordinate
+        out += self.pairing_model.inverse_fq(
+            take_modulo=True,
+            positive_modulo=False,
+            check_constant=False,
+            clean_constant=False,
+            is_constant_reused=False,
+            rolling_option=1,
+            mod_frequency=modulo_threshold // (self.pairing_model.modulus.bit_length() * 3 + 3),
+        )
+        # Multiply x and y for z^-1
+        out += Script.parse_string("OP_TUCK OP_MUL OP_TOALTSTACK OP_MUL OP_FROMALTSTACK")
+
+        # stack in:    [q, ..., inverse_miller_loop_triple_pairing, A, B, C, sum_(i=0)^l a_i * gamma_abc[i]]
+        # stack out: [q, ..., 0/1]
+        out += self.groth16_verifier_proj_with_precomputed_msm(
+            locking_key=locking_key,
+            modulo_threshold=modulo_threshold,
+            check_constant=False,
+            clean_constant=clean_constant,
+        )
+
+        return optimise_script(out)
+
+    def groth16_verifier_proj_with_precomputed_msm(
+        self,
+        locking_key: Groth16ProjLockingKeyWithPrecomputedMsm,
+        modulo_threshold: int,
+        check_constant: bool | None = None,
+        clean_constant: bool | None = None,
+    ) -> Script:
+        """Groth16 verifier.
+
+        Stack input:
+            - stack:    [q, ..., inverse_miller_loop_triple_pairing, A, B, C, sum_(i=0)^l a_i * gamma_abc[i]]
+            - altstack: []
+
+        Stack output:
+            - stack:    [q, ..., True/False]
+            - altstack: []
+
+        Args:
+            locking_key (Groth16ProjLockingKey): Locking key used to generate the verifier. Contains the data of the
+                CRS needed by the verifier.
+            modulo_threshold (int): Bit-length threshold. Values whose bit-length exceeds it are reduced modulo `q`.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
+
+        Returns:
+            Script to verify the equation e(A,B) = alpha_beta * e(sum_(i=0)^(l) a_i * gamma_abc[i], gamma) * e(C, delta)
+            which we turn into  e(A,B) * e(sum_(i=0)^(l) a_i * gamma_abc[i], - gamma) * e(C, - delta) = alpha_beta.
+            The LHS of the equation is a triple pairing defined in bilinear_pairings/model/triple_pairing.py
+
+        Notes:
+            a_0 = 1.
+        """
+        out = verify_bottom_constant(self.pairing_model.modulus) if check_constant else Script()
+
+        # stack in:  [q, ..., inverse_miller_loop_triple_pairing, A, B, C, sum_(i=0)^l a_i * gamma_abc[i]]
+        # stack out: [q, ..., inverse_miller_loop_triple_pairing, A, sum_(i=0)^l a_i * gamma_abc[i], C, B,
+        #               -gamma, -delta]
+        out += roll(
+            position=2 * self.pairing_model.N_POINTS_CURVE - 1, n_elements=self.pairing_model.N_POINTS_CURVE
+        )  # Roll C
+        out += roll(
+            position=2 * self.pairing_model.N_POINTS_CURVE + self.pairing_model.N_POINTS_TWIST - 1,
+            n_elements=self.pairing_model.N_POINTS_TWIST,
+        )  # Roll B
+        out += nums_to_script(locking_key.minus_gamma)
+        out += nums_to_script(locking_key.minus_delta)
+
+        # Compute the triple pairing
+        # stack in:  [q, ..., inverse_miller_loop_triple_pairing, A, sum_(i=0)^l a_i * gamma_abc[i], C, B,
+        #               -gamma, -delta]
+        # stack out: [q, ..., pairing(A,B) * pairing(sum_(i=0)^(l) a_i * gamma_abc[i], -gamma) * pairing(C, -delta)]
+        out += self.pairing_model.triple_pairing(
+            modulo_threshold=modulo_threshold,
+            positive_modulo=True,
+            check_constant=False,
+            clean_constant=clean_constant,
+            is_miller_loop_proj=True,
+        )
+
+        # Verify pairing(A,B) * pairing(sum_(i=0)^(l) a_i * gamma_abc[i], -gamma) * pairing(C, -delta) == alpha_beta
+        # stack in:  [q, ..., pairing(A,B) * pairing(sum_(i=0)^(l) a_i * gamma_abc[i], -gamma) * pairing(C, -delta)]
+        # stack out: [q, ..., 0/1]
+        for i, el in enumerate(locking_key.alpha_beta[::-1]):
+            out += nums_to_script([el])
+            out += (
+                Script.parse_string("OP_EQUAL")
+                if i == len(locking_key.alpha_beta) - 1
+                else Script.parse_string("OP_EQUALVERIFY")
+            )
 
         return optimise_script(out)
