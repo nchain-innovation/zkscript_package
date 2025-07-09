@@ -1175,9 +1175,10 @@ class EllipticCurveFq:
             if fixed_length_unlock:
                 out += (
                     Script.parse_string("OP_ENDIF OP_ELSE")
-                    + roll(position=5, n_elements=2)
+                    + roll(position=5, n_elements=2)  # delete the gradients
                     + Script.parse_string("OP_2DROP OP_ENDIF")
                 )
+                # drop marker_addition
                 out += roll(position=4, n_elements=1) + Script.parse_string("OP_DROP")
             else:
                 out += Script.parse_string("OP_ENDIF OP_ENDIF")
