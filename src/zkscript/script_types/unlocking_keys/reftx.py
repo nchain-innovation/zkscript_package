@@ -9,6 +9,8 @@ from tx_engine.engine.util import GROUP_ORDER_INT, Gx, Gx_bytes
 from src.zkscript.groth16.model.groth16 import Groth16
 from src.zkscript.script_types.unlocking_keys.groth16 import Groth16UnlockingKey
 from src.zkscript.script_types.unlocking_keys.msm_with_fixed_bases import MsmWithFixedBasesUnlockingKey
+from src.zkscript.script_types.unlocking_keys.groth16_proj import Groth16ProjUnlockingKey
+from src.zkscript.script_types.unlocking_keys.msm_with_fixed_bases_projective import MsmWithFixedBasesProjectiveUnlockingKey
 from src.zkscript.util.utility_scripts import nums_to_script
 
 BYTES_32 = 32
@@ -24,9 +26,9 @@ class RefTxUnlockingKey:
     r"""Class encapsulating the data required to generate an unlocking script for a RefTx verifier.
 
     Attributes:
-        __groth16_unlocking_key (Groth16UnLockingKey): The Groth16 unlocking key used to construct the
-            RefTx unlocking script. This is the key for the RefTx circuit C'(l_out, sighash(stx), u_stx)
-            with l_out fixed.
+        __groth16_unlocking_key (Groth16UnLockingKey | Groth16ProjUnlockingKey): The Groth16 unlocking key
+            used to construct the RefTx unlocking script. This is the key for the RefTx circuit 
+            C'(l_out, sighash(stx), u_stx) with l_out fixed.
 
     Notes:
         The public inputs to the RefTx circuit are (l_out, sighash(stx), u_stx). However, for the purpose of this
@@ -36,7 +38,7 @@ class RefTxUnlockingKey:
             gamma_abc[0] + \sum_(i=1)^(n_l_out) pub[i] * gamma_abc[i+1]
     """
 
-    __groth16_unlocking_key: Groth16UnlockingKey
+    __groth16_unlocking_key: Groth16UnlockingKey | Groth16ProjUnlockingKey
 
     @staticmethod
     def __bytes_sighash_chunks(groth16_model: Groth16) -> int:
@@ -83,13 +85,14 @@ class RefTxUnlockingKey:
         A: list[int],  # noqa: N803
         B: list[int],  # noqa: N803
         C: list[int],  # noqa: N803
-        gradients_pairings: list[list[list[list[int]]]],
-        gradients_multiplications: list[list[list[list[int]]]],
+        gradients_pairings: list[list[list[list[int]]]] | None,
+        gradients_multiplications: list[list[list[list[int]]]] | None,
         max_multipliers: list[int] | None,
-        gradients_additions: list[list[int]],
+        gradients_additions: list[list[int]] | None,
         inverse_miller_output: list[int],
-        gradient_precomputed_l_out: list[int],
+        gradient_precomputed_l_out: list[int] | None,
         has_precomputed_gradients: bool = True,
+        use_proj_coordinates: bool = False,
     ) -> Self:
         r"""Construct an instance of `Self` from the provided data.
 
@@ -117,26 +120,43 @@ class RefTxUnlockingKey:
                     \sum_(i=n_l_out+1)^(n_pub) pub[i] * gamma_abc[i+1]
             has_precomputed_gradients (bool): Flag determining if the precomputed gradients used to compute
                 w*(-gamma) and w*(-delta) are in the unlocking script. Defaults to `True`.
+            use_proj_coordinates (bool): Flag indicating whether the groth16 algorithm uses projective coordinates. 
         """
         max_multipliers = RefTxUnlockingKey.__multipliers(groth16_model, pub)
-        msm_key = MsmWithFixedBasesUnlockingKey.from_data(
-            scalars=pub,
-            gradients_multiplications=gradients_multiplications,
-            max_multipliers=max_multipliers,
-            gradients_additions=gradients_additions,
-        )
+        if use_proj_coordinates:
+            msm_key = MsmWithFixedBasesProjectiveUnlockingKey.from_data(
+                scalars=pub,
+                max_multipliers=max_multipliers,
+            )
 
-        groth16_key = Groth16UnlockingKey(
-            pub,
-            A,
-            B,
-            C,
-            gradients_pairings,
-            inverse_miller_output,
-            msm_key,
-            gradient_precomputed_l_out,
-            has_precomputed_gradients=has_precomputed_gradients,
-        )
+            groth16_key = Groth16ProjUnlockingKey(
+                pub,
+                A,
+                B,
+                C,
+                inverse_miller_output,
+                msm_key,
+            )
+
+        else:
+            msm_key = MsmWithFixedBasesUnlockingKey.from_data(
+                scalars=pub,
+                gradients_multiplications=gradients_multiplications,
+                max_multipliers=max_multipliers,
+                gradients_additions=gradients_additions,
+            )
+
+            groth16_key = Groth16UnlockingKey(
+                pub,
+                A,
+                B,
+                C,
+                gradients_pairings,
+                inverse_miller_output,
+                msm_key,
+                gradient_precomputed_l_out,
+                has_precomputed_gradients=has_precomputed_gradients,
+            )
 
         return RefTxUnlockingKey(groth16_key)
 

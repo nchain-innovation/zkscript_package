@@ -5,6 +5,7 @@ from tx_engine import SIGHASH, Script
 from src.zkscript.groth16.model.groth16 import Groth16
 from src.zkscript.script_types.locking_keys.reftx import RefTxLockingKey
 from src.zkscript.script_types.unlocking_keys.msm_with_fixed_bases import MsmWithFixedBasesUnlockingKey
+from src.zkscript.script_types.unlocking_keys.msm_with_fixed_bases_projective import MsmWithFixedBasesProjectiveUnlockingKey
 from src.zkscript.transaction_introspection.transaction_introspection import TransactionIntrospection
 from src.zkscript.util.utility_scripts import nums_to_script
 
@@ -118,9 +119,14 @@ class RefTx:
         # stack out:    [.., msm_data(u_stx), msm_data(sighash(stx))]
         # altstack out: [chunks(sighash(stx))]
         for i in range(n_chunks):
-            out += MsmWithFixedBasesUnlockingKey.extract_scalar_as_unsigned(
-                max_multipliers=max_multipliers, index=i, rolling_option=False
-            )
+            if locking_key.use_proj_coordinates:
+                out += MsmWithFixedBasesProjectiveUnlockingKey.extract_scalar_as_unsigned(
+                    max_multipliers=max_multipliers, index=i, rolling_option=False
+                )
+            else:
+                out += MsmWithFixedBasesUnlockingKey.extract_scalar_as_unsigned(
+                    max_multipliers=max_multipliers, index=i, rolling_option=False
+                )
             out += nums_to_script([bytes_sighash_chunks]) + Script.parse_string("OP_SPLIT OP_DROP")
             out += Script.parse_string("OP_TOALTSTACK")
 
@@ -128,15 +134,24 @@ class RefTx:
         # altstack in:  [chunks(sighash(stx))]
         # stack out:    [..] of fail
         # altstack out: [chunks(sighash(stx))]
-
-        out += self.groth16_model.groth16_verifier(
-            locking_key=locking_key.to_groth16_key(),
-            modulo_threshold=modulo_threshold,
-            extractable_inputs=n_chunks,
-            max_multipliers=max_multipliers,
-            check_constant=check_constant,
-            clean_constant=True,
-        )
+        if locking_key.use_proj_coordinates:
+            out += self.groth16_model.groth16_verifier_proj(
+                locking_key=locking_key.to_groth16_key(),
+                modulo_threshold=modulo_threshold,
+                extractable_inputs=n_chunks,
+                max_multipliers=max_multipliers,
+                check_constant=check_constant,
+                clean_constant=True,
+            )
+        else:
+            out += self.groth16_model.groth16_verifier(
+                locking_key=locking_key.to_groth16_key(),
+                modulo_threshold=modulo_threshold,
+                extractable_inputs=n_chunks,
+                max_multipliers=max_multipliers,
+                check_constant=check_constant,
+                clean_constant=True,
+            )
         out += Script.parse_string("OP_VERIFY")
 
         # stack in:     [..]
