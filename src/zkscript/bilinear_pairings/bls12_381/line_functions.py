@@ -367,9 +367,14 @@ class LineFunctions:
             # stack in:    [q .. P .. Q .. T ..]
             # stack out:   [q .. P .. {Q} .. {T} .. xQ yQ m n]
 
-            out += move(Q, moving_function=bool_to_moving_function(is_q_rolled))
-            if Q.negate:
-                out += Script.parse_string("OP_NEGATE OP_SWAP OP_NEGATE OP_SWAP")
+            out += move(Q.x, moving_function=bool_to_moving_function(is_q_rolled))
+
+            yi = StackFiniteFieldElement(Q.y.position + extension_degree, False, 1)
+            for _ in range(2):
+                out += move(yi, moving_function=bool_to_moving_function(is_q_rolled))
+                if Q.negate:
+                    out += Script.parse_string("OP_NEGATE")
+
             out += Script.parse_string("OP_2OVER OP_2OVER")
             out += move(T.z.shift(4 * extension_degree), moving_function=bool_to_moving_function(is_t_rolled))
             out += Script.parse_string("OP_2DUP OP_2ROT")
