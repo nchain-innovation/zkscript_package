@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from tx_engine import SIGHASH
 
 from src.zkscript.script_types.locking_keys.groth16 import Groth16LockingKey
+from src.zkscript.script_types.locking_keys.groth16_proj import Groth16ProjLockingKey
 
 
 @dataclass
@@ -42,6 +43,7 @@ class RefTxLockingKey:
                 - gradients_pairings[1]: gradients required to compute w*(-delta)
         has_precomputed_gradients (bool): Flag indicating whether the precomputed gradients are injected in the locking
             script. Defaults to `False`, meaning that the precomputed gradientes are passed in the unlocking script.
+        use_proj_coordinates (bool): Flag indicating whether the groth16 algorithm uses projective coordinates.
     """
 
     alpha_beta: list[int]
@@ -49,17 +51,26 @@ class RefTxLockingKey:
     minus_delta: list[int]
     precomputed_l_out: list[int]
     gamma_abc_without_l_out: list[list[int]]
-    gradients_pairings: list[list[list[list[int]]]]
+    gradients_pairings: list[list[list[list[int]]]] | None
     sighash_flags: SIGHASH
     has_precomputed_gradients: bool = False
+    use_proj_coordinates: bool = False
 
-    def to_groth16_key(self) -> Groth16LockingKey:
-        """Turn the RefTxLockingKey into a Groth16LockingKey."""
-        return Groth16LockingKey(
-            alpha_beta=self.alpha_beta,
-            minus_gamma=self.minus_gamma,
-            minus_delta=self.minus_delta,
-            gamma_abc=[self.precomputed_l_out, *self.gamma_abc_without_l_out],
-            gradients_pairings=self.gradients_pairings,
-            has_precomputed_gradients=self.has_precomputed_gradients,
-        )
+    def to_groth16_key(self) -> Groth16LockingKey | Groth16ProjLockingKey:
+        """Turn the RefTxLockingKey into a Groth16LockingKey or Groth16ProjLockingKey."""
+        if self.use_proj_coordinates:
+            return Groth16ProjLockingKey(
+                alpha_beta=self.alpha_beta,
+                minus_gamma=self.minus_gamma,
+                minus_delta=self.minus_delta,
+                gamma_abc=[self.precomputed_l_out, *self.gamma_abc_without_l_out],
+            )
+        else:
+            return Groth16LockingKey(
+                alpha_beta=self.alpha_beta,
+                minus_gamma=self.minus_gamma,
+                minus_delta=self.minus_delta,
+                gamma_abc=[self.precomputed_l_out, *self.gamma_abc_without_l_out],
+                gradients_pairings=self.gradients_pairings,
+                has_precomputed_gradients=self.has_precomputed_gradients,
+            )
