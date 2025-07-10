@@ -384,6 +384,7 @@ class EllipticCurveFqProjective:
         check_constant: bool | None = None,
         clean_constant: bool | None = None,
         positive_modulo: bool = True,
+        fixed_length_unlock: bool = False,
     ) -> Script:
         """Unrolled double-and-add scalar multiplication loop in E(F_q).
 
@@ -402,6 +403,8 @@ class EllipticCurveFqProjective:
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
+            fixed_length_unlock (bool): If `True`, the unlocking script is expected to be padded to a fixed length
+                (dependent on the `max_multiplier`). Defaults to `False`.
 
         Returns:
             Script to multiply a point on E(F_q) in projective coordinates using double-and-add scalar multiplication.
@@ -409,16 +412,16 @@ class EllipticCurveFqProjective:
         out = verify_bottom_constant(self.modulus) if check_constant else Script()
 
         # stack in:  [marker_a_is_zero, P]
-        # stack out: [marker_a_is_zero, P, T]
+        # stack out: [marker_a_is_zero, P, P]
         out += Script.parse_string("OP_3DUP")
-
         # Compute aP
-        # stack in:  [marker_a_is_zero, P, T]
+        # stack in:  [marker_a_is_zero, P, P]
         # stack out: [marker_a_s_zero, P, aP]
         for i in range(int(log2(max_multiplier)) - 1, -1, -1):
             # Roll marker to decide whether to execute the loop and the auxiliary data
             # stack in:  [auxiliary_data, marker_doubling, P, T]
             # stack out: [auxiliary_data, P, T, marker_doubling]
+
             out += roll(position=6, n_elements=1)
 
             # stack in:  [auxiliary_data, P, T, marker_doubling]
@@ -448,7 +451,15 @@ class EllipticCurveFqProjective:
                 positive_modulo=positive_modulo and (i == 0),
                 rolling_option=boolean_list_to_bitmask([False, True]),
             )  # Compute 2T + P
-            out += Script.parse_string("OP_ENDIF OP_ENDIF")  # Conclude the conditional branches
+
+            if fixed_length_unlock:
+                out += (
+                    Script.parse_string("OP_ENDIF OP_ELSE")
+                    + roll(position=6, n_elements=1)
+                    + Script.parse_string("OP_DROP OP_ENDIF")
+                )
+            else:
+                out += Script.parse_string("OP_ENDIF OP_ENDIF")  # Conclude the conditional branches
 
         # Check if a == 0
         # stack in:  [marker_a_is_zero, P, aP]
@@ -728,6 +739,7 @@ class EllipticCurveFqProjective:
         check_constant: bool | None = None,
         clean_constant: bool | None = None,
         positive_modulo: bool = True,
+        extractable_scalars: int = 0,
     ) -> Script:
         r"""Multi-scalar multiplication script in E(F_q) with projective coordinates with fixed bases.
 
@@ -746,13 +758,15 @@ class EllipticCurveFqProjective:
 
         Args:
             bases (list[list[int]]): The bases of the multi scalar multiplication, passed as a list of coordinates.
-                `bases[i]` is `bases[i] = [x, y, z]` the list of the coordinates of P_i.
+                `bases[i]` is `bases[i] = [x, y, z]` the list of the coordinates of P_i. If only two coordinates are
+                passed for `bases[i]`, an additional `1` is padded as z value.
             max_multipliers (list[int]): `max_multipliers[i]` is the maximum value allowed for `a_i`.
-            modulo_threshold (int): Bit-length threshold. Values whose bit-length exceeds it are reduced modulo `q`.
             take_modulo (bool): If `True`, the result is reduced modulo `q`.
             check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
             clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
             positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
+            extractable_scalars (int): The number of scalars that should be extractable in script. Defaults to 0.
+                The extractable scalars are the first to be multiplied, i.e., the last to be loaded on the stack.
 
         Returns:
             A Bitcoin script that computes a multi scalar multiplication with fixed bases.
@@ -762,17 +776,22 @@ class EllipticCurveFqProjective:
         # stack in:     [a_n, .., a_2, a_1]
         # stack out:    []
         # altstack out: [a_1 * P_1, .., a_n * P_n]
-        for base, multiplier in zip(bases, max_multipliers):
+        for i, (base, multiplier) in enumerate(zip(bases, max_multipliers)):
             assert len(base) != 0
             # Load `base` to the stack
             out += nums_to_script(base)
+            # mapping point (x, y) = [x, y, 1]
+            if len(base) == 2:  # noqa PLR2004
+                out += Script.parse_string("OP_1")
             # Compute a_i * P_i
             out += self.unrolled_multiplication(
                 max_multiplier=multiplier,
                 check_constant=False,
                 clean_constant=False,
                 positive_modulo=False,
+                fixed_length_unlock=(i < extractable_scalars),
             )
+
             # Put a_i * P_i on the altstack
             out += Script.parse_string("OP_TOALTSTACK OP_TOALTSTACK OP_TOALTSTACK")
             # Drop P_i

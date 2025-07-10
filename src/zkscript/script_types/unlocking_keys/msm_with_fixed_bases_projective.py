@@ -21,6 +21,7 @@ class MsmWithFixedBasesProjectiveUnlockingKey:
     Args:
         scalar_multiplications_keys (list[EllipticCurveFqProjectiveUnrolledUnlockingKey]):
             `scalar_multiplications_keys[i]` is the unlocking key required to compute `scalars[i] * bases[i]`
+        max_multipliers (list[int]): `max_multipliers[i]` is the the maximum value of the i-th scalar.
     """
 
     scalar_multiplications_keys: list[EllipticCurveFqProjectiveUnrolledUnlockingKey]
