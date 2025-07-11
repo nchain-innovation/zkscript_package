@@ -42,7 +42,7 @@ class TripleMillerLoopProj:
         # stack in:  [P1, P2, P3, Q1, Q2, Q3, T1, T2, T3, {f_i^2}]
         # stack out: [P1, P2, P3, Q1, Q2, Q3, T1, T2, T3, {f_i^2}, ev_(l_(T1,T1))(P1)]
         out += self.line_eval_proj(
-            take_modulo=True,
+            take_modulo=False,
             positive_modulo=False,
             check_constant=False,
             clean_constant=False,
@@ -56,7 +56,7 @@ class TripleMillerLoopProj:
         # stack in:  [P1, P2, P3, Q1, Q2, Q3, T1, T2, T3, {f_i^2}, ev_(l_(T1,T1))(P1)]
         # stack out: [P1, P2, P3, Q1, Q2, Q3, T1, T2, T3, {f_i^2}, ev_(l_(T1,T1))(P1)]
         out += self.line_eval_proj(
-            take_modulo=True,
+            take_modulo=False,
             positive_modulo=False,
             check_constant=False,
             clean_constant=False,
@@ -71,7 +71,7 @@ class TripleMillerLoopProj:
         # stack out: [P1, P2, P3, Q1, Q2, Q3, T1, T2, T3, {f_i^2}, ev_(l_(T1,T1))(P1), ev_(l_(T2,T2))(P2),
         #               ev_(l_(T3,T3))(P3)]
         out += self.line_eval_proj(
-            take_modulo=True,
+            take_modulo=False,
             positive_modulo=False,
             check_constant=False,
             clean_constant=False,
@@ -97,7 +97,7 @@ class TripleMillerLoopProj:
 
         out += self.rational_form(
             function_name="line_eval_times_eval_times_eval",
-            take_modulo=take_modulo and loop_i == len(self.exp_miller_loop) - 2,
+            take_modulo=True,
             positive_modulo=False,
             check_constant=False,
             clean_constant=False,
@@ -207,7 +207,7 @@ class TripleMillerLoopProj:
         # stack out: [P1, P2, P3, Q1, Q2, Q3, (2*T1), (2*T2), (2*T3), without_addition, ev_(l_(2*T1,± Q1))(P1)]
 
         out += self.line_eval_proj(
-            take_modulo=True,
+            take_modulo=False,
             positive_modulo=False,
             check_constant=False,
             clean_constant=False,
@@ -223,7 +223,7 @@ class TripleMillerLoopProj:
         # stack out: [P1, P2, P3, Q1, Q2, Q3, (2*T1), (2*T2), (2*T3), without_addition, ev_(l_(2*T1,± Q1))(P1),
         #               ev_(l_(2*T2,± Q2))(P2)]
         out += self.line_eval_proj(
-            take_modulo=True,
+            take_modulo=False,
             positive_modulo=False,
             check_constant=False,
             clean_constant=False,
@@ -242,7 +242,7 @@ class TripleMillerLoopProj:
         #               ev_(l_(2*T2,± Q2))(P2), ev_(l_(2*T3,± Q3))(P3)]
 
         out += self.line_eval_proj(
-            take_modulo=True,
+            take_modulo=False,
             positive_modulo=False,
             check_constant=False,
             clean_constant=False,
@@ -271,7 +271,7 @@ class TripleMillerLoopProj:
 
         out += self.rational_form(
             function_name="line_eval_times_eval_times_eval",
-            take_modulo=False,
+            take_modulo=True,
             positive_modulo=False,
             check_constant=False,
             clean_constant=False,
@@ -454,7 +454,7 @@ class TripleMillerLoopProj:
                 #               {f_i^2} * (ev_(l_(T1,T1))(P1) * ev_(l_(T2,T2))(P2) * ev_(l_(T3,T3))(P3)]
                 out += self.__one_step_without_addition_proj(
                     loop_i=loop_i,
-                    take_modulo=False,
+                    take_modulo=True,
                     P=P,
                     T=T,
                 )
@@ -466,7 +466,7 @@ class TripleMillerLoopProj:
 
                 out += self.__one_step_with_addition_proj(
                     loop_i=loop_i,
-                    take_modulo=False,
+                    take_modulo=True,
                     P=P,
                     Q=Q,
                     T=T,

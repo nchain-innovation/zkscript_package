@@ -8,9 +8,11 @@ from tx_engine.engine.util import GROUP_ORDER_INT, Gx, Gx_bytes
 
 from src.zkscript.groth16.model.groth16 import Groth16
 from src.zkscript.script_types.unlocking_keys.groth16 import Groth16UnlockingKey
-from src.zkscript.script_types.unlocking_keys.msm_with_fixed_bases import MsmWithFixedBasesUnlockingKey
 from src.zkscript.script_types.unlocking_keys.groth16_proj import Groth16ProjUnlockingKey
-from src.zkscript.script_types.unlocking_keys.msm_with_fixed_bases_projective import MsmWithFixedBasesProjectiveUnlockingKey
+from src.zkscript.script_types.unlocking_keys.msm_with_fixed_bases import MsmWithFixedBasesUnlockingKey
+from src.zkscript.script_types.unlocking_keys.msm_with_fixed_bases_projective import (
+    MsmWithFixedBasesProjectiveUnlockingKey,
+)
 from src.zkscript.util.utility_scripts import nums_to_script
 
 BYTES_32 = 32
@@ -27,7 +29,7 @@ class RefTxUnlockingKey:
 
     Attributes:
         __groth16_unlocking_key (Groth16UnLockingKey | Groth16ProjUnlockingKey): The Groth16 unlocking key
-            used to construct the RefTx unlocking script. This is the key for the RefTx circuit 
+            used to construct the RefTx unlocking script. This is the key for the RefTx circuit
             C'(l_out, sighash(stx), u_stx) with l_out fixed.
 
     Notes:
@@ -85,12 +87,12 @@ class RefTxUnlockingKey:
         A: list[int],  # noqa: N803
         B: list[int],  # noqa: N803
         C: list[int],  # noqa: N803
-        gradients_pairings: list[list[list[list[int]]]] | None,
-        gradients_multiplications: list[list[list[list[int]]]] | None,
-        max_multipliers: list[int] | None,
-        gradients_additions: list[list[int]] | None,
         inverse_miller_output: list[int],
-        gradient_precomputed_l_out: list[int] | None,
+        max_multipliers: list[int] | None,
+        gradients_pairings: list[list[list[list[int]]]] | None = None,
+        gradients_multiplications: list[list[list[list[int]]]] | None = None,
+        gradients_additions: list[list[int]] | None = None,
+        gradient_precomputed_l_out: list[int] | None = None,
         has_precomputed_gradients: bool = True,
         use_proj_coordinates: bool = False,
     ) -> Self:
@@ -120,7 +122,7 @@ class RefTxUnlockingKey:
                     \sum_(i=n_l_out+1)^(n_pub) pub[i] * gamma_abc[i+1]
             has_precomputed_gradients (bool): Flag determining if the precomputed gradients used to compute
                 w*(-gamma) and w*(-delta) are in the unlocking script. Defaults to `True`.
-            use_proj_coordinates (bool): Flag indicating whether the groth16 algorithm uses projective coordinates. 
+            use_proj_coordinates (bool): Flag indicating whether the groth16 algorithm uses projective coordinates.
         """
         max_multipliers = RefTxUnlockingKey.__multipliers(groth16_model, pub)
         if use_proj_coordinates:

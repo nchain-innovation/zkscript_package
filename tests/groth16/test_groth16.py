@@ -757,7 +757,6 @@ def test_groth16_proj_with_precomputed_msm(
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize("precomputed_gradients_in_unlocking", [True, False])
 @pytest.mark.parametrize("extractable_inputs", [1, 0])
 @pytest.mark.parametrize(
     ("alpha_beta", "prepared_vk", "prepared_proof", "test_script", "filename", "max_multipliers", "is_minimal_example"),
@@ -775,7 +774,6 @@ def test_groth16_proj_slow(
     max_multipliers,
     extractable_inputs,
     is_minimal_example,
-    precomputed_gradients_in_unlocking,
     save_to_json_folder,
 ):
     unlocking_key = Groth16ProjUnlockingKey.from_data(
@@ -811,10 +809,8 @@ def test_groth16_proj_slow(
 
     if is_minimal_example:
         num_public_inputs = "two public inputs" if filename == "bls12_381" else "one public input"
-        unlocking_script_type = "un" if precomputed_gradients_in_unlocking else ""
         message = (
-            f"\nThe script size for Groth16Proj for the curve {filename} with {num_public_inputs} "
-            f"and precomputed gradients in the {unlocking_script_type}locking script is:\n"
+            f"\nThe script size for Groth16Proj for the curve {filename} with {num_public_inputs} is:\n"
             f"Locking script: {len(lock.raw_serialize())} bytes.\n"
             f"Unlocking script: {len(unlock.raw_serialize())} bytes.\t"
         )

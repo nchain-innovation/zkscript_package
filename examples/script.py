@@ -164,7 +164,7 @@ def funding_tx_to_locked_tx(funding_tx: Tx, index: int, lock: Script, fee_rate: 
         TxOut(amount=funding_tx_out.amount - int(fee_rate * len(locked_tx.serialize()) / 1000), script_pubkey=lock)
     ]
     locked_tx_signed = private_key.sign_tx_sighash(
-        index=index, input_pytx=funding_tx, pytx=locked_tx, sighash_type=SIGHASH.ALL_FORKID
+        index=0, input_pytx=funding_tx, pytx=locked_tx, sighash_type=SIGHASH.ALL_FORKID
     )
     # Assert correct signing
     locked_tx_signed.validate([funding_tx])
