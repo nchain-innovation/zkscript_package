@@ -112,6 +112,14 @@ def msm(
     return expected
 
 
+def mixed_addition(P, Q, modulus):
+    T = Q[1] - Q[2] * P[1]
+    U = Q[0] - Q[2] * P[0]
+    V = Q[0] + Q[2] * P[0]
+    W = T**2 * Q[2] - U**2 * V
+    return [x % modulus for x in [U * W, T * (Q[0] * U**2 - W) - Q[1] * U**3, U**3 * Q[2]]]
+
+
 def generate_multi_addition_tests(points: list[list[PrimeField]], field: PrimeField):
     """Generate test data for multi addition."""
     n_points = len(points)

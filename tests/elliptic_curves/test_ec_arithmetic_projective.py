@@ -1,12 +1,13 @@
 from dataclasses import dataclass
 
 import pytest
-from elliptic_curves.fields.prime_field import PrimeField
+from elliptic_curves.fields.prime_field import PrimeField, PrimeFieldElement
 from elliptic_curves.models.ec import ShortWeierstrassEllipticCurve
 from tx_engine import Context, Script
 
 from src.zkscript.elliptic_curves.ec_operations_fq_projective import EllipticCurveFqProjective
 from src.zkscript.script_types.stack_elements import (
+    StackEllipticCurvePoint,
     StackEllipticCurvePointProjective,
     StackFiniteFieldElement,
     StackNumber,
@@ -25,6 +26,7 @@ from tests.elliptic_curves.util_projective_ec import (
     add,
     double,
     generate_multi_addition_tests,
+    mixed_addition,
     msm,
     multiply,
     negate,
@@ -81,6 +83,10 @@ class Secp256k1:
         "test_addition": [
             {"P": P, "Q": Q},
             {"P": double(P, curve, base_field), "Q": Q},
+        ],
+        "test_mixed_addition": [
+            {"P": to_aff(P, curve, base_field).to_list(), "Q": Q},
+            {"P": to_aff(P, curve, base_field).to_list(), "Q": double(Q, curve, base_field)},
         ],
         "test_doubling": [
             {"P": P},
@@ -257,6 +263,10 @@ class Secp256r1:
             {"P": P, "Q": Q},
             {"P": double(P, curve, base_field), "Q": Q},
         ],
+        "test_mixed_addition": [
+            {"P": to_aff(P, curve, base_field).to_list(), "Q": Q},
+            {"P": to_aff(P, curve, base_field).to_list(), "Q": double(Q, curve, base_field)},
+        ],
         "test_doubling": [
             {"P": P},
             {"P": add(P, Q, base_field)},
@@ -386,7 +396,7 @@ def generate_test_cases(test_name):
         if test_name in config.test_data:
             for test_data in config.test_data[test_name]:
                 match test_name:
-                    case "test_addition":
+                    case "test_addition" | "test_mixed_addition":
                         out.append(
                             (
                                 config,
@@ -517,6 +527,60 @@ def test_doubling(config, additional_elements, negate_p, P, save_to_json_folder)
 
     if save_to_json_folder:
         save_scripts(str(lock), str(unlock), save_to_json_folder, config.filename, "point doubling")
+
+
+@pytest.mark.parametrize("additional_elements", [[], [10, 11]])
+@pytest.mark.parametrize("negate_p", [True, False])
+@pytest.mark.parametrize("negate_q", [True, False])
+@pytest.mark.parametrize(
+    ("config", "P", "Q"),
+    generate_test_cases("test_mixed_addition"),
+)
+def test_mixed_addition(config, additional_elements, negate_p, negate_q, P, Q, save_to_json_folder):
+    P = [x.to_int() if isinstance(x, PrimeFieldElement) else x for x in P]
+    Q = [x.to_int() if isinstance(x, PrimeFieldElement) else x for x in Q]
+
+    unlock = nums_to_script([config.modulus])
+    unlock += nums_to_script(P)
+    unlock += nums_to_script(additional_elements)
+    unlock += nums_to_script(Q)
+    unlock += nums_to_script(additional_elements)
+    if negate_p:
+        P = [P[0], -P[1]]
+    if negate_q:
+        Q = [Q[0], -Q[1], Q[2]]
+
+    expected = mixed_addition(P, Q, config.modulus)
+
+    lock = config.test_script.point_algebraic_mixed_addition(
+        take_modulo=True,
+        check_constant=True,
+        clean_constant=True,
+        positive_modulo=True,
+        modulus=StackNumber(-1, False),
+        P=StackEllipticCurvePoint(
+            StackFiniteFieldElement(4, False, 1),
+            StackFiniteFieldElement(3, negate_p, 1),
+        ).shift(2 * len(additional_elements)),
+        Q=StackEllipticCurvePointProjective(
+            StackFiniteFieldElement(2, False, 1),
+            StackFiniteFieldElement(1, negate_q, 1),
+            StackFiniteFieldElement(0, False, 1),
+        ).shift(len(additional_elements)),
+        rolling_option=3,
+    )
+    for el in [*additional_elements, *additional_elements, *expected][::-1]:
+        lock += nums_to_script([el])
+        lock += Script.parse_string("OP_EQUALVERIFY")
+    lock += Script.parse_string("OP_1")
+
+    context = Context(script=unlock + lock)
+    assert context.evaluate()
+    assert context.get_stack().size() == 1
+    assert context.get_altstack().size() == 0
+
+    if save_to_json_folder:
+        save_scripts(str(lock), str(unlock), save_to_json_folder, config.filename, "point addition")
 
 
 @pytest.mark.parametrize(
