@@ -6,6 +6,7 @@ from tx_engine import Script
 
 from src.zkscript.fields.fq import Fq
 from src.zkscript.script_types.stack_elements import (
+    StackEllipticCurvePoint,
     StackEllipticCurvePointProjective,
     StackFiniteFieldElement,
     StackNumber,
@@ -808,5 +809,151 @@ class EllipticCurveFqProjective:
             clean_constant=clean_constant,
             positive_modulo=positive_modulo,
         )
+
+        return out
+
+    def point_algebraic_mixed_addition(
+        self,
+        take_modulo: bool,
+        check_constant: bool | None,
+        clean_constant: bool | None,
+        positive_modulo: bool = True,
+        modulus: StackNumber = StackNumber(-1, False),  # noqa: B008
+        P: StackEllipticCurvePoint = StackEllipticCurvePoint(  # noqa: B008, N803
+            StackFiniteFieldElement(4, False, 1),  # noqa: B008
+            StackFiniteFieldElement(3, False, 1),  # noqa: B008
+        ),
+        Q: StackEllipticCurvePointProjective = StackEllipticCurvePointProjective(  # noqa: B008, N803
+            StackFiniteFieldElement(2, False, 1),  # noqa: B008
+            StackFiniteFieldElement(1, False, 1),  # noqa: B008
+            StackFiniteFieldElement(0, False, 1),  # noqa: B008
+        ),
+        rolling_option: int = 3,
+    ) -> Script:
+        """Perform algebraic addition of points on an elliptic curve defined over Fq.
+
+        This function computes the algebraic addition of P and Q for elliptic curve points `P` and `Q`, with Q
+        in projective coordinates and P in affine coordinates. The result is computed in projective
+        coordinates, and the function handles optional checks on the curve constant and whether the constant
+        should be cleaned or reused.
+
+        The formulas we use do not handle the point at infinity, so this script should only be used when we
+        are sure that on the stack the points are not the point at infinity.
+
+        Given Q = [X, Y, Z] in E(F_q^2), and P = (X', Y'), the point P + Q := [X'', Y'', Z''] is computed as follows:
+        * T = Y - Y'Z
+        * U = X - X'Z
+        * V = X + X'Z
+        * W = T^2Z - U^2V
+        * X'' = UW
+        * Y'' = T(XU^2 - W) - YU^3
+        * Z'' = U^3Z
+
+        Stack input:
+            - stack    = [.., q, .., P, .., Q, ..]
+            - altstack = []
+
+        Stack output:
+            - stack    = [.., q, .., P, .., Q, .., (P_+ Q_)]
+            - altstack = []
+
+        P_ = -P not P.y.negate else P
+        Q_ = -Q if Q.y.negate else Q
+
+        Args:
+            take_modulo (bool): If `True`, the result is reduced modulo q.
+            check_constant (bool | None): If `True`, check if `q` is valid before proceeding. Defaults to `None`.
+            clean_constant (bool | None): If `True`, remove `q` from the bottom of the stack. Defaults to `None`.
+            positive_modulo (bool): If `True` the modulo of the result is taken positive. Defaults to `True`.
+            modulus (StackNumber): The position of `self.modulus` in the stack.
+            P (StackEllipticCurvePoint): The position of the point `P` in the stack,
+                its length, whether it should be negated, and whether it should be rolled or picked.
+                Defaults to: StackEllipticCurvePoint(
+                    StackFiniteFieldElement(4,False,1),
+                    StackFiniteFieldElement(3,False,1)
+                    )
+            Q (StackEllipticCurvePointProjective): The position of the point `Q` in the stack,
+                its length, whether it should be negated, and whether it should be rolled or picked.
+                Defaults to: StackEllipticCurvePointProjective(
+                    StackFiniteFieldElement(2,False,1)
+                    StackFiniteFieldElement(1,False,1),
+                    StackFiniteFieldElement(0,False,1)
+                    )
+            rolling_option (int): A bitmask specifying which arguments should be rolled on which should
+                be picked. The bits of the bitmask correspond to whether the i-th argument should be
+                rolled or not. Defaults to 3 (all elements are rolled).
+
+
+        Returns:
+            A Bitcoin Script that computes P_ + Q_ for the given elliptic curve points `P` and `Q`.
+
+        Raises:
+            ValueError: If either of the following happens:
+                - `clean_constant` or `check_constant` are not provided when required.
+                - `P` comes after `Q` in the stack
+                - `Q` is not rolled
+                - `Q` is not in the default position
+
+        Preconditions:
+            - The input points `P` and `Q` must be on the elliptic curve.
+            - The modulo q must be a prime number.
+            - `P_` != `Q_` and `P_ != -Q_` and `P_`, `Q_` not the point at infinity
+        """
+        check_order([P, Q])
+        is_p_rolled, is_q_rolled = bitmask_to_boolean_list(rolling_option, 2)
+
+        # stack in:  [xP, yP, .., xQ, yQ, zQ, ...]
+        # stack out: [{xP}, {yP}, .., {xQ}, {yQ}, {zQ}, xQ, yQ, zQ, V, U, T]
+        out = verify_bottom_constant(self.modulus) if check_constant else Script()
+
+        out += move(Q.x, bool_to_moving_function(is_q_rolled))
+        out += move(Q.y.shift(1), bool_to_moving_function(is_q_rolled))
+        if Q.negate:
+            out += Script.parse_string("OP_NEGATE")
+        out += move(Q.z.shift(2), bool_to_moving_function(is_q_rolled))
+        out += Script.parse_string("OP_3DUP")
+        out += move(P.shift(3), bool_to_moving_function(is_p_rolled))
+        if P.negate:
+            out += Script.parse_string("OP_NEGATE")
+
+        out += Script.parse_string("OP_ROT OP_TUCK OP_MUL OP_TOALTSTACK")  # compute yP * zQ
+        out += Script.parse_string("OP_MUL")  # compute xP * zQ 0
+        out += Script.parse_string("OP_ROT OP_2DUP OP_ADD")  # compute V := xQ + xP * zQ
+        out += Script.parse_string("OP_SWAP OP_ROT OP_SUB")  # compute U := xQ - xP * zQ
+        out += Script.parse_string("OP_ROT OP_FROMALTSTACK OP_SUB")  # compute T := yQ - yP * zQ
+
+        # stack in:  [{xP}, {yP}, .., {xQ}, {yQ}, {zQ}, xQ, yQ, zQ, V, U, T]
+        # stack out: [{xP}, {yP}, .., {xQ}, {yQ}, {zQ}, X'', Y'', Z'']
+
+        out += Script.parse_string("OP_DUP OP_DUP OP_MUL")  # compute T^2
+        out += Script.parse_string(
+            "OP_2ROT OP_ROT OP_OVER OP_MUL OP_2ROT "  # compute T^2 * zQ
+            "OP_DUP OP_DUP OP_TOALTSTACK "  # move U on the altstack
+            "OP_MUL OP_DUP OP_TOALTSTACK "  # move U^2 on the altstack
+            "OP_MUL OP_SUB"
+        )  # compute W := T^2 * zQ - U^2 * V
+        # stack in:  [{xP}, {yP}, .., {xQ}, {yQ}, {zQ},   Z'' T(XU^2 - W)  yQ, U^3]
+        out += Script.parse_string(
+            "OP_FROMALTSTACK OP_FROMALTSTACK OP_ROT OP_OVER OP_OVER OP_MUL OP_TOALTSTACK"  # compute X'' := U * W
+        )  # compute X'' := U * W
+
+        out += Script.parse_string("OP_TOALTSTACK OP_OVER OP_MUL OP_ROT OP_OVER OP_MUL")  # compute Z'' := U^3 * zQ
+        out += Script.parse_string("OP_ROT OP_5 OP_ROLL OP_MUL OP_FROMALTSTACK OP_SUB")  # compute xQ * U^2 - W
+        out += Script.parse_string("OP_4 OP_ROLL OP_MUL")  # compute T(xQ * U^2 - W)
+        out += Script.parse_string("OP_2SWAP OP_MUL OP_SUB")  # compute Y'' := T(xQ * U^2 - W) - yQ * U^3
+
+        if take_modulo:
+            out += move(modulus, bool_to_moving_function(clean_constant))
+            out += mod(stack_preparation="", is_positive=positive_modulo)
+            out += mod(stack_preparation="OP_TOALTSTACK", is_positive=positive_modulo)
+            out += mod(
+                stack_preparation="OP_FROMALTSTACK OP_ROT OP_FROMALTSTACK",
+                is_positive=positive_modulo,
+                is_mod_on_top=False,
+                is_constant_reused=False,
+            )
+            out += Script.parse_string("OP_SWAP OP_ROT")
+        else:
+            out += Script.parse_string("OP_FROMALTSTACK OP_SWAP OP_ROT")
 
         return out
