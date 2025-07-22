@@ -782,7 +782,7 @@ class EllipticCurveFqProjective:
             out += nums_to_script(base)
             # mapping point (x, y) = [x, y, 1]
             if len(base) == 2:  # noqa PLR2004
-                out += Script.parse_string("OP_1")
+                out += Script.parse_string("OP_1") 
             # Compute a_i * P_i
             out += self.unrolled_multiplication(
                 max_multiplier=multiplier,
@@ -791,7 +791,7 @@ class EllipticCurveFqProjective:
                 positive_modulo=False,
                 fixed_length_unlock=(i < extractable_scalars),
             )
-
+   
             # Put a_i * P_i on the altstack
             out += Script.parse_string("OP_TOALTSTACK OP_TOALTSTACK OP_TOALTSTACK")
             # Drop P_i
@@ -807,6 +807,6 @@ class EllipticCurveFqProjective:
             check_constant=False,
             clean_constant=clean_constant,
             positive_modulo=positive_modulo,
-        )
+        ) 
 
         return out
