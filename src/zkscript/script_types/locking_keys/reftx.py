@@ -65,12 +65,11 @@ class RefTxLockingKey:
                 minus_delta=self.minus_delta,
                 gamma_abc=[self.precomputed_l_out, *self.gamma_abc_without_l_out],
             )
-        else:
-            return Groth16LockingKey(
-                alpha_beta=self.alpha_beta,
-                minus_gamma=self.minus_gamma,
-                minus_delta=self.minus_delta,
-                gamma_abc=[self.precomputed_l_out, *self.gamma_abc_without_l_out],
-                gradients_pairings=self.gradients_pairings,
-                has_precomputed_gradients=self.has_precomputed_gradients,
-            )
+        return Groth16LockingKey(
+            alpha_beta=self.alpha_beta,
+            minus_gamma=self.minus_gamma,
+            minus_delta=self.minus_delta,
+            gamma_abc=[self.precomputed_l_out, *self.gamma_abc_without_l_out],
+            gradients_pairings=self.gradients_pairings,
+            has_precomputed_gradients=self.has_precomputed_gradients,
+        )

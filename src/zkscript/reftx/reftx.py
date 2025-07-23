@@ -5,7 +5,9 @@ from tx_engine import SIGHASH, Script
 from src.zkscript.groth16.model.groth16 import Groth16
 from src.zkscript.script_types.locking_keys.reftx import RefTxLockingKey
 from src.zkscript.script_types.unlocking_keys.msm_with_fixed_bases import MsmWithFixedBasesUnlockingKey
-from src.zkscript.script_types.unlocking_keys.msm_with_fixed_bases_projective import MsmWithFixedBasesProjectiveUnlockingKey
+from src.zkscript.script_types.unlocking_keys.msm_with_fixed_bases_projective import (
+    MsmWithFixedBasesProjectiveUnlockingKey,
+)
 from src.zkscript.transaction_introspection.transaction_introspection import TransactionIntrospection
 from src.zkscript.util.utility_scripts import nums_to_script
 
